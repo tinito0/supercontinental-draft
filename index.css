@@ -1,0 +1,1051 @@
+@import './landing.css';
+@import './playercard.css';
+
+/* --- Importaciones de Tailwind --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* --- Estilos Personalizados --- */
+
+/* --- Configuración General y Tema Oscuro (SCL) --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #e0e0e0;
+  line-height: 1.6;
+  background-color: #0f0f0f;
+}
+
+/* --- Paleta de Colores para Estadísticas (Píldoras) --- */
+.stat-c-90 {
+  background-color: #1ec9a4 !important;
+  color: #ffffff !important;
+}
+
+.stat-c-80 {
+  background-color: #a0dd00 !important;
+  color: #1e1e1e !important;
+}
+
+.stat-c-70 {
+  background-color: #ffc400 !important;
+  color: #1e1e1e !important;
+}
+
+.stat-c-60 {
+  background-color: #ec7d22 !important;
+  color: #1e1e1e !important;
+}
+
+.stat-c-50 {
+  background-color: #ff4d4d !important;
+  color: #ffffff !important;
+}
+
+.stat-c-default {
+  background-color: #333 !important;
+  color: #e0e0e0 !important;
+}
+
+/* --- Paleta de Colores para OVR (Tarjetas Antiguas) --- */
+.ovr-c-90 {
+  background-color: #ff4d4d !important;
+  color: #ffffff !important;
+}
+
+/* Red */
+.ovr-c-80 {
+  background-color: #ffa500 !important;
+  color: #1e1e1e !important;
+}
+
+/* Orange */
+.ovr-c-70 {
+  background-color: #a0dd00 !important;
+  color: #1e1e1e !important;
+}
+
+/* Light Green */
+.ovr-c-60 {
+  background-color: #00b34a !important;
+  color: #ffffff !important;
+}
+
+/* Green */
+.ovr-c-50 {
+  background-color: #00aeff !important;
+  color: #ffffff !important;
+}
+
+/* Blue */
+.ovr-c-default {
+  background-color: #333 !important;
+  color: #e0e0e0 !important;
+}
+
+/* Grey */
+
+/* --- Paleta de Colores de Texto para OVR (Nuevas Tarjetas PES) --- */
+.ovr-text-90 {
+  color: #facc15 !important;
+}
+
+/* Amarillo brillante */
+.ovr-text-80 {
+  color: #fbbf24 !important;
+}
+
+/* Amarillo dorado */
+.ovr-text-70 {
+  color: #a3e635 !important;
+}
+
+/* Verde Lima */
+.ovr-text-60 {
+  color: #34d399 !important;
+}
+
+/* Verde esmeralda */
+.ovr-text-50 {
+  color: #38bdf8 !important;
+}
+
+/* Azul claro */
+.ovr-text-default {
+  color: #9ca3af !important;
+}
+
+/* Gris */
+
+/* --- Paleta de Colores para Posiciones (Píldoras y Tarjetas) --- */
+.pos-delantero {
+  background-color: #ff4d4d;
+  color: #ffffff;
+}
+
+.pos-medio {
+  background-color: #00b34a;
+  color: #ffffff;
+}
+
+.pos-defensa {
+  background-color: #00aeff;
+  color: #ffffff;
+}
+
+/* CORREGIDO: 'ffc400' en lugar de 'ffc4al' */
+.pos-portero {
+  background-color: #ffc400;
+  color: #1e1e1e;
+}
+
+.pos-default {
+  background-color: #333;
+  color: #e0e0e0;
+}
+
+/* --- Animación de Fondo --- */
+@keyframes gradientBG {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* --- Scrollbar Personalizado (Estilo PES 2021) --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* --- Estilos para la animación de modales --- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.modal-enter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content-enter {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* --- Grid de Habilidades --- */
+.skills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* --- CORRECCIÓN HEATMAP --- */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  height: 100%;
+  min-height: 400px;
+  /* Reducido para mejor ajuste en modales */
+  align-items: center;
+  /* Centrar verticalmente */
+  justify-items: center;
+  /* Centrar horizontalmente */
+}
+
+/* La celda ahora es el círculo */
+.heatmap-cell {
+  width: 60px;
+  /* Tamaño fijo para el círculo */
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SIDEBAR — Desktop inline, Mobile overlay
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Desktop: inline sidebar (default) */
+.sidebar {
+  background: #0a0a0a;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+  z-index: 40;
+  width: 0;
+  min-width: 0;
+  box-shadow: none;
+  transition: width 280ms ease-in-out, min-width 280ms ease-in-out;
+}
+
+.sidebar--open {
+  width: 224px;
+  min-width: 224px;
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Hide X button on desktop */
+.sidebar-close-btn {
+  display: none;
+}
+
+/* No backdrop on desktop */
+.sidebar-backdrop {
+  display: none;
+}
+
+/* ── Mobile: overlay + backdrop ── */
+@media (max-width: 1023px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 260px !important;
+    min-width: 260px !important;
+    transform: translateX(-100%);
+    transition: transform 300ms ease-in-out;
+    z-index: 60;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.6);
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+  }
+
+  .sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: #9ca3af;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .sidebar-close-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 55;
+    animation: fadeIn 0.3s ease-out;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PLAYER CARD — Redesigned for maximum info visibility
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Base card ── */
+.player-card {
+  --pos-accent: #9ca3af;
+  --ovr-color: #9ca3af;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 80%;
+  max-width: 240px;
+  margin: 0 auto;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  overflow: visible;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.player-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5) !important;
+}
+
+.player-card--locked {
+  opacity: 0.55;
+  pointer-events: auto;
+}
+
+.player-card--locked:hover {
+  transform: none;
+}
+
+/* ── Photo wrapper ── */
+.player-card__photo-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 3.2;
+  overflow: hidden;
+  border-radius: 0;
+  background-color: #0a0a0c;
+}
+
+.player-card__glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.player-card__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  z-index: 2;
+  transition: transform 0.45s ease;
+}
+
+.player-card:hover .player-card__photo {
+  transform: scale(1.04);
+}
+
+.player-card__photo-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ═══════════ INFO STRIP — OVR + Flag + Position overlaid on photo ═══════════ */
+.player-card__info-strip {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  pointer-events: none;
+}
+
+/* OVR badge container */
+.player-card__ovr-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1.5px solid;
+  padding: 2px 7px;
+  backdrop-filter: blur(6px);
+  flex-shrink: 0;
+}
+
+.player-card__ovr {
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  letter-spacing: -0.03em;
+}
+
+/* Country flag — larger and prominent */
+.player-card__flag {
+  width: 22px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 2px;
+  opacity: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+/* Position pill — solid, bold */
+.player-card__pos {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ── Compare button ── */
+.player-card__compare-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  z-index: 20;
+  padding: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  color: #60a5fa;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease;
+  pointer-events: auto;
+}
+
+.player-card:hover .player-card__compare-btn {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.player-card__compare-btn:hover {
+  background: rgba(37, 99, 235, 0.85);
+  color: #fff;
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.player-card__compare-btn--active {
+  opacity: 1 !important;
+  background: rgba(79, 70, 229, 0.9) !important;
+  color: #fff !important;
+  border-color: rgba(129, 140, 248, 0.6) !important;
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.5);
+  transform: translate(-50%, -50%) scale(1) !important;
+}
+
+/* ── Locked overlay bar ── */
+.player-card__locked-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: rgba(220, 38, 38, 0.92);
+  font-size: 8px;
+  font-weight: 900;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ── Owned accent stripe ── */
+.player-card__owned-stripe {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: #10b981;
+  z-index: 25;
+  border-radius: 10px 0 0 0;
+}
+
+/* ── Name bar (bottom of card) ── */
+.player-card__name-bar {
+  padding: 6px 7px 7px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 0 0 10px 10px;
+}
+
+.player-card__name {
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+/* ── Price header — sits on top of the card ── */
+.player-card__price-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px 5px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(16, 185, 129, 0.06) 100%);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.12);
+  border-radius: 10px 10px 0 0;
+}
+
+.player-card__price {
+  font-size: 16px;
+  font-weight: 900;
+  color: #34d399;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 12px rgba(52, 211, 153, 0.3), 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Responsive tweaks ── */
+@media (max-width: 480px) {
+  .player-card {
+    max-width: 150px;
+  }
+
+  .player-card__ovr {
+    font-size: 1.3rem;
+  }
+
+  .player-card__flag {
+    width: 18px;
+    height: 13px;
+  }
+
+  .player-card__pos {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+
+  .player-card__price {
+    font-size: 14px;
+  }
+
+  .player-card__name {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+}
+
+/* Marketplace card sizing: final overrides after legacy card styles. */
+.market-player-card-shell {
+  width: 100%;
+  min-width: 0;
+  height: clamp(124px, 31vw, 238px);
+  max-width: 172px;
+  margin: 0 auto;
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: 124px 172px;
+}
+
+.market-player-card-shell .player-card {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none;
+  margin: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+
+.market-player-card-shell .player-card:hover {
+  transform: none;
+  box-shadow: none !important;
+}
+
+.market-player-card-shell .player-card__price-header {
+  top: 5px;
+  left: 5px;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+
+.market-player-card-shell .player-card__price {
+  font-size: clamp(0.62rem, 2.4vw, 0.9rem);
+  letter-spacing: 0;
+}
+
+.market-player-card-shell .player-card__photo-wrapper {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.market-player-card-shell .player-card__photo {
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.market-player-card-shell .player-card:hover .player-card__photo {
+  transform: none;
+}
+
+.market-player-card-shell .player-card__info-strip {
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+  gap: 4px;
+  padding: 0;
+}
+
+.market-player-card-shell .player-card__ovr-badge {
+  width: clamp(28px, 7.5vw, 40px);
+  height: clamp(28px, 7.5vw, 40px);
+  border-width: 1px;
+}
+
+.market-player-card-shell .player-card__ovr {
+  font-size: clamp(0.9rem, 4vw, 1.16rem);
+  letter-spacing: 0;
+}
+
+.market-player-card-shell .player-card__flag {
+  width: clamp(17px, 4.8vw, 24px);
+  height: auto;
+  margin-bottom: 4px;
+}
+
+.market-player-card-shell .player-card__pos {
+  font-size: clamp(0.52rem, 2.1vw, 0.76rem);
+  padding: 2px 5px;
+  letter-spacing: 0;
+  border-radius: 4px;
+}
+
+.market-player-card-shell .player-card__compare-btn {
+  padding: clamp(6px, 2vw, 10px);
+  backdrop-filter: none;
+}
+
+.market-player-card-shell .player-card__name-bar {
+  flex: 0 0 auto;
+  padding: 5px 6px;
+}
+
+.market-player-card-shell .player-card__name {
+  font-size: clamp(0.56rem, 2.3vw, 0.86rem);
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+@media (max-width: 480px) {
+  #player-list.grid {
+    gap: 8px;
+  }
+
+  .market-player-card-shell {
+    height: clamp(118px, 34vw, 154px);
+    max-width: 124px;
+  }
+
+  .market-player-card-shell .player-card__price-header {
+    top: 4px;
+    left: 4px;
+    padding: 1px 5px;
+  }
+
+  .market-player-card-shell .player-card__info-strip {
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+  }
+
+  .market-player-card-shell .player-card__name-bar {
+    padding: 4px 5px;
+  }
+
+  .market-player-card-shell .player-card,
+  .market-player-card-shell .player-card__photo,
+  .market-player-card-shell .player-card__compare-btn {
+    transition-duration: 120ms;
+  }
+
+  .market-player-card-shell .player-card__glow {
+    opacity: 0.28;
+  }
+
+  .market-player-card-shell .player-card__photo-fade {
+    height: 38%;
+  }
+
+  .market-player-card-shell .player-card__price-header,
+  .market-player-card-shell .player-card__ovr-badge,
+  .market-player-card-shell .player-card__compare-btn {
+    backdrop-filter: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .market-player-card-shell {
+    height: clamp(176px, 22vw, 252px);
+    max-width: 190px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .market-player-card-shell {
+    height: clamp(208px, 16vw, 278px);
+    max-width: 210px;
+  }
+}
+
+.manager-chat-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(34, 211, 238, 0.55) rgba(15, 23, 42, 0.55);
+  -webkit-overflow-scrolling: touch;
+  background: #020712;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.manager-chat-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+
+.manager-chat-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.manager-chat-scroll::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.55);
+  border: 3px solid rgba(15, 23, 42, 0.85);
+  border-radius: 999px;
+}
+
+.manager-chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.8);
+}
+
+.manager-chat-message {
+  display: flex;
+  width: 100%;
+}
+
+.manager-chat-message--mine {
+  justify-content: flex-end;
+}
+
+.manager-chat-message--received {
+  justify-content: flex-start;
+}
+
+.manager-chat-bubble {
+  width: min(100%, 560px);
+  max-width: 100%;
+  font-size: 14px;
+}
+
+.manager-chat-gif {
+  display: block;
+  width: min(100%, 360px);
+  max-width: 100%;
+  height: auto;
+  max-height: 220px;
+}
+
+.manager-chat-composer {
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 767px) {
+  .manager-chat-scroll {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .manager-chat-message {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .manager-chat-bubble {
+    width: auto;
+    max-width: 85%;
+  }
+
+  .manager-chat-gif {
+    width: auto;
+    max-height: 180px;
+  }
+
+  .manager-chat-composer {
+    bottom: 0;
+    z-index: 2;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes scoutHelpIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.scout-help-panel {
+  animation: scoutHelpIn 220ms ease-out both;
+}
+
+.scout-help-step {
+  animation: scoutHelpIn 280ms ease-out both;
+}
+
+.scout-guide-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  pointer-events: auto;
+}
+
+.scout-guide-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.scout-guide-ring {
+  position: fixed;
+  z-index: 121;
+  border: 2px solid rgba(52, 211, 153, 0.95);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.02),
+    0 0 28px rgba(52, 211, 153, 0.34);
+  pointer-events: none;
+  transition: left 180ms ease, top 180ms ease, width 180ms ease, height 180ms ease;
+}
+
+.scout-guide-popover {
+  position: fixed;
+  z-index: 122;
+  max-width: min(340px, calc(100vw - 24px));
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  border-radius: 14px;
+  background: rgba(10, 10, 10, 0.96);
+  padding: 16px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px);
+  animation: scoutHelpIn 180ms ease-out both;
+}
+
+.scout-guide-skip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 48px;
+  min-height: 44px;
+  border-radius: 10px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 900;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.scout-guide-skip:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.app-guide-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  pointer-events: auto;
+}
+
+.app-guide-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.app-guide-ring {
+  position: fixed;
+  z-index: 141;
+  border: 2px solid rgba(34, 211, 238, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(34, 211, 238, 0.34);
+  pointer-events: none;
+  transition: left 180ms ease, top 180ms ease, width 180ms ease, height 180ms ease;
+}
+
+.app-guide-popover {
+  position: fixed;
+  z-index: 142;
+  max-width: min(360px, calc(100vw - 24px));
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 16px;
+  background: rgba(8, 12, 18, 0.97);
+  padding: 16px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(14px);
+  animation: scoutHelpIn 180ms ease-out both;
+}
+
+.app-guide-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-height: 44px;
+  min-width: 72px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.app-guide-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 767px) {
+  .scout-help-panel,
+  .scout-help-step {
+    border-radius: 12px;
+  }
+
+  .scout-help-panel input,
+  .scout-help-panel select,
+  .scout-help-panel button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .scout-guide-popover {
+    max-width: none;
+    width: auto;
+    border-radius: 16px 16px 18px 18px;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .scout-guide-ring {
+    border-radius: 10px;
+  }
+
+  .app-guide-popover {
+    max-width: none;
+    width: auto;
+    border-radius: 16px 16px 18px 18px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .app-guide-ring {
+    border-radius: 10px;
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "Supercontinental Draft",
+  "short_name": "SCL Draft",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "description": "Gestor de mercado de fichajes y alineaciones para la Supercontinental League.",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "logo.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}

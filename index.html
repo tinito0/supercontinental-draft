@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="/android-chrome-512x512.png" />
+
+  <meta name="description" content="SCL Draft 2026 - Plataforma de gestión de fichajes y transferencias del Supercontinental Draft. Control de plantillas, presupuesto y torneo en tiempo real.">
+  <title>SCL DRAFT 2026</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/main.jsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+
+</html>

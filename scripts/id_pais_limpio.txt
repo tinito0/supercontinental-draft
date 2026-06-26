@@ -1,0 +1,176 @@
+ID_Pais: 1, Pais: Afganistan
+ID_Pais: 2, Pais: Bahrain
+ID_Pais: 3, Pais: Bangladesh
+ID_Pais: 5, Pais: Brunéi
+ID_Pais: 7, Pais: China
+ID_Pais: 8, Pais: Hong Kong
+ID_Pais: 9, Pais: India
+ID_Pais: 10, Pais: Indonesia
+ID_Pais: 11, Pais: Irán
+ID_Pais: 12, Pais: Irak
+ID_Pais: 13, Pais: Japón
+ID_Pais: 14, Pais: Jordania
+ID_Pais: 15, Pais: Corea del Norte
+ID_Pais: 16, Pais: Corea del Sur
+ID_Pais: 17, Pais: Kuwait
+ID_Pais: 18, Pais: Laos
+ID_Pais: 19, Pais: Líbano
+ID_Pais: 20, Pais: Macao
+ID_Pais: 21, Pais: Malasia
+ID_Pais: 24, Pais: Myanmar
+ID_Pais: 26, Pais: Omán
+ID_Pais: 28, Pais: Palestina
+ID_Pais: 29, Pais: Filipinas
+ID_Pais: 30, Pais: Qatar
+ID_Pais: 31, Pais: Arabia Saudita
+ID_Pais: 32, Pais: Singapur
+ID_Pais: 34, Pais: Siria
+ID_Pais: 36, Pais: Tailandia
+ID_Pais: 37, Pais: Emiratos Árabes Unidos
+ID_Pais: 38, Pais: Vietnam
+ID_Pais: 39, Pais: Yemen
+ID_Pais: 40, Pais: Kirguistán
+ID_Pais: 41, Pais: Tayikistán
+ID_Pais: 42, Pais: Turkmekistan
+ID_Pais: 44, Pais: Argelia
+ID_Pais: 45, Pais: Angola
+ID_Pais: 46, Pais: Benín
+ID_Pais: 48, Pais: Burkina Faso
+ID_Pais: 49, Pais: Burundi
+ID_Pais: 50, Pais: Camerún
+ID_Pais: 51, Pais: Cabo Verde
+ID_Pais: 52, Pais: República Centroafricana
+ID_Pais: 53, Pais: Chad
+ID_Pais: 54, Pais: Comoras
+ID_Pais: 55, Pais: Congo
+ID_Pais: 56, Pais: Costa de Marfil
+ID_Pais: 58, Pais: Egipto
+ID_Pais: 59, Pais: Guinea Ecuatorial
+ID_Pais: 62, Pais: Gabón
+ID_Pais: 63, Pais: Gambia
+ID_Pais: 64, Pais: Ghana
+ID_Pais: 65, Pais: Guinea
+ID_Pais: 66, Pais: Guinea-Bisáu
+ID_Pais: 67, Pais: Kenia
+ID_Pais: 69, Pais: Liberia
+ID_Pais: 70, Pais: Libia
+ID_Pais: 71, Pais: Madagascar
+ID_Pais: 72, Pais: Malaui
+ID_Pais: 73, Pais: Malí
+ID_Pais: 74, Pais: Mauritania
+ID_Pais: 75, Pais: Mauricio
+ID_Pais: 76, Pais: Marruecos
+ID_Pais: 77, Pais: Mozambique
+ID_Pais: 78, Pais: Namibia
+ID_Pais: 79, Pais: Níger
+ID_Pais: 80, Pais: Nigeria
+ID_Pais: 81, Pais: Ruanda
+ID_Pais: 82, Pais: Santo Tomé y Príncipe
+ID_Pais: 83, Pais: Senegal
+ID_Pais: 85, Pais: Sierra Leona
+ID_Pais: 87, Pais: Sudáfrica
+ID_Pais: 89, Pais: Sudán del Sur
+ID_Pais: 90, Pais: Tanzania
+ID_Pais: 91, Pais: Togo
+ID_Pais: 92, Pais: Túnez
+ID_Pais: 93, Pais: Uganda
+ID_Pais: 94, Pais: Zambia
+ID_Pais: 95, Pais: Zimbabue
+ID_Pais: 98, Pais: RD Congo
+ID_Pais: 104, Pais: Antigua y Barbuda
+ID_Pais: 105, Pais: Aruba
+ID_Pais: 107, Pais: Barbados
+ID_Pais: 109, Pais: Bermudas
+ID_Pais: 110, Pais: Canadá
+ID_Pais: 112, Pais: Costa Rica
+ID_Pais: 113, Pais: Cuba
+ID_Pais: 115, Pais: República Dominicana
+ID_Pais: 116, Pais: El Salvador
+ID_Pais: 117, Pais: Granada
+ID_Pais: 119, Pais: Guatemala
+ID_Pais: 120, Pais: Haití
+ID_Pais: 121, Pais: Honduras
+ID_Pais: 122, Pais: Jamaica
+ID_Pais: 124, Pais: México
+ID_Pais: 125, Pais: Nicaragua
+ID_Pais: 127, Pais: Panamá
+ID_Pais: 128, Pais: Puerto Rico
+ID_Pais: 130, Pais: San Cristóbal y Nieves
+ID_Pais: 131, Pais: Santa Lucía
+ID_Pais: 133, Pais: Trinidad y Tobago
+ID_Pais: 135, Pais: Estados Unidos
+ID_Pais: 139, Pais: Surinam
+ID_Pais: 140, Pais: Curazao
+ID_Pais: 144, Pais: Argentina
+ID_Pais: 145, Pais: Bolivia
+ID_Pais: 146, Pais: Brasil
+ID_Pais: 147, Pais: Chile
+ID_Pais: 148, Pais: Colombia
+ID_Pais: 149, Pais: Ecuador
+ID_Pais: 150, Pais: Paraguay
+ID_Pais: 151, Pais: Perú
+ID_Pais: 152, Pais: Uruguay
+ID_Pais: 153, Pais: Venezuela
+ID_Pais: 159, Pais: Guyana
+ID_Pais: 162, Pais: Australia
+ID_Pais: 165, Pais: Nueva Caledonia
+ID_Pais: 166, Pais: Nueva Zelanda
+ID_Pais: 189, Pais: Israel
+ID_Pais: 190, Pais: Turquía
+ID_Pais: 191, Pais: Albania
+ID_Pais: 192, Pais: Andorra
+ID_Pais: 193, Pais: Armenia
+ID_Pais: 194, Pais: Austria
+ID_Pais: 195, Pais: Azerbaiyán
+ID_Pais: 196, Pais: Bielorrusia
+ID_Pais: 197, Pais: Bélgica
+ID_Pais: 198, Pais: Bosnia y Herzegovina
+ID_Pais: 199, Pais: Bulgaria
+ID_Pais: 200, Pais: Croacia
+ID_Pais: 201, Pais: Chipre
+ID_Pais: 202, Pais: República Checa
+ID_Pais: 203, Pais: Dinamarca
+ID_Pais: 204, Pais: Inglaterra
+ID_Pais: 205, Pais: Estonia
+ID_Pais: 206, Pais: Islas Feroe
+ID_Pais: 207, Pais: Finlandia
+ID_Pais: 208, Pais: Francia
+ID_Pais: 209, Pais: Georgia
+ID_Pais: 210, Pais: Alemania
+ID_Pais: 211, Pais: Grecia
+ID_Pais: 212, Pais: Hungría
+ID_Pais: 213, Pais: Islandia
+ID_Pais: 214, Pais: Irlanda
+ID_Pais: 215, Pais: Italia
+ID_Pais: 216, Pais: Kazajistán
+ID_Pais: 217, Pais: Letonia
+ID_Pais: 218, Pais: Liechtenstein
+ID_Pais: 219, Pais: Lituania
+ID_Pais: 220, Pais: Luxemburgo
+ID_Pais: 221, Pais: Macedonia del Norte
+ID_Pais: 222, Pais: Malta
+ID_Pais: 223, Pais: Moldavia
+ID_Pais: 224, Pais: Países Bajos
+ID_Pais: 225, Pais: Irlanda del Norte
+ID_Pais: 226, Pais: Noruega
+ID_Pais: 227, Pais: Polonia
+ID_Pais: 228, Pais: Portugal
+ID_Pais: 229, Pais: Rumania
+ID_Pais: 230, Pais: Rusia
+ID_Pais: 231, Pais: San Marino
+ID_Pais: 232, Pais: Escocia
+ID_Pais: 234, Pais: Eslovaquia
+ID_Pais: 235, Pais: Eslovenia
+ID_Pais: 236, Pais: España
+ID_Pais: 237, Pais: Suecia
+ID_Pais: 238, Pais: Suiza
+ID_Pais: 239, Pais: Ucrania
+ID_Pais: 240, Pais: Uzbekistán
+ID_Pais: 241, Pais: Gales
+ID_Pais: 245, Pais: Gibraltar
+ID_Pais: 260, Pais: (Genérico/Edición)
+ID_Pais: 298, Pais: China Taipéi (Taiwán)
+ID_Pais: 303, Pais: Serbia
+ID_Pais: 304, Pais: Montenegro
+ID_Pais: 311, Pais: Kosovo
+ID_Pais: 312, Pais: Sudán del Sur

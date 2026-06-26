@@ -1,0 +1,223 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PLAYER CARD STYLES
+   ═══════════════════════════════════════════════════════════════════ */
+
+.player-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--card-bg, #1a1a1f);
+}
+
+.player-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.6);
+}
+
+.player-card--locked {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.player-card--locked:hover {
+  transform: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PRICE HEADER (TOP)
+   ═══════════════════════════════════════════════════════════════════ */
+.player-card__price-header {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.player-card__price {
+  font-weight: 900;
+  color: #4ade80;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHOTO WRAPPER & GLOW
+   ═══════════════════════════════════════════════════════════════════ */
+.player-card__photo-wrapper {
+  position: relative;
+  width: 100%;
+  flex-grow: 1;
+  background: #0b0f19;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.player-card__glow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.8;
+}
+
+.player-card__photo {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  transition: transform 0.3s ease;
+}
+
+.player-card:hover .player-card__photo {
+  transform: scale(1.08) translateY(-3px);
+}
+
+.player-card__photo-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, transparent 100%);
+  z-index: 3;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INFO STRIP (OVR, FLAG, POS)
+   ═══════════════════════════════════════════════════════════════════ */
+.player-card__info-strip {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.player-card__ovr-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  border: 2px solid;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+}
+
+.player-card__ovr {
+  font-weight: 900;
+  font-size: 1.25rem;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.player-card__flag {
+  width: 26px;
+  height: 18px;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  margin-bottom: 6px;
+}
+
+.player-card__pos {
+  font-weight: 900;
+  font-size: 0.85rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-shadow: none;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   NAME BAR (BOTTOM)
+   ═══════════════════════════════════════════════════════════════════ */
+.player-card__name-bar {
+  padding: 10px 12px;
+  text-align: center;
+  background: rgba(0,0,0,0.3);
+  position: relative;
+  z-index: 20;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.player-card__name {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPARE BUTTON & STRIPES
+   ═══════════════════════════════════════════════════════════════════ */
+.player-card__compare-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0;
+  z-index: 30;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  padding: 12px;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.player-card:hover .player-card__compare-btn {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.player-card__compare-btn:hover {
+  background: rgba(99,102,241,0.8);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.player-card__compare-btn--active {
+  opacity: 1 !important;
+  transform: translate(-50%, -50%) scale(1) !important;
+  background: rgba(99,102,241,0.9);
+  border-color: #818cf8;
+}
+
+.player-card__owned-stripe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #06b6d4;
+  z-index: 30;
+  box-shadow: 0 0 10px #06b6d4;
+}

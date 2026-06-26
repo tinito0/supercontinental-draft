@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── ARTIFACTS ─────────────────────────────────────────────
+    match /artifacts/{appId} {
+
+      // Datos públicos: lectura libre, escritura autenticada
+      match /public/{document=**} {
+        allow read: if true;
+        allow write: if request.auth != null;
+      }
+
+      // Manager chat: visible para todos, mensajes para cualquier usuario autenticado
+      match /public/data/manager_chat/{messageId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update, delete: if false;
+      }
+
+      // Player locks: allow authenticated users to update during transfers
+      match /public/data/player_locks/{playerId} {
+        allow read, write: if request.auth != null;
+      }
+
+      // Datos de usuario: allow authenticated users to perform transfer transactions
+      match /users/{userId}/{document=**} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    // ── TRANSFERS (colección raíz) ─────────────────────────────
+    match /transfers/{transferId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.teamId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+  }
+}
