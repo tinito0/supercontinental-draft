@@ -3,7 +3,7 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import { X, ShoppingCart, DollarSign, Shield, Users, Activity, Calendar, MapPin, ArrowRight, History } from 'lucide-react';
 import { formatPriceShort } from '../utils/helpers.js';
 import { DEFAULT_BUDGET, APP_ID } from '../utils/constants.js';
-import { doc, runTransaction, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, runTransaction, updateDoc, collection, serverTimestamp, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 
@@ -270,6 +270,17 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         throw new Error("Monto de oferta invalido.");
       }
 
+      // El presupuesto real disponible del comprador es budget - valor de su carrito actual
+      // (el campo "budget" en Firestore nunca se descuenta al fichar; el gasto se calcula
+      // siempre restando el carrito. Por eso NO se debe escribir el campo budget acá, o el
+      // dinero se cuenta dos veces). Hay que sumar el carrito ANTES de la transacción porque
+      // runTransaction no puede leer una collection completa, solo docs puntuales.
+      const buyerCartSnap = await getDocs(collection(db, `artifacts/${APP_ID}/users/${offer.senderId}/cart`));
+      const buyerCartTotal = buyerCartSnap.docs.reduce((sum, cartDoc) => {
+        const cartPlayer = cartDoc.data();
+        return sum + (cartPlayer.isFranchise ? 0 : (Number(cartPlayer.Precio) || 0) * 1000000);
+      }, 0);
+
       await runTransaction(db, async (transaction) => {
         const buyerProfileRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/profile`, "data");
         const sellerProfileRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/profile`, "data");
@@ -279,15 +290,15 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         if (!buyerDoc.exists() || !sellerDoc.exists()) throw "Perfiles no encontrados";
         
         const buyerBudget = buyerDoc.data().budget || 0;
-        const sellerBudget = sellerDoc.data().budget || 0;
         const buyerProfile = buyerDoc.data();
         const sellerProfile = sellerDoc.data();
         const buyerTeamName = offer.senderTeamName || buyerProfile.teamName || allTeams?.[offer.senderId]?.teamName || 'Equipo comprador';
         const sellerTeamName = offer.targetTeamName || sellerProfile.teamName || allTeams?.[offer.targetTeamId]?.teamName || 'Equipo rival';
         const buyerTeamLogo = offer.senderTeamLogo || buyerProfile.logoUrl || allTeams?.[offer.senderId]?.logoUrl || '';
         const sellerTeamLogo = offer.targetTeamLogo || sellerProfile.logoUrl || allTeams?.[offer.targetTeamId]?.logoUrl || '';
-        
-        if (buyerBudget < activeAmount) throw "El comprador no tiene fondos suficientes";
+
+        const buyerRemainingBudget = buyerBudget - buyerCartTotal;
+        if (buyerRemainingBudget < activeAmount) throw "El comprador no tiene fondos suficientes";
 
         // Verify the offer is still valid
         const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
@@ -303,10 +314,12 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           throw new Error("El jugador ya no pertenece al equipo vendedor.");
         }
 
-        // 1. Update budgets
-        transaction.update(buyerProfileRef, { budget: buyerBudget - activeAmount });
-        transaction.update(sellerProfileRef, { budget: sellerBudget + activeAmount });
-        
+        // 1. NO tocar el campo "budget" acá a propósito: en toda la app el presupuesto
+        // disponible se calcula como budget - valor del carrito (ver handleAddToCart /
+        // remainingBudget en app.jsx). Mover al jugador de carrito (paso 3) ya ajusta
+        // ese cálculo solo. Si además sumamos/restamos el campo budget, la plata se
+        // cuenta dos veces (ese era el bug: vendedor terminaba con presupuesto inflado).
+
         // 2. Transfer lock ownership
         transaction.update(lockRef, {
           lockedBy: offer.senderId,

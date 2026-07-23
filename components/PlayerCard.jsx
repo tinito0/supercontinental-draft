@@ -25,6 +25,12 @@ function getOvrColor(ovr) {
   return OVR_COLOR_DEFAULT;
 }
 
+/* ── Cache de fotos que ya sabemos que fallan (404) ──
+   Persiste entre remounts/re-renders de la card (scroll, virtualización,
+   cambios de filtro) para no volver a intentar cargar la foto real ni
+   mostrar el spinner de nuevo — eso era lo que causaba el parpadeo. */
+const brokenImageIds = new Set();
+
 export const PlayerCard = memo(function PlayerCard({
   player,
   onCardClick,
@@ -39,7 +45,10 @@ export const PlayerCard = memo(function PlayerCard({
 }) {
   const ovr = player.OVR_CALCULADO || 0;
   const ovrColor = getOvrColor(ovr);
-  const [imgState, setImgState] = useState({ loaded: false, error: false });
+  const [imgState, setImgState] = useState(() => {
+    const knownBroken = brokenImageIds.has(player.Id);
+    return { loaded: knownBroken, error: knownBroken };
+  });
   const posColor = POS_COLOR[player.POS_NOMBRE] || '#9ca3af';
   const flagUrl = getFlagUrl(player.Country1);
 
@@ -112,7 +121,10 @@ export const PlayerCard = memo(function PlayerCard({
           height="240"
           fetchPriority="low"
           onLoad={() => setImgState({ loaded: true, error: false })}
-          onError={() => setImgState({ loaded: true, error: true })}
+          onError={() => {
+            brokenImageIds.add(player.Id);
+            setImgState({ loaded: true, error: true });
+          }}
           className="player-card__photo"
           style={{
             filter: isLockedByOther
