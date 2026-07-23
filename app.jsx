@@ -386,7 +386,7 @@ function App() {
       location.pathname.startsWith('/torneo');
 
     if (user && isPublicAuthRoute) {
-      navigate('/my-team', { replace: true });
+      navigate('/marketplace', { replace: true });
       return;
     }
 

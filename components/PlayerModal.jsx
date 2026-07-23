@@ -75,36 +75,28 @@ const RadarChart = memo(function RadarChart({ player, isGK }) {
 
   const { data, options } = useMemo(() => {
     let labels, dataValues;
-    let avg = null;
 
     if (isGK) {
-      // CORRECCIÓN: Aseguramos que sean números con Number() para sumar correctamente
-      const gkStats = [
-        Number(player.GKAwareness || 0),
-        Number(player.GKCatching || 0),
-        Number(player.GKClearing || 0),
-        Number(player.GKReflexes || 0),
-        Number(player.GKReach || 0)
-      ];
-      const sum = gkStats.reduce((a, b) => a + b, 0);
-      avg = Math.round(sum / gkStats.length);
-
-      labels = ['Portería', 'Físico', 'Pase', 'Técnica'];
+      // Arqueros: mismo hexágono que jugadores de campo, pero GK reemplaza a DEF
+      labels = ['SHO', 'PAS', 'STR', 'GK', 'SPD', 'DRI'];
       dataValues = [
-        avg,
-        player.STAT_Fisico,
-        player.STAT_Pase,
-        player.STAT_Tecnica,
+        player.STAT_SHO,
+        player.STAT_PAS,
+        player.STAT_STR,
+        player.STAT_GK,
+        player.STAT_SPD,
+        player.STAT_DRI,
       ];
     } else {
-      labels = ['Ataque', 'Técnica', 'Pase', 'Físico', 'Velocidad', 'Defensa'];
+      // Campo: SHO, PAS, STR, DEF, SPD, DRI (orden horario del hexágono PES)
+      labels = ['SHO', 'PAS', 'STR', 'DEF', 'SPD', 'DRI'];
       dataValues = [
-        player.STAT_Ataque,
-        player.STAT_Tecnica,
-        player.STAT_Pase,
-        player.STAT_Fisico,
-        player.STAT_Velocidad,
-        player.STAT_Defensa
+        player.STAT_SHO,
+        player.STAT_PAS,
+        player.STAT_STR,
+        player.STAT_DEF,
+        player.STAT_SPD,
+        player.STAT_DRI,
       ];
     }
 
@@ -410,23 +402,23 @@ export const PlayerModal = memo(function PlayerModal({
   const country2FlagUrl = hasCountry2 ? getFlagUrl(c2) : null;
   const country2Name = hasCountry2 ? (countryMap[c2] || '') : '';
 
-  const handleSign = useCallback(async (isFranchise = false) => {
+  const handleSign = async (isFranchise = false) => {
     setIsSigning(true);
     const success = await onAddToCart(player, isFranchise);
     if (success) {
       setShowCelebration(true);
     }
     setIsSigning(false);
-  }, [onAddToCart, player]);
+  };
 
-  const handleRelease = useCallback(async () => {
+  const handleRelease = async () => {
     setIsReleasing(true);
     try {
       await onRemoveFromCart(player);
     } catch (e) { console.error(e); }
     setIsReleasing(false);
     setShowReleaseConfirm(false);
-  }, [onRemoveFromCart, player]);
+  };
 
   const ActionButton = () => {
     if (isVisitor) {

@@ -10,13 +10,19 @@ const POS_COLOR = {
   PT: '#eab308',
 };
 
-/* ── OVR color tiers ── */
+/* ── OVR color tiers (static thresholds, zero-alloc) ── */
+const OVR_COLOR_THRESHOLDS = [
+  [90, '#19ffb2'],
+  [85, '#32f718'],
+  [75, '#d67418'],
+  [65, '#9c1a1a'],
+];
+const OVR_COLOR_DEFAULT = '#9ca3af';
 function getOvrColor(ovr) {
-  if (ovr >= 90) return '#19ffb2';
-  if (ovr >= 85) return '#32f718';
-  if (ovr >= 75) return '#d67418';
-  if (ovr >= 65) return '#9c1a1a';
-  return '#9ca3af';
+  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
+    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
+  }
+  return OVR_COLOR_DEFAULT;
 }
 
 export const PlayerCard = memo(function PlayerCard({

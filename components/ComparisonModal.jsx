@@ -10,18 +10,15 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
   const isGK = playerA.Grupo === 'Arqueros' || playerB.Grupo === 'Arqueros';
 
   const statGroups = isGK ? STATS_PORTERO : STATS_JUGADOR_CAMPO;
-  const radarLabels = isGK
-    ? ['Porteria', 'Físico', 'Pase', 'Técnica']
-    : ['Ataque', 'Técnica', 'Pase', 'Físico', 'Velocidad', 'Defensa'];
 
-  const calculateGkAvg = (p) => {
-    const sum = Number(p.GKAwareness || 0) + Number(p.GKCatching || 0) + Number(p.GKClearing || 0) + Number(p.GKReflexes || 0) + Number(p.GKReach || 0);
-    return Math.round(sum / 5);
-  };
+  // Hexágono PES en sentido horario: SHO, PAS, STR, DEF/GK, SPD, DRI
+  const radarLabels = isGK
+    ? ['SHO', 'PAS', 'STR', 'GK', 'SPD', 'DRI']
+    : ['SHO', 'PAS', 'STR', 'DEF', 'SPD', 'DRI'];
 
   const getRadarData = (p) => isGK
-    ? [calculateGkAvg(p), p.STAT_Fisico, p.STAT_Pase, p.STAT_Tecnica]
-    : [p.STAT_Ataque, p.STAT_Tecnica, p.STAT_Pase, p.STAT_Fisico, p.STAT_Velocidad, p.STAT_Defensa];
+    ? [p.STAT_SHO, p.STAT_PAS, p.STAT_STR, p.STAT_GK, p.STAT_SPD, p.STAT_DRI]
+    : [p.STAT_SHO, p.STAT_PAS, p.STAT_STR, p.STAT_DEF, p.STAT_SPD, p.STAT_DRI];
 
   const radarData = {
     labels: radarLabels,
