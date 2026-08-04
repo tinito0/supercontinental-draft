@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRightLeft, BadgeDollarSign, Bell, Check, Info, X } from 'lucide-react';
 
 const TYPE_CONFIG = {
@@ -60,17 +60,23 @@ export const NotificationsPanel = memo(function NotificationsPanel({
   onDismissOne,
   onMarkAllRead,
 }) {
-  if (!isOpen) return null;
-
   const unreadCount = notifications.filter(n => n.read !== true).length;
+  const [filter, setFilter] = useState('all');
+  const visibleNotifications = useMemo(() => notifications.filter(notif => {
+    if (filter === 'market') return ['offer', 'transfer'].includes(notif.type) || notif.category === 'transfer';
+    if (filter === 'system') return !(['offer', 'transfer'].includes(notif.type) || notif.category === 'transfer');
+    return true;
+  }), [filter, notifications]);
 
   const handleItemClick = (notif) => {
     onNotifClick?.(notif);
     onClose?.();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="absolute top-16 right-4 w-80 max-w-[calc(100vw-2rem)] bg-gray-800 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-5">
+    <div className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-[#10131a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-5">
       <div className="flex justify-between items-center p-3 border-b border-gray-700 bg-gray-900/50">
         <div className="flex items-center gap-2">
           <h4 className="font-bold text-white text-sm">Notificaciones</h4>
@@ -95,16 +101,21 @@ export const NotificationsPanel = memo(function NotificationsPanel({
           )}
         </div>
       </div>
-      <div className="max-h-64 overflow-y-auto p-2 space-y-2">
+      <div className="flex gap-2 px-3 pt-3">
+        {[['all', 'Todas'], ['market', 'Mercado'], ['system', 'Sistema']].map(([id, label]) => (
+          <button key={id} onClick={() => setFilter(id)} className={`min-h-8 rounded-lg px-2.5 text-[10px] font-black uppercase tracking-wide transition ${filter === id ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-gray-500 hover:text-white'}`}>{label}</button>
+        ))}
+      </div>
+      <div className="max-h-[28rem] overflow-y-auto p-3 space-y-2">
         {isLoading ? (
           <div className="py-6 flex items-center justify-center gap-3 text-xs text-gray-500 font-bold">
             <div className="w-5 h-5 rounded-full border-2 border-blue-500/30 border-t-blue-400 animate-spin" />
             Cargando notificaciones...
           </div>
-        ) : notifications.length === 0 ? (
-          <p className="text-gray-500 text-xs text-center py-4">No tenes nuevas notificaciones.</p>
+        ) : visibleNotifications.length === 0 ? (
+          <p className="text-gray-500 text-xs text-center py-8">No hay noticias en esta categoría.</p>
         ) : (
-          notifications.map((notif, idx) => (
+          visibleNotifications.map((notif, idx) => (
             <NotificationItem
               key={notif.id || idx}
               notif={notif}

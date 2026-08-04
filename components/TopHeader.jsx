@@ -76,7 +76,7 @@ export const TopHeader = memo(function TopHeader({
           {...prefetchHandlers(onTransferFeedPrefetch)}
           className="flex items-center justify-center min-w-12 min-h-12 rounded-lg text-gray-500
             hover:text-white hover:bg-white/[0.06] transition-all"
-          title="Mercado en Vivo"
+          title="Noticias y Mercado"
         >
           <TrendingUp className="w-5 h-5" />
         </button>

@@ -78,7 +78,7 @@ export default function FormationViewScreen() {
     );
   }
 
-  const { teamName, logoUrl, formationKey, slots, createdAt } = formationData;
+  const { teamName, logoUrl, formationKey, slots, bench = [], createdAt } = formationData;
   const formation = FORMATIONS[formationKey] || FORMATIONS['4-3-3'];
   const validSlots = Object.fromEntries(
     Object.entries(slots || {}).filter(([, slotData]) => {
@@ -128,6 +128,24 @@ export default function FormationViewScreen() {
             readOnlySlots={validSlots}
           />
         </div>
+
+        <section className="mt-5 rounded-2xl border border-gray-700/50 bg-gray-800/40 p-4 sm:p-5">
+          <h2 className="mb-4 text-sm font-black uppercase tracking-wider text-white">Banco de suplentes ({bench.length})</h2>
+          {bench.length ? (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {bench.map(player => (
+                <div key={player.playerId} className="flex items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-2.5">
+                  <img src={`/fotos_jugadores/${player.playerId}.webp`} alt="" className="h-9 w-9 rounded-full object-cover bg-gray-900" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-white">{player.name}</p>
+                    <p className="text-xs text-gray-500">{player.pos}{player.dorsal ? ` · #${player.dorsal}` : ''}</p>
+                  </div>
+                  <span className="text-sm font-black text-blue-300">{player.ovr}</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-sm text-gray-500">Esta formación no tiene suplentes compartidos.</p>}
+        </section>
 
         {/* Info footer */}
         <div className="mt-4 text-center">

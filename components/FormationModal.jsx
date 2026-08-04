@@ -6,7 +6,7 @@ import html2canvas from 'html2canvas';
 import { FORMATIONS, APP_ID, DEFAULT_LOGO } from '../utils/constants.js';
 import { getPosColorClass, formatPriceShort } from '../utils/helpers.js';
 
-export const FormationPlayerItem = memo(({ player, onClick, isSelected, dorsal, onDorsalChange }) => (
+export const FormationPlayerItem = memo(({ player, onClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange, isBench, onBenchChange }) => (
   <div className={`flex items-center space-x-2 p-2 w-full rounded-xl border transition-all duration-200 ${isSelected ? 'bg-blue-600/20 border-blue-500' : 'bg-gray-800/40 border-gray-700/50'}`}>
     <button onClick={onClick} className="flex items-center space-x-3 flex-grow text-left">
       <img crossOrigin="anonymous" src={`/fotos_jugadores/${player.Id}.webp`} className="w-10 h-10 object-cover rounded-full bg-gray-900 border border-gray-600" onError={(e) => e.target.src = `https://placehold.co/40x40/374151/e0e0e0?text=${player.Name.substring(0, 1)}`} />
@@ -26,6 +26,12 @@ export const FormationPlayerItem = memo(({ player, onClick, isSelected, dorsal, 
       onChange={(e) => onDorsalChange(player.Id, e.target.value)}
       maxLength={2}
     />
+    <button type="button" onClick={() => onAvailabilityChange(player.Id, !isAvailable)} className={`min-h-8 rounded px-2 text-[10px] font-black uppercase ${isAvailable ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`} title="Disponibilidad para la próxima fecha">
+      {isAvailable ? 'OK' : 'Baja'}
+    </button>
+    <button type="button" disabled={!isAvailable} onClick={() => onBenchChange(player.Id)} className={`min-h-8 rounded px-2 text-[10px] font-black uppercase disabled:opacity-40 ${isBench ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-gray-400'}`} title="Convocar al banco">
+      Banco
+    </button>
   </div>
 ));
 
@@ -35,6 +41,8 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const [selectedFormation, setSelectedFormation] = useState('4-3-3');
   const [lineup, setLineup] = useState({});
   const [dorsals, setDorsals] = useState({});
+  const [availability, setAvailability] = useState({});
+  const [matchBench, setMatchBench] = useState([]);
   const [holdingPlayer, setHoldingPlayer] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -51,6 +59,8 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       setSelectedFormation(userProfile?.formation || '4-3-3');
       setLineup(userProfile?.lineup ? { ...userProfile.lineup } : {});
       setDorsals(userProfile?.dorsals ? { ...userProfile.dorsals } : {});
+      setAvailability(userProfile?.availability ? { ...userProfile.availability } : {});
+      setMatchBench(Array.isArray(userProfile?.matchBench) ? userProfile.matchBench.map(String) : []);
       setHoldingPlayer(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,10 +102,13 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
       const batch = writeBatch(db);
       
+      const benchToSave = matchBench.filter(playerId => !validSavedIds.has(String(playerId)) && (cart || []).some(player => String(player.Id) === String(playerId))).slice(0, 7);
       const saveData = {
         formation: formationToSave,
         lineup: lineupToSave,
-        dorsals: dorsalsToSave
+        dorsals: dorsalsToSave,
+        availability,
+        matchBench: benchToSave
       };
 
       batch.set(profileRef, saveData, { merge: true });
@@ -119,6 +132,23 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     if (!/^\d*$/.test(value)) return;
     setDorsals(prev => ({ ...prev, [playerId]: value }));
   }, []);
+
+  const handleAvailabilityChange = useCallback((playerId, isAvailable) => {
+    setAvailability(prev => ({ ...prev, [playerId]: isAvailable }));
+    if (!isAvailable) setMatchBench(prev => prev.filter(id => String(id) !== String(playerId)));
+  }, []);
+
+  const handleBenchChange = useCallback((playerId) => {
+    setMatchBench(prev => {
+      const id = String(playerId);
+      if (prev.includes(id)) return prev.filter(item => item !== id);
+      if (prev.length >= 7) {
+        showStatusMessage('warning', 'El banco admite hasta 7 suplentes.');
+        return prev;
+      }
+      return [...prev, id];
+    });
+  }, [showStatusMessage]);
 
   const handleDownloadImage = async () => {
     if (!pitchRef.current || isCapturing) return;
@@ -270,6 +300,18 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         });
       }
 
+      const starterIds = new Set(Object.values(cleanLineup).map(String));
+      const bench = cart
+        .filter(player => !starterIds.has(String(player.Id)))
+        .map(player => ({
+          playerId: String(player.Id),
+          name: player.Name,
+          pos: player.POS_NOMBRE,
+          ovr: player.OVR_CALCULADO,
+          dorsal: dorsals[player.Id] || '',
+          available: availability[player.Id] !== false,
+        }));
+
       // Create a public formation snapshot in Firestore
       const sharedRef = collection(db, `artifacts/${APP_ID}/public/data/shared_formations`);
       const snap = await addDoc(sharedRef, {
@@ -278,6 +320,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         formationKey: selectedFormation,
         formationName: currentFormation?.name || selectedFormation,
         slots: slotsWithNames,
+        bench,
         isPublic: true,
         createdAt: new Date().toISOString(),
         createdBy: userProfile?.userId || 'unknown',
@@ -348,6 +391,9 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           <ImageIcon className="w-3.5 h-3.5" />Exportar
         </button>
       </div>
+      <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-300">
+        Convocados al banco: {matchBench.length}/7 · El resto queda como reserva
+      </div>
       <div className="relative" ref={sharePopoverRef}>
         <button onClick={handleShareURL} disabled={isSharing}
           className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-sm font-bold rounded-lg py-2.5 flex items-center justify-center gap-2 transition border border-blue-500/20 disabled:opacity-50">
@@ -397,7 +443,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const PlayerList = (
     <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-2 bg-gray-900/20 pb-20 lg:pb-4">
       {availablePlayers.sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO).map(player => (
-        <FormationPlayerItem key={player.Id} player={player} onClick={() => handlePlayerClick(player)} isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id} dorsal={dorsals[player.Id]} onDorsalChange={handleDorsalChange} />
+        <FormationPlayerItem key={player.Id} player={player} onClick={() => handlePlayerClick(player)} isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id} dorsal={dorsals[player.Id]} onDorsalChange={handleDorsalChange} isAvailable={availability[player.Id] !== false} onAvailabilityChange={handleAvailabilityChange} isBench={matchBench.includes(String(player.Id))} onBenchChange={handleBenchChange} />
       ))}
       {availablePlayers.length === 0 && <p className="text-gray-500 text-sm italic text-center py-4">Todos tus jugadores están en la cancha.</p>}
     </div>

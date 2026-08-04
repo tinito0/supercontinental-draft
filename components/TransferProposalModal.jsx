@@ -41,7 +41,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
     try {
       const proposalRef = collection(db, `artifacts/${APP_ID}/public/data/offers`);
       const nowIso = new Date().toISOString();
-      const numericOffer = Number(offerAmount) * 1000000;
+      const numericOffer = Math.round(Number(offerAmount) * 1000000);
       await addDoc(proposalRef, {
         playerId: player.Id,
         playerName: player.Name,

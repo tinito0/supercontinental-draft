@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { Pitch } from '../components/Pitch.jsx';
 import { FORMATIONS, DEFAULT_LOGO, APP_ID } from '../utils/constants.js';
@@ -18,6 +18,8 @@ export default function TeamScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cartPlayers, setCartPlayers] = useState([]);
+  const [teamRecord, setTeamRecord] = useState({ played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [], mvpCount: 0, rival: '—', titles: 0 });
+  const [transferHistory, setTransferHistory] = useState([]);
 
   const fetchTeam = async () => {
     setLoading(true);
@@ -40,6 +42,57 @@ export default function TeamScreen() {
 
       const data = teamSnap.data();
       setTeamData(data);
+
+      const transfersSnap = await getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/transfers`), orderBy('timestamp', 'desc'), limit(100)));
+      setTransferHistory(transfersSnap.docs.map(transferDoc => transferDoc.data())
+        .filter(transfer => transfer.teamId === userId || transfer.fromTeamId === userId)
+        .slice(0, 6));
+
+      const tournamentSnap = await getDoc(doc(db, `artifacts/${APP_ID}/public/data/tournament`, 'official'));
+      const normalizedTeamName = String(data.teamName || '').trim().toLowerCase();
+      const record = { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [], mvpCount: 0, rival: '—', titles: Number(data.titles) || 0 };
+      if (tournamentSnap.exists() && normalizedTeamName) {
+        const tournament = tournamentSnap.data();
+        const rivals = {};
+        (tournament.matches || []).filter(match => match.status === 'completed').forEach(match => {
+          const isHome = String(match.homeTeam || '').trim().toLowerCase() === normalizedTeamName;
+          const isAway = String(match.awayTeam || '').trim().toLowerCase() === normalizedTeamName;
+          if (!isHome && !isAway) return;
+          const scored = Number(isHome ? match.homeScore : match.awayScore) || 0;
+          const conceded = Number(isHome ? match.awayScore : match.homeScore) || 0;
+          const rival = isHome ? match.awayTeam : match.homeTeam;
+          if (rival) rivals[rival] = (rivals[rival] || 0) + 1;
+          record.played += 1;
+          record.gf += scored;
+          record.ga += conceded;
+          if (scored > conceded) { record.wins += 1; record.form.push('G'); }
+          else if (scored < conceded) { record.losses += 1; record.form.push('P'); }
+          else { record.draws += 1; record.form.push('E'); }
+          if (match.mvp) record.mvpCount += 1;
+        });
+        const mostFrequentRival = Object.entries(rivals).sort(([, a], [, b]) => b - a)[0];
+        if (mostFrequentRival) record.rival = mostFrequentRival[0];
+        const final = tournament.bracket?.final;
+        const finalWinner = Number(final?.scoreA) > Number(final?.scoreB) ? final?.teamA : Number(final?.scoreB) > Number(final?.scoreA) ? final?.teamB : '';
+        if (String(finalWinner || '').trim().toLowerCase() === normalizedTeamName) record.titles += 1;
+      }
+      const manualStats = data.manualStats || {};
+      ['played', 'wins', 'draws', 'losses', 'gf', 'ga', 'titles'].forEach(field => {
+        if (manualStats[field] !== '' && manualStats[field] !== undefined && manualStats[field] !== null) {
+          const value = Number(manualStats[field]);
+          if (Number.isFinite(value)) record[field] = Math.max(0, value);
+        }
+      });
+      if (String(manualStats.rival || '').trim()) record.rival = String(manualStats.rival).trim();
+      setTeamRecord(record);
+
+      // New public snapshots include the full squad. Older snapshots fall back
+      // to the starting XI so shared links created before this update still work.
+      if (Array.isArray(data?.roster)) {
+        setCartPlayers(data.roster.map(player => ({ ...player, Id: player.Id ?? player.playerId })));
+        setLoading(false);
+        return;
+      }
 
       // Fetch the players in the lineup from the main players list
       const lineup = data?.lineup;
@@ -134,6 +187,14 @@ export default function TeamScreen() {
       }];
     })
   );
+  const starters = new Set(Object.values(publicLineup).map(String));
+  const substitutes = cartPlayers
+    .filter(player => !starters.has(String(player.Id)))
+    .sort((a, b) => Number(a.OVR_CALCULADO || 0) - Number(b.OVR_CALCULADO || 0));
+  const matchBenchIds = new Set((teamData?.matchBench || []).map(String));
+  const calledBench = substitutes.filter(player => matchBenchIds.has(String(player.Id)));
+  const reserves = substitutes.filter(player => !matchBenchIds.has(String(player.Id)));
+  const unavailableCount = cartPlayers.filter(player => player.available === false).length;
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-white flex flex-col">
@@ -171,6 +232,11 @@ export default function TeamScreen() {
                 <Users className="w-4 h-4 text-blue-400" />
                 <span className="text-xs font-bold text-gray-300">Titulares: <span className="text-white">{Object.values(teamData?.lineup || {}).filter(Boolean).length}</span></span>
               </div>
+              <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                <Users className="w-4 h-4 text-violet-400" />
+                <span className="text-xs font-bold text-gray-300">Banco: <span className="text-white">{calledBench.length}/7</span></span>
+              </div>
+              {unavailableCount > 0 && <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20"><span className="text-xs font-bold text-red-300">Bajas: {unavailableCount}</span></div>}
             </div>
           </div>
 
@@ -181,6 +247,24 @@ export default function TeamScreen() {
           </div>
         </div>
       </div>
+
+      <section className="w-full max-w-5xl mx-auto px-4 pt-2 sm:px-8">
+        <div className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-700/50 bg-gray-800/40 p-4 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            ['Partidos', teamRecord.played, 'text-white'],
+            ['Récord', `${teamRecord.wins}-${teamRecord.draws}-${teamRecord.losses}`, 'text-cyan-300'],
+            ['Goles', `${teamRecord.gf}:${teamRecord.ga}`, 'text-emerald-300'],
+            ['Racha', teamRecord.form.slice(-5).join(' · ') || '—', 'text-yellow-300'],
+            ['Títulos', teamRecord.titles, 'text-violet-300'],
+            ['Rivalidad', teamRecord.rival, 'text-orange-300'],
+          ].map(([label, value, color]) => (
+            <div key={label} className="rounded-xl bg-black/20 p-3 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">{label}</p>
+              <p className={`mt-1 text-xl font-black ${color}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Main Content: Pitch */}
       <div className="flex-grow flex items-center justify-center p-4 sm:p-8">
@@ -195,6 +279,54 @@ export default function TeamScreen() {
           />
         </div>
       </div>
+
+      <section className="w-full max-w-5xl mx-auto px-4 pb-10 sm:px-8">
+        <div className="rounded-2xl border border-gray-700/50 bg-gray-800/40 p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Users className="w-5 h-5 text-violet-400" />
+            <h2 className="text-lg font-black uppercase tracking-tight">Banco de suplentes</h2>
+            <span className="text-xs text-gray-500 font-bold">({calledBench.length}/7)</span>
+          </div>
+          {calledBench.length ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {calledBench.map(player => (
+                <article key={player.Id} className={`flex items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-3 ${player.available === false ? 'opacity-50' : ''}`}>
+                  <img src={`/fotos_jugadores/${player.Id}.webp`} alt="" className="h-11 w-11 rounded-full object-cover bg-gray-900" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black">{player.Name}</p>
+                    <p className="text-xs font-bold text-gray-500">{player.POS_NOMBRE || 'Jugador'}{player.dorsal ? ` · #${player.dorsal}` : ''}{player.available === false ? ' · Baja' : ''}</p>
+                  </div>
+                  <span className="rounded-lg bg-blue-500/15 px-2 py-1 text-sm font-black text-blue-300">{player.OVR_CALCULADO || '-'}</span>
+                </article>
+              ))}
+            </div>
+          ) : <p className="text-sm text-gray-500">No hay suplentes cargados todavía.</p>}
+        </div>
+      </section>
+
+      {reserves.length > 0 && (
+        <section className="w-full max-w-5xl mx-auto px-4 pb-10 sm:px-8">
+          <div className="rounded-2xl border border-gray-700/50 bg-gray-800/25 p-5">
+            <h2 className="mb-3 text-sm font-black uppercase tracking-wider text-gray-300">Reservas ({reserves.length})</h2>
+            <div className="flex flex-wrap gap-2">{reserves.map(player => <span key={player.Id} className="rounded-lg bg-black/20 px-2 py-1 text-xs font-bold text-gray-400">{player.Name}{player.available === false ? ' · Baja' : ''}</span>)}</div>
+          </div>
+        </section>
+      )}
+
+      <section className="w-full max-w-5xl mx-auto px-4 pb-10 sm:px-8">
+        <div className="rounded-2xl border border-gray-700/50 bg-gray-800/40 p-5 sm:p-6">
+          <h2 className="mb-4 text-sm font-black uppercase tracking-wider text-white">Historial de mercado</h2>
+          {transferHistory.length ? <div className="space-y-2">
+            {transferHistory.map((transfer, index) => {
+              const isSale = transfer.fromTeamId === userId;
+              return <div key={`${transfer.playerId}-${index}`} className="flex items-center justify-between gap-3 rounded-xl bg-black/20 px-3 py-2.5">
+                <div className="min-w-0"><p className="truncate text-sm font-bold">{transfer.playerName || 'Jugador'}</p><p className={`text-[10px] font-black uppercase ${isSale ? 'text-orange-300' : 'text-emerald-300'}`}>{isSale ? 'Venta' : 'Fichaje'}{transfer.type === 'transfer' ? ' entre equipos' : ''}</p></div>
+                <span className="shrink-0 text-sm font-black text-white">${Number(transfer.price || 0).toFixed(2)}M</span>
+              </div>;
+            })}
+          </div> : <p className="text-sm text-gray-500">Todavía no hay movimientos registrados.</p>}
+        </div>
+      </section>
 
       {/* Footer */}
       <div className="p-8 border-t border-white/5 text-center bg-black/40">

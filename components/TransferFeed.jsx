@@ -59,6 +59,19 @@ const TransferSkeleton = memo(function TransferSkeleton() {
 });
 
 const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams }) {
+  if (transfer.type === 'match_result') {
+    return (
+      <article className="relative overflow-hidden rounded-2xl border border-emerald-500/15 bg-emerald-950/15 p-4 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.04)]">
+        <div className="mb-3 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-emerald-300"><span>Resultado final</span><span>{transfer.round || 'Torneo'}</span></div>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
+          <span className="truncate text-sm font-black uppercase text-white">{transfer.homeTeam}</span>
+          <strong className="rounded-xl bg-black/30 px-3 py-2 text-xl font-black text-emerald-300">{transfer.homeScore} - {transfer.awayScore}</strong>
+          <span className="truncate text-sm font-black uppercase text-white">{transfer.awayTeam}</span>
+        </div>
+        {transfer.mvp && <p className="mt-3 text-center text-xs font-bold text-yellow-300">MVP: {transfer.mvp}</p>}
+      </article>
+    );
+  }
   const isFranchise = transfer.isFranchise === true;
   const isTransfer = transfer.type === 'transfer';
   const time = getTransferTime(transfer.timestamp);
@@ -152,9 +165,11 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
 
 export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPrefetch = false, onClose, playerLocks, allTeams }) {
   const [transfers, setTransfers] = useState([]);
+  const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [releasedIds, setReleasedIds] = useState(() => new Set());
   const releaseTimersRef = useRef({});
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     if (!isVisible && !shouldPrefetch) return undefined;
@@ -185,7 +200,18 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
   }, [db, isVisible, shouldPrefetch]);
 
   useEffect(() => {
-    if (!playerLocks || transfers.length === 0) return undefined;
+    if (!isVisible && !shouldPrefetch) return undefined;
+    const newsRef = collection(db, `artifacts/${APP_ID}/public/data/news`);
+    const unsubscribe = onSnapshot(query(newsRef, orderBy('publishedAt', 'desc'), limit(20)), snapshot => {
+      setNews(snapshot.docs.map(docSnap => ({ id: `news-${docSnap.id}`, ...docSnap.data(), timestamp: docSnap.data().publishedAt })));
+    }, error => console.error('Error fetching live news:', error));
+    return () => unsubscribe();
+  }, [db, isVisible, shouldPrefetch]);
+
+  useEffect(() => {
+    // A market event is historical news. A later sale must not make the
+    // original signing disappear from the live feed.
+    return undefined;
 
     const newlyReleased = [];
     transfers.forEach(transfer => {
@@ -227,7 +253,16 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
     };
   }, []);
 
-  const visibleTransfers = useMemo(() => transfers, [transfers]);
+  const visibleTransfers = useMemo(() => [...transfers, ...news].sort((a, b) => {
+    const aTime = a.timestamp?.toDate?.()?.getTime?.() || 0;
+    const bTime = b.timestamp?.toDate?.()?.getTime?.() || 0;
+    return bTime - aTime;
+  }).filter(transfer => {
+    if (filter === 'transfers') return transfer.type === 'transfer';
+    if (filter === 'signings') return transfer.type !== 'transfer' && transfer.type !== 'match_result';
+    if (filter === 'matches') return transfer.type === 'match_result';
+    return true;
+  }), [filter, news, transfers]);
 
   if (!isVisible) return null;
 
@@ -243,13 +278,30 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
               <TrendingUp className="w-5 h-5 text-blue-300" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-xl font-black text-white tracking-tight uppercase">Mercado en Vivo</h2>
+              <h2 className="text-base sm:text-xl font-black text-white tracking-tight uppercase">Noticias en Vivo</h2>
               <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Últimos movimientos</p>
             </div>
           </div>
           <button onClick={onClose} className="min-w-11 min-h-11 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 transition">
             <X size={20} />
           </button>
+        </div>
+
+        <div className="shrink-0 flex gap-2 px-4 pb-3 sm:px-6">
+          {[
+            ['all', 'Todo'],
+            ['transfers', 'Traspasos'],
+            ['signings', 'Fichajes'],
+            ['matches', 'Partidos'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setFilter(id)}
+              className={`min-h-9 rounded-lg px-3 text-[10px] font-black uppercase tracking-wide transition ${filter === id ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         <div className="flex-grow min-h-0 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-3">

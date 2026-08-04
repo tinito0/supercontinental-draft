@@ -364,7 +364,7 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null); // null = new, object = editing
-  const [formData, setFormData] = useState({ teamName: '', budget: 0, logoUrl: '' });
+  const [formData, setFormData] = useState({ teamName: '', budget: 0, logoUrl: '', manualStats: {} });
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -384,6 +384,7 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
           teamName: privateData.teamName || publicData.teamName || 'Sin Nombre',
           logoUrl: privateData.logoUrl || publicData.logoUrl || DEFAULT_LOGO,
           budget: privateData.budget ?? publicData.budget ?? 0,
+          manualStats: publicData.manualStats || {},
           inWhitelist: publicData.inWhitelist || false,
           playerCount: cartSnap.size,
           email: privateData.email || '',
@@ -403,13 +404,13 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
 
   const openNewTeamModal = () => {
     setEditingTeam(null);
-    setFormData({ teamName: '', budget: DEFAULT_BUDGET, logoUrl: '' });
+    setFormData({ teamName: '', budget: DEFAULT_BUDGET, logoUrl: '', manualStats: {} });
     setShowModal(true);
   };
 
   const openEditTeamModal = (team) => {
     setEditingTeam(team);
-    setFormData({ teamName: team.teamName, budget: team.budget, logoUrl: team.logoUrl });
+    setFormData({ teamName: team.teamName, budget: team.budget, logoUrl: team.logoUrl, manualStats: team.manualStats || {} });
     setShowModal(true);
   };
 
@@ -446,6 +447,7 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
           teamName: formData.teamName.trim(),
           budget: Number(formData.budget) || 0,
           logoUrl: formData.logoUrl || DEFAULT_LOGO,
+          manualStats: formData.manualStats || {},
         };
         batch.set(getPrivateProfileRef(uid), saveData, { merge: true });
         batch.set(getPublicTeamRef(uid), saveData, { merge: true });
@@ -638,6 +640,37 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
                   className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg text-sm outline-none focus:border-blue-500 transition"
                   placeholder="0"
                 />
+              </div>
+              <div className="border-t border-gray-700 pt-4">
+                <p className="mb-3 text-xs font-black uppercase tracking-wider text-cyan-300">Estadísticas públicas (edición manual)</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {[
+                    ['played', 'Partidos'], ['wins', 'Ganados'], ['draws', 'Empatados'], ['losses', 'Perdidos'],
+                    ['gf', 'Goles a favor'], ['ga', 'Goles en contra'], ['titles', 'Títulos'],
+                  ].map(([field, label]) => (
+                    <label key={field} className="block">
+                      <span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">{label}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.manualStats?.[field] ?? ''}
+                        onChange={e => setFormData(prev => ({ ...prev, manualStats: { ...prev.manualStats, [field]: e.target.value } }))}
+                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"
+                      />
+                    </label>
+                  ))}
+                </div>
+                <label className="mt-3 block">
+                  <span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Rivalidad</span>
+                  <input
+                    type="text"
+                    value={formData.manualStats?.rival ?? ''}
+                    onChange={e => setFormData(prev => ({ ...prev, manualStats: { ...prev.manualStats, rival: e.target.value } }))}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"
+                    placeholder="Ej: SK Konya"
+                  />
+                </label>
+                <p className="mt-2 text-[10px] text-gray-500">Los campos cargados reemplazan el cálculo automático del perfil público.</p>
               </div>
               {editingTeam && (
                 <div className="text-xs text-gray-500 bg-gray-800/50 p-3 rounded-lg border border-gray-700/50">
@@ -919,7 +952,17 @@ const OverlayAdminSection = memo(function OverlayAdminSection({
   };
 
   const copyObsLink = async (scene = form.scene) => {
-    const url = `${window.location.origin}/overlay?scene=${scene}`;
+    const tournamentViews = {
+      tabla: 'groups',
+      llaves: 'bracket',
+      bracket: 'bracket',
+      repechaje: 'repechaje',
+      goleadores: 'goleadores',
+    };
+    const tournamentView = tournamentViews[scene];
+    const url = tournamentView
+      ? `${window.location.origin}/torneo?mode=obs&view=${tournamentView}`
+      : `${window.location.origin}/overlay?scene=${scene}`;
     try {
       await navigator.clipboard.writeText(url);
       showStatusMessage('success', 'Link OBS copiado.');

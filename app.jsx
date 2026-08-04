@@ -503,7 +503,7 @@ function App() {
     const id = notification.id || `${notification.category || notification.type || 'notif'}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setNotifications(prev => {
       if (prev.some(n => n.id === id)) return prev;
-      return [{ ...notification, id }, ...prev].slice(0, 40);
+      return [{ ...notification, id, read: notification.read === true, createdAt: notification.createdAt || new Date().toISOString() }, ...prev].slice(0, 40);
     });
   }, []);
 
@@ -861,6 +861,22 @@ function App() {
     if (!isAdmin) return;
     try {
       await setDoc(getTournamentDocRef(), newData, { merge: true });
+      const completedMatches = (newData.matches || []).filter(match => match.status === 'completed' && match.id);
+      await Promise.all(completedMatches.map(match => setDoc(
+        doc(db, `artifacts/${APP_ID}/public/data/news`, `match-${match.id}`),
+        {
+          type: 'match_result',
+          matchId: match.id,
+          round: match.round || 'Partido de torneo',
+          homeTeam: match.homeTeam || 'Local',
+          awayTeam: match.awayTeam || 'Visitante',
+          homeScore: Number(match.homeScore) || 0,
+          awayScore: Number(match.awayScore) || 0,
+          mvp: match.mvp || '',
+          publishedAt: serverTimestamp(),
+        },
+        { merge: true }
+      )));
       showStatusMessage('success', 'Torneo actualizado correctamente.');
     } catch (e) {
       console.error(e);
@@ -1127,6 +1143,16 @@ function App() {
               }, ...prev]);
             }
             // Notify sender when their offer is accepted
+            if (data.status === 'accepted' && data.targetTeamId === userId) {
+              setNotifications(prev => [{
+                id: `transfer-sale-${change.doc.id}`,
+                type: 'transfer',
+                category: 'transfer',
+                text: `Venta confirmada: ${data.playerName} fue transferido por ${formatPriceShort((data.counterAmount || data.offerAmount || 0) / 1000000)}.`,
+                time: 'Mercado',
+                read: false,
+              }, ...prev]);
+            }
             if (data.status === 'accepted' && data.senderId === userId) {
               setNotifications(prev => [{
                 type: 'info',
@@ -1695,7 +1721,7 @@ function App() {
 
   if (isSpecialMode) {
     // OBS Goleadores view
-    if (viewParam === 'goleadores') {
+    if (viewParam === 'goleadores' && !isObsMode) {
       if (!tournamentData)
         return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando...</div>;
       const scorers = tournamentData.topScorers || [];
@@ -1932,7 +1958,7 @@ function App() {
           {/* TOP HEADER con hamburger */}
           <TopHeader
             userProfile={userProfile}
-            unreadCount={notifications.length}
+            unreadCount={notifications.filter(notification => notification.read !== true).length}
             unreadChatCount={unreadChatCount}
             onNotificationClick={() => {
               setAreNotificationsWarmed(true);
@@ -2447,6 +2473,14 @@ function App() {
         isLoading={!areNotificationsWarmed && notifications.length === 0}
         onClose={() => setIsNotificationPanelOpen(false)}
         onClear={() => setNotifications([])}
+        onDismissOne={(notification) => setNotifications(prev => prev.filter(item => item.id !== notification.id))}
+        onMarkAllRead={() => setNotifications(prev => prev.map(item => ({ ...item, read: true })))}
+        onNotifClick={(notification) => {
+          setNotifications(prev => prev.map(item => item.id === notification.id ? { ...item, read: true } : item));
+          if (['offer', 'transfer'].includes(notification.type) || notification.category === 'transfer') {
+            openModalRoute('cart');
+          }
+        }}
       />
 
       {/* BUDGET ALERT MODAL */}
@@ -2505,6 +2539,24 @@ function App() {
       </div>
     </>
   );
+
+  // Keep a compact, public squad snapshot so the public team board can show
+  // both the XI and the substitutes without exposing the private cart.
+  useEffect(() => {
+    if (!userId || !userProfile) return;
+
+    const roster = cart.map(player => ({
+      Id: String(player.Id),
+      Name: player.Name || 'Jugador',
+      POS_NOMBRE: player.POS_NOMBRE || '',
+      OVR_CALCULADO: Number(player.OVR_CALCULADO) || 0,
+      dorsal: userProfile.dorsals?.[player.Id] || '',
+      available: userProfile.availability?.[player.Id] !== false,
+    }));
+
+    setDoc(getPublicTeamRef(userId), { roster, rosterUpdatedAt: new Date().toISOString() }, { merge: true })
+      .catch(error => console.error('Error sincronizando plantilla pública:', error));
+  }, [cart, getPublicTeamRef, userId, userProfile]);
 }
 
 export default firebaseInitializationError ? FirebaseError : App; 

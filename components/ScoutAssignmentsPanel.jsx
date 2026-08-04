@@ -9,8 +9,8 @@ const RESULT_COUNT_MAX = 5;
 const MONTHLY_SEARCH_LIMIT = 5;
 
 const DEFAULT_SCOUTS = [
-  { id: 'scout-rapido', name: 'Nico Radar', quality: 58, durationHours: 4, specialty: 'Respuesta corta', description: 'Vuelve rapido, pero puede traer jugadores con mas variacion respecto a lo pedido.' },
-  { id: 'scout-equilibrado', name: 'Rolo Cancha', quality: 74, durationHours: 8, specialty: 'Busqueda confiable', description: 'Buen balance entre tiempo y precision. Ideal para busquedas normales.' },
+  { id: 'scout-rapido', name: 'Tomás Ibarra', quality: 58, durationHours: 4, specialty: 'Respuesta rápida', description: 'Vuelve rápido, pero puede traer jugadores con más variación respecto a lo pedido.' },
+  { id: 'scout-equilibrado', name: 'Martín Sosa', quality: 74, durationHours: 8, specialty: 'Búsqueda confiable', description: 'Buen balance entre tiempo y precisión. Ideal para búsquedas normales.' },
   { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 16, imageUrl: '/scouts/fefe-farfan.png', specialty: 'Elite total', description: 'El mejor ojeador de todos. Tarda mas porque filtra fino y prioriza coincidencias premium.' },
   { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantanea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para testear resultados.' },
 ];

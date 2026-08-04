@@ -265,7 +265,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       const livePlayer = allPlayers?.find(p => p.Id === offer.playerId);
       if (!livePlayer) throw "Jugador no encontrado en la base de datos";
 
-      const activeAmount = getOfferAmount(offer);
+      let activeAmount = Number(getOfferAmount(offer));
       if (!Number.isFinite(activeAmount) || activeAmount <= 0) {
         throw new Error("Monto de oferta invalido.");
       }
@@ -303,6 +303,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         // Verify the offer is still valid
         const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
         const offerDoc = await transaction.get(offerRef);
+        activeAmount = Number(getOfferAmount(offerDoc.exists() ? offerDoc.data() : {}));
         if (!offerDoc.exists() || (offerDoc.data().status !== 'pending' && offerDoc.data().status !== 'countered')) {
           throw new Error("La oferta ya no es válida o ya fue procesada.");
         }
@@ -310,6 +311,23 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         // Verify the seller still owns the player
         const lockRef = doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(offer.playerId));
         const lockDoc = await transaction.get(lockRef);
+        const sellerCartRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/cart`, String(offer.playerId));
+        const buyerCartRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/cart`, String(offer.playerId));
+        const sellerCartDoc = await transaction.get(sellerCartRef);
+        const buyerCartDoc = await transaction.get(buyerCartRef);
+        if (!sellerCartDoc.exists()) throw new Error('El jugador ya no está en el plantel vendedor.');
+        if (buyerCartDoc.exists()) throw new Error('El comprador ya tiene este jugador.');
+        const ownedPlayer = sellerCartDoc.data();
+        if (ownedPlayer.isFranchise || (lockDoc.exists() && lockDoc.data().isFranchise)) {
+          throw new Error('Los jugadores franquicia no son transferibles.');
+        }
+        const playerBaseCost = Math.round((Number(ownedPlayer.Precio) || 0) * 1000000);
+        if (!Number.isSafeInteger(activeAmount) || !playerBaseCost || activeAmount < playerBaseCost || activeAmount > playerBaseCost * 3) {
+          throw new Error('El monto ya no cumple los límites del jugador.');
+        }
+        if (Number(buyerBudget) - buyerCartTotal < activeAmount) {
+          throw new Error('El comprador no tiene fondos suficientes.');
+        }
         if (!lockDoc.exists() || lockDoc.data().lockedBy !== offer.targetTeamId) {
           throw new Error("El jugador ya no pertenece al equipo vendedor.");
         }
@@ -328,10 +346,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         });
 
         // 3. Move player from seller cart to buyer cart
-        const sellerCartRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/cart`, String(offer.playerId));
-        const buyerCartRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/cart`, String(offer.playerId));
         transaction.delete(sellerCartRef);
-        transaction.set(buyerCartRef, livePlayer);
+        transaction.set(buyerCartRef, { ...ownedPlayer, isFranchise: false });
+        const buyerBudgetAfter = buyerBudget + playerBaseCost - activeAmount;
+        const sellerBudgetAfter = (Number(sellerProfile.budget) || 0) + activeAmount - playerBaseCost;
+        transaction.update(buyerProfileRef, { budget: buyerBudgetAfter });
+        transaction.update(sellerProfileRef, { budget: sellerBudgetAfter });
+        transaction.set(doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.senderId), { budget: buyerBudgetAfter }, { merge: true });
+        transaction.set(doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.targetTeamId), { budget: sellerBudgetAfter }, { merge: true });
         
         // 4. Update offer status
         const acceptedAt = new Date().toISOString();
@@ -416,6 +438,11 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const handleCounterOffer = async (offer) => {
     if (isProcessing || !counterAmount || isNaN(counterAmount)) return;
     const livePlayer = allPlayers?.find(p => p.Id === offer.playerId);
+    const valueInMillions = Number(counterAmount);
+    if (!Number.isFinite(valueInMillions) || valueInMillions <= 0 || !livePlayer || valueInMillions < Number(livePlayer.Precio) || valueInMillions > Number(livePlayer.Precio) * 3) {
+      alert('La contraoferta debe estar entre el valor base y tres veces ese valor.');
+      return;
+    }
     if (livePlayer && Number(counterAmount) > livePlayer.Precio * 3) {
       alert(`La contraoferta no puede superar el límite máximo de $${(livePlayer.Precio * 3).toFixed(2)}M (3x valor base).`);
       return;
@@ -424,7 +451,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     try {
       const proposalRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
       const counterAt = new Date().toISOString();
-      const counterValue = Number(counterAmount) * 1000000;
+      const counterValue = Math.round(valueInMillions * 1000000);
       await updateDoc(proposalRef, {
         status: "countered",
         counterAmount: counterValue,
