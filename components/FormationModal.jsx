@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef, useMemo, useReducer } from 'react';
 import { X, Save, Image as ImageIcon, ClipboardList, Move, Share2, Check, Copy, Loader2 } from 'lucide-react';
 import { writeBatch, addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { Pitch } from './Pitch.jsx';
@@ -35,16 +35,92 @@ export const FormationPlayerItem = memo(({ player, onClick, isSelected, dorsal, 
   </div>
 ));
 
+// --- REDUCER: lineup + holdingPlayer viven juntos y se actualizan en un solo paso puro ---
+// (antes: setLineup se llamaba DENTRO del updater de setHoldingPlayer, lo cual es un
+// side-effect impuro. React puede re-invocar ese updater más de una vez —siempre pasa
+// en Strict Mode— y cada re-invocación volvía a escribir el mismo jugador en el lineup,
+// terminando con el mismo playerId pisado en varios slots a la vez).
+const initialFormationState = { lineup: {}, holdingPlayer: null };
+
+function formationReducer(state, action) {
+  switch (action.type) {
+    case 'LOAD':
+      return { lineup: action.payload?.lineup || {}, holdingPlayer: null };
+
+    case 'RESET':
+      return { lineup: {}, holdingPlayer: null };
+
+    case 'SANITIZE': {
+      const { cart } = action.payload;
+      const validIds = new Set((cart || []).map(p => String(p.Id)));
+      const cleaned = {};
+      Object.entries(state.lineup || {}).forEach(([slotIndex, playerId]) => {
+        const id = String(playerId || '');
+        if (id && validIds.has(id)) cleaned[slotIndex] = id;
+      });
+      if (JSON.stringify(cleaned) === JSON.stringify(state.lineup)) return state; // sin cambios, misma referencia
+      return { ...state, lineup: cleaned };
+    }
+
+    case 'PICK_FROM_LIST': {
+      const { player } = action.payload;
+      const holdingPlayer = state.holdingPlayer?.player.Id === player.Id ? null : { player, from: 'list' };
+      return { ...state, holdingPlayer };
+    }
+
+    case 'CLICK_SLOT': {
+      const { index, cart } = action.payload;
+      const curr = state.holdingPlayer;
+      const newLineup = { ...state.lineup };
+      const playerInSlotId = newLineup[index];
+      const playerInSlot = cart.find(p => String(p.Id) === String(playerInSlotId));
+
+      if (curr) {
+        const placingId = String(curr.player.Id);
+
+        // UNICIDAD: sacar al jugador de cualquier otro slot primero
+        Object.keys(newLineup).forEach(key => {
+          if (String(newLineup[key]) === placingId && String(key) !== String(index)) {
+            delete newLineup[key];
+          }
+        });
+
+        // Colocar al jugador que se estaba sosteniendo en este slot
+        newLineup[index] = placingId;
+
+        if (curr.from === 'slot' && String(curr.fromSlotIndex) !== String(index)) {
+          // Swap: el jugador desplazado vuelve al slot de origen
+          if (playerInSlot) newLineup[curr.fromSlotIndex] = String(playerInSlot.Id);
+          else delete newLineup[curr.fromSlotIndex];
+        }
+
+        return { lineup: newLineup, holdingPlayer: null };
+      }
+
+      if (playerInSlot) {
+        // Levantar jugador del slot
+        delete newLineup[index];
+        return { lineup: newLineup, holdingPlayer: { player: playerInSlot, from: 'slot', fromSlotIndex: index } };
+      }
+
+      return state; // click en slot vacío sin nada en mano: no-op
+    }
+
+    default:
+      return state;
+  }
+}
+
 // --- COMPONENTE PRINCIPAL ---
 
 export const FormationModal = memo(function FormationModal({ isVisible, isPage, onClose, cart, userProfile, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db }) {
   const [selectedFormation, setSelectedFormation] = useState('4-3-3');
-  const [lineup, setLineup] = useState({});
+  const [{ lineup, holdingPlayer }, dispatchFormation] = useReducer(formationReducer, initialFormationState);
   const [dorsals, setDorsals] = useState({});
   const [availability, setAvailability] = useState({});
   const [matchBench, setMatchBench] = useState([]);
-  const [holdingPlayer, setHoldingPlayer] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const pendingAutoSaveRef = useRef(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [mobileTab, setMobileTab] = useState('pitch'); // 'pitch' | 'squad'
   const [showSharePopover, setShowSharePopover] = useState(false);
@@ -57,16 +133,16 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     // Load from userProfile when opening from any context (isVisible OR isPage)
     if (isVisible || isPage) {
       setSelectedFormation(userProfile?.formation || '4-3-3');
-      setLineup(userProfile?.lineup ? { ...userProfile.lineup } : {});
+      dispatchFormation({ type: 'LOAD', payload: { lineup: userProfile?.lineup ? { ...userProfile.lineup } : {} } });
       setDorsals(userProfile?.dorsals ? { ...userProfile.dorsals } : {});
       setAvailability(userProfile?.availability ? { ...userProfile.availability } : {});
       setMatchBench(Array.isArray(userProfile?.matchBench) ? userProfile.matchBench.map(String) : []);
-      setHoldingPlayer(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.formation, userProfile?.lineup, userProfile?.dorsals, isVisible, isPage]);
 
-  const sanitizeLineup = useCallback((sourceLineup = lineup) => {
+  // Utilidad pura: no depende de closures sobre el estado del reducer, recibe todo por parámetro.
+  const sanitizeLineup = useCallback((sourceLineup) => {
     const validIds = new Set((cart || []).map(player => String(player.Id)));
     const cleaned = {};
     Object.entries(sourceLineup || {}).forEach(([slotIndex, playerId]) => {
@@ -74,15 +150,14 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       if (id && validIds.has(id)) cleaned[slotIndex] = id;
     });
     return cleaned;
-  }, [cart, lineup]);
+  }, [cart]);
 
   useEffect(() => {
     if (!cart.length || (!isVisible && !isPage)) return;
-    setLineup(prev => {
-      const cleaned = sanitizeLineup(prev);
-      return JSON.stringify(cleaned) === JSON.stringify(prev) ? prev : cleaned;
-    });
-  }, [cart, isVisible, isPage, sanitizeLineup]);
+    // La limpieza se resuelve DENTRO del reducer (case 'SANITIZE'), en base al lineup
+    // actual del propio estado — así no hace falta leer `lineup` en las deps de este efecto.
+    dispatchFormation({ type: 'SANITIZE', payload: { cart } });
+  }, [cart, isVisible, isPage]);
 
   const handleSaveLineup = async (overrideLineup, overrideFormation) => {
     // Check if called directly from onClick (React passes the event object)
@@ -198,59 +273,27 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const availablePlayers = cart.filter(p => !assignedIds.has(String(p.Id)) || (holdingPlayer?.from === 'slot' && String(p.Id) === String(holdingPlayer.player.Id)));
 
   const handlePlayerClick = useCallback((player) => {
-    setHoldingPlayer(prev => (prev?.player.Id === player.Id ? null : { player, from: 'list' }));
+    dispatchFormation({ type: 'PICK_FROM_LIST', payload: { player } });
     // Auto switch to pitch view on mobile after selecting a player
     setMobileTab('pitch');
   }, []);
 
   const onSlotClick = useCallback((index) => {
-    setHoldingPlayer(curr => {
-      setLineup(prev => {
-        const newLineup = { ...prev };
-        const playerInSlotId = newLineup[index];
-        const playerInSlot = cart.find(p => String(p.Id) === String(playerInSlotId));
+    // Si había un jugador "en mano", este click va a resultar en una colocación:
+    // marcamos la intención de auto-guardar ANTES de despachar, y dejamos que un
+    // efecto sobre `lineup` dispare el guardado una vez que el reducer ya resolvió
+    // el nuevo estado (en vez de anidar setState como antes).
+    if (holdingPlayer) pendingAutoSaveRef.current = true;
+    dispatchFormation({ type: 'CLICK_SLOT', payload: { index, cart } });
+  }, [cart, holdingPlayer]);
 
-        if (curr) {
-          const placingId = String(curr.player.Id);
-
-          // UNIQUENESS: Remove player from ANY other slot first
-          Object.keys(newLineup).forEach(key => {
-            if (String(newLineup[key]) === placingId && String(key) !== String(index)) {
-              delete newLineup[key];
-            }
-          });
-
-          // Place the held player into this slot
-          newLineup[index] = placingId;
-          if (curr.from === 'slot' && String(curr.fromSlotIndex) !== String(index)) {
-            // Swap: put the displaced player back to where the dragged one came from
-            if (playerInSlot) newLineup[curr.fromSlotIndex] = String(playerInSlot.Id);
-            else delete newLineup[curr.fromSlotIndex];
-          }
-          // Auto-save to Firestore after placement
-          setTimeout(() => handleSaveLineup(newLineup), 0);
-          return newLineup;
-        } else if (playerInSlot) {
-          // Pick up player from slot
-          delete newLineup[index];
-          return newLineup;
-        }
-        return newLineup;
-      });
-
-      // Determine new holdingPlayer state
-      if (curr) {
-        return null; // Placed — clear holding
-      } else {
-        const playerInSlotId = lineup[index];
-        const playerInSlot = cart.find(p => String(p.Id) === String(playerInSlotId));
-        if (playerInSlot) {
-          return { player: playerInSlot, from: 'slot', fromSlotIndex: index };
-        }
-        return null;
-      }
-    });
-  }, [cart, lineup, handleSaveLineup]);
+  // Auto-guardado tras una colocación (reemplaza el setTimeout que vivía dentro del setState anidado)
+  useEffect(() => {
+    if (!pendingAutoSaveRef.current) return;
+    pendingAutoSaveRef.current = false;
+    handleSaveLineup(lineup);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineup]);
 
   // ── Share URL with popover ──
   const [shareUrl, setShareUrl] = useState('');
@@ -375,7 +418,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   /* ── Shared sub-components ── */
   const ControlsBar = (
     <div className="p-3 lg:p-4 space-y-3 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-      <select value={selectedFormation} onChange={(e) => { setSelectedFormation(e.target.value); setLineup({}); setHoldingPlayer(null); }}
+      <select value={selectedFormation} onChange={(e) => { setSelectedFormation(e.target.value); dispatchFormation({ type: 'RESET' }); }}
         className="w-full bg-white/[0.05] text-white rounded-lg px-3 py-2.5 font-bold outline-none text-sm cursor-pointer"
         style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
         {Object.keys(FORMATIONS).map(key => <option key={key} value={key}>{FORMATIONS[key].name}</option>)}
