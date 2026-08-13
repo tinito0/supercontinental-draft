@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Lock, ArrowLeftRight, Star } from 'lucide-react';
 import { getPosColorClass, getStatAndOvrColorClass, getFlagUrl, formatPriceShort } from '../utils/helpers.js';
 
-export const PlayerListItem = memo(function PlayerListItem({ player, countryMap, onCardClick, isInMyCart, isLockedByOther, lockedTeamName, lockedTeamLogo, onCompare, isComparing, isWishlisted, onToggleWishlist }) {
+export const PlayerListItem = memo(function PlayerListItem({ player, countryMap, onSelectPlayer, isInMyCart, isLockedByOther, lockedTeamName, lockedTeamLogo, onCompare, isComparing, isWishlisted, onToggleWishlist }) {
   const posClass = getPosColorClass(player.POS_NOMBRE);
   const ovrColorClass = getStatAndOvrColorClass(player.OVR_CALCULADO);
   const countryFlagUrl = getFlagUrl(player.Country1);
@@ -33,7 +33,7 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
 
   return (
     <div
-      onClick={onCardClick}
+      onClick={() => onSelectPlayer?.(player.Id)}
       className={`
         group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer relative overflow-hidden
         ${isLockedByOther ? 'opacity-50 grayscale-[0.5]' : isInMyCart ? 'bg-emerald-900/10' : 'hover:bg-white/[0.04] hover:-translate-y-px'}`}
@@ -48,7 +48,7 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
       {/* SECCIÓN IZQUIERDA: FOTO E INFO */}
       <div className="flex items-center space-x-3 flex-1 min-w-0 relative z-10">
         <button
-          onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(e); }}
+          onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(player.Id); }}
           className={`p-1.5 rounded-full transition-all duration-200 shrink-0
             ${isWishlisted ? 'text-yellow-400 hover:text-yellow-300' : 'text-gray-500 hover:text-white'}`}
           title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}

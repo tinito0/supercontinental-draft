@@ -23,7 +23,10 @@ export const TeamsModal = memo(function TeamsModal({ isPage, isVisible, onClose,
     const avgOvr = team.players.length > 0
       ? Math.round(team.players.reduce((sum, p) => sum + p.OVR_CALCULADO, 0) / team.players.length)
       : 0;
-    return { ...team, totalCost, avgOvr };
+    // Ordenar una copia una sola vez acá, en vez de team.players.sort(...) directo en el JSX
+    // (eso mutaba el array en cada render, además de recalcular el orden innecesariamente).
+    const sortedPlayers = [...team.players].sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO);
+    return { ...team, players: sortedPlayers, totalCost, avgOvr };
   }), [playersByTeam]);
 
   const ovrColor = (v) => v >= 85 ? '#4ade80' : v >= 70 ? '#facc15' : '#fb923c';
@@ -117,7 +120,7 @@ export const TeamsModal = memo(function TeamsModal({ isPage, isVisible, onClose,
                 </div>
               ) : (
                 <div className="px-4 pb-4 pt-2 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5">
-                  {team.players.sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO).map(player => (
+                  {team.players.map(player => (
                     <div
                       key={player.Id}
                       onClick={() => onPlayerClick && onPlayerClick(player)}

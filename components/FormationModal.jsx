@@ -270,7 +270,10 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     Object.values(lineup).filter(Boolean).forEach(id => ids.add(String(id)));
     return ids;
   }, [lineup]);
-  const availablePlayers = cart.filter(p => !assignedIds.has(String(p.Id)) || (holdingPlayer?.from === 'slot' && String(p.Id) === String(holdingPlayer.player.Id)));
+  const availablePlayers = useMemo(() => {
+    const list = cart.filter(p => !assignedIds.has(String(p.Id)) || (holdingPlayer?.from === 'slot' && String(p.Id) === String(holdingPlayer.player.Id)));
+    return [...list].sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO);
+  }, [cart, assignedIds, holdingPlayer]);
 
   const handlePlayerClick = useCallback((player) => {
     dispatchFormation({ type: 'PICK_FROM_LIST', payload: { player } });
@@ -485,7 +488,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
   const PlayerList = (
     <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-2 bg-gray-900/20 pb-20 lg:pb-4">
-      {availablePlayers.sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO).map(player => (
+      {availablePlayers.map(player => (
         <FormationPlayerItem key={player.Id} player={player} onClick={() => handlePlayerClick(player)} isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id} dorsal={dorsals[player.Id]} onDorsalChange={handleDorsalChange} isAvailable={availability[player.Id] !== false} onAvailabilityChange={handleAvailabilityChange} isBench={matchBench.includes(String(player.Id))} onBenchChange={handleBenchChange} />
       ))}
       {availablePlayers.length === 0 && <p className="text-gray-500 text-sm italic text-center py-4">Todos tus jugadores están en la cancha.</p>}

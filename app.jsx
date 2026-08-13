@@ -2054,11 +2054,11 @@ function App() {
                           key={player.Id}
                           player={player}
                           countryMap={countryMap}
-                          onCardClick={() => setSelectedPlayerId(player.Id)}
+                          onSelectPlayer={setSelectedPlayerId}
                           isInMyCart={isInMyCart}
                           isLocked={isLockedByOther}
                           isWishlisted={wishlistSet.has(player.Id)}
-                          onToggleWishlist={(e) => { e.stopPropagation(); toggleWishlist(player.Id); }}
+                          onToggleWishlist={toggleWishlist}
                           isLockedByOther={isLockedByOther}
                           lockedTeamName={isLockedByOther ? lockInfo.teamName : null}
                           lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
@@ -2081,11 +2081,11 @@ function App() {
                           <PlayerCard
                             player={player}
                             countryMap={countryMap}
-                            onCardClick={() => setSelectedPlayerId(player.Id)}
+                            onSelectPlayer={setSelectedPlayerId}
                             isInMyCart={isInMyCart}
                             isLocked={isLockedByOther}
                             isWishlisted={wishlistSet.has(player.Id)}
-                            onToggleWishlist={(e) => { e.stopPropagation(); toggleWishlist(player.Id); }}
+                            onToggleWishlist={toggleWishlist}
                             isLockedByOther={isLockedByOther}
                             lockedTeamName={isLockedByOther ? lockInfo.teamName : null}
                             lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}

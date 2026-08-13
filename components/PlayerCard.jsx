@@ -33,7 +33,7 @@ const brokenImageIds = new Set();
 
 export const PlayerCard = memo(function PlayerCard({
   player,
-  onCardClick,
+  onSelectPlayer,
   isInMyCart,
   isLockedByOther,
   lockedTeamName,
@@ -65,7 +65,7 @@ export const PlayerCard = memo(function PlayerCard({
 
   return (
     <div
-      onClick={onCardClick}
+      onClick={() => onSelectPlayer?.(player.Id)}
       className={`player-card ${isLockedByOther ? 'player-card--locked' : ''} ${isInMyCart ? 'player-card--owned' : ''} ${isComparing ? 'player-card--comparing' : ''}`}
       style={{
         '--pos-accent': posColor,
@@ -92,7 +92,7 @@ export const PlayerCard = memo(function PlayerCard({
       {/* ═══════════ PHOTO AREA ═══════════ */}
       <div className="player-card__photo-wrapper">
         <button
-          onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(e); }}
+          onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(player.Id); }}
           className={`absolute top-2 right-2 z-20 p-1.5 rounded-full transition-all duration-200 backdrop-blur-sm
             ${isWishlisted ? 'bg-yellow-500/20 text-yellow-400' : 'bg-black/30 text-white/50 hover:bg-black/50 hover:text-white'}`}
           title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}

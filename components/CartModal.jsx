@@ -253,6 +253,10 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const [counteringOfferId, setCounteringOfferId] = useState(null);
   const [counterAmount, setCounterAmount] = useState('');
 
+  // Antes: cart.sort(...) directo en el JSX mutaba el array del prop/estado (Array.prototype.sort
+  // muta in-place) y volvía a ordenar en cada render. Acá se ordena una copia, una sola vez por cambio de cart.
+  const sortedCart = useMemo(() => [...cart].sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO), [cart]);
+
   const handleAcceptOffer = async (offer) => {
     if (isProcessing || processingOfferRef.current) return;
     processingOfferRef.current = offer?.id || 'unknown';
@@ -712,7 +716,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-              {cart.sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO).map(player => (
+              {sortedCart.map(player => (
                 <CartMiniPlayerCard
                   key={player.Id}
                   player={player}

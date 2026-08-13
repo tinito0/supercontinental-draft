@@ -1,11 +1,16 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { getPitchPosColors, POSITION_COLORS, getStatAndOvrColorClass } from '../utils/helpers.js';
 
-export const PitchSlot = memo(({ pos, x, y, index, onClick, lineup, cart, holdingPlayer, dorsals, isReadOnly, readOnlySlots, isCapturing }) => {
+export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById, holdingPlayer, dorsals, isReadOnly, readOnlySlots, isCapturing }) => {
   const playerId = lineup[index];
-  const player = cart.find(p => String(p.Id) === String(playerId));
+  const player = cartById.get(String(playerId));
   const isHoldingThis = holdingPlayer?.from === 'slot' && holdingPlayer.fromSlotIndex === index;
   const dorsal = player ? dorsals?.[player.Id] : null;
+
+  // Onclick estable por slot: no se recrea en cada render de Pitch (evita romper el memo())
+  const handleClick = useCallback(() => {
+    if (!isReadOnly) onSlotClick?.(index);
+  }, [isReadOnly, onSlotClick, index]);
 
   // Use shared position color system from helpers.js
   const colors = player ? getPitchPosColors(player.POS_NOMBRE) : POSITION_COLORS.none;
@@ -41,7 +46,7 @@ export const PitchSlot = memo(({ pos, x, y, index, onClick, lineup, cart, holdin
 
   return (
     <div
-      onClick={!isReadOnly ? onClick : undefined}
+      onClick={!isReadOnly ? handleClick : undefined}
       className={`absolute flex flex-col items-center justify-center transition-all duration-200 z-20 group
         ${isHoldingThis ? 'opacity-30 scale-90' : ''}
         ${holdingPlayer && !isHoldingThis ? 'hover:scale-110' : ''}
@@ -126,6 +131,13 @@ export const PitchSlot = memo(({ pos, x, y, index, onClick, lineup, cart, holdin
 });
 
 export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlayer, dorsals, isReadOnly, onSlotClick, pitchRef, readOnlySlots, isCapturing }) {
+  // Se arma una sola vez por cambio de cart, en vez de un cart.find() O(n) dentro de cada uno de los 11 slots
+  const cartById = useMemo(() => {
+    const map = new Map();
+    (cart || []).forEach(p => map.set(String(p.Id), p));
+    return map;
+  }, [cart]);
+
   return (
     <div 
       ref={pitchRef}
@@ -149,12 +161,12 @@ export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlaye
           {...slot}
           index={idx}
           lineup={lineup}
-          cart={cart || []}
+          cartById={cartById}
           holdingPlayer={holdingPlayer}
           dorsals={dorsals || {}}
           isReadOnly={isReadOnly}
           readOnlySlots={readOnlySlots}
-          onClick={() => onSlotClick?.(idx)}
+          onSlotClick={onSlotClick}
           isCapturing={isCapturing}
         />
       ))}
