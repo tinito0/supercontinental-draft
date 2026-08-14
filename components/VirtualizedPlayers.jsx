@@ -134,7 +134,14 @@ export function VirtualizedPlayerList({ players, playerLocks, userId, allTeams, 
 
 const GRID_ROW_GAP = 12;
 const GRID_COLUMN_GAP = 12;
-const GRID_CARD_ASPECT_HEIGHT = 340; // alto aproximado de una PlayerCard
+// El alto real de una card lo define `.market-player-card-shell` en index.css
+// (height: clamp(124px, 31vw, 238px) — tope de 238px en desktop). Acá se usa
+// ese mismo tope + el gap, para que la fila del Grid no le quede de más
+// (antes eran 340px fijos, mucho más alto que la card real, y encima se
+// forzaba height:100% sobre el shell, pisando su propio clamp() y
+// estirándolo — combinación que dejaba un montón de aire vacío debajo de
+// la foto).
+const GRID_CARD_ASPECT_HEIGHT = 238 + GRID_ROW_GAP;
 
 function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare }) {
   const index = rowIndex * columnCount + columnIndex;
@@ -151,7 +158,7 @@ function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLo
         boxSizing: 'border-box',
       }}
     >
-      <div className="market-player-card-shell" style={{ height: '100%' }}>
+      <div className="market-player-card-shell">
         <PlayerCard
           player={player}
           countryMap={countryMap}
