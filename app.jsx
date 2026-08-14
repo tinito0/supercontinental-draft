@@ -14,25 +14,57 @@ import { StatusAlert } from './components/StatusAlert.jsx';
 import { NotificationsPanel } from './components/NotificationsPanel.jsx';
 import { SearchBar } from './components/SearchBar.jsx';
 import { PlayerListItem } from './components/PlayerListItem.jsx';
+import { VirtualizedPlayerList, VirtualizedPlayerGrid } from './components/VirtualizedPlayers.jsx';
 import { BroadcastOverlay, DEFAULT_BROADCAST_OVERLAY } from './components/BroadcastOverlay.jsx';
 import { normalizeTournamentView } from './utils/tournamentViews.js';
 import { getMentionedTeamIds, hasTransferIntent } from './utils/managerChatUtils.js';
+import { makePrefetchable, schedulePrefetchOnIdle } from './utils/prefetch.js';
 
 // Lazy loading modals and heavy screens
 const LoginScreen = React.lazy(() => import('./screens/LoginScreen.jsx').then(m => ({ default: m.LoginScreen })));
 const LandingPage = React.lazy(() => import('./screens/LandingPage.jsx').then(m => ({ default: m.LandingPage })));
 const AdminModal = React.lazy(() => import('./components/AdminModal.jsx').then(m => ({ default: m.AdminModal })));
-const PlayerModal = React.lazy(() => import('./components/PlayerModal.jsx').then(m => ({ default: m.PlayerModal })));
-const ComparisonModal = React.lazy(() => import('./components/ComparisonModal.jsx').then(m => ({ default: m.ComparisonModal })));
-const FormationModal = React.lazy(() => import('./components/FormationModal.jsx').then(m => ({ default: m.FormationModal })));
+
+// Modals de alta frecuencia de uso: se exponen sus importadores "crudos" para poder
+// prefetchearlos (idle-time y/o hover) antes de que el usuario los abra.
+const importPlayerModal = () => import('./components/PlayerModal.jsx');
+const PlayerModal = React.lazy(() => importPlayerModal().then(m => ({ default: m.PlayerModal })));
+const prefetchPlayerModal = makePrefetchable('PlayerModal', importPlayerModal);
+
+const importComparisonModal = () => import('./components/ComparisonModal.jsx');
+const ComparisonModal = React.lazy(() => importComparisonModal().then(m => ({ default: m.ComparisonModal })));
+const prefetchComparisonModal = makePrefetchable('ComparisonModal', importComparisonModal);
+
+const importFormationModal = () => import('./components/FormationModal.jsx');
+const FormationModal = React.lazy(() => importFormationModal().then(m => ({ default: m.FormationModal })));
+const prefetchFormationModal = makePrefetchable('FormationModal', importFormationModal);
+
 const TournamentModal = React.lazy(() => import('./components/TournamentModal.jsx').then(m => ({ default: m.TournamentModal })));
-const FiltrosModal = React.lazy(() => import('./components/FiltrosModal.jsx').then(m => ({ default: m.FiltrosModal })));
+
+const importFiltrosModal = () => import('./components/FiltrosModal.jsx');
+const FiltrosModal = React.lazy(() => importFiltrosModal().then(m => ({ default: m.FiltrosModal })));
+const prefetchFiltrosModal = makePrefetchable('FiltrosModal', importFiltrosModal);
+
 const TutorialModal = React.lazy(() => import('./components/TutorialModal.jsx').then(m => ({ default: m.TutorialModal })));
-const CartModal = React.lazy(() => import('./components/CartModal.jsx').then(m => ({ default: m.CartModal })));
-const TeamsModal = React.lazy(() => import('./components/TeamsModal.jsx').then(m => ({ default: m.TeamsModal })));
+
+const importCartModal = () => import('./components/CartModal.jsx');
+const CartModal = React.lazy(() => importCartModal().then(m => ({ default: m.CartModal })));
+const prefetchCartModal = makePrefetchable('CartModal', importCartModal);
+
+const importTeamsModal = () => import('./components/TeamsModal.jsx');
+const TeamsModal = React.lazy(() => importTeamsModal().then(m => ({ default: m.TeamsModal })));
+const prefetchTeamsModal = makePrefetchable('TeamsModal', importTeamsModal);
+
 const SuggestionsModal = React.lazy(() => import('./components/SuggestionsModal.jsx').then(m => ({ default: m.SuggestionsModal })));
-const TransferFeed = React.lazy(() => import('./components/TransferFeed.jsx').then(m => ({ default: m.TransferFeed })));
-const ManagerChat = React.lazy(() => import('./components/ManagerChat.jsx').then(m => ({ default: m.ManagerChat })));
+
+const importTransferFeed = () => import('./components/TransferFeed.jsx');
+const TransferFeed = React.lazy(() => importTransferFeed().then(m => ({ default: m.TransferFeed })));
+const prefetchTransferFeed = makePrefetchable('TransferFeed', importTransferFeed);
+
+const importManagerChat = () => import('./components/ManagerChat.jsx');
+const ManagerChat = React.lazy(() => importManagerChat().then(m => ({ default: m.ManagerChat })));
+const prefetchManagerChat = makePrefetchable('ManagerChat', importManagerChat);
+
 const ScoutAssignmentsPanel = React.lazy(() => import('./components/ScoutAssignmentsPanel.jsx').then(m => ({ default: m.ScoutAssignmentsPanel })));
 const TeamScreen = React.lazy(() => import('./screens/TeamScreen.jsx'));
 const FormationViewScreen = React.lazy(() => import('./screens/FormationViewScreen.jsx'));
@@ -307,8 +339,13 @@ function App() {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
   });
-  const batchSize = useMemo(() => isMobileViewport ? 9 : 36, [isMobileViewport]);
-  const [displayCount, setDisplayCount] = useState(batchSize);
+  // Se usa junto con isMobileViewport para calcular cuántas columnas le pasamos al
+  // Grid virtualizado — replica los mismos breakpoints (md=768, xl=1280) que antes
+  // tenía `gridColumnClass` en Tailwind, pero como número (react-window lo necesita).
+  const [isXlViewport, setIsXlViewport] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= 1280;
+  });
   const [viewMode, setViewMode] = useState('grid'); // 'grid' o 'list'
   const [gridColumns, setGridColumns] = useState(6);
   const [isLoading, setIsLoading] = useState(true);
@@ -416,6 +453,7 @@ function App() {
   useEffect(() => {
     const handleResize = () => {
       setIsMobileViewport(window.innerWidth < 768);
+      setIsXlViewport(window.innerWidth >= 1280);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -428,9 +466,22 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [filters.name]);
 
+  // Prefetch de los modals más usados (Jugador, Comparador, Carrito, Otros Equipos,
+  // Formación, Filtros) durante tiempo idle del browser, una vez que ya cargó lo
+  // crítico (base de jugadores). Así, cuando el usuario realmente hace click, el
+  // chunk ya está en caché y Suspense resuelve casi al instante en vez de mostrar
+  // el spinner de carga. Respeta ahorro de datos / conexión lenta (ver utils/prefetch.js).
   useEffect(() => {
-    setDisplayCount(batchSize);
-  }, [batchSize, filters, sortConfig, marketStatus.status]);
+    if (!hasLoadedPlayerDatabase) return;
+    return schedulePrefetchOnIdle([
+      prefetchPlayerModal,
+      prefetchComparisonModal,
+      prefetchCartModal,
+      prefetchTeamsModal,
+      prefetchFormationModal,
+      prefetchFiltrosModal,
+    ]);
+  }, [hasLoadedPlayerDatabase]);
 
   const handleInstallClick = async () => {
     if (!installPrompt) return;
@@ -989,11 +1040,6 @@ function App() {
     setFilters(prev => ({ ...initialFilters, name: prev.name }));
   }, []);
 
-  const loadMorePlayers = useCallback(() => {
-    setDisplayCount(prevCount => prevCount + batchSize);
-  }, [batchSize]);
-
-
   const totalCartCost = useMemo(() => {
     return cart.reduce((total, player) => {
       const isFranchise = player.isFranchise || (userProfile?.franchisePlayerId === player.Id);
@@ -1014,10 +1060,6 @@ function App() {
     return map;
   }, [allPlayers]);
 
-  const visibleMarketplacePlayers = useMemo(() => {
-    return filteredPlayers.slice(0, displayCount);
-  }, [filteredPlayers, displayCount]);
-
   const wishlistSet = useMemo(() => {
     return new Set(userProfile?.wishlist || []);
   }, [userProfile?.wishlist]);
@@ -1026,18 +1068,17 @@ function App() {
     return new Set(compareList.map(player => player.Id));
   }, [compareList]);
 
-  const gridColumnClass = useMemo(() => {
+  // Antes esto devolvía una clase de Tailwind (para un <div className="grid ...">).
+  // Ahora el Grid virtualizado necesita el número de columnas directamente — se
+  // replican los mismos breakpoints (md=768, xl=1280) que tenía la clase original.
+  const gridColumnCount = useMemo(() => {
     switch (gridColumns) {
-      case 2:
-        return 'grid-cols-2';
-      case 3:
-        return 'grid-cols-3';
-      case 4:
-        return 'grid-cols-3 md:grid-cols-4';
-      default:
-        return 'grid-cols-3 md:grid-cols-4 xl:grid-cols-6';
+      case 2: return 2;
+      case 3: return 3;
+      case 4: return isMobileViewport ? 3 : 4;
+      default: return isXlViewport ? 6 : isMobileViewport ? 3 : 4;
     }
-  }, [gridColumns]);
+  }, [gridColumns, isMobileViewport, isXlViewport]);
 
   // --- ACTIVITY FEED: Detectar fichajes en tiempo real ---
   useEffect(() => {
@@ -1970,8 +2011,8 @@ function App() {
               openModalRoute('transfers');
             }}
             onNotificationPrefetch={() => setAreNotificationsWarmed(true)}
-            onChatPrefetch={() => setUnreadChatCount(prev => prev)}
-            onTransferFeedPrefetch={() => setShouldPrefetchTransfers(true)}
+            onChatPrefetch={prefetchManagerChat}
+            onTransferFeedPrefetch={() => { prefetchTransferFeed(); setShouldPrefetchTransfers(true); }}
             onLogout={handleLogout}
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
@@ -1981,10 +2022,12 @@ function App() {
           <div className="flex-1 overflow-hidden w-full flex relative">
 
             {/* CENTER VIEW - MARKETPLACE MULTIPLEXING */}
-            <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
+            <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8 flex flex-col" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
               {/* Render content based on active tab, for now Marketplace is the main functional view */}
-              <div data-app-tour="marketplace" style={{ display: activeTab === 'Marketplace' ? 'block' : 'none' }}>
+              <div data-app-tour="marketplace" className={activeTab === 'Marketplace' ? 'flex-1 min-h-0 flex flex-col' : 'hidden'}>
 
+                {/* Header fijo: no scrollea con la lista — la lista tiene su propio scroll interno (virtualizado) */}
+                <div className="shrink-0">
                 <SearchBar
                   filters={filters}
                   setFilters={setFilters}
@@ -2040,77 +2083,41 @@ function App() {
                     <p className="text-sm text-gray-400 font-bold">Tu presupuesto no alcanza para más fichajes</p>
                   </div>
                 )}
+                </div>
+                {/* Fin del header fijo */}
 
+                <div className="flex-1 min-h-0 mt-1" data-app-tour="players" id="player-list">
                 {viewMode === 'list' ? (
-                  <main data-app-tour="players" id="player-list" className="grid gap-3 sm:gap-4 grid-cols-1">
-                    {visibleMarketplacePlayers.map(player => {
-                      const lockInfo = playerLocks[player.Id];
-                      const isInMyCart = lockInfo && lockInfo.lockedBy === userId;
-                      const isLockedByOther = lockInfo && lockInfo.lockedBy !== userId;
-                      const lockedTeam = isLockedByOther && allTeams ? allTeams[lockInfo.lockedBy] : null;
-
-                      return (
-                        <PlayerListItem
-                          key={player.Id}
-                          player={player}
-                          countryMap={countryMap}
-                          onSelectPlayer={setSelectedPlayerId}
-                          isInMyCart={isInMyCart}
-                          isLocked={isLockedByOther}
-                          isWishlisted={wishlistSet.has(player.Id)}
-                          onToggleWishlist={toggleWishlist}
-                          isLockedByOther={isLockedByOther}
-                          lockedTeamName={isLockedByOther ? lockInfo.teamName : null}
-                          lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
-                          onCompare={handleToggleCompare}
-                          isComparing={comparingIdsSet.has(player.Id)}
-                        />
-                      );
-                    })}
-                  </main>
+                  <VirtualizedPlayerList
+                    players={filteredPlayers}
+                    playerLocks={playerLocks}
+                    userId={userId}
+                    allTeams={allTeams}
+                    countryMap={countryMap}
+                    wishlistSet={wishlistSet}
+                    comparingIdsSet={comparingIdsSet}
+                    onSelectPlayer={setSelectedPlayerId}
+                    onToggleWishlist={toggleWishlist}
+                    onCompare={handleToggleCompare}
+                    overscanCount={isMobileViewport ? 3 : 6}
+                  />
                 ) : (
-                  <main data-app-tour="players" id="player-list" className={`grid gap-3 sm:gap-4 ${gridColumnClass}`}>
-                    {visibleMarketplacePlayers.map(player => {
-                      const lockInfo = playerLocks[player.Id];
-                      const isInMyCart = lockInfo && lockInfo.lockedBy === userId;
-                      const isLockedByOther = lockInfo && lockInfo.lockedBy !== userId;
-                      const lockedTeam = isLockedByOther && allTeams ? allTeams[lockInfo.lockedBy] : null;
-
-                      return (
-                        <div key={player.Id} className="market-player-card-shell">
-                          <PlayerCard
-                            player={player}
-                            countryMap={countryMap}
-                            onSelectPlayer={setSelectedPlayerId}
-                            isInMyCart={isInMyCart}
-                            isLocked={isLockedByOther}
-                            isWishlisted={wishlistSet.has(player.Id)}
-                            onToggleWishlist={toggleWishlist}
-                            isLockedByOther={isLockedByOther}
-                            lockedTeamName={isLockedByOther ? lockInfo.teamName : null}
-                            lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
-                            onCompare={handleToggleCompare}
-                            isComparing={comparingIdsSet.has(player.Id)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </main>
+                  <VirtualizedPlayerGrid
+                    players={filteredPlayers}
+                    columnCount={gridColumnCount}
+                    playerLocks={playerLocks}
+                    userId={userId}
+                    allTeams={allTeams}
+                    countryMap={countryMap}
+                    wishlistSet={wishlistSet}
+                    comparingIdsSet={comparingIdsSet}
+                    onSelectPlayer={setSelectedPlayerId}
+                    onToggleWishlist={toggleWishlist}
+                    onCompare={handleToggleCompare}
+                    overscanCount={isMobileViewport ? 1 : 2}
+                  />
                 )}
-
-                {filteredPlayers.length > displayCount && (
-                  <div className="mt-10 mb-24 text-center">
-                    <button
-                      onClick={loadMorePlayers}
-                      className="py-3 px-8 text-sm font-bold text-gray-400 border border-gray-700 bg-gray-900 rounded hover:bg-gray-800 transition-all shadow-lg active:scale-95"
-                    >
-                      Cargar Más Jugadores
-                      <span className="text-[10px] text-gray-600 block mt-1 uppercase tracking-wider">
-                        ({displayCount} de {filteredPlayers.length})
-                      </span>
-                    </button>
-                  </div>
-                )}
+                </div>
               </div> {/* End Marketplace Container*/}
 
 
