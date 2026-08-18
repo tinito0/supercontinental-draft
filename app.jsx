@@ -339,6 +339,13 @@ function App() {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
   });
+  // Franja de celular chico (<=480px) — `.market-player-card-shell` en index.css
+  // tiene una CUARTA regla responsive específica para esta franja (achica la card
+  // a un tope de 154px), separada de la base "mobile" (238px) que cubre 481-767px.
+  const [isSmallMobileViewport, setIsSmallMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 480;
+  });
   // Se usa junto con isMobileViewport para calcular cuántas columnas le pasamos al
   // Grid virtualizado — replica los mismos breakpoints (md=768, xl=1280) que antes
   // tenía `gridColumnClass` en Tailwind, pero como número (react-window lo necesita).
@@ -453,6 +460,7 @@ function App() {
   useEffect(() => {
     const handleResize = () => {
       setIsMobileViewport(window.innerWidth < 768);
+      setIsSmallMobileViewport(window.innerWidth <= 480);
       setIsXlViewport(window.innerWidth >= 1280);
     };
     window.addEventListener('resize', handleResize);
@@ -1079,6 +1087,18 @@ function App() {
       default: return isXlViewport ? 6 : isMobileViewport ? 3 : 4;
     }
   }, [gridColumns, isMobileViewport, isXlViewport]);
+
+  // El alto de `.market-player-card-shell` en index.css cambia en 4 franjas (no 3
+  // como se asumió la primera vez) — esto le dice al Grid virtualizado qué tope usar
+  // en cada caso, para que la fila no le quede corta (recorta la card) ni de más
+  // (deja un hueco vacío entre filas, que es justo lo que pasaba en celulares chicos:
+  // ahí la card real mide hasta 154px pero la fila se calculaba con 238px).
+  const gridCardMaxHeight = useMemo(() => {
+    if (isXlViewport) return 278;        // >=1280px
+    if (!isMobileViewport) return 252;   // 768-1279px (md)
+    if (isSmallMobileViewport) return 154; // <=480px
+    return 238;                          // 481-767px (mobile base)
+  }, [isMobileViewport, isSmallMobileViewport, isXlViewport]);
 
   // --- ACTIVITY FEED: Detectar fichajes en tiempo real ---
   useEffect(() => {
@@ -2115,6 +2135,7 @@ function App() {
                     onToggleWishlist={toggleWishlist}
                     onCompare={handleToggleCompare}
                     overscanCount={isMobileViewport ? 1 : 2}
+                    cardMaxHeight={gridCardMaxHeight}
                   />
                 )}
                 </div>

@@ -507,12 +507,30 @@ body {
 /* En dispositivos táctiles :hover no dispara de forma confiable (o queda "pegado"
    tras el tap), así que el botón "Comparar" quedaba invisible y prácticamente
    indescubrible en mobile aunque siguiera siendo tappeable. Se muestra siempre
-   (con un poco menos de opacidad) en touch, y se mantiene el reveal-on-hover
-   solo donde el hover real existe (mouse/trackpad). */
+   en touch — pero centrado tapaba media cara del jugador (mala UX). El strip de
+   OVR/bandera/posición ya ocupa toda la franja de abajo, así que se reposiciona
+   al borde derecho, centrado verticalmente (al costado de la cara), y se achica,
+   en vez de un círculo grande en el medio de la foto. En hover real (mouse) se
+   mantiene centrado como estaba, porque ahí solo aparece un instante al pasar
+   el mouse — no molesta. */
 @media (hover: none) {
   .player-card__compare-btn {
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(1);
+    top: 42%;
+    left: auto;
+    right: 6px;
+    bottom: auto;
+    transform: translateY(-50%);
+    padding: 5px;
+    opacity: 0.55;
+  }
+
+  .player-card__compare-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .player-card__compare-btn--active {
+    opacity: 0.9;
   }
 }
 

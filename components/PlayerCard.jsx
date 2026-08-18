@@ -10,12 +10,15 @@ const POS_COLOR = {
   PT: '#eab308',
 };
 
-/* ── OVR color tiers (static thresholds, zero-alloc) ── */
+/* ── OVR color tiers (static thresholds, zero-alloc) ──
+   Antes eran verdes neón puros (#19ffb2, #32f718) — quedaban "sucios"/chillones.
+   Ahora usan la misma paleta que ya tienen las píldoras de stats (.stat-c-* en
+   index.css), para que se vea consistente en toda la card. */
 const OVR_COLOR_THRESHOLDS = [
-  [90, '#19ffb2'],
-  [85, '#32f718'],
-  [75, '#d67418'],
-  [65, '#9c1a1a'],
+  [90, '#1ec9a4'],
+  [85, '#a0dd00'],
+  [75, '#ffc400'],
+  [65, '#ec7d22'],
 ];
 const OVR_COLOR_DEFAULT = '#9ca3af';
 function getOvrColor(ovr) {

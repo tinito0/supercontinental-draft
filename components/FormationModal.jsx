@@ -42,10 +42,31 @@ export const FormationPlayerItem = memo(({ player, onClick, isSelected, dorsal, 
 // terminando con el mismo playerId pisado en varios slots a la vez).
 const initialFormationState = { lineup: {}, holdingPlayer: null };
 
+// Además de sacar jugadores que ya no están en el cart (eso ya lo hacía SANITIZE),
+// esto fuerza unicidad: si el mismo playerId aparece en más de un slot (rastro de
+// datos viejos, de ANTES de que existiera este reducer, guardados en Firestore
+// mientras el bug de duplicación seguía activo), se queda con la PRIMERA
+// aparición (por índice de slot, orden numérico) y limpia el resto. Sin esto,
+// cargar un lineup ya corrompido lo seguía mostrando corrompido para siempre,
+// aunque el bug que lo causó ya esté arreglado.
+function dedupeLineup(sourceLineup) {
+  const seen = new Set();
+  const deduped = {};
+  const orderedSlots = Object.entries(sourceLineup || {})
+    .sort(([a], [b]) => Number(a) - Number(b));
+  orderedSlots.forEach(([slotIndex, playerId]) => {
+    const id = String(playerId || '');
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    deduped[slotIndex] = id;
+  });
+  return deduped;
+}
+
 function formationReducer(state, action) {
   switch (action.type) {
     case 'LOAD':
-      return { lineup: action.payload?.lineup || {}, holdingPlayer: null };
+      return { lineup: dedupeLineup(action.payload?.lineup || {}), holdingPlayer: null };
 
     case 'RESET':
       return { lineup: {}, holdingPlayer: null };
@@ -58,8 +79,9 @@ function formationReducer(state, action) {
         const id = String(playerId || '');
         if (id && validIds.has(id)) cleaned[slotIndex] = id;
       });
-      if (JSON.stringify(cleaned) === JSON.stringify(state.lineup)) return state; // sin cambios, misma referencia
-      return { ...state, lineup: cleaned };
+      const deduped = dedupeLineup(cleaned);
+      if (JSON.stringify(deduped) === JSON.stringify(state.lineup)) return state; // sin cambios, misma referencia
+      return { ...state, lineup: deduped };
     }
 
     case 'PICK_FROM_LIST': {
@@ -133,7 +155,16 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     // Load from userProfile when opening from any context (isVisible OR isPage)
     if (isVisible || isPage) {
       setSelectedFormation(userProfile?.formation || '4-3-3');
-      dispatchFormation({ type: 'LOAD', payload: { lineup: userProfile?.lineup ? { ...userProfile.lineup } : {} } });
+      const rawLineup = userProfile?.lineup ? { ...userProfile.lineup } : {};
+      // Solo se marca para auto-guardar si el cart ya cargó — si todavía está vacío
+      // (ej. la pizarra se abre antes de que llegue el snapshot de Firestore),
+      // guardar ahora borraría el lineup entero (sanitizeLineup filtra contra un
+      // cart vacío = todo inválido). El efecto de SANITIZE ya reintenta esto solo
+      // cuando el cart efectivamente tenga datos.
+      if (cart.length > 0 && JSON.stringify(dedupeLineup(rawLineup)) !== JSON.stringify(rawLineup)) {
+        pendingAutoSaveRef.current = true;
+      }
+      dispatchFormation({ type: 'LOAD', payload: { lineup: rawLineup } });
       setDorsals(userProfile?.dorsals ? { ...userProfile.dorsals } : {});
       setAvailability(userProfile?.availability ? { ...userProfile.availability } : {});
       setMatchBench(Array.isArray(userProfile?.matchBench) ? userProfile.matchBench.map(String) : []);
@@ -154,9 +185,19 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
   useEffect(() => {
     if (!cart.length || (!isVisible && !isPage)) return;
-    // La limpieza se resuelve DENTRO del reducer (case 'SANITIZE'), en base al lineup
-    // actual del propio estado — así no hace falta leer `lineup` en las deps de este efecto.
+    // Antes de despachar, se chequea acá (no dentro del reducer, que tiene que
+    // quedar puro) si la sanitización + deduplicación va a cambiar algo respecto
+    // al lineup actual. Si cambia, es porque había datos corruptos (viejos, de
+    // antes de este reducer) o jugadores que salieron del cart — en ese caso se
+    // marca para auto-guardar, así la corrección queda persistida en Firestore
+    // y no vuelve a aparecer la próxima vez que se abra la pizarra.
+    const cleaned = sanitizeLineup(lineup);
+    const deduped = dedupeLineup(cleaned);
+    if (JSON.stringify(deduped) !== JSON.stringify(lineup)) {
+      pendingAutoSaveRef.current = true;
+    }
     dispatchFormation({ type: 'SANITIZE', payload: { cart } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart, isVisible, isPage]);
 
   const handleSaveLineup = async (overrideLineup, overrideFormation) => {
