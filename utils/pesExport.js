@@ -147,7 +147,7 @@ export function generateTeamCsv(teamId, teamName) {
   const abbr = safeName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase() || 'SCL';
   const coachId = (parseInt(teamId, 10) * 1000) + 1;
 
-  const row = `${teamId};${safeName};204;42;${coachId};False;${safeName};;;${safeName};${safeName};;;;;;;;;;;${safeName};;;;;;${abbr};${abbr};;-1;-1;;;-1;;0;0;0;;;;;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;-1;-1;-1;;;;0;0;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;0;0;0;False;0;0;0;-1;False;0;0;0;0;-1;0;0;0;0;128;0;177;0;0;100;132;102;146;204;228;204;232;760000;760000;-1;0;1;53152010;92488866;4;2;0;0;0;-1;0;0;0;0`;
+  const row = `${teamId};${safeName};204;42;${coachId};False;${safeName};${safeName};${safeName};${safeName};${safeName};;;;;;;;;;;${safeName};;;;;;${abbr};${abbr};;-1;-1;;;-1;;0;0;0;;;;;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;-1;-1;-1;;;;0;0;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;0;0;0;False;0;0;0;-1;False;0;0;0;0;-1;0;0;0;0;128;0;177;0;0;100;132;102;146;204;228;204;232;760000;760000;-1;0;1;53152010;92488866;4;2;0;0;0;-1;0;0;0;0`;
 
   return `${headers}\n${row}\n`;
 }
@@ -191,26 +191,26 @@ export function generateFormationCsv(teamId, formationKey, starters, setPieces =
   // IndexPlayer1..40 (mapeo secuencial 0..39 a los 40 slots del Roster)
   const indexPlayers = Array.from({ length: 40 }, (_, i) => i).join(';');
 
-  // Helper para resolver índice en base 1 (1..11) en los titulares a partir de un ID
-  const getPlayer1BasedIndex = (targetId, default1BasedIdx = 1) => {
+  // Helper para resolver índice en base 1 (1..11) en los titulares a partir de un ID (0 = Automático / Por defecto)
+  const getPlayer1BasedIndex = (targetId, default1BasedIdx = 0) => {
     if (!targetId) return default1BasedIdx;
     const foundIdx = starters.findIndex(p => String(p.Id || p.id) === String(targetId));
     return foundIdx >= 0 ? (foundIdx + 1) : default1BasedIdx;
   };
 
-  // Roles de balón parado en base 1 (1..11) para compatibilidad con EJOGC327
-  const captainIdx = getPlayer1BasedIndex(setPieces.captain, 1);
-  const shortFkIdx = getPlayer1BasedIndex(setPieces.shortFK, 1);
-  const longFkIdx = getPlayer1BasedIndex(setPieces.longFK, 1);
-  const rightCornerIdx = getPlayer1BasedIndex(setPieces.rightCorner, 1);
-  const leftCornerIdx = getPlayer1BasedIndex(setPieces.leftCorner, 1);
-  const penaltyIdx = getPlayer1BasedIndex(setPieces.penalty, 1);
-  const secondKickerIdx = getPlayer1BasedIndex(setPieces.secondKicker, 1);
+  // Roles de balón parado en base 1 (1..11) o 0 (Automático / Por defecto / En blanco)
+  const captainIdx = getPlayer1BasedIndex(setPieces.captain, 0);
+  const shortFkIdx = getPlayer1BasedIndex(setPieces.shortFK, 0);
+  const longFkIdx = getPlayer1BasedIndex(setPieces.longFK, 0);
+  const rightCornerIdx = getPlayer1BasedIndex(setPieces.rightCorner, 0);
+  const leftCornerIdx = getPlayer1BasedIndex(setPieces.leftCorner, 0);
+  const penaltyIdx = getPlayer1BasedIndex(setPieces.penalty, 0);
+  const secondKickerIdx = getPlayer1BasedIndex(setPieces.secondKicker, 0);
 
-  // Rematadores (Header 1, 2, 3): 1-based index si está seleccionado, o default 2, 3, 4 (o 0 si no hay jugador)
-  const header1Idx = setPieces.header1 ? getPlayer1BasedIndex(setPieces.header1, 0) : (starters.length > 1 ? 2 : 0);
-  const header2Idx = setPieces.header2 ? getPlayer1BasedIndex(setPieces.header2, 0) : (starters.length > 2 ? 3 : 0);
-  const header3Idx = setPieces.header3 ? getPlayer1BasedIndex(setPieces.header3, 0) : (starters.length > 3 ? 4 : 0);
+  // Rematadores (Header 1, 2, 3): 1-based index si está seleccionado, o 0 si está vacío/automático
+  const header1Idx = getPlayer1BasedIndex(setPieces.header1, 0);
+  const header2Idx = getPlayer1BasedIndex(setPieces.header2, 0);
+  const header3Idx = getPlayer1BasedIndex(setPieces.header3, 0);
 
   const rolesString = `${captainIdx};${shortFkIdx};${longFkIdx};${rightCornerIdx};${leftCornerIdx};${penaltyIdx};${secondKickerIdx};${header1Idx};${header2Idx};${header3Idx};0;0;0;0;0;0;0`;
 
