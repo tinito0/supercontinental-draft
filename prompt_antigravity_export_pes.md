@@ -1,52 +1,53 @@
-# Contexto para Antigravity CLI — Feature: Exportar plantilla en formato PES (option file)
+# Contexto para Antigravity CLI — Fix de Pateadores + Feature de Estrategia (v2, diagnóstico confirmado)
 
-## Quién sos y qué necesito
+Este prompt reemplaza al anterior (`prompt_antigravity_roles_kickers_tactics.md`). Esta vez el diagnóstico **no es una hipótesis** — está confirmado leyendo el código real del repo (commit `c11dc699`, "A lot of changes", 26/08). Repasá igual el código vos mismo antes de tocar nada, por las dudas de que haya cambiado desde entonces, pero acá no hay adivinanza: son ubicaciones y líneas concretas.
 
-Estás trabajando sobre el repo `tinito0/supercontinental-draft` (React + Firebase/Firestore), la web de mercado/draft de la SuperContinental League™, una liga amateur de PES 2021 entre 12 managers. Necesito que analices el código real del repo (no asumas nada de lo que sigue sin confirmarlo vos mismo en los archivos) y me devuelvas un plan de implementación concreto, con tradeoffs, antes de tocar una sola línea. Esto es intencional: quiero validar el análisis antes de que se escriba código.
+## 1. BUG CONFIRMADO: "Roles y Pateadores" no persiste bien
 
-## Objetivo de negocio
+**Archivo:** `components/FormationModal.jsx`
 
-Quiero poder reemplazar un club existente del juego (ej. "Panathinaikos") por uno de los clubes ficticios de la liga (ej. "Dinamo Visegrad"), conservando el mismo `Id` interno de PES para no romper referencias del juego, pero con toda la data nueva (plantilla, nombre, etc.). Para lograrlo necesito que la web de mercado pueda **exportar la plantilla de un equipo en el formato de "option file" de PES**, que consiste en un set de CSVs: `Team.csv`, `Roster.csv`, `Players.csv`, `Coach.csv`, `Formation.csv`. Tengo un ejemplo real de referencia (export de Liverpool FC con Id=103) que podés usar para ver el esquema exacto de columnas de cada archivo.
+**Causa raíz #1 — no autoguarda:**
+`handleSetPieceChange` (línea ~299) solo hace `setSetPieces(prev => ({...}))`, sin disparar ningún guardado. Comparalo con la colocación de jugadores en la cancha (`onSlotClick`, línea ~442-449), que marca `pendingAutoSaveRef.current = true` y un `useEffect` sobre `lineup` (línea ~452-457) llama a `handleSaveLineup(lineup)` automáticamente. Elegir un capitán/pateador **no tiene ningún mecanismo equivalente**. Si el usuario entra a la pestaña "Pateadores", cambia algo, y sale sin tocar la cancha ni apretar "Guardar" manualmente, el cambio se pierde.
 
-## Lo que ya analicé (verificalo, no lo des por sentado)
+**Causa raíz #2 — no limpia ids huérfanos:**
+`lineup` tiene un `SANITIZE` en el reducer (línea ~156-167) que saca jugadores que ya no están en el `cart`. `setPieces` **no tiene ningún mecanismo así**. Si un jugador que era capitán/pateador sale del 11 titular (lo sacás de la cancha, lo vendés, lo mandás al banco), su Id se queda guardado en Firestore en `setPieces.captain` (u otro rol) para siempre. El `<select>` de `RolesPanel` (línea ~97-112) solo lista `starterPlayers`, así que ese Id huérfano no aparece entre las opciones — el desplegable se ve vacío/en "(Por defecto / Automático)" aunque en Firestore siga guardado un valor viejo. Esto es probablemente lo que Santino percibe como "sigue el bug": el rol "se resetea solo" o "no respeta lo que elegí".
 
-Revisé el repo y encontré lo siguiente. Quiero que confirmes esto contra el código actual (puede haber cambiado) y corrijas cualquier error mío:
+**Fix mínimo propuesto (confirmalo/ajustalo vos, no lo apliques a ciegas sin mirar el código actual):**
+1. Agregar un `useEffect` sobre `setPieces` análogo al de `lineup`, que dispare `handleSaveLineup()` (o una función de guardado más liviana que solo toque `setPieces`) cuando cambie.
+2. Agregar una limpieza (efecto o dentro de `SANITIZE`) que filtre `setPieces` contra los ids de `starterPlayers` vigentes, sacando cualquier rol cuyo playerId ya no esté en el 11 titular — así el dato en Firestore no queda huérfano y el `<select>` siempre refleja la realidad.
 
-1. **Roster.csv es 100% automatizable.** Cada equipo en Firestore (`artifacts/{APP_ID}/public/data/teams/{uid}`) guarda `team.players`, y cada jugador conserva su `Id` original de PES (mismo id que usa `Players.csv`/`Team.csv` para referenciarse — confirmado porque el export a PDF en `components/AdminModal.jsx` (~línea 774) lo etiqueta literalmente "ID (Juego)"). También existe `team.dorsals` (mapa `{playerId: numeroDeCamiseta}`).
+**Nota para no romper otra cosa:** `utils/pesExport.js` → `generateFormationCsv()` (línea ~192-211) ya resuelve bien el mapeo real hacia el formato PES: convierte el Id de `setPieces` al índice 0-10 dentro de `starters` (`getPlayerIndex`), que es lo que espera `Formation.csv` (confirmado contra un `Formation.csv` real de Portland Rovers: `Captain=9` referencia el slot 9 del 11 titular, no un Id de jugador). Esa parte **no tiene el bug** — no la toques, el problema está solo en `FormationModal.jsx` (captura y persistencia en la UI), no en la exportación.
 
-2. **Players.csv se puede generar sin pérdida**, pero OJO: no hay que reconstruirlo desde `jugadores.json` (el pipeline `main.py` descarta columnas como `YouthClub`, `ContractUntil`, todos los `Edit*`, `DribbleMotion`, etc. — ver la lista `columnas_a_incluir` en `main.py`). En cambio, como cada jugador conserva su `Id` original, la fila completa y sin pérdida se puede sacar directamente del CSV maestro `jugadores_exportados.csv` (que tiene el esquema completo de `Players.csv`), matcheando por `Id`.
+## 2. FEATURE NUEVA: Editor de Estrategia de Ataque/Defensa
 
-3. **Team.csv y Coach.csv NO tienen dato de origen en la app.** El modelo de datos del equipo en Firestore solo tiene `teamName` y `logoUrl`. Las ~130 columnas de `Team.csv` (colores de kit, escudo, estadio, sponsors, rivales) y toda la ficha de `Coach.csv` no existen en ningún lado del código — no hay feature de DT ni de identidad visual más allá del logo.
+**Confirmado el hueco:** en `utils/pesExport.js`, `generateFormationCsv()` (línea ~187) tiene:
+```js
+const strategyChunk = "1;1;1;1;6;2;0;0;0;8;2;0;0;0;0;0;0;0;0;0;0;0;0";
+```
+Este string está **hardcodeado igual para los 12 equipos** — nadie puede tener su propia estrategia hoy. Corresponde a estos 12 valores en este orden (columnas reales de `Formation.csv`, confirmadas contra el archivo de Portland Rovers):
 
-4. **Formation.csv es parcial.** Existe `utils/constants.js` → `FORMATIONS`, con un `layout` por esquema táctico (ej. "4-3-3") que da `{pos, x, y}` por slot, pero en escala 0-100 pensada para el pitch visual de la UI, no en la escala/códigos de posición reales que usa PES en `Formation.csv`. Se podría reversear la escala/mapeo usando el `Formation.csv` de referencia (Liverpool), pero no es automático hoy.
+```
+AttackingStylesS1;BuildUpS1;AttackingAreaS1;PositioningS1;SupportRangeS1;NumbersInAttackS1;
+DefensiveStylesS1;ContainmentAreaS1;PressuringS1;DefensiveLineS1;CompactnessS1;NumbersInDefenseS1
+```
 
-5. **`dorsals` no cubre toda la plantilla.** En `components/FormationModal.jsx` (~línea 165-184), al guardar se filtra `dorsalsToSave` contra `validSavedIds`, que sale de los valores del `lineup` (el 11 titular) — es decir, los dorsales de suplentes no quedan persistidos hoy. Para que `Roster.csv` tenga número de camiseta de toda la plantilla (hasta 40 jugadores) hay que revisar/ajustar esa lógica.
+**Alcance decidido: empezar solo con el preset S1** (el mismo que ya usa el export hoy). PES soporta 3 presets tácticos alternables en partido (S1/S2/S3), pero tripicar la UI y el trabajo de mapeo de enums para un beneficio marginal en una liga amateur no vale la pena todavía — dejalo como posible fase futura, no lo bloquees ni lo descartes de plano, pero no lo construyas ahora.
 
-## Pista extra: ya existe un export parecido en el código
+**Lo que falta para construir esto:**
+- **UI**: nueva sección (¿pestaña "Estrategia" al lado de "Pateadores" en `FormationModal.jsx`, o en `AdminModal.jsx`? — proponé vos dónde tiene más sentido según cómo está armada la navegación hoy) con un `<select>` por cada uno de los 12 campos de arriba.
+- **Modelo de datos**: agregar un objeto (ej. `team.tactics` o similar) al mismo `saveData` que ya arma `handleSaveLineup` en `FormationModal.jsx`, con las 12 claves. Definí un default razonable si no está seteado (podés usar los mismos valores del `strategyChunk` actual como default, así ningún equipo existente queda roto).
+- **Conectar con el export**: en `generateFormationCsv()`, reemplazar el `strategyChunk` hardcodeado por los valores reales de `team.tactics` (con fallback al default si el equipo todavía no lo configuró), para no romper exports existentes.
+- **HUECO DE DATOS QUE SIGUE ABIERTO — pedíselo a Santino directamente:** varios de estos 12 campos son *enums* con etiquetas (ej. `AttackingStylesS1=1` es "Possession Game" según la captura del editor que compartió), y otros son escalas numéricas directas (`SupportRangeS1=6`, `DefensiveLineS1=8`, `CompactnessS1=2` — estos van con un input numérico, no un `<select>` de opciones). No tenés la tabla completa de qué código numérico corresponde a qué etiqueta en cada enum (`AttackingStyles`, `BuildUp`, `AttackingArea`, `Positioning`, `NumbersInAttack`, `DefensiveStyles`, `ContainmentArea`, `Pressuring`, `NumbersInDefense`). Pedile a Santino que, desde el editor de PES que ya tiene abierto, te pase la lista completa de opciones de cada dropdown en el orden en que aparecen (la posición en la lista suele ser el código numérico, empezando en 0). Sin esto no se puede armar el `<select>` real — no inventes las etiquetas.
 
-En `components/AdminModal.jsx` (la misma zona de ~línea 740-830 que ya te marqué) hay una función que genera un **PDF llamado "Plantilla"** por equipo, y hace exactamente el join que necesitás para `Roster.csv`: recorre `team.players`, cruza con `team.lineup` (para el 11 titular por slot táctico), con `team.dorsals` (número de camiseta) y con `FORMATIONS[team.formation]` (para el rol táctico de cada slot), y arma la tabla de titulares + banquillo con `Id` (juego), dorsal, nombre, posición natural y valoración.
+## Qué quiero que hagas
 
-Te adjunto un PDF real generado por esa función (`Plantilla_PORTLAND_ROVERS_Tactico.pdf`, equipo Portland Rovers) para que veas el resultado y uses esa misma función/lógica como base o referencia directa para armar `Roster.csv` — capaz ni hace falta escribir el join de nuevo, solo reformatear la salida a CSV.
+1. Confirmá vos mismo, mirando el código actual (puede haber cambiado desde este commit), que el diagnóstico del bug sigue siendo así.
+2. Aplicá el fix de "Roles y Pateadores" (autoguardado + limpieza de huérfanos). Este sí lo podés implementar directo, es acotado y de bajo riesgo.
+3. Para la Estrategia de Ataque/Defensa: armá la UI + modelo de datos + conexión al export **excepto los enums** (dejá placeholders o los valores numéricos crudos en los `<select>` mientras tanto), y pedile a Santino la tabla de equivalencias antes de poner las etiquetas en español definitivas.
+4. Avisame si algo de lo que describí ya cambió en el código o no coincide con lo que encontrás vos.
 
-Cosas para que notes en ese PDF de ejemplo (confirman puntos que ya marqué arriba):
-- Hay jugadores del banquillo sin dorsal asignado (aparece "-"), lo que confirma el problema de `dorsals` que no persiste para todo el plantel, no solo el 11 titular.
-- La columna "Pos" del banquillo es la posición **natural** del jugador (`POS_NOMBRE`), mientras que en el 11 titular la columna "Rol" es la posición **táctica del slot** de la formación (pueden no coincidir, ej. C. Pulisic natural ED jugando de MD) — para `Formation.csv` vas a necesitar diferenciar estos dos conceptos.
-- Hay un jugador con un `Id` de 10 dígitos (`CAIO LUCAS — 1073803084`) que no pinta como un Id real de la base de PES (los demás son de 5-6 dígitos) — puede ser un jugador editado/creado a mano. Marcalo como caso borde a resolver: qué hacer en `Players.csv` si el `Id` no matchea contra `jugadores_exportados.csv`.
+## Restricciones del proyecto
 
-Si para hacer un análisis más extenso de cómo funciona el sistema de datos preferís tener más ejemplos de plantillas reales (más PDFs de este tipo, u otros equipos), avisame y te paso más antes de que sigas.
-
-## Lo que quiero que hagas
-
-1. **Verificá cada uno de los 5 puntos de arriba** contra el código actual del repo. Decime si algo cambió o si mi lectura está mal.
-2. **Analizá el `Formation.csv` y `Team.csv` del ZIP de referencia** (`Liverpool FC - 103`, contiene `Team.csv`, `Roster.csv`, `Players.csv`, `Coach.csv`, `Formation.csv`, `Appearances.csv`) para documentar el esquema exacto de columnas de cada archivo, con foco en `Formation.csv` (códigos de posición numéricos, rango real de `LocationX`/`LocationY`, qué son `AttackingStylesS1`, `BuildUp...`, etc.) y `Team.csv` (qué columnas son obligatorias para que el juego no rompa vs. cuáles son cosméticas).
-3. **Proponeme un plan de implementación en fases**, con esta base como punto de partida (podés cuestionarla):
-   - **Fase 1**: botón "Exportar Plantilla PES" (en `components/AdminModal.jsx`, por equipo) que genera un ZIP con `Team.csv` (solo `Id`+`Name` completos, resto en blanco para completar a mano), `Roster.csv` completo, y `Players.csv` con la fila original completa de cada jugador (matcheada por `Id` contra `jugadores_exportados.csv`).
-   - **Fase 2 (a confirmar conmigo)**: si conviene generar también `Coach.csv`/`Formation.csv`, y si vale la pena, para eso, construir nueva UI de captura de datos (colores, estadio, DT) o mantenerlo manual en el editor del juego.
-4. **Para la Fase 1**, decime también qué cambios mínimos hacen falta en `dorsals` (ver punto 5) para que el número de camiseta salga correcto para toda la plantilla, no solo el 11 titular.
-5. **No implementes nada todavía.** Quiero el análisis + plan + preguntas abiertas primero, para darte el ok antes de que generes código.
-
-## Restricciones y estilo del proyecto
-
-- Todo el contenido de cara al usuario/manager va en español (Argentina, voseo).
-- No asumas nada del modelo de datos sin verificarlo vos mismo en el repo — no confíes ciegamente en mi resumen de arriba.
-- Priorizá no romper nada de lo que ya funciona en el mercado/draft (fichajes, cashback, formaciones actuales).
+- Español (Argentina, voseo) en todo lo de cara al manager.
+- No toques `getPlayerIndex`/`generateFormationCsv` más que para conectar la estrategia real — esa parte del export ya funciona bien.
+- No implementes los 3 presets (S2/S3) todavía, solo S1.

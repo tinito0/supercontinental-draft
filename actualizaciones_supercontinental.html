@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Supercontinental Draft - Actualizaciones</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
+  
+  @page {
+    size: A4;
+    margin: 14mm 12mm 14mm 12mm;
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #ffffff;
+    color: #1e293b;
+    line-height: 1.45;
+    font-size: 11px;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    color: white;
+    padding: 18px 22px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #312e81;
+  }
+
+  .header h1 {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+  }
+
+  .header p {
+    font-size: 11px;
+    color: #38bdf8;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .badge {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .section {
+    margin-bottom: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 11px 13px;
+    page-break-inside: avoid;
+  }
+
+  .section-title {
+    font-size: 12.5px;
+    font-weight: 900;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 7px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .card {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .card h3 {
+    font-size: 11px;
+    font-weight: 800;
+    color: #0369a1;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .card ul {
+    list-style: none;
+  }
+
+  .card li {
+    font-size: 10px;
+    color: #334155;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .card li::before {
+    content: '•';
+    color: #0284c7;
+    font-weight: 900;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .highlight {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .role-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 5px;
+    font-size: 9.5px;
+    background: white;
+    border-radius: 7px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+  }
+
+  .role-table th {
+    background: #0f172a;
+    color: white;
+    padding: 5px 8px;
+    text-align: left;
+    font-weight: 800;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+
+  .role-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+  }
+
+  .role-table tr:nth-child(even) {
+    background: #f8fafc;
+  }
+
+  .role-name {
+    font-weight: 800;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+
+  .stat-badge {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 8.5px;
+    border: 1px solid #bae6fd;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 10px;
+    padding-top: 6px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 9px;
+    color: #64748b;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>Supercontinental Draft</h1>
+      <p>Guía de Novedades y Actualizaciones · Integración PES 2021 & Tácticas</p>
+    </div>
+    <div class="badge">Actualización 2.0</div>
+  </div>
+
+  <!-- SECCIÓN 1: ESTRATEGIA TÁCTICA -->
+  <div class="section">
+    <div class="section-title">
+      <span>⚙️</span> 1. Nueva Pestaña de Estrategia Táctica (Ataque y Defensa)
+    </div>
+    <p style="margin-bottom: 6px; color: #475569; font-size: 10px;">Ahora cada usuario puede definir con exactitud el estilo de juego de su equipo dentro de la Pizarra Táctica. Estos valores se guardan en la nube y se exportan automáticamente a los archivos de PES 2021.</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>⚔️ Estrategia Ofensiva</h3>
+        <ul>
+          <li><span class="highlight">Estilo de Ataque:</span> Posesión o Contraataque.</li>
+          <li><span class="highlight">Construcción de Juego:</span> Pase Corto o Pase Largo.</li>
+          <li><span class="highlight">Área de Ataque:</span> Por el Centro o por las Bandas.</li>
+          <li><span class="highlight">Posicionamiento:</span> Flexible o Mantener Formación.</li>
+          <li><span class="highlight">Rango de Apoyo:</span> Slider del 1 al 10 (cercanía de apoyos).</li>
+          <li><span class="highlight">Efectivos en Ataque:</span> Muchos, Medio o Pocos jugadores.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🛡️ Estrategia Defensiva</h3>
+        <ul>
+          <li><span class="highlight">Estilo Defensivo:</span> Presión en la Frontal o Defensa Total.</li>
+          <li><span class="highlight">Área de Contención:</span> Por el Centro o por las Bandas.</li>
+          <li><span class="highlight">Presión:</span> Conservadora o Agresiva.</li>
+          <li><span class="highlight">Línea Defensiva:</span> Slider del 1 al 10 (altura de la zaga).</li>
+          <li><span class="highlight">Compactibilidad / Densidad:</span> Slider del 1 al 10.</li>
+          <li><span class="highlight">Efectivos en Defensa:</span> Pocos, Medio o Muchos jugadores.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 2: PATEADORES Y ROLES -->
+  <div class="section">
+    <div class="section-title">
+      <span>🎯</span> 2. Asignación Inteligente de Pateadores y Capitán
+    </div>
+    <p style="margin-bottom: 6px; color: #475569; font-size: 10px;">Los selectores de roles ahora muestran las estadísticas y habilidades reales que gobierna el motor de PES 2021, facilitando elegir al mejor ejecutante para cada situación.</p>
+    <table class="role-table">
+      <thead>
+        <tr>
+          <th>Rol</th>
+          <th>Atributos / Habilidades Evaluadas</th>
+          <th>Beneficio en el Juego</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="role-name">👑 Capitán</td>
+          <td><span class="stat-badge">Habilidad Capitanía</span> + OVR</td>
+          <td>Otorga bonus de resistencia y moral a todo el equipo.</td>
+        </tr>
+        <tr>
+          <td class="role-name">🎯 Tiro Libre Corto</td>
+          <td><span class="stat-badge">Balón Parado (BP)</span> + <span class="stat-badge">Efecto</span></td>
+          <td>Precisión milimétrica por encima o al costado de la barrera.</td>
+        </tr>
+        <tr>
+          <td class="role-name">🚀 Tiro Libre Largo</td>
+          <td><span class="stat-badge">Balón Parado (BP)</span> + <span class="stat-badge">Potencia</span></td>
+          <td>Disparos con fuerza y centros tensos al área desde lejos.</td>
+        </tr>
+        <tr>
+          <td class="role-name">📐 Córner Izq / Der</td>
+          <td><span class="stat-badge">BP</span> + <span class="stat-badge">Efecto</span> + Pierna (Izq/Der)</td>
+          <td>Comba abierta o cerrada según el perfil de la pierna hábil.</td>
+        </tr>
+        <tr>
+          <td class="role-name">🥅 Penales</td>
+          <td><span class="stat-badge">Esp. Penaltis</span> + BP + Finalización</td>
+          <td>Tiros esquineros inatajables y menor nerviosismo.</td>
+        </tr>
+        <tr>
+          <td class="role-name">👥 Segundo Tirador</td>
+          <td><span class="stat-badge">BP</span> + <span class="stat-badge">Efecto</span> + Pierna Cambiada</td>
+          <td>Opción de amague y remate con el perfil contrario.</td>
+        </tr>
+        <tr>
+          <td class="role-name">💥 Rematadores (1, 2, 3)</td>
+          <td><span class="stat-badge">Cabeceo</span> + <span class="stat-badge">Salto</span> + Altura (cm)</td>
+          <td>Jugadores que van a buscar el cabezazo en tiros de esquina.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECCIÓN 3: EXPORTADOR PES Y MEJORAS VISUALES -->
+  <div class="section">
+    <div class="section-title">
+      <span>📦</span> 3. Exportador Completo de Option File y Mejoras de Uso
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>🎮 Paquete ZIP para EJOGC327</h3>
+        <ul>
+          <li><span class="highlight">Formation.csv:</span> Alineación, posiciones X/Y, pateadores y táctica S1 personalizada.</li>
+          <li><span class="highlight">Roster.csv:</span> Titulares y suplentes ordenados con sus dorsales oficiales.</li>
+          <li><span class="highlight">Appearances.csv:</span> Caras, físicos y accesorios vinculados.</li>
+          <li><span class="highlight">Players.csv:</span> Jugadores exportados con sus IDs de PES.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>📱 Mejoras Visuales y Autoguardado</h3>
+        <ul>
+          <li><span class="highlight">Autoguardado Inmediato:</span> Cualquier cambio de formación, pateador o táctica se guarda al instante.</li>
+          <li><span class="highlight">Limpieza Automática:</span> Si un jugador sale del 11 titular, se desasigna de los roles automáticamente.</li>
+          <li><span class="highlight">Diseño Responsivo:</span> Navegación fluida por pestañas en celulares y computadoras.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Supercontinental Draft © 2025/2026 · Desarrollado para la comunidad de PES 2021
+  </div>
+
+</body>
+</html>

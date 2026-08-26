@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-const FIREBASE_API_KEY = "AIzaSyC3dU2SsxKd0RGqHu8eODMnVx1Rme4mDtg";
-const FIREBASE_PROJECT_ID = "supercont-d62df";
-const FIREBASE_MESSAGING_SENDER_ID = "1083109181179";
-const FIREBASE_AUTH_DOMAIN = "supercont-d62df.firebaseapp.com";
-const FIREBASE_STORAGE_BUCKET = "supercont-d62df.appspot.com";
-const FIREBASE_APP_ID = "1:1083109181179:web:b1ea53e2da91a04a05525e";
+const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY;
+const FIREBASE_PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+const FIREBASE_MESSAGING_SENDER_ID = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID;
+const FIREBASE_AUTH_DOMAIN = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
+const FIREBASE_STORAGE_BUCKET = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
+const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID;
 
 let app;
 let auth;

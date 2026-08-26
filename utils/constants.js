@@ -372,3 +372,18 @@ export const ADMIN_USER_IDS = [
   "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3"
 ];
 export const APP_ID = 'scl-draft-2025';
+
+export const DEFAULT_TACTICS = {
+  attackingStyles: 1,    // 0: Contraataque, 1: Posesión
+  buildUp: 1,            // 0: Pase largo, 1: Pase corto
+  attackingArea: 1,      // 0: Por las bandas, 1: Por el centro
+  positioning: 1,        // 0: Mantener formación, 1: Flexible
+  supportRange: 6,       // Slider 1-10
+  numbersInAttack: 2,    // 0: Pocos, 1: Medio, 2: Muchos
+  defensiveStyles: 0,    // 0: Presión en la frontal, 1: Defensa total
+  containmentArea: 0,    // 0: Por el centro, 1: Por las bandas
+  pressuring: 0,         // 0: Conservador, 1: Agresivo
+  defensiveLine: 8,      // Slider 1-10
+  compactness: 2,        // Slider 1-10
+  numbersInDefense: 0    // 0: Pocos, 1: Medio, 2: Muchos
+};

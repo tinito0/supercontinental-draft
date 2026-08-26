@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { FORMATIONS } from './constants.js';
+import { FORMATIONS, DEFAULT_TACTICS } from './constants.js';
 
 const PES_POSITION_MAP = {
   PT: 0,
@@ -155,17 +155,18 @@ export function generateTeamCsv(teamId, teamName) {
 /**
  * Genera Coach.csv
  */
-export function generateCoachCsv(teamId, coachName = 'Director Técnico') {
+export function generateCoachCsv(teamId, coachName = 'Director Técnico', coachNationality = 204) {
   const headers = "Id;Name;Country;JapName;Adaptability;Photo;Photo_file;EditName;EditCountry;EditPhoto;EditIntern;Value1;Value2;Value3;Value4;Value5;Value6";
   const coachId = (parseInt(teamId, 10) * 1000) + 1;
-  const row = `${coachId};${coachName};204;;85;0;;False;False;False;False;0;0;0;-1;-1;-1`;
+  const countryId = parseInt(coachNationality, 10) || 204;
+  const row = `${coachId};${coachName};${countryId};;85;0;;False;False;False;False;0;0;0;-1;-1;-1`;
   return `${headers}\n${row}\n`;
 }
 
 /**
  * Genera Formation.csv mapeando slots, coordenadas y roles de pateadores
  */
-export function generateFormationCsv(teamId, formationKey, starters, setPieces = {}, allPlayers = []) {
+export function generateFormationCsv(teamId, formationKey, starters, setPieces = {}, allPlayers = [], tactics = {}) {
   const formation = FORMATIONS[formationKey] || FORMATIONS['4-3-3'];
   const layout = formation.layout || FORMATIONS['4-3-3'].layout;
 
@@ -183,30 +184,33 @@ export function generateFormationCsv(teamId, formationKey, starters, setPieces =
   const positionsString = positions.join(';');
   const locationsString = locPairs.join(';');
 
-  // Estrategia base PES estándar (presets 1, 2, 3)
-  const strategyChunk = "1;1;1;1;6;2;0;0;0;8;2;0;0;0;0;0;0;0;0;0;0;0;0";
+  // Estrategia real configurada por el equipo (Preset S1)
+  const t = { ...DEFAULT_TACTICS, ...(tactics || {}) };
+  const strategyChunk = `${t.attackingStyles ?? 1};${t.buildUp ?? 1};${t.attackingArea ?? 1};${t.positioning ?? 1};${t.supportRange ?? 6};${t.numbersInAttack ?? 2};${t.defensiveStyles ?? 0};${t.containmentArea ?? 0};${t.pressuring ?? 0};${t.defensiveLine ?? 8};${t.compactness ?? 2};${t.numbersInDefense ?? 0};0;0;0;0;0;0;0;0;0;0;0`;
 
-  // IndexPlayer1..40 (40 ceros como el estándar oficial de PES)
-  const indexPlayers = Array(40).fill(0).join(';');
+  // IndexPlayer1..40 (mapeo secuencial 0..39 a los 40 slots del Roster)
+  const indexPlayers = Array.from({ length: 40 }, (_, i) => i).join(';');
 
-  // Helper para resolver índice (0..10) en los titulares a partir de un ID
-  const getPlayerIndex = (targetId, defaultIdx = 0) => {
-    if (!targetId) return defaultIdx;
+  // Helper para resolver índice en base 1 (1..11) en los titulares a partir de un ID
+  const getPlayer1BasedIndex = (targetId, default1BasedIdx = 1) => {
+    if (!targetId) return default1BasedIdx;
     const foundIdx = starters.findIndex(p => String(p.Id || p.id) === String(targetId));
-    return foundIdx >= 0 ? foundIdx : defaultIdx;
+    return foundIdx >= 0 ? (foundIdx + 1) : default1BasedIdx;
   };
 
-  // Roles de balón parado
-  const captainIdx = getPlayerIndex(setPieces.captain, 0);
-  const shortFkIdx = getPlayerIndex(setPieces.shortFK, 0);
-  const longFkIdx = getPlayerIndex(setPieces.longFK, 0);
-  const rightCornerIdx = getPlayerIndex(setPieces.rightCorner, 0);
-  const leftCornerIdx = getPlayerIndex(setPieces.leftCorner, 0);
-  const penaltyIdx = getPlayerIndex(setPieces.penalty, 0);
-  const secondKickerIdx = getPlayerIndex(setPieces.secondKicker, 0);
-  const header1Idx = getPlayerIndex(setPieces.header1, 1);
-  const header2Idx = getPlayerIndex(setPieces.header2, 2);
-  const header3Idx = getPlayerIndex(setPieces.header3, 3);
+  // Roles de balón parado en base 1 (1..11) para compatibilidad con EJOGC327
+  const captainIdx = getPlayer1BasedIndex(setPieces.captain, 1);
+  const shortFkIdx = getPlayer1BasedIndex(setPieces.shortFK, 1);
+  const longFkIdx = getPlayer1BasedIndex(setPieces.longFK, 1);
+  const rightCornerIdx = getPlayer1BasedIndex(setPieces.rightCorner, 1);
+  const leftCornerIdx = getPlayer1BasedIndex(setPieces.leftCorner, 1);
+  const penaltyIdx = getPlayer1BasedIndex(setPieces.penalty, 1);
+  const secondKickerIdx = getPlayer1BasedIndex(setPieces.secondKicker, 1);
+
+  // Rematadores (Header 1, 2, 3): 1-based index si está seleccionado, o default 2, 3, 4 (o 0 si no hay jugador)
+  const header1Idx = setPieces.header1 ? getPlayer1BasedIndex(setPieces.header1, 0) : (starters.length > 1 ? 2 : 0);
+  const header2Idx = setPieces.header2 ? getPlayer1BasedIndex(setPieces.header2, 0) : (starters.length > 2 ? 3 : 0);
+  const header3Idx = setPieces.header3 ? getPlayer1BasedIndex(setPieces.header3, 0) : (starters.length > 3 ? 4 : 0);
 
   const rolesString = `${captainIdx};${shortFkIdx};${longFkIdx};${rightCornerIdx};${leftCornerIdx};${penaltyIdx};${secondKickerIdx};${header1Idx};${header2Idx};${header3Idx};0;0;0;0;0;0;0`;
 
@@ -233,9 +237,10 @@ export function generateAppearancesCsv(allTeamPlayers) {
 /**
  * Empaqueta y descarga el ZIP completo de Option File para PES
  */
-export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachName = 'Director Técnico') {
+export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachName = 'Director Técnico', customTeamName = null, coachNationality = 204) {
   const zip = new JSZip();
 
+  const finalTeamName = (customTeamName && typeof customTeamName === 'string' && customTeamName.trim()) ? customTeamName.trim() : (teamData.name || 'Equipo');
   const starters = [];
   const starterIds = new Set();
   const lineup = teamData.lineup || {};
@@ -262,9 +267,9 @@ export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachN
   // 3. Generar CSVs
   const rosterCsv = generateRosterCsv(targetPesTeamId, starters, subs, teamData.dorsals || {});
   const { csvContent: playersCsv, missingPlayers } = await generatePlayersCsv(allSquad);
-  const teamCsv = generateTeamCsv(targetPesTeamId, teamData.name);
-  const coachCsv = generateCoachCsv(targetPesTeamId, coachName);
-  const formationCsv = generateFormationCsv(targetPesTeamId, teamData.formation, starters, teamData.setPieces || {}, allSquad);
+  const teamCsv = generateTeamCsv(targetPesTeamId, finalTeamName);
+  const coachCsv = generateCoachCsv(targetPesTeamId, coachName, coachNationality);
+  const formationCsv = generateFormationCsv(targetPesTeamId, teamData.formation, starters, teamData.setPieces || {}, allSquad, teamData.tactics || {});
   const appearancesCsv = generateAppearancesCsv(allSquad);
 
   // 4. Agregar al archivo ZIP
@@ -279,7 +284,7 @@ export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachN
   const content = await zip.generateAsync({ type: 'blob' });
   const downloadUrl = URL.createObjectURL(content);
   const a = document.createElement('a');
-  const safeName = (teamData.name || 'Equipo').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const safeName = finalTeamName.replace(/[^a-zA-Z0-9_-]/g, '_');
   a.href = downloadUrl;
   a.download = `PES_OptionFile_${safeName}_ID${targetPesTeamId}.zip`;
   document.body.appendChild(a);

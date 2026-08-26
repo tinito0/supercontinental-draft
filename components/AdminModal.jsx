@@ -721,6 +721,7 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
           formation: profileData.formation || '4-3-3',
           lineup: profileData.lineup || {},
           setPieces: profileData.setPieces || {},
+          tactics: profileData.tactics || {},
           players: players || [] // Aseguramos que sea un array
         };
       });
@@ -736,18 +737,40 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
 
   const [pesExportModalTeam, setPesExportModalTeam] = useState(null);
   const [targetPesTeamId, setTargetPesTeamId] = useState(103);
+  const [targetTeamName, setTargetTeamName] = useState('');
   const [targetCoachName, setTargetCoachName] = useState('Director Técnico');
+  const [targetCoachNationality, setTargetCoachNationality] = useState(204);
+  const [countryOptions, setCountryOptions] = useState([]);
   const [isExportingPes, setIsExportingPes] = useState(false);
+
+  useEffect(() => {
+    fetch('/paises.json')
+      .then(res => res.json())
+      .then(data => {
+        const list = Object.entries(data)
+          .map(([id, name]) => ({ id: Number(id), name }))
+          .filter(c => c.id > 0 && c.name && c.name !== 'N/A')
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setCountryOptions(list);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleDownloadPesZip = async () => {
     if (!pesExportModalTeam) return;
     setIsExportingPes(true);
     try {
-      const result = await exportTeamToPesZip(pesExportModalTeam, targetPesTeamId, targetCoachName);
+      const result = await exportTeamToPesZip(
+        pesExportModalTeam,
+        targetPesTeamId,
+        targetCoachName,
+        targetTeamName,
+        targetCoachNationality
+      );
       if (result.missingPlayers?.length > 0) {
         showStatusMessage('warning', `Option File exportado con éxito. Nota: ${result.missingPlayers.length} jugador(es) no estaban en el CSV maestro y se exportaron con valores base.`);
       } else {
-        showStatusMessage('success', `Option File (${pesExportModalTeam.name}) exportado correctamente para PES (ID ${targetPesTeamId}).`);
+        showStatusMessage('success', `Option File (${targetTeamName || pesExportModalTeam.name}) exportado correctamente para PES (ID ${targetPesTeamId}).`);
       }
       setPesExportModalTeam(null);
     } catch (err) {
@@ -932,7 +955,9 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
                   onClick={() => {
                     setPesExportModalTeam(team);
                     setTargetPesTeamId(103);
+                    setTargetTeamName(team.name || '');
                     setTargetCoachName(team.name ? `DT ${team.name}` : 'Director Técnico');
+                    setTargetCoachNationality(204);
                   }}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center transition shadow-lg active:scale-95"
                 >
@@ -957,13 +982,28 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
             </div>
 
             <div className="text-xs text-gray-300 bg-blue-950/40 border border-blue-800/40 p-3 rounded-xl space-y-1">
-              <p className="font-bold text-blue-300">Equipo: {pesExportModalTeam.name}</p>
+              <p className="font-bold text-blue-300">Equipo Original: {pesExportModalTeam.name}</p>
               <p className="text-[11px] text-gray-400 leading-relaxed">
-                Genera un ZIP con <span className="text-cyan-300 font-mono">Team.csv</span>, <span className="text-cyan-300 font-mono">Roster.csv</span>, <span className="text-cyan-300 font-mono">Players.csv</span>, <span className="text-cyan-300 font-mono">Coach.csv</span> y <span className="text-cyan-300 font-mono">Formation.csv</span> listo para PES 2021.
+                Genera un ZIP con <span className="text-cyan-300 font-mono">Team.csv</span>, <span className="text-cyan-300 font-mono">Roster.csv</span>, <span className="text-cyan-300 font-mono">Players.csv</span>, <span className="text-cyan-300 font-mono">Coach.csv</span>, <span className="text-cyan-300 font-mono">Appearances.csv</span> y <span className="text-cyan-300 font-mono">Formation.csv</span> listo para PES 2021.
               </p>
             </div>
 
             <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  Nombre del Club en PES
+                </label>
+                <input
+                  type="text"
+                  value={targetTeamName}
+                  onChange={(e) => setTargetTeamName(e.target.value)}
+                  maxLength={32}
+                  className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                  placeholder="Ej: Liverpool FC, Boca Juniors, etc."
+                />
+                <span className="text-[10px] text-gray-500">Nombre que figurará en el juego (máx. 32 caracteres).</span>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-300 mb-1">
                   ID del Club PES a reemplazar
@@ -978,17 +1018,38 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
                 <span className="text-[10px] text-gray-500">Ejemplo: 103 para reemplazar Liverpool FC o el ID del club deseado.</span>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1">
-                  Nombre del Director Técnico
-                </label>
-                <input
-                  type="text"
-                  value={targetCoachName}
-                  onChange={(e) => setTargetCoachName(e.target.value)}
-                  className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-3 py-2 text-white text-sm outline-none"
-                  placeholder="Director Técnico"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1">
+                    Nombre del DT
+                  </label>
+                  <input
+                    type="text"
+                    value={targetCoachName}
+                    onChange={(e) => setTargetCoachName(e.target.value)}
+                    className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                    placeholder="Director Técnico"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1">
+                    Nacionalidad del DT
+                  </label>
+                  <select
+                    value={targetCoachNationality}
+                    onChange={(e) => setTargetCoachNationality(Number(e.target.value))}
+                    className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-2.5 py-2 text-white text-xs outline-none cursor-pointer"
+                  >
+                    {countryOptions.length > 0 ? (
+                      countryOptions.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
+                      ))
+                    ) : (
+                      <option value={204}>Argentina (ID: 204)</option>
+                    )}
+                  </select>
+                </div>
               </div>
             </div>
 

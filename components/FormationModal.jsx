@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, memo, useRef, useMemo, useReducer } from 'react';
-import { X, Save, Image as ImageIcon, ClipboardList, Move, Share2, Check, Copy, Loader2, Crown, Target, Zap, Shield, Users, Activity } from 'lucide-react';
+import { X, Save, Image as ImageIcon, ClipboardList, Move, Share2, Check, Copy, Loader2, Crown, Target, Zap, Shield, Users, Activity, Sliders, Settings } from 'lucide-react';
 import { writeBatch, addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { Pitch } from './Pitch.jsx';
 import html2canvas from 'html2canvas';
-import { FORMATIONS, APP_ID, DEFAULT_LOGO } from '../utils/constants.js';
+import { FORMATIONS, APP_ID, DEFAULT_LOGO, DEFAULT_TACTICS } from '../utils/constants.js';
 import { getPosColorClass, formatPriceShort } from '../utils/helpers.js';
 
 export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange, isBench, onBenchChange }) => (
@@ -49,6 +49,273 @@ export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, do
   </div>
 ));
 
+export const TacticsPanel = memo(function TacticsPanel({
+  tactics,
+  onTacticsChange
+}) {
+  const currentTactics = { ...DEFAULT_TACTICS, ...(tactics || {}) };
+
+  const attackFields = [
+    {
+      key: 'attackingStyles',
+      label: 'Estilo de Ataque',
+      type: 'select',
+      options: [
+        { value: 1, label: 'Posesión (Possession Game)' },
+        { value: 0, label: 'Contraataque (Counter Attack)' }
+      ]
+    },
+    {
+      key: 'buildUp',
+      label: 'Construcción',
+      type: 'select',
+      options: [
+        { value: 1, label: 'Pase Corto (Short-pass)' },
+        { value: 0, label: 'Pase Largo (Long-pass)' }
+      ]
+    },
+    {
+      key: 'attackingArea',
+      label: 'Área de Ataque',
+      type: 'select',
+      options: [
+        { value: 1, label: 'Centro (Centre)' },
+        { value: 0, label: 'Bandas (Wide)' }
+      ]
+    },
+    {
+      key: 'positioning',
+      label: 'Posicionamiento',
+      type: 'select',
+      options: [
+        { value: 1, label: 'Flexible' },
+        { value: 0, label: 'Mantener Formación' }
+      ]
+    },
+    {
+      key: 'supportRange',
+      label: 'Rango de Apoyo',
+      type: 'slider',
+      min: 1,
+      max: 10,
+      minLabel: 'Corto (1)',
+      maxLabel: 'Largo (10)'
+    },
+    {
+      key: 'numbersInAttack',
+      label: 'Efectivos en Ataque',
+      type: 'select',
+      options: [
+        { value: 2, label: 'Muchos (Many)' },
+        { value: 1, label: 'Medio (Medium)' },
+        { value: 0, label: 'Pocos (Few)' }
+      ]
+    }
+  ];
+
+  const defenseFields = [
+    {
+      key: 'defensiveStyles',
+      label: 'Estilo Defensivo',
+      type: 'select',
+      options: [
+        { value: 0, label: 'Presión en la Frontal (Frontline Pressure)' },
+        { value: 1, label: 'Defensa Total (All-out Defence)' }
+      ]
+    },
+    {
+      key: 'containmentArea',
+      label: 'Área de Contención',
+      type: 'select',
+      options: [
+        { value: 0, label: 'Centro (Middle)' },
+        { value: 1, label: 'Bandas (Wide)' }
+      ]
+    },
+    {
+      key: 'pressuring',
+      label: 'Presión',
+      type: 'select',
+      options: [
+        { value: 0, label: 'Conservador (Conservative)' },
+        { value: 1, label: 'Agresivo (Aggressive)' }
+      ]
+    },
+    {
+      key: 'defensiveLine',
+      label: 'Línea Defensiva',
+      type: 'slider',
+      min: 1,
+      max: 10,
+      minLabel: 'Retrasada (1)',
+      maxLabel: 'Adelantada (10)'
+    },
+    {
+      key: 'compactness',
+      label: 'Compactibilidad / Densidad',
+      type: 'slider',
+      min: 1,
+      max: 10,
+      minLabel: 'Abierta (1)',
+      maxLabel: 'Compacta (10)'
+    },
+    {
+      key: 'numbersInDefense',
+      label: 'Efectivos en Defensa',
+      type: 'select',
+      options: [
+        { value: 0, label: 'Pocos (Few)' },
+        { value: 1, label: 'Medio (Medium)' },
+        { value: 2, label: 'Muchos (Many)' }
+      ]
+    }
+  ];
+
+  return (
+    <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-4 bg-gray-900/20 pb-20 lg:pb-4">
+      <div className="text-[11px] text-gray-400 bg-white/[0.02] p-2.5 rounded-lg border border-white/5 leading-relaxed">
+        Configurá la estrategia táctica (Preset S1) de tu equipo. Se exporta directamente a PES en <span className="text-cyan-300 font-mono">Formation.csv</span>.
+      </div>
+
+      {/* SECCIÓN ATAQUE */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-black uppercase text-cyan-400 tracking-wider">
+          <Zap className="w-3.5 h-3.5 text-cyan-400" /> Estrategia Ofensiva
+        </div>
+        <div className="space-y-2">
+          {attackFields.map((field) => (
+            <div key={field.key} className="bg-gray-800/40 border border-gray-700/60 rounded-xl p-2.5 space-y-1.5 hover:border-gray-600 transition">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-200">{field.label}</span>
+                {field.type === 'slider' && (
+                  <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/50">
+                    {currentTactics[field.key] ?? field.min}
+                  </span>
+                )}
+              </div>
+              {field.type === 'select' ? (
+                <select
+                  value={currentTactics[field.key] ?? field.options[0].value}
+                  onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
+                  className="w-full bg-black/50 text-white text-xs rounded-lg px-2.5 py-1.5 border border-gray-700 focus:border-cyan-500 outline-none font-medium cursor-pointer"
+                >
+                  {field.options.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="space-y-1 pt-1">
+                  <input
+                    type="range"
+                    min={field.min}
+                    max={field.max}
+                    value={currentTactics[field.key] ?? field.min}
+                    onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
+                    className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                  />
+                  <div className="flex justify-between text-[9px] text-gray-500 font-medium px-0.5">
+                    <span>{field.minLabel}</span>
+                    <span>{field.maxLabel}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* SECCIÓN DEFENSA */}
+      <div className="space-y-2 pt-2 border-t border-white/5">
+        <div className="flex items-center gap-1.5 text-xs font-black uppercase text-emerald-400 tracking-wider">
+          <Shield className="w-3.5 h-3.5 text-emerald-400" /> Estrategia Defensiva
+        </div>
+        <div className="space-y-2">
+          {defenseFields.map((field) => (
+            <div key={field.key} className="bg-gray-800/40 border border-gray-700/60 rounded-xl p-2.5 space-y-1.5 hover:border-gray-600 transition">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-200">{field.label}</span>
+                {field.type === 'slider' && (
+                  <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50">
+                    {currentTactics[field.key] ?? field.min}
+                  </span>
+                )}
+              </div>
+              {field.type === 'select' ? (
+                <select
+                  value={currentTactics[field.key] ?? field.options[0].value}
+                  onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
+                  className="w-full bg-black/50 text-white text-xs rounded-lg px-2.5 py-1.5 border border-gray-700 focus:border-emerald-500 outline-none font-medium cursor-pointer"
+                >
+                  {field.options.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="space-y-1 pt-1">
+                  <input
+                    type="range"
+                    min={field.min}
+                    max={field.max}
+                    value={currentTactics[field.key] ?? field.min}
+                    onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
+                    className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                  />
+                  <div className="flex justify-between text-[9px] text-gray-500 font-medium px-0.5">
+                    <span>{field.minLabel}</span>
+                    <span>{field.maxLabel}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+function formatRolePlayerOption(player, roleKey, dorsals = {}) {
+  const d = dorsals[player.Id] ? `#${dorsals[player.Id]} ` : '';
+  const name = player.Name;
+  const pos = player.slotPos || player.POS_NOMBRE;
+  const isLeftFooted = String(player.Foot).toLowerCase() === 'izquierdo' || player.Foot === true || player.Foot === 'True';
+  const footLabel = isLeftFooted ? 'Izq' : 'Der';
+  const hasCaptaincy = player.Captaincy === true || String(player.Captaincy) === 'True';
+  const hasPenaltySpec = player.PenaltySpecialist === true || String(player.PenaltySpecialist) === 'True';
+  const hasHeadingSpec = player.HeadingSpecial === true || String(player.HeadingSpecial) === 'True';
+
+  const pk = player.PlaceKicking ?? '-';
+  const curl = player.Curl ?? '-';
+  const kp = player.KickingPower ?? '-';
+  const fin = player.Finishing ?? '-';
+  const head = player.Heading ?? '-';
+  const jump = player.Jump ?? '-';
+  const height = player.Height ? `${player.Height}cm` : '';
+  const ovr = player.OVR_CALCULADO ?? '-';
+
+  switch (roleKey) {
+    case 'captain':
+      return `${pos} ${d}${name} (${hasCaptaincy ? '⭐ Capitanía | ' : ''}OVR: ${ovr})`;
+    case 'shortFK':
+      return `${pos} ${d}${name} (BP: ${pk} · Efecto: ${curl})`;
+    case 'longFK':
+      return `${pos} ${d}${name} (BP: ${pk} · Potencia: ${kp})`;
+    case 'leftCorner':
+    case 'rightCorner':
+      return `${pos} ${d}${name} (BP: ${pk} · Efecto: ${curl} · ${footLabel})`;
+    case 'penalty':
+      return `${pos} ${d}${name} (${hasPenaltySpec ? '🎯 Esp. Penales | ' : ''}BP: ${pk} · Fin: ${fin})`;
+    case 'secondKicker':
+      return `${pos} ${d}${name} (BP: ${pk} · Efecto: ${curl} · ${footLabel})`;
+    case 'header1':
+    case 'header2':
+    case 'header3':
+      return `${pos} ${d}${name} (${hasHeadingSpec ? '💥 ' : ''}Cab: ${head} · Salto: ${jump}${height ? ' · ' + height : ''})`;
+    default:
+      return `${pos} ${d}${name} (OVR: ${ovr})`;
+  }
+}
+
 export const RolesPanel = memo(function RolesPanel({
   starterPlayers,
   setPieces,
@@ -64,16 +331,16 @@ export const RolesPanel = memo(function RolesPanel({
   }
 
   const roleConfigs = [
-    { key: 'captain', label: 'Capitán', icon: Crown, color: 'text-yellow-400', statKey: 'OVR_CALCULADO', statLabel: 'OVR' },
-    { key: 'shortFK', label: 'Tiro Libre Corto', icon: Target, color: 'text-cyan-400', statKey: 'PlaceKicking', statLabel: 'Balón Parado' },
-    { key: 'longFK', label: 'Tiro Libre Largo', icon: Zap, color: 'text-amber-400', statKey: 'KickingPower', statLabel: 'Potencia' },
-    { key: 'leftCorner', label: 'Córner Izquierdo', icon: Target, color: 'text-blue-400', statKey: 'Curl', statLabel: 'Efecto' },
-    { key: 'rightCorner', label: 'Córner Derecho', icon: Target, color: 'text-blue-400', statKey: 'Curl', statLabel: 'Efecto' },
-    { key: 'penalty', label: 'Penales', icon: Shield, color: 'text-emerald-400', statKey: 'Finishing', statLabel: 'Finalización' },
-    { key: 'secondKicker', label: 'Segundo Tirador', icon: Users, color: 'text-purple-400', statKey: 'PlaceKicking', statLabel: 'Balón Parado' },
-    { key: 'header1', label: 'Rematador al Cabeceo 1', icon: Activity, color: 'text-red-400', statKey: 'Heading', statLabel: 'Cabeceo' },
-    { key: 'header2', label: 'Rematador al Cabeceo 2', icon: Activity, color: 'text-red-400', statKey: 'Heading', statLabel: 'Cabeceo' },
-    { key: 'header3', label: 'Rematador al Cabeceo 3', icon: Activity, color: 'text-red-400', statKey: 'Heading', statLabel: 'Cabeceo' },
+    { key: 'captain', label: 'Capitán', icon: Crown, color: 'text-yellow-400', statLabel: 'Habilidad Capitanía · OVR' },
+    { key: 'shortFK', label: 'Tiro Libre Corto', icon: Target, color: 'text-cyan-400', statLabel: 'Balón Parado · Efecto' },
+    { key: 'longFK', label: 'Tiro Libre Largo', icon: Zap, color: 'text-amber-400', statLabel: 'Balón Parado · Potencia' },
+    { key: 'leftCorner', label: 'Córner Izquierdo', icon: Target, color: 'text-blue-400', statLabel: 'Balón Parado · Efecto · Pie' },
+    { key: 'rightCorner', label: 'Córner Derecho', icon: Target, color: 'text-blue-400', statLabel: 'Balón Parado · Efecto · Pie' },
+    { key: 'penalty', label: 'Penales', icon: Shield, color: 'text-emerald-400', statLabel: 'Balón Parado · Finalización' },
+    { key: 'secondKicker', label: 'Segundo Tirador', icon: Users, color: 'text-purple-400', statLabel: 'Balón Parado · Efecto · Pie' },
+    { key: 'header1', label: 'Rematador al Cabeceo 1', icon: Activity, color: 'text-red-400', statLabel: 'Cabeceo · Salto · Altura' },
+    { key: 'header2', label: 'Rematador al Cabeceo 2', icon: Activity, color: 'text-red-400', statLabel: 'Cabeceo · Salto · Altura' },
+    { key: 'header3', label: 'Rematador al Cabeceo 3', icon: Activity, color: 'text-red-400', statLabel: 'Cabeceo · Salto · Altura' },
   ];
 
   return (
@@ -81,7 +348,7 @@ export const RolesPanel = memo(function RolesPanel({
       <div className="text-[11px] text-gray-400 bg-white/[0.02] p-2.5 rounded-lg border border-white/5 leading-relaxed">
         Configura los lanzadores de faltas y capitán. Se exportan directamente a PES en <span className="text-cyan-300 font-mono">Formation.csv</span>.
       </div>
-      {roleConfigs.map(({ key, label, icon: Icon, color, statKey, statLabel }) => {
+      {roleConfigs.map(({ key, label, icon: Icon, color, statLabel }) => {
         const currentValue = setPieces[key] || '';
         return (
           <div key={key} className="bg-gray-800/40 border border-gray-700/60 rounded-xl p-2.5 space-y-1.5 hover:border-gray-600 transition">
@@ -97,18 +364,14 @@ export const RolesPanel = memo(function RolesPanel({
             <select
               value={currentValue}
               onChange={(e) => onSetPieceChange(key, e.target.value)}
-              className="w-full bg-black/50 text-white text-xs rounded-lg px-2.5 py-1.5 border border-gray-700 focus:border-cyan-500 outline-none font-medium"
+              className="w-full bg-black/50 text-white text-xs rounded-lg px-2.5 py-1.5 border border-gray-700 focus:border-cyan-500 outline-none font-medium cursor-pointer"
             >
               <option value="">(Por defecto / Automático)</option>
-              {starterPlayers.map((player) => {
-                const statVal = player[statKey] || player.OVR_CALCULADO || '-';
-                const d = dorsals[player.Id] ? `#${dorsals[player.Id]}` : '';
-                return (
-                  <option key={player.Id} value={player.Id}>
-                    {player.slotPos} {d} {player.Name} ({statLabel}: {statVal})
-                  </option>
-                );
-              })}
+              {starterPlayers.map((player) => (
+                <option key={player.Id} value={player.Id}>
+                  {formatRolePlayerOption(player, key, dorsals)}
+                </option>
+              ))}
             </select>
           </div>
         );
@@ -235,7 +498,8 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const shareTimeoutRef = useRef(null);
 
   const [setPieces, setSetPieces] = useState(() => userProfile?.setPieces ? { ...userProfile.setPieces } : {});
-  const [sidebarTab, setSidebarTab] = useState('players'); // 'players' | 'roles'
+  const [tactics, setTactics] = useState(() => userProfile?.tactics ? { ...DEFAULT_TACTICS, ...userProfile.tactics } : DEFAULT_TACTICS);
+  const [sidebarTab, setSidebarTab] = useState('players'); // 'players' | 'roles' | 'tactics'
 
   // Cleanup share timeout on unmount
   useEffect(() => {
@@ -258,6 +522,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       dispatchFormation({ type: 'LOAD', payload: { lineup: rawLineup } });
       setDorsals(userProfile.dorsals ? { ...userProfile.dorsals } : {});
       setSetPieces(userProfile.setPieces ? { ...userProfile.setPieces } : {});
+      setTactics(userProfile.tactics ? { ...DEFAULT_TACTICS, ...userProfile.tactics } : DEFAULT_TACTICS);
       setAvailability(userProfile.availability ? { ...userProfile.availability } : {});
       setMatchBench(Array.isArray(userProfile.matchBench) ? userProfile.matchBench.map(String) : []);
     }
@@ -296,11 +561,40 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     dispatchFormation({ type: 'SANITIZE', payload: { cart } });
   }, [cart, isVisible, isPage]);
 
+  // Limpieza automática de IDs huérfanos en setPieces si el jugador ya no está en el 11 inicial
+  useEffect(() => {
+    if (!starterPlayers || starterPlayers.length === 0) return;
+    const validStarterIds = new Set(starterPlayers.map(p => String(p.Id ?? p.id ?? '')));
+    setSetPieces(prev => {
+      let changed = false;
+      const cleaned = { ...prev };
+      Object.entries(prev).forEach(([role, pId]) => {
+        if (pId && !validStarterIds.has(String(pId))) {
+          cleaned[role] = '';
+          changed = true;
+        }
+      });
+      return changed ? cleaned : prev;
+    });
+  }, [starterPlayers]);
+
   const handleSetPieceChange = useCallback((roleKey, playerId) => {
-    setSetPieces(prev => ({ ...prev, [roleKey]: playerId }));
+    setSetPieces(prev => {
+      const next = { ...prev, [roleKey]: playerId };
+      pendingAutoSaveRef.current = true;
+      return next;
+    });
   }, []);
 
-  const handleSaveLineup = useCallback(async (overrideLineup, overrideFormation) => {
+  const handleTacticsChange = useCallback((tacticsKey, value) => {
+    setTactics(prev => {
+      const next = { ...prev, [tacticsKey]: value };
+      pendingAutoSaveRef.current = true;
+      return next;
+    });
+  }, []);
+
+  const handleSaveLineup = useCallback(async (overrideLineup, overrideFormation, overrideSetPieces, overrideTactics) => {
     // Determinar si overrideLineup es un objeto lineup real o un SyntheticEvent de React
     const isLineupObject = Boolean(
       overrideLineup &&
@@ -313,12 +607,14 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     const lineupToSave = isLineupObject ? sanitizeLineup(overrideLineup) : sanitizeLineup(lineup);
     const formationToSave = (overrideFormation && typeof overrideFormation === 'string') ? overrideFormation : selectedFormation;
     
-    // CORREGIDO: Guardar dorsales de TODO el plantel (titulares + suplentes en cart), no solo el 11 inicial
+    // Guardar dorsales de TODO el plantel (titulares + suplentes en cart), no solo el 11 inicial
     const allSquadIds = new Set((cart || []).map(player => String(player.Id ?? player.id ?? player.playerId ?? '')));
     const dorsalsToSave = Object.fromEntries(
       Object.entries(dorsals || {}).filter(([playerId]) => allSquadIds.has(String(playerId)))
     );
     const validSavedIds = new Set(Object.values(lineupToSave).map(String));
+    const setPiecesToSave = (overrideSetPieces && typeof overrideSetPieces === 'object') ? overrideSetPieces : (setPieces || {});
+    const tacticsToSave = (overrideTactics && typeof overrideTactics === 'object') ? overrideTactics : (tactics || DEFAULT_TACTICS);
     
     setIsSaving(true);
     try {
@@ -338,7 +634,8 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         formation: formationToSave,
         lineup: lineupToSave,
         dorsals: dorsalsToSave,
-        setPieces: setPieces || {},
+        setPieces: setPiecesToSave,
+        tactics: tacticsToSave,
         availability,
         matchBench: benchToSave
       };
@@ -359,7 +656,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     } finally {
       setIsSaving(false);
     }
-  }, [sanitizeLineup, lineup, selectedFormation, dorsals, setPieces, availability, matchBench, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db, isPage, onClose]);
+  }, [sanitizeLineup, lineup, selectedFormation, dorsals, setPieces, tactics, availability, matchBench, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db, isPage, onClose]);
 
   const handleDorsalChange = useCallback((playerId, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -448,13 +745,13 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     dispatchFormation({ type: 'CLICK_SLOT', payload: { index, cart } });
   }, [cart, holdingPlayer]);
 
-  // Auto-guardado tras una colocación (reemplaza el setTimeout que vivía dentro del setState anidado)
+  // Auto-guardado tras una colocación o cambio de pateador/estrategia
   useEffect(() => {
     if (!pendingAutoSaveRef.current) return;
     pendingAutoSaveRef.current = false;
-    handleSaveLineup(lineup);
+    handleSaveLineup(lineup, selectedFormation, setPieces, tactics);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lineup]);
+  }, [lineup, selectedFormation, setPieces, tactics]);
 
   // ── Share URL with popover ──
   const [shareUrl, setShareUrl] = useState('');
@@ -504,9 +801,9 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         });
       }
 
-      const starterIds = new Set(Object.values(cleanLineup).map(String));
-      const bench = cart
-        .filter(player => !starterIds.has(String(player.Id)))
+      const bench = matchBench
+        .map(id => cart.find(p => String(p.Id) === String(id)))
+        .filter(Boolean)
         .map(player => ({
           playerId: String(player.Id),
           name: player.Name,
@@ -687,7 +984,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         <div className="flex lg:hidden shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <button
             onClick={() => setMobileTab('pitch')}
-            className={`flex-1 py-2.5 text-sm font-bold text-center transition-all ${
+            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all ${
               mobileTab === 'pitch'
                 ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
                 : 'text-gray-500 hover:text-gray-300'
@@ -697,28 +994,38 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           </button>
           <button
             onClick={() => setMobileTab('squad')}
-            className={`flex-1 py-2.5 text-sm font-bold text-center transition-all relative ${
+            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all relative ${
               mobileTab === 'squad'
                 ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            👥 Jugadores
+            👥 Plantilla
             {availablePlayers.length > 0 && (
-              <span className="ml-1.5 bg-gray-700 text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              <span className="ml-1 bg-gray-700 text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                 {availablePlayers.length}
               </span>
             )}
           </button>
           <button
             onClick={() => setMobileTab('roles')}
-            className={`flex-1 py-2.5 text-sm font-bold text-center transition-all ${
+            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all ${
               mobileTab === 'roles'
                 ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
             🎯 Pateadores
+          </button>
+          <button
+            onClick={() => setMobileTab('tactics')}
+            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all ${
+              mobileTab === 'tactics'
+                ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            ⚙️ Estrategia
           </button>
         </div>
 
@@ -732,11 +1039,11 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
               style={{ borderRight: '1px solid rgba(255,255,255,0.05)' }}>
               {ControlsBar}
               
-              <div className="flex bg-black/40 p-1 mx-3 my-2 rounded-lg border border-white/5 shrink-0">
+              <div className="flex bg-black/40 p-1 mx-3 my-2 rounded-lg border border-white/5 shrink-0 gap-1">
                 <button
                   type="button"
                   onClick={() => setSidebarTab('players')}
-                  className={`flex-1 py-1 text-xs font-bold rounded-md transition ${
+                  className={`flex-1 py-1 text-[11px] font-bold rounded-md transition ${
                     sidebarTab === 'players' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
                   }`}
                 >
@@ -745,11 +1052,20 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                 <button
                   type="button"
                   onClick={() => setSidebarTab('roles')}
-                  className={`flex-1 py-1 text-xs font-bold rounded-md transition ${
+                  className={`flex-1 py-1 text-[11px] font-bold rounded-md transition ${
                     sidebarTab === 'roles' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   🎯 Pateadores
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSidebarTab('tactics')}
+                  className={`flex-1 py-1 text-[11px] font-bold rounded-md transition ${
+                    sidebarTab === 'tactics' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  ⚙️ Estrategia
                 </button>
               </div>
 
@@ -758,12 +1074,17 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                   {HoldingBanner}
                   {PlayerList}
                 </>
-              ) : (
+              ) : sidebarTab === 'roles' ? (
                 <RolesPanel
                   starterPlayers={starterPlayers}
                   setPieces={setPieces}
                   onSetPieceChange={handleSetPieceChange}
                   dorsals={dorsals}
+                />
+              ) : (
+                <TacticsPanel
+                  tactics={tactics}
+                  onTacticsChange={handleTacticsChange}
                 />
               )}
             </div>
@@ -785,12 +1106,17 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                 {HoldingBanner}
                 {PlayerList}
               </>
-            ) : (
+            ) : mobileTab === 'roles' ? (
               <RolesPanel
                 starterPlayers={starterPlayers}
                 setPieces={setPieces}
                 onSetPieceChange={handleSetPieceChange}
                 dorsals={dorsals}
+              />
+            ) : (
+              <TacticsPanel
+                tactics={tactics}
+                onTacticsChange={handleTacticsChange}
               />
             )}
           </div>

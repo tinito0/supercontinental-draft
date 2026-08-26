@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { 
   ChevronRight, Shield, Users, Zap, BarChart2, Trophy, 
   ArrowLeftRight, Sparkles, Target, Lock, Globe, MessageCircle,
-  BookOpen, ChevronDown, ExternalLink
+  BookOpen, ChevronDown, ExternalLink, Package, Sliders, Activity, Radio, Cpu
 } from 'lucide-react';
 import { APP_NAME } from '../utils/constants.js';
 
@@ -178,6 +178,11 @@ export function LandingPage({ onEnter }) {
         </div>
 
         <div className="landing-hero__content">
+          {/* Badge PES */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-black uppercase tracking-wider mb-6 animate-pulse shadow-lg shadow-cyan-500/10">
+            <Package className="w-4 h-4 text-cyan-400" /> PES 2021 Option File Compatible · Actualización 2.0
+          </div>
+
           {/* Logo */}
           <div className="landing-hero__logo-wrap">
             <div className="landing-hero__logo-glow" />
@@ -188,11 +193,23 @@ export function LandingPage({ onEnter }) {
             {APP_NAME} <span className="landing-hero__dot">.</span>
           </h1>
           <p className="landing-hero__subtitle">
-            Armá tu equipo soñado. Competí en tiempo real contra tus amigos.
+            Armá tu equipo soñado, definí tus estrategias tácticas en la nube y exportá tu plantel listo para jugar en PES 2021.
           </p>
-          <p className="landing-hero__season">
-            Volvemos en verano de 2027
-          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-8 max-w-2xl">
+            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-amber-400" /> Mercado en Vivo
+            </span>
+            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" /> Tácticas S1 & Balón Parado
+            </span>
+            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5 text-blue-400" /> Exportador Option File (.zip)
+            </span>
+            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold flex items-center gap-1.5">
+              <Radio className="w-3.5 h-3.5 text-emerald-400" /> Overlay OBS Streams
+            </span>
+          </div>
 
           <HeroPitchPreview />
 
@@ -215,7 +232,7 @@ export function LandingPage({ onEnter }) {
             <Sparkles className="landing-section__title-icon" style={{ color: '#facc15' }} />
             Los Mejores del Mundo
           </h2>
-          <p className="landing-section__desc">Más de 1000 jugadores con stats detalladas estilo PES esperan tu fichaje.</p>
+          <p className="landing-section__desc">Más de 1.000 jugadores con estadísticas oficiales y atributos del motor de PES 2021.</p>
         </Reveal>
 
         <div className="landing-carousel">
@@ -232,7 +249,7 @@ export function LandingPage({ onEnter }) {
         <Reveal>
           <h2 className="landing-section__title">
             <Target className="landing-section__title-icon" style={{ color: '#60a5fa' }} />
-            ¿Cómo Funciona?
+            ¿Cómo Funciona el Draft?
           </h2>
         </Reveal>
 
@@ -242,31 +259,31 @@ export function LandingPage({ onEnter }) {
             <div className="landing-step__icon-wrap" style={{ background: 'rgba(16,185,129,0.1)', borderColor: 'rgba(16,185,129,0.3)' }}>
               <Shield className="landing-step__icon" style={{ color: '#34d399' }} />
             </div>
-            <h3 className="landing-step__title">Presupuesto Inicial</h3>
+            <h3 className="landing-step__title">Presupuesto y Fichajes</h3>
             <p className="landing-step__desc">
-              Cada equipo tiene un presupuesto designado por la presidencia. Administrá cada peso como un verdadero director deportivo.
+              Administrá tu presupuesto oficial. Cada fichaje se sincroniza en vivo y bloquea al jugador al instante para todos los rivales.
             </p>
           </Reveal>
 
           <Reveal delay={250} className="landing-step">
             <div className="landing-step__num">2</div>
-            <div className="landing-step__icon-wrap" style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.3)' }}>
-              <Lock className="landing-step__icon" style={{ color: '#f87171' }} />
+            <div className="landing-step__icon-wrap" style={{ background: 'rgba(56,189,248,0.1)', borderColor: 'rgba(56,189,248,0.3)' }}>
+              <Sliders className="landing-step__icon" style={{ color: '#38bdf8' }} />
             </div>
-            <h3 className="landing-step__title">Mercado en Tiempo Real</h3>
+            <h3 className="landing-step__title">Pizarra Táctica & Estrategia</h3>
             <p className="landing-step__desc">
-              Fichá jugadores antes que tus rivales. Cada fichaje es definitivo y se bloquea al instante para todos los demás.
+              Posicioná a tus 11 titulares, configurá la estrategia de ataque/defensa (Preset S1) y designá a tus lanzadores de balón parado.
             </p>
           </Reveal>
 
           <Reveal delay={400} className="landing-step">
             <div className="landing-step__num">3</div>
             <div className="landing-step__icon-wrap" style={{ background: 'rgba(99,102,241,0.1)', borderColor: 'rgba(99,102,241,0.3)' }}>
-              <Trophy className="landing-step__icon" style={{ color: '#818cf8' }} />
+              <Package className="landing-step__icon" style={{ color: '#818cf8' }} />
             </div>
-            <h3 className="landing-step__title">Competí con tu Liga</h3>
+            <h3 className="landing-step__title">Exportación a PES 2021</h3>
             <p className="landing-step__desc">
-              Usá comparadores, tácticas y formaciones para armar el equipo más fuerte y dominar la Supercontinental.
+              Descargá el paquete ZIP de Option File y cargalo directamente en el editor EJOGC327 para jugar la liga en tu consola o PC.
             </p>
           </Reveal>
         </div>
@@ -277,20 +294,62 @@ export function LandingPage({ onEnter }) {
         <Reveal>
           <h2 className="landing-section__title">
             <Zap className="landing-section__title-icon" style={{ color: '#f59e0b' }} />
-            Herramientas de Manager
+            Herramientas de Manager de Élite
           </h2>
         </Reveal>
 
         <div className="landing-features">
           {[
-            { icon: BarChart2, color: '#38bdf8', title: 'Stats Detalladas', desc: 'Radar, heatmap y más de 25 atributos por jugador, estilo PES.' },
-            { icon: ArrowLeftRight, color: '#a78bfa', title: 'Comparador 1v1', desc: 'Enfrentá dos jugadores para tomar la mejor decisión de fichaje.' },
-            { icon: Sparkles, color: '#fbbf24', title: 'IA Scout', desc: '¿Jugador bloqueado? La IA te sugiere alternativas similares automáticamente.' },
-            { icon: Shield, color: '#34d399', title: 'Formación Táctica', desc: 'Armá tu 11 ideal con +15 formaciones y exportá la imagen.' },
-            { icon: Users, color: '#fb7185', title: 'Multiplayer en Vivo', desc: 'Mercado compartido entre todos los managers. Cada segundo cuenta.' },
-            { icon: Globe, color: '#22d3ee', title: '6 Regiones', desc: 'Jugadores de Sudamérica, Europa, Asia, África y más.' },
+            { 
+              icon: Package, 
+              color: '#38bdf8', 
+              title: 'Option File PES 2021', 
+              desc: 'Exportación ZIP completa con Formation.csv, Roster.csv, Players.csv, Appearances.csv, Team.csv y Coach.csv.' 
+            },
+            { 
+              icon: Sliders, 
+              color: '#22c55e', 
+              title: 'Estrategia Táctica S1', 
+              desc: 'Ajustá posesión/contraataque, pases, áreas de ataque, líneas defensivas, presión y densidad con guardado automático.' 
+            },
+            { 
+              icon: Target, 
+              color: '#fbbf24', 
+              title: 'Lanzadores y Roles PES', 
+              desc: 'Elegí capitán, tiros libres, penales y rematadores guiado por atributos reales (Balón Parado, Efecto, Salto, Capitanía).' 
+            },
+            { 
+              icon: Users, 
+              color: '#f43f5e', 
+              title: 'Mercado Multijugador', 
+              desc: 'Fichajes en tiempo real con presupuesto compartido, cláusulas de rescisión y alertas inmediatas.' 
+            },
+            { 
+              icon: ArrowLeftRight, 
+              color: '#a78bfa', 
+              title: 'Centro de Traspasos', 
+              desc: 'Proponé ofertas formales, intercambios de jugadores, dinero y contraofertas con otros managers.' 
+            },
+            { 
+              icon: BarChart2, 
+              color: '#38bdf8', 
+              title: 'Radar & Comparador 1v1', 
+              desc: 'Enfrentá dos jugadores frente a frente con gráficos de radar, heatmaps y más de 30 atributos detallados.' 
+            },
+            { 
+              icon: Radio, 
+              color: '#ec4899', 
+              title: 'Overlay OBS para Streams', 
+              desc: 'Marcador en vivo, alineaciones y placas gráficas transparentes listas para transmisiones en Twitch o YouTube.' 
+            },
+            { 
+              icon: Cpu, 
+              color: '#10b981', 
+              title: 'IA Scout Inteligente', 
+              desc: 'Algoritmo de recomendación que encuentra sustitutos y gemelos estadísticos cuando un jugador ya fue fichado.' 
+            },
           ].map((f, i) => (
-            <Reveal key={f.title} delay={i * 100} className="landing-feature">
+            <Reveal key={f.title} delay={i * 80} className="landing-feature">
               <div className="landing-feature__icon-wrap" style={{ background: `${f.color}15`, border: `1px solid ${f.color}30` }}>
                 <f.icon style={{ color: f.color, width: 22, height: 22 }} />
               </div>
@@ -314,11 +373,11 @@ export function LandingPage({ onEnter }) {
           <div className="landing-rules">
             {[
               'Cada manager comienza con un presupuesto asignado por la administración.',
-              'Los fichajes son en tiempo real: si fichás a un jugador, se bloquea para todos.',
+              'Los fichajes son en tiempo real: si fichás a un jugador, se bloquea para todos al instante.',
               'Podés vender un jugador en cualquier momento y recuperar el 100% de su valor.',
-              'Existe la opción de proponer traspasos a otros managers con ofertas y contraofertas.',
+              'Existe la opción de proponer traspasos a otros managers con ofertas, contraofertas e intercambio de fichas.',
               'El Jugador Franquicia es una ficha especial que se puede usar una vez por temporada.',
-              'El mercado abre y cierra según lo defina la administración. ¡Estén atentos!',
+              'En la Pizarra podés definir tu 11 titular, suplentes convocados, dorsales y estrategia táctica S1.',
             ].map((rule, i) => (
               <div key={i} className="landing-rule">
                 <span className="landing-rule__num">{i + 1}</span>
@@ -341,12 +400,12 @@ export function LandingPage({ onEnter }) {
             <div className="landing-stat__label">Formaciones tácticas</div>
           </Reveal>
           <Reveal delay={300} className="landing-stat">
-            <div className="landing-stat__value"><AnimatedCounter end={6} /></div>
-            <div className="landing-stat__label">Regiones del mundo</div>
+            <div className="landing-stat__value"><AnimatedCounter end={12} /></div>
+            <div className="landing-stat__label">Parámetros tácticos PES</div>
           </Reveal>
           <Reveal delay={450} className="landing-stat">
-            <div className="landing-stat__value"><AnimatedCounter end={25} prefix="+" /></div>
-            <div className="landing-stat__label">Stats por jugador</div>
+            <div className="landing-stat__value"><AnimatedCounter end={100} suffix="%" /></div>
+            <div className="landing-stat__label">Sincronizado en vivo</div>
           </Reveal>
         </div>
       </section>
@@ -356,7 +415,7 @@ export function LandingPage({ onEnter }) {
         <Reveal>
           <h2 className="landing-section__title">
             <MessageCircle className="landing-section__title-icon" style={{ color: '#34d399' }} />
-            Comunidad
+            Comunidad & Torneos
           </h2>
           <p className="landing-section__desc">Mantenete conectado con los otros managers de la liga.</p>
         </Reveal>
@@ -369,7 +428,7 @@ export function LandingPage({ onEnter }) {
               </div>
               <div>
                 <h3 className="landing-link__title">Grupo de WhatsApp</h3>
-                <p className="landing-link__desc">Coordiná fichajes y novedades</p>
+                <p className="landing-link__desc">Coordiná fichajes, fechas y novedades</p>
               </div>
               <ExternalLink className="landing-link__arrow" />
             </a>
@@ -380,7 +439,7 @@ export function LandingPage({ onEnter }) {
               </div>
               <div>
                 <h3 className="landing-link__title">Servidor de Discord</h3>
-                <p className="landing-link__desc">Chat en vivo y anuncios</p>
+                <p className="landing-link__desc">Chat en vivo, streamings y anuncios</p>
               </div>
               <ExternalLink className="landing-link__arrow" />
             </a>
@@ -394,7 +453,7 @@ export function LandingPage({ onEnter }) {
           <img src="/logo.webp" alt="" className="landing-final-cta__logo" width="80" height="80" loading="lazy" decoding="async" />
           <h2 className="landing-final-cta__title">¿Listo para armar tu equipo?</h2>
           <p className="landing-final-cta__desc">
-            El mercado te espera. Cada segundo cuenta.
+            El mercado está abierto. Diseñá tu estrategia y conquistá la Supercontinental.
           </p>
           <button onClick={onEnter} className="landing-hero__cta" style={{ marginTop: '2rem' }}>
             <span>Ingresar al Draft</span>
@@ -405,8 +464,8 @@ export function LandingPage({ onEnter }) {
 
       {/* ═══════════ FOOTER ═══════════ */}
       <footer className="landing-footer">
-        <p>© 2025 – 2027 Supercontinental Draft. Todos los derechos reservados.</p>
-        <p className="landing-footer__sub">Hecho con ⚽ para amigos que aman el fútbol.</p>
+        <p>© 2025 – 2027 {APP_NAME}. Todos los derechos reservados.</p>
+        <p className="landing-footer__sub">Hecho con ⚽ para la comunidad de PES 2021.</p>
       </footer>
     </div>
   );
