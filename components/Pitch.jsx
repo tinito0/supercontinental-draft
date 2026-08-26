@@ -1,6 +1,14 @@
 import React, { memo, useMemo, useCallback } from 'react';
 import { getPitchPosColors, POSITION_COLORS, getStatAndOvrColorClass } from '../utils/helpers.js';
 
+// Get last name, max 10 chars
+const getLastName = (name) => {
+  if (!name) return '?';
+  const parts = name.split(' ');
+  const last = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+  return last.length > 10 ? last.substring(0, 9) + '.' : last;
+};
+
 export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById, holdingPlayer, dorsals, isReadOnly, readOnlySlots, isCapturing }) => {
   const playerId = lineup[index];
   const player = cartById.get(String(playerId));
@@ -25,14 +33,6 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
     && readOnlySlotName !== 'desconocido'
       ? rawReadOnlySlot
       : null;
-
-  // Get last name, max 10 chars
-  const getLastName = (name) => {
-    if (!name) return '?';
-    const parts = name.split(' ');
-    const last = parts.length > 1 ? parts[parts.length - 1] : parts[0];
-    return last.length > 10 ? last.substring(0, 9) + '.' : last;
-  };
 
   const playerName = player ? getLastName(player.Name) : readOnlySlot ? getLastName(readOnlySlot.name) : null;
   const playerOvr = player ? player.OVR_CALCULADO : readOnlySlot?.ovr;

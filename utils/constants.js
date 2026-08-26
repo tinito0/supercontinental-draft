@@ -368,4 +368,7 @@ export const APP_NAME = "Supercontinental Draft";
 export const DEFAULT_BUDGET = 200000000;
 export const DEFAULT_LOGO = "/logo.webp";
 export const ADMIN_USER_ID = "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3";
+export const ADMIN_USER_IDS = [
+  "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3"
+];
 export const APP_ID = 'scl-draft-2025';

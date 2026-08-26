@@ -6,6 +6,7 @@ export default {
     "./components/**/*.jsx",
     "./screens/**/*.jsx",
     "./hooks/**/*.jsx",
+    "./utils/**/*.{js,jsx}",
   ],
   theme: {
     extend: {},

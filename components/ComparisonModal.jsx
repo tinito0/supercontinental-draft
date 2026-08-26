@@ -20,7 +20,7 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
     ? [p.STAT_SHO, p.STAT_PAS, p.STAT_STR, p.STAT_GK, p.STAT_SPD, p.STAT_DRI]
     : [p.STAT_SHO, p.STAT_PAS, p.STAT_STR, p.STAT_DEF, p.STAT_SPD, p.STAT_DRI];
 
-  const radarData = {
+  const radarData = useMemo(() => ({
     labels: radarLabels,
     datasets: [
       {
@@ -46,9 +46,9 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
         pointHoverRadius: 6,
       }
     ]
-  };
+  }), [playerA, playerB, isGK]);
 
-  const radarOptions = {
+  const radarOptions = useMemo(() => ({
     responsive: false,
     maintainAspectRatio: true,
     scales: {
@@ -66,7 +66,7 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
       }
     },
     plugins: { legend: { display: false } }
-  };
+  }), []);
 
   const skillsA = Object.entries(PLAYER_SKILLS_MAP).filter(([k]) => playerA[k]).map(([, v]) => v);
   const skillsB = Object.entries(PLAYER_SKILLS_MAP).filter(([k]) => playerB[k]).map(([, v]) => v);

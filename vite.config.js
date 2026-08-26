@@ -5,16 +5,22 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    // Esto soluciona la advertencia del tamaño del chunk que vimos antes
-    chunkSizeWarningLimit: 1600, 
-    
-    // --- ESTA ES LA CORRECCIÓN ---
-    // Le decimos a Vite que compile para navegadores modernos
-    // que soportan 'import.meta'
-    target: 'esnext', 
+    // Restore reasonable chunk size warning
+    chunkSizeWarningLimit: 600,
+    target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split heavy vendor libs into their own cacheable chunks
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          'vendor-charts': ['chart.js', 'react-chartjs-2'],
+          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
+          'vendor-html2canvas': ['html2canvas'],
+        }
+      }
+    }
   },
-  // Esto asegura que esbuild (que usa Vite) también 
-  // entienda la sintaxis moderna.
   esbuild: {
     target: 'esnext',
   }

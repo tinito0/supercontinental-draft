@@ -2,6 +2,28 @@ import React, { memo } from 'react';
 import { Lock, ArrowLeftRight, Star } from 'lucide-react';
 import { getPosColorClass, getStatAndOvrColorClass, getFlagUrl, formatPriceShort } from '../utils/helpers.js';
 
+const getStatTextColor = (val) => {
+  const v = Number(val);
+  if (v >= 90) return 'text-cyan-400';
+  if (v >= 80) return 'text-green-400';
+  if (v >= 70) return 'text-yellow-400';
+  if (v >= 60) return 'text-orange-400';
+  return 'text-red-400';
+};
+
+const StatItem = ({ label, value }) => (
+  <div className="flex flex-col items-center justify-center w-12 group/stat cursor-default">
+    <span className={`text-base font-black leading-none mb-0.5 drop-shadow-md transition-transform group-hover/stat:scale-110 duration-200 ${getStatTextColor(value)}`}>
+      {value}
+    </span>
+    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest group-hover/stat:text-gray-300 transition-colors">
+      {label}
+    </span>
+  </div>
+);
+
+const VerticalDivider = () => <div className="w-px h-5 bg-gray-700/50 mx-0.5" />;
+
 export const PlayerListItem = memo(function PlayerListItem({ player, countryMap, onSelectPlayer, isInMyCart, isLockedByOther, lockedTeamName, lockedTeamLogo, onCompare, isComparing, isWishlisted, onToggleWishlist }) {
   const posClass = getPosColorClass(player.POS_NOMBRE);
   const ovrColorClass = getStatAndOvrColorClass(player.OVR_CALCULADO);
@@ -9,39 +31,12 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
 
   const isGK = player.POS_NOMBRE === 'PT' || player.Grupo === 'Arqueros';
 
-  const getStatTextColor = (val) => {
-    const v = Number(val);
-    if (v >= 90) return 'text-cyan-400';
-    if (v >= 80) return 'text-green-400';
-    if (v >= 70) return 'text-yellow-400';
-    if (v >= 60) return 'text-orange-400';
-    return 'text-red-400';
-  };
-
-  const StatItem = ({ label, value }) => (
-    <div className="flex flex-col items-center justify-center w-12 group/stat cursor-default">
-      <span className={`text-base font-black leading-none mb-0.5 drop-shadow-md transition-transform group-hover/stat:scale-110 duration-200 ${getStatTextColor(value)}`}>
-        {value}
-      </span>
-      <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest group-hover/stat:text-gray-300 transition-colors">
-        {label}
-      </span>
-    </div>
-  );
-
-  const VerticalDivider = () => <div className="w-px h-5 bg-gray-700/50 mx-0.5"></div>;
-
   return (
     <div
       onClick={() => onSelectPlayer?.(player.Id)}
       className={`
         group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer relative overflow-hidden
-        ${isLockedByOther ? 'opacity-50 grayscale-[0.5]' : isInMyCart ? 'bg-emerald-900/10' : 'hover:bg-white/[0.04] hover:-translate-y-px'}`}
-      style={{
-        ...(isInMyCart ? { border:'1px solid rgba(16,185,129,0.3)', boxShadow:'0 0 12px rgba(16,185,129,0.1)' } : { border:'1px solid rgba(255,255,255,0.05)' }),
-        contentVisibility: 'auto',
-        containIntrinsicSize: '72px'
-      }}
+        ${isLockedByOther ? 'opacity-50 grayscale-[0.5]' : isInMyCart ? 'bg-emerald-900/10 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]' : 'border border-white/5 hover:bg-white/[0.04] hover:-translate-y-px'}`}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 

@@ -27,9 +27,11 @@ function useElementSize() {
 
     const updateSize = () => {
       const rect = node.getBoundingClientRect();
-      setSize(prev => (prev.width === rect.width && prev.height === rect.height)
+      const roundedWidth = Math.round(rect.width);
+      const roundedHeight = Math.round(rect.height);
+      setSize(prev => (prev.width === roundedWidth && prev.height === roundedHeight)
         ? prev
-        : { width: rect.width, height: rect.height });
+        : { width: roundedWidth, height: roundedHeight });
     };
 
     updateSize();
@@ -77,7 +79,10 @@ function buildLockInfo(player, playerLocks, userId, allTeams) {
   };
 }
 
-function ListRow({ index, style, players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare }) {
+function ListRow({ index, style, players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore }) {
+  if (onLoadMore && index >= players.length - 6) {
+    onLoadMore();
+  }
   const player = players[index];
   if (!player) return null;
   const { isInMyCart, isLockedByOther, lockedTeamName, lockedTeamLogo } = buildLockInfo(player, playerLocks, userId, allTeams);
@@ -101,12 +106,12 @@ function ListRow({ index, style, players, playerLocks, userId, allTeams, country
   );
 }
 
-export function VirtualizedPlayerList({ players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, overscanCount = 6 }) {
+export function VirtualizedPlayerList({ players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, overscanCount = 6 }) {
   const [containerRef, { width, height }] = useElementSize();
 
   const rowProps = useMemo(() => ({
-    players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare,
-  }), [players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare]);
+    players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore,
+  }), [players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore]);
 
   return (
     <div ref={containerRef} style={{ height: '100%', width: '100%' }}>
@@ -134,21 +139,15 @@ export function VirtualizedPlayerList({ players, playerLocks, userId, allTeams, 
 
 const GRID_ROW_GAP = 12;
 const GRID_COLUMN_GAP = 24;
-// El alto real de la card lo define `.market-player-card-shell` en index.css, y
-// tiene TRES valores según breakpoint (no uno solo, como asumí la primera vez):
-//   base:            height: clamp(124px, 31vw, 238px)  → tope 238px
-//   @media >=768px:  height: clamp(176px, 22vw, 252px)  → tope 252px
-//   @media >=1280px: height: clamp(208px, 16vw, 278px)  → tope 278px
-// Si la fila del Grid usa un alto fijo que no matchea el breakpoint activo,
-// la card puede quedar recortada (fila más baja que la card real) o con aire
-// de más (fila más alta). `cardMaxHeight` deja elegir el tope correcto desde
-// afuera, igual que ya se hace con `columnCount`.
 function getRowHeight(cardMaxHeight) {
   return cardMaxHeight + GRID_ROW_GAP;
 }
 
-function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare }) {
+function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore }) {
   const index = rowIndex * columnCount + columnIndex;
+  if (onLoadMore && index >= players.length - (columnCount * 2)) {
+    onLoadMore();
+  }
   const player = players[index];
   if (!player) return <div style={style} />;
   const { isInMyCart, isLockedByOther, lockedTeamName, lockedTeamLogo } = buildLockInfo(player, playerLocks, userId, allTeams);
@@ -181,14 +180,14 @@ function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLo
   );
 }
 
-export function VirtualizedPlayerGrid({ players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, overscanCount = 2, cardMaxHeight = 238 }) {
+export function VirtualizedPlayerGrid({ players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, overscanCount = 2, cardMaxHeight = 238 }) {
   const [containerRef, { width, height }] = useElementSize();
   const rowCount = Math.ceil(players.length / Math.max(1, columnCount));
   const rowHeight = getRowHeight(cardMaxHeight);
 
   const cellProps = useMemo(() => ({
-    players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare,
-  }), [players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare]);
+    players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore,
+  }), [players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore]);
 
   return (
     <div ref={containerRef} style={{ height: '100%', width: '100%' }}>

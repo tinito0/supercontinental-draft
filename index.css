@@ -665,9 +665,6 @@ body {
   height: clamp(124px, 31vw, 238px);
   max-width: 172px;
   margin: 0 auto;
-  contain: layout paint style;
-  content-visibility: auto;
-  contain-intrinsic-size: 124px 172px;
 }
 
 .market-player-card-shell .player-card {

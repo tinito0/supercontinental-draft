@@ -1,4 +1,4 @@
-﻿import React, { memo, useState, useMemo, useEffect, useCallback } from 'react';
+import React, { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { X, Eye, MinusCircle, DollarSign, Sparkles, Lock, CheckCircle, ChevronRight, PieChart, Shield, Target, Zap, Activity, Trash2, AlertTriangle, Handshake, Crown } from 'lucide-react';
 import { Radar, Bar, Doughnut } from 'react-chartjs-2';
 import {
@@ -206,28 +206,25 @@ export const getSimilarPlayers = (targetPlayer, allPlayers, limit = 4) => {
     return (magA && magB) ? (dotProduct / (magA * magB)) : 0;
   };
 
+  const targetOvr = Number(targetPlayer.OVR_CALCULADO) || 0;
+  const targetPrice = Number(targetPlayer.Precio) || 0;
+  const maxPriceDiff = targetPrice * 0.6 + 15;
+  const targetPos = targetPlayer.POS_NOMBRE;
+  const targetId = targetPlayer.Id;
   const targetVec = getVector(targetPlayer);
+  const candidates = [];
 
-  return allPlayers
-    .filter(p =>
-      p.Id !== targetPlayer.Id &&
-      // 1. Filtro de Posición: Debe ser la misma posición exacta o muy compatible
-      p.POS_NOMBRE === targetPlayer.POS_NOMBRE &&
+  for (let i = 0; i < allPlayers.length; i++) {
+    const p = allPlayers[i];
+    if (p.Id === targetId || p.POS_NOMBRE !== targetPos) continue;
+    if (Math.abs((Number(p.OVR_CALCULADO) || 0) - targetOvr) > 6) continue;
+    if (Math.abs((Number(p.Precio) || 0) - targetPrice) >= maxPriceDiff) continue;
+    const similarity = cosineSim(targetVec, getVector(p));
+    candidates.push({ ...p, similarityScore: similarity * 100 });
+  }
 
-      // 2. Filtro de Calidad (OVR): Evita que salgan jugadores mucho peores
-      // Permitimos una diferencia máxima de 6 puntos de media (hacia arriba o abajo)
-      Math.abs(p.OVR_CALCULADO - targetPlayer.OVR_CALCULADO) <= 6 &&
-
-      // 3. Filtro de Precio: Mantenemos el rango flexible por si el OVR engaña
-      Math.abs(p.Precio - targetPlayer.Precio) < (targetPlayer.Precio * 0.6 + 15)
-    )
-    .map(p => {
-      const pVec = getVector(p);
-      const similarity = cosineSim(targetVec, pVec);
-      return { ...p, similarityScore: similarity * 100 };
-    })
-    .sort((a, b) => b.similarityScore - a.similarityScore) // Mayor score primero
-    .slice(0, limit);
+  candidates.sort((a, b) => b.similarityScore - a.similarityScore);
+  return candidates.slice(0, limit);
 };
 
 const CelebrationPopup = memo(function CelebrationPopup({ player, onDismiss }) {
@@ -420,7 +417,7 @@ export const PlayerModal = memo(function PlayerModal({
     setShowReleaseConfirm(false);
   };
 
-  const ActionButton = () => {
+  const renderActionButton = () => {
     if (isVisitor) {
       return (
         <div className="flex items-center justify-center px-6 py-3 font-bold rounded-xl bg-gray-800 text-gray-400 border border-gray-700 w-full sm:w-auto cursor-not-allowed opacity-70">
@@ -730,7 +727,7 @@ export const PlayerModal = memo(function PlayerModal({
 
             {/* BOTÓN FICHAR ALINEADO DERECHA */}
             <div className="flex flex-col items-end gap-2 w-full lg:w-auto shrink-0 mt-4 lg:mt-0">
-              <ActionButton />
+              {renderActionButton()}
             </div>
           </div>
 

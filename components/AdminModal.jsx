@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { X, Save, Upload, Crown, Settings, Users, Trash2, RefreshCw, UserCheck, Shield, Edit2, Power, Trophy, CalendarClock, Eye, Snowflake, XCircle, Gift, AlertTriangle, MessageSquarePlus, FileText, ClipboardList, Download, Plus, DollarSign } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { X, Save, Upload, Crown, Settings, Users, Trash2, RefreshCw, UserCheck, Shield, Edit2, Power, Trophy, CalendarClock, Eye, Snowflake, XCircle, Gift, AlertTriangle, MessageSquarePlus, FileText, ClipboardList, Download, Plus, DollarSign, Package, Loader2 } from 'lucide-react';
 import { onSnapshot, setDoc, deleteDoc, doc, getDocs, query, collection, writeBatch, getDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { jsPDF } from 'jspdf';
@@ -8,6 +8,7 @@ import { DEFAULT_LOGO, DEFAULT_BUDGET, APP_ID, FORMATIONS } from '../utils/const
 import { formatPriceShort, formatBudget, formatPrice } from '../utils/helpers.js';
 import { DEFAULT_BROADCAST_OVERLAY } from './BroadcastOverlay.jsx';
 import { TournamentActionButton, TournamentField, TournamentPanel, TournamentSectionTitle, TournamentTabButton, tournamentBackdropClass, tournamentControlClass, tournamentShellClass } from './TournamentUI.jsx';
+import { exportTeamToPesZip } from '../utils/pesExport.js';
 
 const FIRESTORE_BATCH_LIMIT = 450;
 
@@ -719,6 +720,7 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
           dorsals: profileData.dorsals || {},
           formation: profileData.formation || '4-3-3',
           lineup: profileData.lineup || {},
+          setPieces: profileData.setPieces || {},
           players: players || [] // Aseguramos que sea un array
         };
       });
@@ -730,6 +732,30 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
       showStatusMessage('error', 'Error cargando datos de plantillas.');
     }
     setIsLoading(false);
+  };
+
+  const [pesExportModalTeam, setPesExportModalTeam] = useState(null);
+  const [targetPesTeamId, setTargetPesTeamId] = useState(103);
+  const [targetCoachName, setTargetCoachName] = useState('Director Técnico');
+  const [isExportingPes, setIsExportingPes] = useState(false);
+
+  const handleDownloadPesZip = async () => {
+    if (!pesExportModalTeam) return;
+    setIsExportingPes(true);
+    try {
+      const result = await exportTeamToPesZip(pesExportModalTeam, targetPesTeamId, targetCoachName);
+      if (result.missingPlayers?.length > 0) {
+        showStatusMessage('warning', `Option File exportado con éxito. Nota: ${result.missingPlayers.length} jugador(es) no estaban en el CSV maestro y se exportaron con valores base.`);
+      } else {
+        showStatusMessage('success', `Option File (${pesExportModalTeam.name}) exportado correctamente para PES (ID ${targetPesTeamId}).`);
+      }
+      setPesExportModalTeam(null);
+    } catch (err) {
+      console.error('Error exportando PES zip:', err);
+      showStatusMessage('error', 'Error al generar Option File PES: ' + (err?.message || ''));
+    } finally {
+      setIsExportingPes(false);
+    }
   };
 
   // 2. Generación de PDF (adaptado a la nueva estructura 'layout')
@@ -818,7 +844,7 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
       headStyles: { fillColor: [41, 128, 185], halign: 'center' },
       columnStyles: {
         0: { fontStyle: 'bold', halign: 'center', cellWidth: 20 },
-        1: { halign: 'center', cellWidth: 15 },
+        1: { halign: 'center', fontStyle: 'bold', cellWidth: 15 },
         3: { fontStyle: 'italic', fontSize: 9, cellWidth: 30 },
         4: { halign: 'center', cellWidth: 15 },
         5: { halign: 'center', cellWidth: 15 }
@@ -895,14 +921,97 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
                 <span className="flex items-center"><ClipboardList size={12} className="mr-1" /> {FORMATIONS[team.formation]?.name || team.formation}</span>
               </div>
 
-              <button
-                onClick={() => generatePDF(team)}
-                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center shadow-lg transition transform active:scale-95"
-              >
-                <Download size={16} className="mr-2" /> Descargar PDF Táctico
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                <button
+                  onClick={() => generatePDF(team)}
+                  className="bg-gray-700/80 hover:bg-gray-700 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center transition border border-gray-600 active:scale-95"
+                >
+                  <Download size={14} className="mr-1.5" /> PDF Táctico
+                </button>
+                <button
+                  onClick={() => {
+                    setPesExportModalTeam(team);
+                    setTargetPesTeamId(103);
+                    setTargetCoachName(team.name ? `DT ${team.name}` : 'Director Técnico');
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center transition shadow-lg active:scale-95"
+                >
+                  <Package size={14} className="mr-1.5" /> Exportar PES (.zip)
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── MODAL EXPORTAR PES OPTION FILE ── */}
+      {pesExportModalTeam && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-base font-bold text-white">Exportar Option File PES</h3>
+              </div>
+              <button onClick={() => setPesExportModalTeam(null)} className="text-gray-500 hover:text-white"><X size={18} /></button>
+            </div>
+
+            <div className="text-xs text-gray-300 bg-blue-950/40 border border-blue-800/40 p-3 rounded-xl space-y-1">
+              <p className="font-bold text-blue-300">Equipo: {pesExportModalTeam.name}</p>
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                Genera un ZIP con <span className="text-cyan-300 font-mono">Team.csv</span>, <span className="text-cyan-300 font-mono">Roster.csv</span>, <span className="text-cyan-300 font-mono">Players.csv</span>, <span className="text-cyan-300 font-mono">Coach.csv</span> y <span className="text-cyan-300 font-mono">Formation.csv</span> listo para PES 2021.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  ID del Club PES a reemplazar
+                </label>
+                <input
+                  type="number"
+                  value={targetPesTeamId}
+                  onChange={(e) => setTargetPesTeamId(Number(e.target.value))}
+                  className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-3 py-2 text-white text-sm font-mono outline-none"
+                  placeholder="Ej: 103 (Liverpool), etc."
+                />
+                <span className="text-[10px] text-gray-500">Ejemplo: 103 para reemplazar Liverpool FC o el ID del club deseado.</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1">
+                  Nombre del Director Técnico
+                </label>
+                <input
+                  type="text"
+                  value={targetCoachName}
+                  onChange={(e) => setTargetCoachName(e.target.value)}
+                  className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                  placeholder="Director Técnico"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setPesExportModalTeam(null)}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl font-bold text-xs transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDownloadPesZip}
+                disabled={isExportingPes}
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 py-2.5 rounded-xl font-black text-xs transition flex items-center justify-center gap-1.5 shadow-lg disabled:opacity-50"
+              >
+                {isExportingPes ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Procesando...</>
+                ) : (
+                  <><Download className="w-4 h-4" /> Descargar ZIP</>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

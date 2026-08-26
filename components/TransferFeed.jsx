@@ -208,43 +208,9 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
     return () => unsubscribe();
   }, [db, isVisible, shouldPrefetch]);
 
-  useEffect(() => {
-    // A market event is historical news. A later sale must not make the
-    // original signing disappear from the live feed.
-    return undefined;
-
-    const newlyReleased = [];
-    transfers.forEach(transfer => {
-      const lock = playerLocks[transfer.playerId];
-      const isStillLocked = lock && lock.lockedBy === transfer.teamId;
-      if (!isStillLocked && !releasedIds.has(transfer.id)) {
-        newlyReleased.push(transfer.id);
-      }
-    });
-
-    if (newlyReleased.length > 0) {
-      setReleasedIds(prev => {
-        const next = new Set(prev);
-        newlyReleased.forEach(id => next.add(id));
-        return next;
-      });
-    }
-
-    newlyReleased.forEach(id => {
-      if (releaseTimersRef.current[id]) return;
-      releaseTimersRef.current[id] = setTimeout(() => {
-        setTransfers(prev => prev.filter(transfer => transfer.id !== id));
-        setReleasedIds(prev => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-        delete releaseTimersRef.current[id];
-      }, 5000);
-    });
-
-    return undefined;
-  }, [playerLocks, releasedIds, transfers]);
+  // Historical signing retention
+  // A market event is historical news. A later sale must not make the
+  // original signing disappear from the live feed.
 
   useEffect(() => {
     return () => {

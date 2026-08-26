@@ -21,108 +21,117 @@ export default function TeamScreen() {
   const [teamRecord, setTeamRecord] = useState({ played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [], mvpCount: 0, rival: '—', titles: 0 });
   const [transferHistory, setTransferHistory] = useState([]);
 
-  const fetchTeam = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (!userId) {
-        setError("No se especificó un ID de equipo.");
-        setLoading(false);
-        return;
-      }
-
-      const teamRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, userId);
-      const teamSnap = await getDoc(teamRef);
-
-      if (!teamSnap.exists()) {
-        setError("El equipo no existe o no es público.");
-        setLoading(false);
-        return;
-      }
-
-      const data = teamSnap.data();
-      setTeamData(data);
-
-      const transfersSnap = await getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/transfers`), orderBy('timestamp', 'desc'), limit(100)));
-      setTransferHistory(transfersSnap.docs.map(transferDoc => transferDoc.data())
-        .filter(transfer => transfer.teamId === userId || transfer.fromTeamId === userId)
-        .slice(0, 6));
-
-      const tournamentSnap = await getDoc(doc(db, `artifacts/${APP_ID}/public/data/tournament`, 'official'));
-      const normalizedTeamName = String(data.teamName || '').trim().toLowerCase();
-      const record = { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [], mvpCount: 0, rival: '—', titles: Number(data.titles) || 0 };
-      if (tournamentSnap.exists() && normalizedTeamName) {
-        const tournament = tournamentSnap.data();
-        const rivals = {};
-        (tournament.matches || []).filter(match => match.status === 'completed').forEach(match => {
-          const isHome = String(match.homeTeam || '').trim().toLowerCase() === normalizedTeamName;
-          const isAway = String(match.awayTeam || '').trim().toLowerCase() === normalizedTeamName;
-          if (!isHome && !isAway) return;
-          const scored = Number(isHome ? match.homeScore : match.awayScore) || 0;
-          const conceded = Number(isHome ? match.awayScore : match.homeScore) || 0;
-          const rival = isHome ? match.awayTeam : match.homeTeam;
-          if (rival) rivals[rival] = (rivals[rival] || 0) + 1;
-          record.played += 1;
-          record.gf += scored;
-          record.ga += conceded;
-          if (scored > conceded) { record.wins += 1; record.form.push('G'); }
-          else if (scored < conceded) { record.losses += 1; record.form.push('P'); }
-          else { record.draws += 1; record.form.push('E'); }
-          if (match.mvp) record.mvpCount += 1;
-        });
-        const mostFrequentRival = Object.entries(rivals).sort(([, a], [, b]) => b - a)[0];
-        if (mostFrequentRival) record.rival = mostFrequentRival[0];
-        const final = tournament.bracket?.final;
-        const finalWinner = Number(final?.scoreA) > Number(final?.scoreB) ? final?.teamA : Number(final?.scoreB) > Number(final?.scoreA) ? final?.teamB : '';
-        if (String(finalWinner || '').trim().toLowerCase() === normalizedTeamName) record.titles += 1;
-      }
-      const manualStats = data.manualStats || {};
-      ['played', 'wins', 'draws', 'losses', 'gf', 'ga', 'titles'].forEach(field => {
-        if (manualStats[field] !== '' && manualStats[field] !== undefined && manualStats[field] !== null) {
-          const value = Number(manualStats[field]);
-          if (Number.isFinite(value)) record[field] = Math.max(0, value);
-        }
-      });
-      if (String(manualStats.rival || '').trim()) record.rival = String(manualStats.rival).trim();
-      setTeamRecord(record);
-
-      // New public snapshots include the full squad. Older snapshots fall back
-      // to the starting XI so shared links created before this update still work.
-      if (Array.isArray(data?.roster)) {
-        setCartPlayers(data.roster.map(player => ({ ...player, Id: player.Id ?? player.playerId })));
-        setLoading(false);
-        return;
-      }
-
-      // Fetch the players in the lineup from the main players list
-      const lineup = data?.lineup;
-      if (lineup && typeof lineup === 'object') {
-        const playerIds = Object.values(lineup).filter(v => v != null && v !== '').map(String);
-        if (playerIds.length > 0) {
-          const resp = await fetch('/jugadores.json');
-          const rawPlayers = await resp.json();
-          const allPlayers = processPlayersData(rawPlayers || []);
-          const filtered = allPlayers.filter(p => playerIds.includes(String(p?.Id)));
-          setCartPlayers(filtered);
-        }
-      }
-
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching team:", err);
-      if (err?.code === 'permission-denied') {
-        setError("Sin permisos para cargar el equipo.");
-      } else if (err?.message?.includes('network') || err?.message?.includes('fetch')) {
-        setError("Error de conexión. Verificá tu internet e intentá de nuevo.");
-      } else {
-        setError("Los datos del equipo no están disponibles aún.");
-      }
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchTeam();
+    let isMounted = true;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (!userId) {
+          if (isMounted) {
+            setError("No se especificó un ID de equipo.");
+            setLoading(false);
+          }
+          return;
+        }
+
+        const teamRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, userId);
+        const teamSnap = await getDoc(teamRef);
+
+        if (!teamSnap.exists()) {
+          if (isMounted) {
+            setError("El equipo no existe o no es público.");
+            setLoading(false);
+          }
+          return;
+        }
+
+        const data = teamSnap.data();
+        if (isMounted) setTeamData(data);
+
+        const transfersSnap = await getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/transfers`), orderBy('timestamp', 'desc'), limit(100)));
+        if (isMounted) {
+          setTransferHistory(transfersSnap.docs.map(transferDoc => transferDoc.data())
+            .filter(transfer => transfer.teamId === userId || transfer.fromTeamId === userId)
+            .slice(0, 6));
+        }
+
+        const tournamentSnap = await getDoc(doc(db, `artifacts/${APP_ID}/public/data/tournament`, 'official'));
+        const normalizedTeamName = String(data.teamName || '').trim().toLowerCase();
+        const record = { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [], mvpCount: 0, rival: '—', titles: Number(data.titles) || 0 };
+        if (tournamentSnap.exists() && normalizedTeamName) {
+          const tournament = tournamentSnap.data();
+          const rivals = {};
+          (tournament.matches || []).filter(match => match.status === 'completed').forEach(match => {
+            const isHome = String(match.homeTeam || '').trim().toLowerCase() === normalizedTeamName;
+            const isAway = String(match.awayTeam || '').trim().toLowerCase() === normalizedTeamName;
+            if (!isHome && !isAway) return;
+            const scored = Number(isHome ? match.homeScore : match.awayScore) || 0;
+            const conceded = Number(isHome ? match.awayScore : match.homeScore) || 0;
+            const rival = isHome ? match.awayTeam : match.homeTeam;
+            if (rival) rivals[rival] = (rivals[rival] || 0) + 1;
+            record.played += 1;
+            record.gf += scored;
+            record.ga += conceded;
+            if (scored > conceded) { record.wins += 1; record.form.push('G'); }
+            else if (scored < conceded) { record.losses += 1; record.form.push('P'); }
+            else { record.draws += 1; record.form.push('E'); }
+            if (match.mvp) record.mvpCount += 1;
+          });
+          const mostFrequentRival = Object.entries(rivals).sort(([, a], [, b]) => b - a)[0];
+          if (mostFrequentRival) record.rival = mostFrequentRival[0];
+          const final = tournament.bracket?.final;
+          const finalWinner = Number(final?.scoreA) > Number(final?.scoreB) ? final?.teamA : Number(final?.scoreB) > Number(final?.scoreA) ? final?.teamB : '';
+          if (String(finalWinner || '').trim().toLowerCase() === normalizedTeamName) record.titles += 1;
+        }
+        const manualStats = data.manualStats || {};
+        ['played', 'wins', 'draws', 'losses', 'gf', 'ga', 'titles'].forEach(field => {
+          if (manualStats[field] !== '' && manualStats[field] !== undefined && manualStats[field] !== null) {
+            const value = Number(manualStats[field]);
+            if (Number.isFinite(value)) record[field] = Math.max(0, value);
+          }
+        });
+        if (String(manualStats.rival || '').trim()) record.rival = String(manualStats.rival).trim();
+        if (isMounted) setTeamRecord(record);
+
+        if (Array.isArray(data?.roster)) {
+          if (isMounted) {
+            setCartPlayers(data.roster.map(player => ({ ...player, Id: player.Id ?? player.playerId })));
+            setLoading(false);
+          }
+          return;
+        }
+
+        const lineup = data?.lineup;
+        if (lineup && typeof lineup === 'object') {
+          const playerIds = Object.values(lineup).filter(v => v != null && v !== '').map(String);
+          if (playerIds.length > 0) {
+            const resp = await fetch('/jugadores.json');
+            const rawPlayers = await resp.json();
+            const allPlayers = processPlayersData(rawPlayers || []);
+            const filtered = allPlayers.filter(p => playerIds.includes(String(p?.Id)));
+            if (isMounted) setCartPlayers(filtered);
+          }
+        }
+
+        if (isMounted) setLoading(false);
+      } catch (err) {
+        console.error("Error fetching team:", err);
+        if (!isMounted) return;
+        if (err?.code === 'permission-denied') {
+          setError("Sin permisos para cargar el equipo.");
+        } else if (err?.message?.includes('network') || err?.message?.includes('fetch')) {
+          setError("Error de conexión. Verificá tu internet e intentá de nuevo.");
+        } else {
+          setError("Los datos del equipo no están disponibles aún.");
+        }
+        setLoading(false);
+      }
+    };
+
+    load();
+    return () => { isMounted = false; };
   }, [userId]);
 
   if (loading) {

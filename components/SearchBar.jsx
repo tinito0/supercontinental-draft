@@ -1,18 +1,21 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import {
   ArrowUpWideNarrow, LayoutGrid, List as ListIcon, Search, SlidersHorizontal, Star
 } from 'lucide-react';
 
 export const SearchBar = memo(function SearchBar({
-  filters, setFilters, applyFilters, setIsFiltrosModalVisible, sortConfig, setSortConfig,
+  filters, setFilters, setIsFiltrosModalVisible, sortConfig, setSortConfig,
   viewMode, setViewMode, gridColumns, setGridColumns,
   resultCount, totalCount
 }) {
-  const [inputValue, setInputValue] = useState(filters.name);
+  const [inputValue, setInputValue] = useState(filters.name || '');
+
+  useEffect(() => {
+    setInputValue(filters.name || '');
+  }, [filters.name]);
 
   const triggerSearch = () => {
     setFilters(prev => ({ ...prev, name: inputValue }));
-    applyFilters();
   };
 
   const handleSortChange = (event) => {
@@ -32,7 +35,11 @@ export const SearchBar = memo(function SearchBar({
             type="text"
             placeholder="Buscar por nombre..."
             value={inputValue}
-            onChange={event => setInputValue(event.target.value)}
+            onChange={event => {
+              const val = event.target.value;
+              setInputValue(val);
+              setFilters(prev => ({ ...prev, name: val }));
+            }}
             onKeyDown={event => { if (event.key === 'Enter') triggerSearch(); }}
             className="w-full min-h-12 pl-10 pr-4 py-2.5 bg-[#111923] text-white rounded-xl text-base outline-none shadow-[inset_0_0_0_1px_rgba(34,211,238,0.10)] focus:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.42),0_0_0_3px_rgba(34,211,238,0.08)] placeholder:text-gray-500"
           />
@@ -47,7 +54,6 @@ export const SearchBar = memo(function SearchBar({
           <button
             onClick={() => {
               setFilters(prev => ({ ...prev, wishlistOnly: !prev.wishlistOnly }));
-              setTimeout(applyFilters, 0);
             }}
             className={`min-h-12 flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 font-bold rounded-xl transition active:scale-95 text-sm ${
               filters.wishlistOnly
@@ -80,9 +86,11 @@ export const SearchBar = memo(function SearchBar({
 
         <div className="flex items-center gap-4 text-gray-400 text-sm font-medium text-center lg:text-left px-2">
           <span>
-            {resultCount === 0
+            {totalCount === 0
               ? 'No se encontraron jugadores.'
-              : <>Mostrando <span className="text-white font-bold">{resultCount}</span> de {totalCount}</>
+              : resultCount < totalCount
+                ? <>Mostrando <span className="text-cyan-400 font-bold">{resultCount}</span> de <span className="text-white font-bold">{totalCount}</span> jugadores</>
+                : <>Mostrando <span className="text-white font-bold">{totalCount}</span> jugadores</>
             }
           </span>
         </div>

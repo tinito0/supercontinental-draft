@@ -71,12 +71,18 @@ export const ManagerChat = memo(function ManagerChat({
     return isAtBottom;
   };
 
+  const scrollTimeoutRef = useRef(null);
   const persistScrollPosition = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const isAtBottom = updateBottomState();
-    sessionStorage.setItem(scrollKey, String(el.scrollTop));
-    sessionStorage.setItem(bottomKey, JSON.stringify(isAtBottom));
+    updateBottomState();
+    if (scrollTimeoutRef.current) return;
+    scrollTimeoutRef.current = setTimeout(() => {
+      scrollTimeoutRef.current = null;
+      if (!scrollRef.current) return;
+      sessionStorage.setItem(scrollKey, String(scrollRef.current.scrollTop));
+      sessionStorage.setItem(bottomKey, JSON.stringify(wasAtBottomRef.current));
+    }, 150);
   };
 
   useEffect(() => {

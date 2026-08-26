@@ -34,9 +34,6 @@ export const LeftSidebar = memo(function LeftSidebar({
     if (id === 'Torneo') {
       navigate('/torneo');
     } else {
-      if (location.pathname !== '/') {
-        navigate('/');
-      }
       setActiveTab(id);
     }
     if (window.innerWidth < 1024 && onClose) onClose();

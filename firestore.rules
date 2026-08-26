@@ -2,39 +2,54 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuth() && (
+        request.auth.uid == "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3" ||
+        (request.auth.token.keys().hasAny(['admin']) && request.auth.token.admin == true)
+      );
+    }
+
     // ── ARTIFACTS ─────────────────────────────────────────────
     match /artifacts/{appId} {
 
       // Datos públicos: lectura libre, escritura autenticada
       match /public/{document=**} {
         allow read: if true;
-        allow write: if request.auth != null;
+        allow write: if isAuth();
       }
 
       // Manager chat: visible para todos, mensajes para cualquier usuario autenticado
       match /public/data/manager_chat/{messageId} {
         allow read: if true;
-        allow create: if request.auth != null;
-        allow update, delete: if false;
+        allow create: if isAuth();
+        allow update, delete: if isAdmin();
       }
 
       // Player locks: allow authenticated users to update during transfers
       match /public/data/player_locks/{playerId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if isAuth();
       }
 
-      // Datos de usuario: allow authenticated users to perform transfer transactions
+      // Datos de usuario: solo el propietario o administradores pueden leer/escribir sus datos
       match /users/{userId}/{document=**} {
-        allow read, write: if request.auth != null;
+        allow read, write: if isAuth() && (request.auth.uid == userId || isAdmin());
       }
     }
 
     // ── TRANSFERS (colección raíz) ─────────────────────────────
     match /transfers/{transferId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-                    && request.resource.data.teamId == request.auth.uid;
-      allow update, delete: if false;
+      allow read: if isAuth();
+      allow create: if isAuth() && (request.resource.data.teamId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // ── CATCH-ALL: deny everything not explicitly matched ──
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
 
   }

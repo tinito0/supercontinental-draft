@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo, useRef, Suspense } from 'react';
-import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, APP_ID } from './utils/constants.js';
+import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID } from './utils/constants.js';
 import { formatPriceShort, normalizarString, processPlayersData, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
 import { PlayerCard } from './components/PlayerCard.jsx';
 import { RecommendationsAccordion } from './components/RecommendationsAccordion.jsx';
@@ -273,19 +273,33 @@ const MiniPlayerCard = memo(function MiniPlayerCard({ player, countryMap, onRemo
   );
 });
 
+// ── Route mapping constants (module scope, never recreated) ──
+const pathToTab = {
+  '/marketplace': 'Marketplace',
+  '/my-team': 'My Team',
+  '/scouting': 'Scouting',
+  '/other-teams': 'Other Teams',
+  '/financials': 'Financials',
+  '/torneo': 'Torneo',
+  '/admin': 'Admin',
+  '/tactics': 'My Team',
+};
+const tabToPath = {
+  'Marketplace': '/marketplace',
+  'My Team': '/my-team',
+  'Scouting': '/scouting',
+  'Other Teams': '/other-teams',
+  'Financials': '/financials',
+  'Torneo': '/torneo',
+  'Admin': '/admin',
+};
+
+const ALL_DETAILED_STAT_KEYS = Object.values(DETAILED_STAT_KEYS).flat();
+
 function App() {
   const navigate = useNavigate();
   const location = useLocation();  // Derive "activeTab" from current URL path for backward compat with all existing code
-  const pathToTab = {
-    '/marketplace': 'Marketplace',
-    '/my-team': 'My Team',
-    '/scouting': 'Scouting',
-    '/other-teams': 'Other Teams',
-    '/financials': 'Financials',
-    '/torneo': 'Torneo',
-    '/admin': 'Admin',
-    '/tactics': 'My Team',
-  };
+  // pathToTab and tabToPath moved to module scope — see above App()
   const modalRoute = location.pathname.startsWith('/modal/') ? location.pathname.replace('/modal/', '') : '';
   const modalBackgroundTab = modalRoute === 'compare' || modalRoute === 'tutorial' || modalRoute === 'filters'
     ? 'Marketplace'
@@ -293,15 +307,7 @@ function App() {
   const activeTab = pathToTab[location.pathname] ?? modalBackgroundTab;
 
   // setActiveTab is a drop-in replacement that navigates to route
-  const tabToPath = {
-    'Marketplace': '/marketplace',
-    'My Team': '/my-team',
-    'Scouting': '/scouting',
-    'Other Teams': '/other-teams',
-    'Financials': '/financials',
-    'Torneo': '/torneo',
-    'Admin': '/admin',
-  };
+  // tabToPath at module scope — see above App()
   const setActiveTab = (tab) => navigate(tabToPath[tab] ?? '/marketplace');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -658,17 +664,22 @@ function App() {
         const uid = firebaseUser.uid;
         setUserId(uid);
 
-        setIsAdmin(uid === ADMIN_USER_ID);
+        const idTokenResult = await firebaseUser.getIdTokenResult();
+        const isGoogleSignIn = idTokenResult.signInProvider === 'google.com';
+
+        const adminUidList = Array.isArray(ADMIN_USER_IDS) ? ADMIN_USER_IDS : [ADMIN_USER_ID];
+        const isUserAdmin = (
+          uid === ADMIN_USER_ID ||
+          adminUidList.includes(uid) ||
+          idTokenResult.claims?.admin === true
+        );
+        setIsAdmin(isUserAdmin);
 
         const profileRef = getPrivateProfileRef(uid);
         const publicTeamRef = getPublicTeamRef(uid);
         const profileSnap = await getDoc(profileRef);
 
         let profileData;
-
-        // Verificar si el inicio de sesión actual fue con Google o Password
-        const idTokenResult = await firebaseUser.getIdTokenResult();
-        const isGoogleSignIn = idTokenResult.signInProvider === 'google.com';
 
         if (!profileSnap.exists()) {
           if (isGoogleSignIn) {
@@ -704,6 +715,9 @@ function App() {
 
         } else {
           profileData = profileSnap.data();
+          if (profileData.isAdmin === true || profileData.role === 'admin') {
+            setIsAdmin(true);
+          }
 
           if (!isGoogleSignIn) {
             // Logueado con email/password u otro
@@ -779,97 +793,6 @@ function App() {
       unsubscribeMarket();
     };
   }, [firebaseInitializationError, getMarketStatusDocRef, getPrivateProfileRef, getPublicTeamRef]);
-  useEffect(() => {
-    if (isAdmin) {
-      window.runManualMigration = async () => {
-        const currentUid = "ZTX1NMKAWHcass2BVzzaADc5NPu1";
-        const googleUid = "JeB3Bo9CuXNj8kCvz84zKW6eq752";
-        console.log("Iniciando migración manual de", currentUid, "a", googleUid);
-        try {
-          const oldProfileRef = doc(db, `artifacts/${APP_ID}/users/${currentUid}/profile`, "data");
-          const newProfileRef = doc(db, `artifacts/${APP_ID}/users/${googleUid}/profile`, "data");
-          const oldProfileSnap = await getDoc(oldProfileRef);
-          if (oldProfileSnap.exists()) {
-            await setDoc(newProfileRef, {
-              ...oldProfileSnap.data(),
-              providers: ["google.com"],
-              migratedFrom: currentUid,
-              migratedAt: new Date().toISOString()
-            }, { merge: true });
-          }
-
-          const cartSnap = await getDocs(collection(db, `artifacts/${APP_ID}/users/${currentUid}/cart`));
-          const batch = writeBatch(db);
-          cartSnap.docs.forEach(cartDoc => {
-            batch.set(
-              doc(db, `artifacts/${APP_ID}/users/${googleUid}/cart/${cartDoc.id}`),
-              cartDoc.data()
-            );
-            batch.delete(cartDoc.ref);
-          });
-          await batch.commit();
-
-          const locksSnap = await getDocs(collection(db, `artifacts/${APP_ID}/public/data/player_locks`));
-          const lockBatch = writeBatch(db);
-          locksSnap.docs.forEach(lockDoc => {
-            if (lockDoc.data().lockedBy === currentUid) {
-              lockBatch.update(lockDoc.ref, { lockedBy: googleUid });
-            }
-          });
-          await lockBatch.commit();
-
-          const oldTeamRef = doc(db, `artifacts/${APP_ID}/public/data/teams/${currentUid}`);
-          const newTeamRef = doc(db, `artifacts/${APP_ID}/public/data/teams/${googleUid}`);
-          const oldTeamSnap = await getDoc(oldTeamRef);
-          if (oldTeamSnap.exists()) {
-            await setDoc(newTeamRef, {
-              ...oldTeamSnap.data(),
-              userId: googleUid
-            });
-            await deleteDoc(oldTeamRef);
-          }
-
-          const offersSnap = await getDocs(collection(db, `artifacts/${APP_ID}/public/data/offers`));
-          const offerBatch = writeBatch(db);
-          let hasOfferChanges = false;
-          offersSnap.docs.forEach(offerDoc => {
-            const data = offerDoc.data();
-            let updateData = {};
-            if (data.senderId === currentUid) updateData.senderId = googleUid;
-            if (data.targetTeamId === currentUid) updateData.targetTeamId = googleUid;
-            if (Object.keys(updateData).length > 0) {
-              offerBatch.update(offerDoc.ref, updateData);
-              hasOfferChanges = true;
-            }
-          });
-          if (hasOfferChanges) await offerBatch.commit();
-
-          const transfersSnap = await getDocs(collection(db, `artifacts/${APP_ID}/public/data/transfers`));
-          const transferBatch = writeBatch(db);
-          let hasTransferChanges = false;
-          transfersSnap.docs.forEach(transferDoc => {
-            const data = transferDoc.data();
-            let updateData = {};
-            if (data.teamId === currentUid) updateData.teamId = googleUid;
-            if (data.fromTeamId === currentUid) updateData.fromTeamId = googleUid;
-            if (Object.keys(updateData).length > 0) {
-              transferBatch.update(transferDoc.ref, updateData);
-              hasTransferChanges = true;
-            }
-          });
-          if (hasTransferChanges) await transferBatch.commit();
-
-          await deleteDoc(oldProfileRef);
-          console.log("MIGRACIÓN MANUAL COMPLETADA!");
-          alert("MIGRACIÓN COMPLETADA: LOURINHA FC");
-        } catch (e) {
-          console.error("Error en migración manual:", e);
-          alert("Error: " + e.message);
-        }
-      };
-      console.log("Admin: window.runManualMigration() is ready");
-    }
-  }, [isAdmin, db]);
 
   useEffect(() => {
 
@@ -980,6 +903,22 @@ function App() {
     const matchMin = (val, min) => min === "" || val >= parseInt(min, 10);
     const matchMax = (val, max) => max === "" || val <= parseInt(max, 10);
 
+    // Pre-calcular filtros de stats detalladas activas una sola vez
+    const activeDetailedStatFilters = [];
+    for (let i = 0; i < ALL_DETAILED_STAT_KEYS.length; i++) {
+      const k = ALL_DETAILED_STAT_KEYS[i];
+      const min = f[`${k}Min`];
+      const max = f[`${k}Max`];
+      if ((min !== "" && min !== undefined) || (max !== "" && max !== undefined)) {
+        activeDetailedStatFilters.push({
+          key: k,
+          minVal: min !== "" && min !== undefined ? parseInt(min, 10) : -Infinity,
+          maxVal: max !== "" && max !== undefined ? parseInt(max, 10) : Infinity,
+        });
+      }
+    }
+    const hasDetailedFilters = activeDetailedStatFilters.length > 0;
+
     players = players.filter(p => {
       if (marketStatus.status === 'FranchiseMarket') {
         const isFranchiseEligible = p.Age >= 31 && p.OVR_CALCULADO >= 83 && p.OVR_CALCULADO <= 89;
@@ -999,7 +938,6 @@ function App() {
         matchMin(p.Age, f.ageMin) && matchMax(p.Age, f.ageMax) &&
         matchMin(p.Precio, f.priceMin) && matchMax(p.Precio, f.priceMax) &&
         (f.id === "" || String(p.Id).includes(f.id)) &&
-        // CORRECCIÓN AQUÍ: Usar p.searchableName en vez de p.Name_lower
         (searchName === "" || (p.searchableName && p.searchableName.includes(searchName))) &&
         (f.pos === "" || p.POS_NOMBRE === f.pos) &&
         (f.country === "" || country1Name.includes(normalizedCountry) || country2Name.includes(normalizedCountry)) &&
@@ -1010,30 +948,93 @@ function App() {
 
       if (!matchBasic) return false;
 
-      const matchDetailedStats = Object.values(DETAILED_STAT_KEYS).flat().every(statKey => {
-        const val = p[statKey] || 0;
-        return matchMin(val, f[`${statKey}Min`]) && matchMax(val, f[`${statKey}Max`]);
-      });
-
-      return matchDetailedStats;
-    });
-
-    // Ordenamiento integrado — sort a copy to avoid mutating the filtered array
-    const sorted = [...players];
-    sorted.sort((a, b) => {
-      let valA, valB;
-      switch (sortConfig.key) {
-        case 'precio': valA = a.Precio; valB = b.Precio; break;
-        case 'edad': valA = a.Age; valB = b.Age; break;
-        case 'nombre': valA = a.searchableName; valB = b.searchableName; break;
-        default: valA = a.OVR_CALCULADO; valB = b.OVR_CALCULADO; break;
+      if (hasDetailedFilters) {
+        for (let i = 0; i < activeDetailedStatFilters.length; i++) {
+          const filter = activeDetailedStatFilters[i];
+          const val = p[filter.key] || 0;
+          if (val < filter.minVal || val > filter.maxVal) return false;
+        }
       }
-      if (sortConfig.direction === 'asc') return valA < valB ? -1 : 1;
-      else return valA > valB ? -1 : 1;
+
+      return true;
     });
+
+    // Ordenamiento integrado optimizado sin switches dentro del comparator
+    const sorted = [...players];
+    const { key, direction } = sortConfig;
+    const isAsc = direction === 'asc';
+
+    if (key === 'precio') {
+      sorted.sort(isAsc ? (a, b) => a.Precio - b.Precio : (a, b) => b.Precio - a.Precio);
+    } else if (key === 'edad') {
+      sorted.sort(isAsc ? (a, b) => a.Age - b.Age : (a, b) => b.Age - a.Age);
+    } else if (key === 'nombre') {
+      sorted.sort(isAsc
+        ? (a, b) => (a.searchableName || '').localeCompare(b.searchableName || '')
+        : (a, b) => (b.searchableName || '').localeCompare(a.searchableName || ''));
+    } else {
+      sorted.sort(isAsc ? (a, b) => a.OVR_CALCULADO - b.OVR_CALCULADO : (a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO);
+    }
 
     return sorted;
   }, [allPlayers, filters, sortConfig, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName]);
+
+  const pageSize = isMobileViewport ? 48 : 64;
+  const [displayCount, setDisplayCount] = useState(64);
+
+  // Reset displayCount on filter, search or sort change
+  useEffect(() => {
+    setDisplayCount(pageSize);
+  }, [filters, debouncedName, sortConfig, pageSize]);
+
+  const visiblePlayers = useMemo(() => {
+    return filteredPlayers.slice(0, displayCount);
+  }, [filteredPlayers, displayCount]);
+
+  const handleLoadMore = useCallback(() => {
+    setDisplayCount(prev => {
+      if (prev >= filteredPlayers.length) return prev;
+      return Math.min(prev + (isMobileViewport ? 48 : 64), filteredPlayers.length);
+    });
+  }, [isMobileViewport, filteredPlayers.length]);
+
+  const mobileSentinelRef = useRef(null);
+
+  useEffect(() => {
+    if (!isMobileViewport || visiblePlayers.length >= filteredPlayers.length) return;
+    const sentinel = mobileSentinelRef.current;
+
+    let observer = null;
+    if (sentinel && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting) {
+          handleLoadMore();
+        }
+      }, { rootMargin: '600px' });
+      observer.observe(sentinel);
+    }
+
+    // Scroll listener fallback for mobile containers
+    const scrollContainer = document.getElementById('main-content');
+    const handleScroll = () => {
+      if (!scrollContainer) return;
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      if (scrollHeight - scrollTop - clientHeight < 800) {
+        handleLoadMore();
+      }
+    };
+
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      if (observer) observer.disconnect();
+      if (scrollContainer) scrollContainer.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isMobileViewport, visiblePlayers.length, filteredPlayers.length, handleLoadMore]);
 
   // Mantener una función "applyFilters" vacía por si algún componente hijo la pide
   const applyFilters = useCallback(() => { }, []);
@@ -1041,8 +1042,12 @@ function App() {
   // Mensaje de contador
   useEffect(() => {
     if (filteredPlayers.length === 0) setContadorMsg("No se encontraron jugadores.");
-    else setContadorMsg(`Mostrando ${filteredPlayers.length} de ${allPlayers.length} jugadores.`);
-  }, [filteredPlayers.length, allPlayers.length]);
+    else if (visiblePlayers.length < filteredPlayers.length) {
+      setContadorMsg(`Mostrando ${visiblePlayers.length} de ${filteredPlayers.length} encontrados (${allPlayers.length} total).`);
+    } else {
+      setContadorMsg(`Mostrando ${filteredPlayers.length} de ${allPlayers.length} jugadores.`);
+    }
+  }, [visiblePlayers.length, filteredPlayers.length, allPlayers.length]);
 
   const resetFilters = useCallback(() => {
     setFilters(prev => ({ ...initialFilters, name: prev.name }));
@@ -1534,123 +1539,11 @@ function App() {
   }, [budgetPercent]);
 
   // ── SMART RECOMMENDATION ENGINE ──
-  const recommendations = useMemo(() => {
-    if (!allPlayers.length || !userProfile) return [];
-
-    // Position groups
-    const posGroups = {
-      PT: ['PT'],
-      DEF: ['DFC', 'LD', 'LI'],
-      MED: ['MC', 'MCD', 'MO', 'MD', 'MI'],
-      DEL: ['DC', 'SD', 'ED', 'EI'],
-    };
-
-    // Count players per group from cart
-    const groupCounts = { PT: 0, DEF: 0, MED: 0, DEL: 0 };
-    const groupOvrTotals = { PT: 0, DEF: 0, MED: 0, DEL: 0 };
-    const positionCounts = {};
-
-    cart.forEach(p => {
-      const pos = p.POS_NOMBRE;
-      positionCounts[pos] = (positionCounts[pos] || 0) + 1;
-      for (const [group, positions] of Object.entries(posGroups)) {
-        if (positions.includes(pos)) {
-          groupCounts[group]++;
-          groupOvrTotals[group] += (p.OVR_CALCULADO || 0);
-          break;
-        }
-      }
-    });
-
-    // Calculate average OVR per group
-    const groupAvgOvr = {};
-    for (const group of Object.keys(groupCounts)) {
-      groupAvgOvr[group] = groupCounts[group] > 0
-        ? Math.round(groupOvrTotals[group] / groupCounts[group])
-        : 0;
-    }
-
-    // Find weakest group
-    const overallAvg = cart.length > 0
-      ? Math.round(cart.reduce((s, p) => s + (p.OVR_CALCULADO || 0), 0) / cart.length)
-      : 0;
-
-    // Missing positions (groups with 0 or 1 player)
-    const missingGroups = Object.entries(groupCounts)
-      .filter(([, count]) => count <= 1)
-      .map(([group]) => group);
-
-    // Weak groups (avg OVR significantly below overall)
-    const weakGroups = Object.entries(groupAvgOvr)
-      .filter(([, avg]) => avg > 0 && avg < overallAvg - 5)
-      .map(([group]) => group);
-
-    // Budget cap: 35% of remaining
-    const maxPrice = remainingBudget > 0 ? (remainingBudget * 0.35) / 1000000 : 0;
-
-    if (maxPrice <= 0) return [];
-
-    // Score each available player
-    const cartIds = new Set(cart.map(p => String(p.Id)));
-    const lockedIds = new Set(Object.keys(playerLocks));
-
-    const scored = allPlayers
-      .filter(p => {
-        if (cartIds.has(String(p.Id))) return false; // Already in cart
-        if (lockedIds.has(String(p.Id))) return false; // Locked by someone
-        if (p.Precio > maxPrice) return false; // Too expensive
-        if (p.Precio <= 0) return false; // Free/invalid
-        return true;
-      })
-      .map(p => {
-        let score = 0;
-        let reason = '';
-        const pos = p.POS_NOMBRE;
-
-        // Find player's group
-        let playerGroup = null;
-        for (const [group, positions] of Object.entries(posGroups)) {
-          if (positions.includes(pos)) { playerGroup = group; break; }
-        }
-
-        // +40 if fills a missing position
-        if (playerGroup && missingGroups.includes(playerGroup)) {
-          score += 40;
-          reason = `Necesitás un ${pos}`;
-        }
-
-        // +15 if fills a weak group
-        if (playerGroup && weakGroups.includes(playerGroup) && !reason) {
-          score += 15;
-          reason = `Refuerzo para ${playerGroup === 'DEF' ? 'defensa' : playerGroup === 'MED' ? 'mediocampo' : playerGroup === 'DEL' ? 'ataque' : 'portería'}`;
-        }
-
-        // OVR bonuses
-        if (p.OVR_CALCULADO >= 85) { score += 30; if (!reason) reason = 'Mejor OVR disponible'; }
-        else if (p.OVR_CALCULADO >= 80) { score += 20; if (!reason) reason = 'Alta calidad'; }
-
-        // Budget value bonus
-        if (p.Precio * 1000000 <= remainingBudget * 0.2) {
-          score += 10;
-          if (!reason) reason = 'Gran valor';
-        }
-
-        // Penalty if position is already stacked
-        const posCount = positionCounts[pos] || 0;
-        if (posCount >= 3) score -= 20;
-
-        if (!reason) reason = 'Buen fichaje';
-
-        return { ...p, _score: score, _reason: reason };
-      })
-      .sort((a, b) => b._score - a._score || b.OVR_CALCULADO - a.OVR_CALCULADO)
-      .slice(0, 6);
-
-    return scored;
-  }, [allPlayers, cart, playerLocks, remainingBudget, userProfile]);
+  // NOTE: `recommendations` removed — was dead code (never used in JSX).
+  // Only `smartRecommendations` below is used.
 
   const smartRecommendations = useMemo(() => {
-    if (!allPlayers.length || !userProfile) return [];
+    if (activeTab !== 'Marketplace' || !allPlayers.length || !userProfile) return [];
 
     const posGroups = {
       PT: ['PT'],
@@ -2044,14 +1937,13 @@ function App() {
             {/* CENTER VIEW - MARKETPLACE MULTIPLEXING */}
             <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8 flex flex-col" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
               {/* Render content based on active tab, for now Marketplace is the main functional view */}
-              <div data-app-tour="marketplace" className={activeTab === 'Marketplace' ? 'flex-1 min-h-0 flex flex-col' : 'hidden'}>
+              <div data-app-tour="marketplace" className={activeTab === 'Marketplace' ? (isMobileViewport ? 'flex flex-col' : 'flex-1 min-h-0 flex flex-col') : 'hidden'}>
 
-                {/* Header fijo: no scrollea con la lista — la lista tiene su propio scroll interno (virtualizado) */}
+                {/* Header superior */}
                 <div className="shrink-0">
                 <SearchBar
                   filters={filters}
                   setFilters={setFilters}
-                  applyFilters={applyFilters}
                   setIsFiltrosModalVisible={(value) => value ? openModalRoute('filters') : closeModalRoute(setIsFiltrosModalVisible)}
                   sortConfig={sortConfig}
                   setSortConfig={setSortConfig}
@@ -2059,8 +1951,8 @@ function App() {
                   setViewMode={setViewMode}
                   gridColumns={gridColumns}
                   setGridColumns={setGridColumns}
-                  resultCount={filteredPlayers.length}
-                  totalCount={allPlayers.length}
+                  resultCount={isMobileViewport ? visiblePlayers.length : filteredPlayers.length}
+                  totalCount={filteredPlayers.length}
                 />
 
                 {(playersLoadError || countriesLoadError) && (
@@ -2104,40 +1996,108 @@ function App() {
                   </div>
                 )}
                 </div>
-                {/* Fin del header fijo */}
+                {/* Fin del header */}
 
-                <div className="flex-1 min-h-0 mt-1" data-app-tour="players" id="player-list">
-                {viewMode === 'list' ? (
-                  <VirtualizedPlayerList
-                    players={filteredPlayers}
-                    playerLocks={playerLocks}
-                    userId={userId}
-                    allTeams={allTeams}
-                    countryMap={countryMap}
-                    wishlistSet={wishlistSet}
-                    comparingIdsSet={comparingIdsSet}
-                    onSelectPlayer={setSelectedPlayerId}
-                    onToggleWishlist={toggleWishlist}
-                    onCompare={handleToggleCompare}
-                    overscanCount={isMobileViewport ? 3 : 6}
-                  />
-                ) : (
-                  <VirtualizedPlayerGrid
-                    players={filteredPlayers}
-                    columnCount={gridColumnCount}
-                    playerLocks={playerLocks}
-                    userId={userId}
-                    allTeams={allTeams}
-                    countryMap={countryMap}
-                    wishlistSet={wishlistSet}
-                    comparingIdsSet={comparingIdsSet}
-                    onSelectPlayer={setSelectedPlayerId}
-                    onToggleWishlist={toggleWishlist}
-                    onCompare={handleToggleCompare}
-                    overscanCount={isMobileViewport ? 1 : 2}
-                    cardMaxHeight={gridCardMaxHeight}
-                  />
-                )}
+                <div className={isMobileViewport ? "mt-1 flex flex-col" : "flex-1 min-h-0 mt-1 flex flex-col"} data-app-tour="players" id="player-list">
+                  {isMobileViewport ? (
+                    <div className={viewMode === 'list'
+                      ? 'space-y-2.5'
+                      : `grid gap-3 sm:gap-4 ${
+                          gridColumns === 2
+                            ? 'grid-cols-2'
+                            : gridColumns === 3
+                              ? 'grid-cols-3'
+                              : gridColumns === 4
+                                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'
+                                : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6'
+                        }`
+                    }>
+                      {visiblePlayers.map(player => {
+                        const isLocked = Boolean(playerLocks[player.Id] && playerLocks[player.Id]?.lockedBy !== userId);
+                        const isInMyCart = Boolean(playerLocks[player.Id]?.lockedBy === userId);
+                        const lockedTeam = isLocked && allTeams ? allTeams[playerLocks[player.Id]?.lockedBy] : null;
+
+                        return viewMode === 'list' ? (
+                          <PlayerListItem
+                            key={player.Id}
+                            player={player}
+                            countryMap={countryMap}
+                            onSelectPlayer={setSelectedPlayerId}
+                            isInMyCart={isInMyCart}
+                            isLockedByOther={isLocked}
+                            lockedTeamName={isLocked ? playerLocks[player.Id]?.teamName : null}
+                            lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
+                            isWishlisted={wishlistSet.has(player.Id)}
+                            onToggleWishlist={toggleWishlist}
+                            onCompare={handleToggleCompare}
+                            isComparing={comparingIdsSet.has(player.Id)}
+                          />
+                        ) : (
+                          <div key={player.Id} className="market-player-card-shell">
+                            <PlayerCard
+                              player={player}
+                              countryMap={countryMap}
+                              onSelectPlayer={setSelectedPlayerId}
+                              isInMyCart={isInMyCart}
+                              isLockedByOther={isLocked}
+                              lockedTeamName={isLocked ? playerLocks[player.Id]?.teamName : null}
+                              lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
+                              isWishlisted={wishlistSet.has(player.Id)}
+                              onToggleWishlist={toggleWishlist}
+                              onCompare={handleToggleCompare}
+                              isComparing={comparingIdsSet.has(player.Id)}
+                            />
+                          </div>
+                        );
+                      })}
+                      {visiblePlayers.length < filteredPlayers.length && (
+                        <div className="col-span-full py-4 flex flex-col items-center justify-center gap-2">
+                          <div ref={mobileSentinelRef} className="h-6 w-full pointer-events-none" />
+                          <button
+                            type="button"
+                            onClick={handleLoadMore}
+                            className="px-6 py-2 bg-gray-800/80 hover:bg-gray-700 text-cyan-400 font-bold text-xs rounded-xl border border-gray-700/80 hover:border-cyan-500/50 shadow-md transition active:scale-95 flex items-center gap-2"
+                          >
+                            <span>Cargar más jugadores ({visiblePlayers.length} de {filteredPlayers.length})</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-h-0">
+                      {viewMode === 'list' ? (
+                        <VirtualizedPlayerList
+                          players={filteredPlayers}
+                          playerLocks={playerLocks}
+                          userId={userId}
+                          allTeams={allTeams}
+                          countryMap={countryMap}
+                          wishlistSet={wishlistSet}
+                          comparingIdsSet={comparingIdsSet}
+                          onSelectPlayer={setSelectedPlayerId}
+                          onToggleWishlist={toggleWishlist}
+                          onCompare={handleToggleCompare}
+                          overscanCount={6}
+                        />
+                      ) : (
+                        <VirtualizedPlayerGrid
+                          players={filteredPlayers}
+                          columnCount={gridColumnCount}
+                          playerLocks={playerLocks}
+                          userId={userId}
+                          allTeams={allTeams}
+                          countryMap={countryMap}
+                          wishlistSet={wishlistSet}
+                          comparingIdsSet={comparingIdsSet}
+                          onSelectPlayer={setSelectedPlayerId}
+                          onToggleWishlist={toggleWishlist}
+                          onCompare={handleToggleCompare}
+                          overscanCount={2}
+                          cardMaxHeight={gridCardMaxHeight}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div> {/* End Marketplace Container*/}
 
@@ -2162,6 +2122,7 @@ function App() {
                     onClose={() => setActiveTab('Marketplace')}
                     cart={cart}
                     userProfile={userProfile}
+                    userId={userId}
                     getPrivateProfileRef={getPrivateProfileRef}
                     getPublicTeamRef={getPublicTeamRef}
                     showStatusMessage={showStatusMessage}
@@ -2226,6 +2187,7 @@ function App() {
                 {activeTab === 'Admin' && isAdmin && (
                   <AdminModal
                     isVisible={true}
+                    isPage={true}
                     onClose={() => setActiveTab('Marketplace')}
                     getPublicTeamsCollectionRef={getPublicTeamsCollectionRef}
                     getPrivateProfileRef={getPrivateProfileRef}
@@ -2237,6 +2199,8 @@ function App() {
                     getSuggestionsCollectionRef={getSuggestionsCollectionRef}
                     getPublicLocksCollectionRef={getPublicLocksCollectionRef}
                     allTeams={allTeams}
+                    playerLocks={playerLocks}
+                    allPlayers={allPlayers}
                     storage={storage}
                     db={db}
                     showStatusMessage={showStatusMessage}
@@ -2420,6 +2384,7 @@ function App() {
       {(isAdminModalVisible || modalRoute === 'admin') && isAdmin && (
         <AdminModal
           isVisible={true}
+          isPage={false}
           onClose={() => closeModalRoute(setIsAdminModalVisible)}
           getPublicTeamsCollectionRef={getPublicTeamsCollectionRef}
           getPrivateProfileRef={getPrivateProfileRef}
@@ -2431,6 +2396,8 @@ function App() {
           getSuggestionsCollectionRef={getSuggestionsCollectionRef}
           getPublicLocksCollectionRef={getPublicLocksCollectionRef}
           allTeams={allTeams}
+          playerLocks={playerLocks}
+          allPlayers={allPlayers}
           storage={storage}
           db={db}
           showStatusMessage={showStatusMessage}
@@ -2463,6 +2430,7 @@ function App() {
           onClose={() => closeModalRoute(setIsFormationModalVisible)}
           cart={cart}
           userProfile={userProfile}
+          userId={userId}
           getPrivateProfileRef={getPrivateProfileRef}
           getPublicTeamRef={getPublicTeamRef}
           showStatusMessage={showStatusMessage}

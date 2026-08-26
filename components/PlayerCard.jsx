@@ -33,6 +33,7 @@ function getOvrColor(ovr) {
    cambios de filtro) para no volver a intentar cargar la foto real ni
    mostrar el spinner de nuevo — eso era lo que causaba el parpadeo. */
 const brokenImageIds = new Set();
+const loadedImageIds = new Set();
 
 export const PlayerCard = memo(function PlayerCard({
   player,
@@ -49,8 +50,9 @@ export const PlayerCard = memo(function PlayerCard({
   const ovr = player.OVR_CALCULADO || 0;
   const ovrColor = getOvrColor(ovr);
   const [imgState, setImgState] = useState(() => {
-    const knownBroken = brokenImageIds.has(player.Id);
-    return { loaded: knownBroken, error: knownBroken };
+    const isBroken = brokenImageIds.has(player.Id);
+    const isLoaded = isBroken || loadedImageIds.has(player.Id);
+    return { loaded: isLoaded, error: isBroken };
   });
   const posColor = POS_COLOR[player.POS_NOMBRE] || '#9ca3af';
   const flagUrl = getFlagUrl(player.Country1);
@@ -77,8 +79,6 @@ export const PlayerCard = memo(function PlayerCard({
         border: `1px solid ${borderColor}`,
         width: '100%',
         height: '100%',
-        contentVisibility: 'auto',
-        containIntrinsicSize: '260px 360px',
         boxShadow: isInMyCart
           ? 'inset 0 1px 0 rgba(16,185,129,0.08)'
           : 'none',
@@ -111,9 +111,7 @@ export const PlayerCard = memo(function PlayerCard({
         />
 
         {!imgState.loaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-gray-600 border-t-emerald-500 rounded-full animate-spin opacity-50"></div>
-          </div>
+          <div className="absolute inset-0 bg-white/[0.03] animate-pulse" />
         )}
         <img
           src={imgState.error ? `https://placehold.co/200x240/111/333?text=${player.Name?.substring(0, 2) ?? '?'}` : `/fotos_jugadores/${player.Id}.webp`}
@@ -123,22 +121,18 @@ export const PlayerCard = memo(function PlayerCard({
           width="200"
           height="240"
           fetchPriority="low"
-          onLoad={() => setImgState({ loaded: true, error: false })}
+          onLoad={() => {
+            loadedImageIds.add(player.Id);
+            if (!imgState.loaded) setImgState({ loaded: true, error: false });
+          }}
           onError={() => {
             brokenImageIds.add(player.Id);
-            setImgState({ loaded: true, error: true });
+            if (!imgState.error) setImgState({ loaded: true, error: true });
           }}
           className="player-card__photo"
           style={{
-            filter: isLockedByOther
-              ? 'grayscale(0.7) brightness(0.5)'
-              : 'none',
+            filter: isLockedByOther ? 'grayscale(0.7) brightness(0.5)' : 'none',
             opacity: imgState.loaded ? 1 : 0,
-            transition: 'opacity 0.2s ease-in',
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-            objectPosition: 'center bottom'
           }}
         />
 

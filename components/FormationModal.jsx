@@ -1,39 +1,121 @@
 import React, { useState, useEffect, useCallback, memo, useRef, useMemo, useReducer } from 'react';
-import { X, Save, Image as ImageIcon, ClipboardList, Move, Share2, Check, Copy, Loader2 } from 'lucide-react';
+import { X, Save, Image as ImageIcon, ClipboardList, Move, Share2, Check, Copy, Loader2, Crown, Target, Zap, Shield, Users, Activity } from 'lucide-react';
 import { writeBatch, addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { Pitch } from './Pitch.jsx';
 import html2canvas from 'html2canvas';
 import { FORMATIONS, APP_ID, DEFAULT_LOGO } from '../utils/constants.js';
 import { getPosColorClass, formatPriceShort } from '../utils/helpers.js';
 
-export const FormationPlayerItem = memo(({ player, onClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange, isBench, onBenchChange }) => (
-  <div className={`flex items-center space-x-2 p-2 w-full rounded-xl border transition-all duration-200 ${isSelected ? 'bg-blue-600/20 border-blue-500' : 'bg-gray-800/40 border-gray-700/50'}`}>
-    <button onClick={onClick} className="flex items-center space-x-3 flex-grow text-left">
-      <img crossOrigin="anonymous" src={`/fotos_jugadores/${player.Id}.webp`} className="w-10 h-10 object-cover rounded-full bg-gray-900 border border-gray-600" onError={(e) => e.target.src = `https://placehold.co/40x40/374151/e0e0e0?text=${player.Name.substring(0, 1)}`} />
-      <div className="min-w-0 flex-grow">
-        <div className={`text-sm font-bold truncate ${isSelected ? 'text-blue-300' : 'text-gray-200'}`}>{player.Name}</div>
-        <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-black px-1.5 rounded text-black ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
-          <span className="text-xs text-gray-500">{formatPriceShort(player.Precio)}</span>
+export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange, isBench, onBenchChange }) => (
+  <div className={`flex items-center justify-between gap-2 p-2 w-full rounded-xl border transition-all duration-200 ${isSelected ? 'bg-blue-600/20 border-blue-500 shadow-md shadow-blue-500/10' : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-800/70'}`}>
+    <button onClick={() => onPlayerClick(player)} className="flex items-center gap-2 min-w-0 flex-1 text-left">
+      <img crossOrigin="anonymous" src={`/fotos_jugadores/${player.Id}.webp`} className="w-8 h-8 object-cover rounded-full bg-gray-900 border border-gray-600 shrink-0" onError={(e) => e.target.src = `https://placehold.co/40x40/374151/e0e0e0?text=${player.Name.substring(0, 1)}`} />
+      <div className="min-w-0 flex-1">
+        <div className={`text-xs font-bold truncate leading-tight ${isSelected ? 'text-cyan-300' : 'text-gray-100'}`}>{player.Name}</div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className={`text-[9px] font-black px-1 py-0.2 rounded text-black shrink-0 ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+          <span className="text-[10px] text-gray-400 font-mono shrink-0">{formatPriceShort(player.Precio || player.Valor || player.Price)}</span>
         </div>
       </div>
     </button>
-    <input
-      type="text"
-      placeholder="#"
-      className="w-10 h-8 bg-black/40 text-center text-white text-sm font-bold rounded border border-gray-600 focus:border-blue-500 outline-none"
-      value={dorsal || ''}
-      onChange={(e) => onDorsalChange(player.Id, e.target.value)}
-      maxLength={2}
-    />
-    <button type="button" onClick={() => onAvailabilityChange(player.Id, !isAvailable)} className={`min-h-8 rounded px-2 text-[10px] font-black uppercase ${isAvailable ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`} title="Disponibilidad para la próxima fecha">
-      {isAvailable ? 'OK' : 'Baja'}
-    </button>
-    <button type="button" disabled={!isAvailable} onClick={() => onBenchChange(player.Id)} className={`min-h-8 rounded px-2 text-[10px] font-black uppercase disabled:opacity-40 ${isBench ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-gray-400'}`} title="Convocar al banco">
-      Banco
-    </button>
+    <div className="flex items-center gap-1 shrink-0">
+      <input
+        type="text"
+        placeholder="#"
+        className="w-7 h-7 bg-black/50 text-center text-white text-xs font-bold rounded-lg border border-gray-600 focus:border-cyan-400 outline-none"
+        value={dorsal || ''}
+        onChange={(e) => onDorsalChange(player.Id, e.target.value)}
+        maxLength={2}
+        title="Dorsal"
+      />
+      <button
+        type="button"
+        onClick={() => onAvailabilityChange(player.Id, !isAvailable)}
+        className={`h-7 px-1.5 text-[9px] font-black uppercase rounded-lg transition active:scale-95 ${isAvailable ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}
+        title="Disponibilidad para próxima fecha"
+      >
+        {isAvailable ? 'OK' : 'Baja'}
+      </button>
+      <button
+        type="button"
+        disabled={!isAvailable}
+        onClick={() => onBenchChange(player.Id)}
+        className={`h-7 px-1.5 text-[9px] font-black uppercase rounded-lg transition disabled:opacity-30 active:scale-95 ${isBench ? 'bg-cyan-400 text-slate-950 font-bold shadow' : 'bg-white/5 text-gray-400 border border-white/10 hover:text-white'}`}
+        title="Convocar al banco de suplentes"
+      >
+        Banco
+      </button>
+    </div>
   </div>
 ));
+
+export const RolesPanel = memo(function RolesPanel({
+  starterPlayers,
+  setPieces,
+  onSetPieceChange,
+  dorsals
+}) {
+  if (!starterPlayers || starterPlayers.length === 0) {
+    return (
+      <div className="p-6 text-center text-gray-500 text-xs italic bg-gray-900/20 rounded-xl m-3 border border-white/5">
+        Coloca jugadores titulares en la cancha para poder asignar los roles de balón parado y capitanía.
+      </div>
+    );
+  }
+
+  const roleConfigs = [
+    { key: 'captain', label: 'Capitán', icon: Crown, color: 'text-yellow-400', statKey: 'OVR_CALCULADO', statLabel: 'OVR' },
+    { key: 'shortFK', label: 'Tiro Libre Corto', icon: Target, color: 'text-cyan-400', statKey: 'PlaceKicking', statLabel: 'Balón Parado' },
+    { key: 'longFK', label: 'Tiro Libre Largo', icon: Zap, color: 'text-amber-400', statKey: 'KickingPower', statLabel: 'Potencia' },
+    { key: 'leftCorner', label: 'Córner Izquierdo', icon: Target, color: 'text-blue-400', statKey: 'Curl', statLabel: 'Efecto' },
+    { key: 'rightCorner', label: 'Córner Derecho', icon: Target, color: 'text-blue-400', statKey: 'Curl', statLabel: 'Efecto' },
+    { key: 'penalty', label: 'Penales', icon: Shield, color: 'text-emerald-400', statKey: 'Finishing', statLabel: 'Finalización' },
+    { key: 'secondKicker', label: 'Segundo Tirador', icon: Users, color: 'text-purple-400', statKey: 'PlaceKicking', statLabel: 'Balón Parado' },
+    { key: 'header1', label: 'Rematador al Cabeceo 1', icon: Activity, color: 'text-red-400', statKey: 'Heading', statLabel: 'Cabeceo' },
+    { key: 'header2', label: 'Rematador al Cabeceo 2', icon: Activity, color: 'text-red-400', statKey: 'Heading', statLabel: 'Cabeceo' },
+    { key: 'header3', label: 'Rematador al Cabeceo 3', icon: Activity, color: 'text-red-400', statKey: 'Heading', statLabel: 'Cabeceo' },
+  ];
+
+  return (
+    <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-3 bg-gray-900/20 pb-20 lg:pb-4">
+      <div className="text-[11px] text-gray-400 bg-white/[0.02] p-2.5 rounded-lg border border-white/5 leading-relaxed">
+        Configura los lanzadores de faltas y capitán. Se exportan directamente a PES en <span className="text-cyan-300 font-mono">Formation.csv</span>.
+      </div>
+      {roleConfigs.map(({ key, label, icon: Icon, color, statKey, statLabel }) => {
+        const currentValue = setPieces[key] || '';
+        return (
+          <div key={key} className="bg-gray-800/40 border border-gray-700/60 rounded-xl p-2.5 space-y-1.5 hover:border-gray-600 transition">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-gray-200">
+                <Icon className={`w-3.5 h-3.5 ${color}`} />
+                {label}
+              </span>
+              <span className="text-[10px] text-gray-500 font-mono">
+                {statLabel}
+              </span>
+            </div>
+            <select
+              value={currentValue}
+              onChange={(e) => onSetPieceChange(key, e.target.value)}
+              className="w-full bg-black/50 text-white text-xs rounded-lg px-2.5 py-1.5 border border-gray-700 focus:border-cyan-500 outline-none font-medium"
+            >
+              <option value="">(Por defecto / Automático)</option>
+              {starterPlayers.map((player) => {
+                const statVal = player[statKey] || player.OVR_CALCULADO || '-';
+                const d = dorsals[player.Id] ? `#${dorsals[player.Id]}` : '';
+                return (
+                  <option key={player.Id} value={player.Id}>
+                    {player.slotPos} {d} {player.Name} ({statLabel}: {statVal})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        );
+      })}
+    </div>
+  );
+});
 
 // --- REDUCER: lineup + holdingPlayer viven juntos y se actualizan en un solo paso puro ---
 // (antes: setLineup se llamaba DENTRO del updater de setHoldingPlayer, lo cual es un
@@ -135,7 +217,7 @@ function formationReducer(state, action) {
 
 // --- COMPONENTE PRINCIPAL ---
 
-export const FormationModal = memo(function FormationModal({ isVisible, isPage, onClose, cart, userProfile, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db }) {
+export const FormationModal = memo(function FormationModal({ isVisible, isPage, onClose, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db }) {
   const [selectedFormation, setSelectedFormation] = useState('4-3-3');
   const [{ lineup, holdingPlayer }, dispatchFormation] = useReducer(formationReducer, initialFormationState);
   const [dorsals, setDorsals] = useState({});
@@ -143,6 +225,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const [matchBench, setMatchBench] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const pendingAutoSaveRef = useRef(false);
+  const hasLoadedRef = useRef(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [mobileTab, setMobileTab] = useState('pitch'); // 'pitch' | 'squad'
   const [showSharePopover, setShowSharePopover] = useState(false);
@@ -151,78 +234,111 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const sharePopoverRef = useRef(null);
   const shareTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    // Load from userProfile when opening from any context (isVisible OR isPage)
-    if (isVisible || isPage) {
-      setSelectedFormation(userProfile?.formation || '4-3-3');
-      const rawLineup = userProfile?.lineup ? { ...userProfile.lineup } : {};
-      // Solo se marca para auto-guardar si el cart ya cargó — si todavía está vacío
-      // (ej. la pizarra se abre antes de que llegue el snapshot de Firestore),
-      // guardar ahora borraría el lineup entero (sanitizeLineup filtra contra un
-      // cart vacío = todo inválido). El efecto de SANITIZE ya reintenta esto solo
-      // cuando el cart efectivamente tenga datos.
-      if (cart.length > 0 && JSON.stringify(dedupeLineup(rawLineup)) !== JSON.stringify(rawLineup)) {
-        pendingAutoSaveRef.current = true;
-      }
-      dispatchFormation({ type: 'LOAD', payload: { lineup: rawLineup } });
-      setDorsals(userProfile?.dorsals ? { ...userProfile.dorsals } : {});
-      setAvailability(userProfile?.availability ? { ...userProfile.availability } : {});
-      setMatchBench(Array.isArray(userProfile?.matchBench) ? userProfile.matchBench.map(String) : []);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile?.formation, userProfile?.lineup, userProfile?.dorsals, isVisible, isPage]);
+  const [setPieces, setSetPieces] = useState(() => userProfile?.setPieces ? { ...userProfile.setPieces } : {});
+  const [sidebarTab, setSidebarTab] = useState('players'); // 'players' | 'roles'
 
-  // Utilidad pura: no depende de closures sobre el estado del reducer, recibe todo por parámetro.
+  // Cleanup share timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+    };
+  }, []);
+
+  // Cargar datos solo al abrir la pizarra (evita que los snapshots de Firestore sobreescriban el estado mientras se edita)
+  useEffect(() => {
+    if (!isVisible && !isPage) {
+      hasLoadedRef.current = false;
+      return;
+    }
+
+    if (!hasLoadedRef.current && userProfile) {
+      hasLoadedRef.current = true;
+      setSelectedFormation(userProfile.formation || '4-3-3');
+      const rawLineup = userProfile.lineup ? { ...userProfile.lineup } : {};
+      dispatchFormation({ type: 'LOAD', payload: { lineup: rawLineup } });
+      setDorsals(userProfile.dorsals ? { ...userProfile.dorsals } : {});
+      setSetPieces(userProfile.setPieces ? { ...userProfile.setPieces } : {});
+      setAvailability(userProfile.availability ? { ...userProfile.availability } : {});
+      setMatchBench(Array.isArray(userProfile.matchBench) ? userProfile.matchBench.map(String) : []);
+    }
+  }, [isVisible, isPage, userProfile]);
+
+  // Utilidad pura: resolución robusta de ID para evitar falsos filtros vacíos
   const sanitizeLineup = useCallback((sourceLineup) => {
-    const validIds = new Set((cart || []).map(player => String(player.Id)));
+    if (!sourceLineup || typeof sourceLineup !== 'object') return {};
+    const validIds = new Set((cart || []).map(player => String(player.Id ?? player.id ?? player.playerId ?? '')));
     const cleaned = {};
-    Object.entries(sourceLineup || {}).forEach(([slotIndex, playerId]) => {
+    Object.entries(sourceLineup).forEach(([slotIndex, playerId]) => {
       const id = String(playerId || '');
       if (id && validIds.has(id)) cleaned[slotIndex] = id;
     });
     return cleaned;
   }, [cart]);
 
+  const starterPlayers = useMemo(() => {
+    const clean = sanitizeLineup(lineup);
+    const currentLayout = (FORMATIONS[selectedFormation] || FORMATIONS['4-3-3']).layout || [];
+    const list = [];
+    currentLayout.forEach((slot, index) => {
+      const pId = clean[index];
+      if (pId) {
+        const p = (cart || []).find(pl => String(pl.Id ?? pl.id ?? '') === String(pId));
+        if (p) {
+          list.push({ ...p, slotIndex: index, slotPos: slot.pos });
+        }
+      }
+    });
+    return list;
+  }, [lineup, selectedFormation, cart, sanitizeLineup]);
+
   useEffect(() => {
-    if (!cart.length || (!isVisible && !isPage)) return;
-    // Antes de despachar, se chequea acá (no dentro del reducer, que tiene que
-    // quedar puro) si la sanitización + deduplicación va a cambiar algo respecto
-    // al lineup actual. Si cambia, es porque había datos corruptos (viejos, de
-    // antes de este reducer) o jugadores que salieron del cart — en ese caso se
-    // marca para auto-guardar, así la corrección queda persistida en Firestore
-    // y no vuelve a aparecer la próxima vez que se abra la pizarra.
-    const cleaned = sanitizeLineup(lineup);
-    const deduped = dedupeLineup(cleaned);
-    if (JSON.stringify(deduped) !== JSON.stringify(lineup)) {
-      pendingAutoSaveRef.current = true;
-    }
+    if (!cart?.length || (!isVisible && !isPage)) return;
     dispatchFormation({ type: 'SANITIZE', payload: { cart } });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart, isVisible, isPage]);
 
-  const handleSaveLineup = async (overrideLineup, overrideFormation) => {
-    // Check if called directly from onClick (React passes the event object)
-    const isEvent = overrideLineup && overrideLineup.nativeEvent;
-    const lineupToSave = sanitizeLineup((overrideLineup && !isEvent) ? overrideLineup : lineup);
-    const formationToSave = (overrideFormation && typeof overrideFormation === 'string') ? overrideFormation : selectedFormation;
-    const validSavedIds = new Set(Object.values(lineupToSave).map(String));
-    const dorsalsToSave = Object.fromEntries(
-      Object.entries(dorsals || {}).filter(([playerId]) => validSavedIds.has(String(playerId)))
+  const handleSetPieceChange = useCallback((roleKey, playerId) => {
+    setSetPieces(prev => ({ ...prev, [roleKey]: playerId }));
+  }, []);
+
+  const handleSaveLineup = useCallback(async (overrideLineup, overrideFormation) => {
+    // Determinar si overrideLineup es un objeto lineup real o un SyntheticEvent de React
+    const isLineupObject = Boolean(
+      overrideLineup &&
+      typeof overrideLineup === 'object' &&
+      !('nativeEvent' in overrideLineup) &&
+      !('target' in overrideLineup) &&
+      !('_reactName' in overrideLineup)
     );
+
+    const lineupToSave = isLineupObject ? sanitizeLineup(overrideLineup) : sanitizeLineup(lineup);
+    const formationToSave = (overrideFormation && typeof overrideFormation === 'string') ? overrideFormation : selectedFormation;
+    
+    // CORREGIDO: Guardar dorsales de TODO el plantel (titulares + suplentes en cart), no solo el 11 inicial
+    const allSquadIds = new Set((cart || []).map(player => String(player.Id ?? player.id ?? player.playerId ?? '')));
+    const dorsalsToSave = Object.fromEntries(
+      Object.entries(dorsals || {}).filter(([playerId]) => allSquadIds.has(String(playerId)))
+    );
+    const validSavedIds = new Set(Object.values(lineupToSave).map(String));
     
     setIsSaving(true);
     try {
-      if (!userProfile?.userId) throw new Error('No userId');
-      const profileRef = getPrivateProfileRef(userProfile.userId);
-      const publicRef = getPublicTeamRef(userProfile.userId);
+      const targetUserId = userId || userProfile?.userId;
+      if (!targetUserId) throw new Error('No se pudo identificar el usuario');
+      const profileRef = getPrivateProfileRef(targetUserId);
+      const publicRef = getPublicTeamRef(targetUserId);
 
       const batch = writeBatch(db);
       
-      const benchToSave = matchBench.filter(playerId => !validSavedIds.has(String(playerId)) && (cart || []).some(player => String(player.Id) === String(playerId))).slice(0, 7);
+      const benchToSave = matchBench.filter(playerId =>
+        !validSavedIds.has(String(playerId)) &&
+        (cart || []).some(player => String(player.Id ?? player.id ?? '') === String(playerId))
+      ).slice(0, 7);
+
       const saveData = {
         formation: formationToSave,
         lineup: lineupToSave,
         dorsals: dorsalsToSave,
+        setPieces: setPieces || {},
         availability,
         matchBench: benchToSave
       };
@@ -232,17 +348,18 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
       await batch.commit();
       
-      // Show message only if it's a manual save (from button click or no override)
-      if (!overrideLineup || isEvent) {
-        showStatusMessage('success', 'Plantilla guardada.');
+      // Notificar solo si fue guardado manual (clic en botón)
+      if (!isLineupObject) {
+        showStatusMessage?.('success', 'Plantilla guardada.');
         if (!isPage) onClose?.();
       }
     } catch (e) {
       console.error('Error saving lineup:', e);
-      showStatusMessage('error', 'Error al guardar plantilla.');
+      showStatusMessage?.('error', 'Error al guardar plantilla: ' + (e?.message || ''));
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
-  };
+  }, [sanitizeLineup, lineup, selectedFormation, dorsals, setPieces, availability, matchBench, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db, isPage, onClose]);
 
   const handleDorsalChange = useCallback((playerId, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -468,7 +585,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         {Object.keys(FORMATIONS).map(key => <option key={key} value={key}>{FORMATIONS[key].name}</option>)}
       </select>
       <div className="grid grid-cols-2 gap-2">
-        <button onClick={handleSaveLineup} disabled={isSaving}
+        <button onClick={() => handleSaveLineup()} disabled={isSaving}
           className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg py-2 flex items-center justify-center gap-1.5 transition">
           <Save className="w-3.5 h-3.5" />Guardar
         </button>
@@ -530,7 +647,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const PlayerList = (
     <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-2 bg-gray-900/20 pb-20 lg:pb-4">
       {availablePlayers.map(player => (
-        <FormationPlayerItem key={player.Id} player={player} onClick={() => handlePlayerClick(player)} isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id} dorsal={dorsals[player.Id]} onDorsalChange={handleDorsalChange} isAvailable={availability[player.Id] !== false} onAvailabilityChange={handleAvailabilityChange} isBench={matchBench.includes(String(player.Id))} onBenchChange={handleBenchChange} />
+        <FormationPlayerItem key={player.Id} player={player} onPlayerClick={handlePlayerClick} isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id} dorsal={dorsals[player.Id]} onDorsalChange={handleDorsalChange} isAvailable={availability[player.Id] !== false} onAvailabilityChange={handleAvailabilityChange} isBench={matchBench.includes(String(player.Id))} onBenchChange={handleBenchChange} />
       ))}
       {availablePlayers.length === 0 && <p className="text-gray-500 text-sm italic text-center py-4">Todos tus jugadores están en la cancha.</p>}
     </div>
@@ -593,6 +710,16 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
               </span>
             )}
           </button>
+          <button
+            onClick={() => setMobileTab('roles')}
+            className={`flex-1 py-2.5 text-sm font-bold text-center transition-all ${
+              mobileTab === 'roles'
+                ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            🎯 Pateadores
+          </button>
         </div>
 
         {/* ── CONTENT AREA ── */}
@@ -601,11 +728,44 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           {/* === DESKTOP LAYOUT (lg+): side-by-side === */}
           <div className="hidden lg:flex flex-grow overflow-hidden">
             {/* Left Panel */}
-            <div className="w-[280px] flex-shrink-0 flex flex-col h-full overflow-hidden"
+            <div className="w-[340px] xl:w-[360px] flex-shrink-0 flex flex-col h-full overflow-hidden"
               style={{ borderRight: '1px solid rgba(255,255,255,0.05)' }}>
               {ControlsBar}
-              {HoldingBanner}
-              {PlayerList}
+              
+              <div className="flex bg-black/40 p-1 mx-3 my-2 rounded-lg border border-white/5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSidebarTab('players')}
+                  className={`flex-1 py-1 text-xs font-bold rounded-md transition ${
+                    sidebarTab === 'players' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  👥 Plantilla
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSidebarTab('roles')}
+                  className={`flex-1 py-1 text-xs font-bold rounded-md transition ${
+                    sidebarTab === 'roles' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  🎯 Pateadores
+                </button>
+              </div>
+
+              {sidebarTab === 'players' ? (
+                <>
+                  {HoldingBanner}
+                  {PlayerList}
+                </>
+              ) : (
+                <RolesPanel
+                  starterPlayers={starterPlayers}
+                  setPieces={setPieces}
+                  onSetPieceChange={handleSetPieceChange}
+                  dorsals={dorsals}
+                />
+              )}
             </div>
             {/* Right Panel: Pitch */}
             {PitchView}
@@ -620,11 +780,18 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                 {holdingPlayer && HoldingBanner}
                 {PitchView}
               </>
-            ) : (
+            ) : mobileTab === 'squad' ? (
               <>
                 {HoldingBanner}
                 {PlayerList}
               </>
+            ) : (
+              <RolesPanel
+                starterPlayers={starterPlayers}
+                setPieces={setPieces}
+                onSetPieceChange={handleSetPieceChange}
+                dorsals={dorsals}
+              />
             )}
           </div>
 

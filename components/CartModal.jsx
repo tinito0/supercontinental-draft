@@ -27,8 +27,8 @@ const KpiCard = memo(function KpiCard({ title, value, icon: Icon, colorClass }) 
 });
 
 // ─── CartMiniPlayerCard ─────────────────────────────────────────────────────
-const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, allPlayers, onRemove, onCardClick }) {
-  const livePlayer = allPlayers?.find(p => p.Id === player.Id);
+const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap, allPlayers, onRemove, onCardClick }) {
+  const livePlayer = playerMap ? playerMap.get(String(player.Id)) : allPlayers?.find(p => p.Id === player.Id);
   const precio = livePlayer ? livePlayer.Precio : player.Precio;
   const ovr = player.OVR_CALCULADO || 0;
   let ovrColor = 'text-orange-400';
@@ -142,6 +142,7 @@ const OfferTimeline = memo(function OfferTimeline({ offer }) {
 const NegotiationCard = memo(function NegotiationCard({
   offer,
   allTeams,
+  playerMap,
   allPlayers,
   isIncoming,
   isHistory,
@@ -155,7 +156,7 @@ const NegotiationCard = memo(function NegotiationCard({
   onCounter,
   onWithdraw,
 }) {
-  const livePlayer = allPlayers?.find(p => String(p.Id) === String(offer.playerId));
+  const livePlayer = playerMap ? playerMap.get(String(offer.playerId)) : allPlayers?.find(p => String(p.Id) === String(offer.playerId));
   const senderName = getOfferSenderName(offer, allTeams);
   const targetName = getOfferTargetName(offer, allTeams);
   const activeAmount = getOfferAmount(offer);
@@ -257,6 +258,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   // muta in-place) y volvía a ordenar en cada render. Acá se ordena una copia, una sola vez por cambio de cart.
   const sortedCart = useMemo(() => [...cart].sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO), [cart]);
 
+  const playerMap = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(allPlayers)) {
+      allPlayers.forEach(p => map.set(String(p.Id), p));
+    }
+    return map;
+  }, [allPlayers]);
+
   const handleAcceptOffer = async (offer) => {
     if (isProcessing || processingOfferRef.current) return;
     processingOfferRef.current = offer?.id || 'unknown';
@@ -266,7 +275,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         throw new Error("Oferta invalida: comprador y vendedor no pueden ser el mismo equipo.");
       }
 
-      const livePlayer = allPlayers?.find(p => p.Id === offer.playerId);
+      const livePlayer = playerMap.get(String(offer.playerId)) || allPlayers?.find(p => p.Id === offer.playerId);
       if (!livePlayer) throw "Jugador no encontrado en la base de datos";
 
       let activeAmount = Number(getOfferAmount(offer));
@@ -720,6 +729,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
                 <CartMiniPlayerCard
                   key={player.Id}
                   player={player}
+                  playerMap={playerMap}
                   allPlayers={allPlayers}
                   onRemove={() => onRemoveFromCart(player)}
                   onCardClick={() => onPlayerClick(player)}
@@ -742,6 +752,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
                   key={offer.id}
                   offer={offer}
                   allTeams={allTeams}
+                  playerMap={playerMap}
                   allPlayers={allPlayers}
                   isIncoming={true}
                   isProcessing={isProcessing}
@@ -855,6 +866,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
                   key={offer.id}
                   offer={offer}
                   allTeams={allTeams}
+                  playerMap={playerMap}
                   allPlayers={allPlayers}
                   isIncoming={false}
                   isProcessing={isProcessing}
@@ -916,6 +928,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
                   key={offer.id}
                   offer={offer}
                   allTeams={allTeams}
+                  playerMap={playerMap}
                   allPlayers={allPlayers}
                   isHistory={true}
                   isIncoming={offer.targetTeamId === userProfile?.uid}
