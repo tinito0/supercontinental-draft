@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Send, AlertTriangle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
-import { APP_ID, DEFAULT_LOGO } from '../utils/constants.js';
+import { APP_ID, DEFAULT_LOGO, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
 
 export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamName, targetTeamId, senderId, senderTeamName, senderTeamLogo }) => {
   const [offerAmount, setOfferAmount] = useState('');
@@ -30,8 +30,9 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
       return;
     }
 
-    if (Number(offerAmount) > player.Precio * 3) {
-      setError(`La oferta no puede superar el límite máximo de $${(player.Precio * 3).toFixed(2)}M (3x valor base).`);
+    const maxOfferAmount = Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100;
+    if (Number(offerAmount) > maxOfferAmount) {
+      setError(`La oferta no puede superar el límite máximo de $${maxOfferAmount.toFixed(2)}M (115% del valor base).`);
       return;
     }
     
@@ -155,6 +156,9 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">M</span>
               </div>
+              <p className="mt-2 text-[11px] text-gray-500">
+                Máximo: ${(Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100).toFixed(2)}M. El vendedor recibe el {Math.round((1 - TRANSFER_FEE_RATE) * 100)}%; el {Math.round(TRANSFER_FEE_RATE * 100)}% restante es comisión de transferencia.
+              </p>
             </div>
 
             <div>

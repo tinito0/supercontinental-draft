@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useMemo, memo } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { X, ShoppingCart, DollarSign, Shield, Users, Activity, Calendar, MapPin, ArrowRight, History } from 'lucide-react';
 import { formatPriceShort } from '../utils/helpers.js';
-import { DEFAULT_BUDGET, APP_ID } from '../utils/constants.js';
+import { DEFAULT_BUDGET, APP_ID, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
 import { doc, runTransaction, updateDoc, collection, serverTimestamp, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
@@ -367,7 +367,10 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         }
 
         const playerBaseCost = Math.round((Number(livePlayer.Precio) || 0) * 1000000);
-        if (!Number.isSafeInteger(activeAmount) || !playerBaseCost || activeAmount < playerBaseCost || activeAmount > playerBaseCost * 3) {
+        // El formulario opera con dos decimales de millones, por eso el tope se
+        // redondea a esa misma precisión antes de compararlo con la oferta.
+        const maxTransferAmount = Math.round((playerBaseCost / 1000000) * MAX_TRANSFER_MULTIPLIER * 100) * 10000;
+        if (!Number.isSafeInteger(activeAmount) || !playerBaseCost || activeAmount < playerBaseCost || activeAmount > maxTransferAmount) {
           throw new Error('El monto ya no cumple los límites del jugador.');
         }
 
@@ -382,7 +385,9 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
         // 2. Calcular presupuestos resultantes
         const buyerBudgetAfter = buyerBudget + playerBaseCost - activeAmount;
-        const sellerBudgetAfter = sellerBudget + activeAmount - playerBaseCost;
+        const sellerNetAmount = Math.round(activeAmount * (1 - TRANSFER_FEE_RATE));
+        const transferFee = activeAmount - sellerNetAmount;
+        const sellerBudgetAfter = sellerBudget + sellerNetAmount - playerBaseCost;
 
         // 3. Sincronizar rosters y presupuestos públicos en transacción atómica
         const buyerCurrentRoster = Array.isArray(buyerTeamDoc.data().roster) ? buyerTeamDoc.data().roster : [];
@@ -455,6 +460,8 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           teamName: buyerTeamName,
           teamLogo: buyerTeamLogo,
           price: activeAmount / 1000000,
+          sellerReceives: sellerNetAmount / 1000000,
+          transferFee: transferFee / 1000000,
           type: 'transfer',
           isFranchise: false,
           timestamp: serverTimestamp()
@@ -502,12 +509,11 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     if (isProcessing || !counterAmount || isNaN(counterAmount)) return;
     const livePlayer = allPlayers?.find(p => p.Id === offer.playerId);
     const valueInMillions = Number(counterAmount);
-    if (!Number.isFinite(valueInMillions) || valueInMillions <= 0 || !livePlayer || valueInMillions < Number(livePlayer.Precio) || valueInMillions > Number(livePlayer.Precio) * 3) {
-      alert('La contraoferta debe estar entre el valor base y tres veces ese valor.');
-      return;
-    }
-    if (livePlayer && Number(counterAmount) > livePlayer.Precio * 3) {
-      alert(`La contraoferta no puede superar el límite máximo de $${(livePlayer.Precio * 3).toFixed(2)}M (3x valor base).`);
+    const maxCounterAmount = livePlayer
+      ? Math.round(Number(livePlayer.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100
+      : 0;
+    if (!Number.isFinite(valueInMillions) || valueInMillions <= 0 || !livePlayer || valueInMillions < Number(livePlayer.Precio) || valueInMillions > maxCounterAmount) {
+      alert(`La contraoferta debe estar entre el valor base y $${maxCounterAmount.toFixed(2)}M (115% del valor base).`);
       return;
     }
     setIsProcessing(true);

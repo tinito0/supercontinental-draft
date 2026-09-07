@@ -372,6 +372,10 @@ export const ADMIN_USER_IDS = [
   "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3"
 ];
 export const APP_ID = 'scl-draft-2025';
+// Mercado secundario: el comprador puede ofrecer hasta 15% sobre el valor base.
+// La comisión asegura que una reventa al tope no genere dinero neto.
+export const MAX_TRANSFER_MULTIPLIER = 1.15;
+export const TRANSFER_FEE_RATE = 0.15;
 
 export const DEFAULT_TACTICS = {
   attackingStyles: 1,    // 0: Contraataque, 1: Posesión
