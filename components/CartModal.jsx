@@ -288,6 +288,9 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     processingOfferRef.current = offer?.id || 'unknown';
     setIsProcessing(true);
     try {
+      if (!userId) {
+        throw new Error("Debes iniciar sesión para aceptar una oferta.");
+      }
       if (!offer?.senderId || !offer?.targetTeamId || offer.senderId === offer.targetTeamId) {
         throw new Error("Oferta invalida: comprador y vendedor no pueden ser el mismo equipo.");
       }
@@ -319,6 +322,10 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         const sellerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.targetTeamId);
         const lockRef = doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(offer.playerId));
         const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
+        const buyerCartPrivateRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/cart`, String(offer.playerId));
+        const buyerProfilePrivateRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/profile`, 'data');
+        const sellerCartPrivateRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/cart`, String(offer.playerId));
+        const sellerProfilePrivateRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/profile`, 'data');
 
         const buyerTeamDoc = await transaction.get(buyerTeamPublicRef);
         const sellerTeamDoc = await transaction.get(sellerTeamPublicRef);
@@ -335,13 +342,20 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         const buyerTeamLogo = offer.senderTeamLogo || buyerTeamDoc.data()?.logoUrl || allTeams?.[offer.senderId]?.logoUrl || '';
         const sellerTeamLogo = offer.targetTeamLogo || sellerTeamDoc.data()?.logoUrl || allTeams?.[offer.targetTeamId]?.logoUrl || '';
 
-        const buyerRemainingBudget = buyerBudget - buyerCartTotal;
-        if (buyerRemainingBudget < activeAmount) throw new Error("El comprador no tiene fondos suficientes.");
-
         // Verificar validez de oferta
-        activeAmount = Number(getOfferAmount(offerDoc.exists() ? offerDoc.data() : {}));
         if (!offerDoc.exists() || (offerDoc.data().status !== 'pending' && offerDoc.data().status !== 'countered')) {
           throw new Error("La oferta ya no es válida o ya fue procesada.");
+        }
+        const liveOffer = offerDoc.data();
+        const expectedAccepterId = liveOffer.status === 'countered' ? liveOffer.senderId : liveOffer.targetTeamId;
+        if (userId !== expectedAccepterId) {
+          throw new Error("Solo el equipo que recibió la oferta actual puede aceptarla.");
+        }
+        activeAmount = Number(getOfferAmount(liveOffer));
+
+        const buyerRemainingBudget = buyerBudget - buyerCartTotal;
+        if (!Number.isFinite(activeAmount) || buyerRemainingBudget < activeAmount) {
+          throw new Error("El comprador no tiene fondos suficientes.");
         }
 
         // Verificar propiedad del vendedor
@@ -396,6 +410,17 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           roster: newSellerRoster,
           rosterUpdatedAt: acceptedAt,
         }, { merge: true });
+
+        // El usuario que acepta puede actualizar sus documentos privados dentro de
+        // esta misma transacción. Así, una contraoferta aceptada por el comprador
+        // no depende de que otro snapshot agregue el jugador más tarde.
+        if (userId === offer.senderId) {
+          transaction.set(buyerCartPrivateRef, { ...livePlayer, isFranchise: false });
+          transaction.set(buyerProfilePrivateRef, { budget: buyerBudgetAfter }, { merge: true });
+        } else {
+          transaction.delete(sellerCartPrivateRef);
+          transaction.set(sellerProfilePrivateRef, { budget: sellerBudgetAfter }, { merge: true });
+        }
 
         // 4. Actualizar estado de la oferta
         transaction.update(offerRef, {

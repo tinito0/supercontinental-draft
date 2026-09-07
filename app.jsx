@@ -842,13 +842,28 @@ function App() {
           }
 
           const publicTeamSnap = await getDoc(publicTeamRef);
-          if (!publicTeamSnap.exists() || publicTeamSnap.data().budget !== profileData.budget) {
+          if (!publicTeamSnap.exists()) {
             await setDoc(publicTeamRef, {
               teamName: profileData.teamName,
               userId: uid,
               logoUrl: profileData.logoUrl || DEFAULT_LOGO,
               budget: profileData.budget,
-              inWhitelist: publicTeamSnap.exists() ? publicTeamSnap.data().inWhitelist : false
+              inWhitelist: false
+            }, { merge: true });
+          } else {
+            // El presupuesto público se modifica en las transacciones de mercado.
+            // Nunca lo restaures con una copia privada vieja al iniciar sesión.
+            const publicBudget = Number(publicTeamSnap.data().budget);
+            if (Number.isFinite(publicBudget) && publicBudget !== Number(profileData.budget)) {
+              await setDoc(profileRef, { budget: publicBudget }, { merge: true });
+              profileData = { ...profileData, budget: publicBudget };
+            }
+
+            // Mantener los datos visuales sincronizados sin tocar el presupuesto.
+            await setDoc(publicTeamRef, {
+              teamName: profileData.teamName,
+              userId: uid,
+              logoUrl: profileData.logoUrl || DEFAULT_LOGO,
             }, { merge: true });
           }
         }
@@ -1147,12 +1162,22 @@ function App() {
     setFilters(prev => ({ ...initialFilters, name: prev.name }));
   }, []);
 
+  // Un documento privado atrasado no debe mantener a un jugador vendido en la UI
+  // ni descontar su valor del presupuesto mientras se completa la limpieza.
+  const ownedCart = useMemo(() => {
+    if (!userId || !playerLocks) return cart;
+    return cart.filter(player => {
+      const lock = playerLocks[String(player.Id)];
+      return !lock || !lock.lockedBy || lock.lockedBy === userId;
+    });
+  }, [cart, playerLocks, userId]);
+
   const totalCartCost = useMemo(() => {
-    return cart.reduce((total, player) => {
+    return ownedCart.reduce((total, player) => {
       const isFranchise = player.isFranchise || (userProfile?.franchisePlayerId === player.Id);
       return total + (isFranchise ? 0 : player.Precio * 1000000);
     }, 0);
-  }, [cart, userProfile]);
+  }, [ownedCart, userProfile]);
 
   const remainingBudget = useMemo(() => {
     if (!userProfile) return 0;
@@ -2277,7 +2302,7 @@ function App() {
                   <FormationModal
                     isVisible={true}
                     onClose={() => setActiveTab('Marketplace')}
-                    cart={cart}
+                    cart={ownedCart}
                     userProfile={userProfile}
                     userId={userId}
                     getPrivateProfileRef={getPrivateProfileRef}
@@ -2326,7 +2351,7 @@ function App() {
                   <CartModal
                     isVisible={true}
                     onClose={() => setActiveTab('Marketplace')}
-                    cart={cart}
+                    cart={ownedCart}
                     onRemoveFromCart={handleRemoveFromCart}
                     userProfile={userProfile}
                     userId={userId}
@@ -2502,7 +2527,7 @@ function App() {
         userId={userId}
         userProfile={userProfile}
         remainingBudget={remainingBudget}
-        isInMyCart={selectedPlayer && cart.some(p => p.Id === selectedPlayer.Id)}
+        isInMyCart={selectedPlayer && ownedCart.some(p => p.Id === selectedPlayer.Id)}
         isFranchisePlayer={selectedPlayer && playerLocks[selectedPlayer.Id]?.isFranchise}
         onRemoveFromCart={handleRemoveFromCart}
         allPlayers={allPlayers}
@@ -2518,7 +2543,7 @@ function App() {
             setCartInitialTab('players');
             closeModalRoute(setIsCartVisible);
           }}
-          cart={cart}
+          cart={ownedCart}
           onRemoveFromCart={handleRemoveFromCart}
           userProfile={userProfile}
           userId={userId}
@@ -2701,22 +2726,26 @@ function App() {
 
   // Auto-sync: Sincronizar cart privado cuando playerLocks asigna o quita jugadores (ej. traspasos aceptados)
   useEffect(() => {
-    if (!userId || !playerLocks || !allPlayers?.length) return;
+    if (!userId || !playerLocks) return;
 
     // 1. Si un jugador está bloqueado por este usuario pero aún no está en su cart privado, añadirlo
-    Object.entries(playerLocks).forEach(([playerId, lock]) => {
-      if (lock.lockedBy === userId && !cart.some(p => String(p.Id) === String(playerId))) {
-        const fullPlayer = playerById.get(String(playerId));
-        if (fullPlayer) {
-          setDoc(getPrivateCartDocRef(userId, playerId), { ...fullPlayer, isFranchise: Boolean(lock.isFranchise) })
-            .catch(err => console.error('Error auto-sync agregando a cart:', err));
+    // (Requiere allPlayers para datos completos del jugador)
+    if (allPlayers?.length) {
+      Object.entries(playerLocks).forEach(([playerId, lock]) => {
+        if (lock.lockedBy === userId && !cart.some(p => String(p.Id) === String(playerId))) {
+          const fullPlayer = playerById.get(String(playerId));
+          if (fullPlayer) {
+            setDoc(getPrivateCartDocRef(userId, playerId), { ...fullPlayer, isFranchise: Boolean(lock.isFranchise) })
+              .catch(err => console.error('Error auto-sync agregando a cart:', err));
+          }
         }
-      }
-    });
+      });
+    }
 
     // 2. Si un jugador está en el cart privado pero playerLocks indica que pertenece a otro usuario, removerlo
+    // (NO requiere allPlayers — funciona siempre que haya locks y cart)
     cart.forEach(p => {
-      const lock = playerLocks[String(p.Id)]; // String() fix: Firestore doc IDs siempre son string
+      const lock = playerLocks[String(p.Id)];
       if (lock && lock.lockedBy && lock.lockedBy !== userId) {
         deleteDoc(getPrivateCartDocRef(userId, p.Id))
           .catch(err => console.error('Error auto-sync removiendo de cart:', err));
@@ -2724,7 +2753,7 @@ function App() {
     });
 
     // 3. Sincronizar presupuesto de perfil si difiere del presupuesto público (actualizado por traspasos)
-    // Number() fix: evitar false-negative por tipo (string vs number en comparación estricta)
+    // (NO requiere allPlayers)
     const publicBudget = Number(allTeams?.[userId]?.budget);
     const privateBudget = Number(userProfile?.budget);
     if (!isNaN(publicBudget) && userProfile && publicBudget !== privateBudget) {
@@ -2762,8 +2791,16 @@ function App() {
           .filter(Boolean)
       : [];
 
+    // Only include cart players still owned by this user according to playerLocks
+    // (Prevents overwriting a clean roster written by a transfer transaction)
+    const ownedCartPlayers = cart.filter(player => {
+      const lock = playerLocks?.[String(player.Id)];
+      // Keep if: no lock info, no lockedBy, or lockedBy is this user
+      return !lock || !lock.lockedBy || lock.lockedBy === userId;
+    });
+
     const roster = [
-      ...cart.map(player => ({
+      ...ownedCartPlayers.map(player => ({
         Id: String(player.Id),
         Name: player.Name || 'Jugador',
         POS_NOMBRE: player.POS_NOMBRE || '',
