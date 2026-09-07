@@ -47,12 +47,6 @@ service cloud.firestore {
       }
     }
 
-    // ── TRANSFERS (colección raíz) ─────────────────────────────
-    match /transfers/{transferId} {
-      allow read: if isAuth();
-      allow create: if isAuth() && (request.resource.data.teamId == request.auth.uid || isAdmin());
-      allow update, delete: if isAdmin();
-    }
 
     // ── CATCH-ALL: deny everything not explicitly matched ──
     match /{document=**} {

@@ -315,28 +315,25 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       });
 
       await runTransaction(db, async (transaction) => {
-        const sellerProfileRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/profile`, "data");
         const buyerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.senderId);
         const sellerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.targetTeamId);
         const lockRef = doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(offer.playerId));
-        const sellerCartRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/cart`, String(offer.playerId));
         const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
 
-        const sellerDoc = await transaction.get(sellerProfileRef);
         const buyerTeamDoc = await transaction.get(buyerTeamPublicRef);
         const sellerTeamDoc = await transaction.get(sellerTeamPublicRef);
         const offerDoc = await transaction.get(offerRef);
         const lockDoc = await transaction.get(lockRef);
-        const sellerCartDoc = await transaction.get(sellerCartRef);
 
-        if (!sellerDoc.exists()) throw new Error("Perfil de vendedor no encontrado.");
+        if (!sellerTeamDoc.exists()) throw new Error("Equipo vendedor no encontrado.");
+        if (!buyerTeamDoc.exists()) throw new Error("Equipo comprador no encontrado.");
 
-        const buyerBudget = buyerTeamDoc.exists() ? (buyerTeamDoc.data().budget || 0) : 0;
-        const sellerProfile = sellerDoc.data();
+        const buyerBudget = Number(buyerTeamDoc.data().budget) || 0;
+        const sellerBudget = Number(sellerTeamDoc.data().budget) || 0;
         const buyerTeamName = offer.senderTeamName || buyerTeamDoc.data()?.teamName || allTeams?.[offer.senderId]?.teamName || 'Equipo comprador';
-        const sellerTeamName = offer.targetTeamName || sellerProfile.teamName || allTeams?.[offer.targetTeamId]?.teamName || 'Equipo rival';
+        const sellerTeamName = offer.targetTeamName || sellerTeamDoc.data()?.teamName || allTeams?.[offer.targetTeamId]?.teamName || 'Equipo vendedor';
         const buyerTeamLogo = offer.senderTeamLogo || buyerTeamDoc.data()?.logoUrl || allTeams?.[offer.senderId]?.logoUrl || '';
-        const sellerTeamLogo = offer.targetTeamLogo || sellerProfile.logoUrl || allTeams?.[offer.targetTeamId]?.logoUrl || '';
+        const sellerTeamLogo = offer.targetTeamLogo || sellerTeamDoc.data()?.logoUrl || allTeams?.[offer.targetTeamId]?.logoUrl || '';
 
         const buyerRemainingBudget = buyerBudget - buyerCartTotal;
         if (buyerRemainingBudget < activeAmount) throw new Error("El comprador no tiene fondos suficientes.");
@@ -348,17 +345,16 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         }
 
         // Verificar propiedad del vendedor
-        if (!sellerCartDoc.exists()) throw new Error('El jugador ya no está en el plantel vendedor.');
-        const ownedPlayer = sellerCartDoc.data();
-        if (ownedPlayer.isFranchise || (lockDoc.exists() && lockDoc.data().isFranchise)) {
-          throw new Error('Los jugadores franquicia no son transferibles.');
-        }
-        const playerBaseCost = Math.round((Number(ownedPlayer.Precio) || 0) * 1000000);
-        if (!Number.isSafeInteger(activeAmount) || !playerBaseCost || activeAmount < playerBaseCost || activeAmount > playerBaseCost * 3) {
-          throw new Error('El monto ya no cumple los límites del jugador.');
-        }
         if (!lockDoc.exists() || lockDoc.data().lockedBy !== offer.targetTeamId) {
           throw new Error("El jugador ya no pertenece al equipo vendedor.");
+        }
+        if (lockDoc.data().isFranchise) {
+          throw new Error('Los jugadores franquicia no son transferibles.');
+        }
+
+        const playerBaseCost = Math.round((Number(livePlayer.Precio) || 0) * 1000000);
+        if (!Number.isSafeInteger(activeAmount) || !playerBaseCost || activeAmount < playerBaseCost || activeAmount > playerBaseCost * 3) {
+          throw new Error('El monto ya no cumple los límites del jugador.');
         }
 
         const acceptedAt = new Date().toISOString();
@@ -370,24 +366,20 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           lockedAt: acceptedAt
         });
 
-        // 2. Remover jugador del cart del vendedor
-        transaction.delete(sellerCartRef);
-
-        // 3. Actualizar presupuesto del vendedor
+        // 2. Calcular presupuestos resultantes
         const buyerBudgetAfter = buyerBudget + playerBaseCost - activeAmount;
-        const sellerBudgetAfter = (Number(sellerProfile.budget) || 0) + activeAmount - playerBaseCost;
-        transaction.update(sellerProfileRef, { budget: sellerBudgetAfter });
+        const sellerBudgetAfter = sellerBudget + activeAmount - playerBaseCost;
 
-        // 4. Sincronizar rosters y presupuestos públicos en transacción atómica
-        const buyerCurrentRoster = (buyerTeamDoc.exists() && Array.isArray(buyerTeamDoc.data().roster)) ? buyerTeamDoc.data().roster : [];
-        const sellerCurrentRoster = (sellerTeamDoc.exists() && Array.isArray(sellerTeamDoc.data().roster)) ? sellerTeamDoc.data().roster : [];
+        // 3. Sincronizar rosters y presupuestos públicos en transacción atómica
+        const buyerCurrentRoster = Array.isArray(buyerTeamDoc.data().roster) ? buyerTeamDoc.data().roster : [];
+        const sellerCurrentRoster = Array.isArray(sellerTeamDoc.data().roster) ? sellerTeamDoc.data().roster : [];
         const newBuyerRoster = [
           ...buyerCurrentRoster.filter(p => String(p.Id) !== String(offer.playerId)),
           {
-            Id: String(ownedPlayer.Id),
-            Name: ownedPlayer.Name || 'Jugador',
-            POS_NOMBRE: ownedPlayer.POS_NOMBRE || '',
-            OVR_CALCULADO: Number(ownedPlayer.OVR_CALCULADO) || 0,
+            Id: String(livePlayer.Id),
+            Name: livePlayer.Name || 'Jugador',
+            POS_NOMBRE: livePlayer.POS_NOMBRE || '',
+            OVR_CALCULADO: Number(livePlayer.OVR_CALCULADO) || 0,
             available: true,
           }
         ];
@@ -405,7 +397,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           rosterUpdatedAt: acceptedAt,
         }, { merge: true });
 
-        // 5. Actualizar estado de la oferta
+        // 4. Actualizar estado de la oferta
         transaction.update(offerRef, {
           status: 'accepted',
           acceptedAt,
@@ -423,11 +415,11 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           })
         });
 
-        // 6. Registrar en el feed de transferencias
+        // 5. Registrar en el feed de transferencias
         const transferRef = doc(collection(db, `artifacts/${APP_ID}/public/data/transfers`));
         transaction.set(transferRef, {
           playerId: offer.playerId,
-          playerName: offer.playerName,
+          playerName: offer.playerName || livePlayer.Name,
           playerOvr: offer.playerOvr || livePlayer.OVR_CALCULADO || 0,
           playerPosition: offer.playerPosition || livePlayer.POS_NOMBRE || '',
           playerCountry: offer.playerCountry || livePlayer.Country1 || '',

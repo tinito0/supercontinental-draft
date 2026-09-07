@@ -2732,21 +2732,48 @@ function App() {
 
   // Keep a compact, public squad snapshot so the public team board can show
   // both the XI and the substitutes without exposing the private cart.
+  // IMPORTANT: roster = union(cart, playerLocks owned by userId) to avoid
+  // overwriting a roster that was just updated by a transfer transaction
+  // before the private cart auto-sync had a chance to propagate.
   useEffect(() => {
     if (!userId || !userProfile) return;
 
-    const roster = cart.map(player => ({
-      Id: String(player.Id),
-      Name: player.Name || 'Jugador',
-      POS_NOMBRE: player.POS_NOMBRE || '',
-      OVR_CALCULADO: Number(player.OVR_CALCULADO) || 0,
-      dorsal: userProfile.dorsals?.[player.Id] || '',
-      available: userProfile.availability?.[player.Id] !== false,
-    }));
+    const cartIds = new Set(cart.map(p => String(p.Id)));
+
+    // Include players locked by this user that are not yet in the local cart
+    // (race window between transaction commit and cart onSnapshot delivery)
+    const lockedNotInCart = playerLocks
+      ? Object.entries(playerLocks)
+          .filter(([pid, lock]) => lock.lockedBy === userId && !cartIds.has(String(pid)))
+          .map(([pid, lock]) => {
+            const p = playerById?.get(String(pid));
+            return p ? {
+              Id: String(p.Id),
+              Name: p.Name || 'Jugador',
+              POS_NOMBRE: p.POS_NOMBRE || '',
+              OVR_CALCULADO: Number(p.OVR_CALCULADO) || 0,
+              dorsal: userProfile.dorsals?.[pid] || '',
+              available: userProfile.availability?.[pid] !== false,
+            } : null;
+          })
+          .filter(Boolean)
+      : [];
+
+    const roster = [
+      ...cart.map(player => ({
+        Id: String(player.Id),
+        Name: player.Name || 'Jugador',
+        POS_NOMBRE: player.POS_NOMBRE || '',
+        OVR_CALCULADO: Number(player.OVR_CALCULADO) || 0,
+        dorsal: userProfile.dorsals?.[player.Id] || '',
+        available: userProfile.availability?.[player.Id] !== false,
+      })),
+      ...lockedNotInCart,
+    ];
 
     setDoc(getPublicTeamRef(userId), { roster, rosterUpdatedAt: new Date().toISOString() }, { merge: true })
       .catch(error => console.error('Error sincronizando plantilla pública:', error));
-  }, [cart, getPublicTeamRef, userId, userProfile]);
+  }, [cart, playerLocks, playerById, getPublicTeamRef, userId, userProfile]);
 }
 
 export default firebaseInitializationError ? FirebaseError : App; 
