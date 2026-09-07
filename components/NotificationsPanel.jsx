@@ -1,12 +1,12 @@
 import React, { memo, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRightLeft, BadgeDollarSign, Bell, Check, Info, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, BadgeDollarSign, Bell, Check, ChevronRight, Info, X } from 'lucide-react';
 
 const TYPE_CONFIG = {
-  warning: { icon: AlertTriangle, wrap: 'bg-yellow-900/20 border-yellow-800 text-yellow-200', iconColor: 'text-yellow-400' },
-  offer: { icon: BadgeDollarSign, wrap: 'bg-emerald-900/20 border-emerald-800 text-emerald-200', iconColor: 'text-emerald-400' },
-  transfer: { icon: ArrowRightLeft, wrap: 'bg-purple-900/20 border-purple-800 text-purple-200', iconColor: 'text-purple-300' },
-  info: { icon: Info, wrap: 'bg-blue-900/20 border-blue-800 text-blue-200', iconColor: 'text-blue-300' },
-  default: { icon: Bell, wrap: 'bg-gray-700/50 border-gray-600 text-gray-300', iconColor: 'text-gray-400' },
+  warning: { icon: AlertTriangle, wrap: 'bg-yellow-900/20 border-yellow-800/80 text-yellow-200 hover:bg-yellow-900/30', iconColor: 'text-yellow-400' },
+  offer: { icon: BadgeDollarSign, wrap: 'bg-emerald-900/20 border-emerald-800/80 text-emerald-200 hover:bg-emerald-900/30', iconColor: 'text-emerald-400' },
+  transfer: { icon: ArrowRightLeft, wrap: 'bg-purple-900/20 border-purple-800/80 text-purple-200 hover:bg-purple-900/30', iconColor: 'text-purple-300' },
+  info: { icon: Info, wrap: 'bg-blue-900/20 border-blue-800/80 text-blue-200 hover:bg-blue-900/30', iconColor: 'text-blue-300' },
+  default: { icon: Bell, wrap: 'bg-gray-800/60 border-gray-700/80 text-gray-300 hover:bg-gray-800/90', iconColor: 'text-gray-400' },
 };
 
 function getTypeConfig(type) {
@@ -24,23 +24,30 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? () => onClick(notif) : undefined}
       onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(notif); } } : undefined}
-      className={`group relative flex items-start gap-2 p-2 pr-7 rounded-lg text-sm border transition-colors ${wrap} ${
-        isClickable ? 'cursor-pointer hover:brightness-125 focus:outline-none focus:ring-1 focus:ring-white/30' : ''
+      className={`group relative flex items-start gap-2.5 p-3 pr-8 rounded-xl text-sm border transition-all duration-200 ${wrap} ${
+        isClickable ? 'cursor-pointer hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-1 focus:ring-cyan-400/50 active:scale-[0.99]' : ''
       }`}
     >
-      {isUnread && <span className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_0_2px_rgba(34,211,238,0.25)]" />}
+      {isUnread && <span className="absolute top-2.5 left-2 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />}
 
       <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${iconColor}`} />
 
-      <div className="min-w-0 flex-1">
-        <p className={isUnread ? 'font-bold' : 'font-medium opacity-80'}>{notif.text}</p>
-        <span className="block text-[10px] text-gray-500 mt-1 text-right">{notif.time}</span>
+      <div className="min-w-0 flex-1 pl-1">
+        <p className={`text-xs leading-snug ${isUnread ? 'font-black text-white' : 'font-medium text-gray-300'}`}>{notif.text}</p>
+        <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-white/[0.04]">
+          <span className="text-[10px] text-gray-500 font-bold tracking-wider uppercase">{notif.time}</span>
+          {isClickable && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-black text-cyan-400 opacity-80 group-hover:opacity-100 transition-opacity">
+              Ver <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </span>
+          )}
+        </div>
       </div>
 
       {typeof onDismiss === 'function' && (
         <button
           onClick={(e) => { e.stopPropagation(); onDismiss(notif); }}
-          className="absolute top-1.5 right-1.5 min-w-6 min-h-6 flex items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+          className="absolute top-2 right-2 min-w-6 min-h-6 flex items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/10 opacity-60 group-hover:opacity-100 focus:opacity-100 transition-opacity"
           title="Descartar"
         >
           <X className="w-3.5 h-3.5" />

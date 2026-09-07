@@ -365,9 +365,23 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null); // null = new, object = editing
-  const [formData, setFormData] = useState({ teamName: '', budget: 0, logoUrl: '', manualStats: {} });
+  const [formData, setFormData] = useState({ teamName: '', budget: 0, logoUrl: '', country: 204, manualStats: {} });
+  const [countryOptions, setCountryOptions] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    fetch('/paises.json')
+      .then(res => res.json())
+      .then(data => {
+        const list = Object.entries(data)
+          .map(([id, name]) => ({ id: Number(id), name }))
+          .filter(c => c.id > 0 && c.name && c.name !== 'N/A')
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setCountryOptions(list);
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchTeams = useCallback(async () => {
     setIsLoading(true);
@@ -385,6 +399,7 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
           teamName: privateData.teamName || publicData.teamName || 'Sin Nombre',
           logoUrl: privateData.logoUrl || publicData.logoUrl || DEFAULT_LOGO,
           budget: privateData.budget ?? publicData.budget ?? 0,
+          country: publicData.country || privateData.country || 204,
           manualStats: publicData.manualStats || {},
           inWhitelist: publicData.inWhitelist || false,
           playerCount: cartSnap.size,
@@ -405,13 +420,13 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
 
   const openNewTeamModal = () => {
     setEditingTeam(null);
-    setFormData({ teamName: '', budget: DEFAULT_BUDGET, logoUrl: '', manualStats: {} });
+    setFormData({ teamName: '', budget: DEFAULT_BUDGET, logoUrl: '', country: 204, manualStats: {} });
     setShowModal(true);
   };
 
   const openEditTeamModal = (team) => {
     setEditingTeam(team);
-    setFormData({ teamName: team.teamName, budget: team.budget, logoUrl: team.logoUrl, manualStats: team.manualStats || {} });
+    setFormData({ teamName: team.teamName, budget: team.budget, logoUrl: team.logoUrl, country: team.country || 204, manualStats: team.manualStats || {} });
     setShowModal(true);
   };
 
@@ -448,6 +463,7 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
           teamName: formData.teamName.trim(),
           budget: Number(formData.budget) || 0,
           logoUrl: formData.logoUrl || DEFAULT_LOGO,
+          country: Number(formData.country) || 204,
           manualStats: formData.manualStats || {},
         };
         batch.set(getPrivateProfileRef(uid), saveData, { merge: true });
@@ -642,6 +658,23 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
                   placeholder="0"
                 />
               </div>
+              {/* Country / Nationality */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Nacionalidad / País del Club</label>
+                <select
+                  value={formData.country || 204}
+                  onChange={e => setFormData(prev => ({ ...prev, country: Number(e.target.value) }))}
+                  className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg text-sm outline-none focus:border-blue-500 transition cursor-pointer"
+                >
+                  {countryOptions.length > 0 ? (
+                    countryOptions.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
+                    ))
+                  ) : (
+                    <option value={204}>Inglaterra (ID: 204)</option>
+                  )}
+                </select>
+              </div>
               <div className="border-t border-gray-700 pt-4">
                 <p className="mb-3 text-xs font-black uppercase tracking-wider text-cyan-300">Estadísticas públicas (edición manual)</p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -717,6 +750,7 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
         return {
           id: userId,
           name: publicData.teamName || profileData.teamName || "Sin Nombre",
+          country: publicData.country || profileData.country || 204,
           dorsals: profileData.dorsals || {},
           formation: profileData.formation || '4-3-3',
           lineup: profileData.lineup || {},
@@ -738,6 +772,7 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
   const [pesExportModalTeam, setPesExportModalTeam] = useState(null);
   const [targetPesTeamId, setTargetPesTeamId] = useState(103);
   const [targetTeamName, setTargetTeamName] = useState('');
+  const [targetTeamNationality, setTargetTeamNationality] = useState(204);
   const [targetCoachName, setTargetCoachName] = useState('Director Técnico');
   const [targetCoachNationality, setTargetCoachNationality] = useState(204);
   const [countryOptions, setCountryOptions] = useState([]);
@@ -765,7 +800,8 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
         targetPesTeamId,
         targetCoachName,
         targetTeamName,
-        targetCoachNationality
+        targetCoachNationality,
+        targetTeamNationality
       );
       if (result.missingPlayers?.length > 0) {
         showStatusMessage('warning', `Option File exportado con éxito. Nota: ${result.missingPlayers.length} jugador(es) no estaban en el CSV maestro y se exportaron con valores base.`);
@@ -956,6 +992,7 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
                     setPesExportModalTeam(team);
                     setTargetPesTeamId(103);
                     setTargetTeamName(team.name || '');
+                    setTargetTeamNationality(team.country || 204);
                     setTargetCoachName(team.name ? `DT ${team.name}` : 'Director Técnico');
                     setTargetCoachNationality(204);
                   }}
@@ -989,19 +1026,41 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
             </div>
 
             <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1">
-                  Nombre del Club en PES
-                </label>
-                <input
-                  type="text"
-                  value={targetTeamName}
-                  onChange={(e) => setTargetTeamName(e.target.value)}
-                  maxLength={32}
-                  className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-3 py-2 text-white text-sm outline-none"
-                  placeholder="Ej: Liverpool FC, Boca Juniors, etc."
-                />
-                <span className="text-[10px] text-gray-500">Nombre que figurará en el juego (máx. 32 caracteres).</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1">
+                    Nombre del Club en PES
+                  </label>
+                  <input
+                    type="text"
+                    value={targetTeamName}
+                    onChange={(e) => setTargetTeamName(e.target.value)}
+                    maxLength={32}
+                    className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                    placeholder="Ej: Liverpool FC, Boca Juniors, etc."
+                  />
+                  <span className="text-[10px] text-gray-500">Nombre en PES (máx. 32 car.).</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 mb-1">
+                    Nacionalidad / País del Club
+                  </label>
+                  <select
+                    value={targetTeamNationality}
+                    onChange={(e) => setTargetTeamNationality(Number(e.target.value))}
+                    className="w-full bg-black/60 border border-gray-700 focus:border-cyan-500 rounded-lg px-2.5 py-2 text-white text-xs outline-none cursor-pointer"
+                  >
+                    {countryOptions.length > 0 ? (
+                      countryOptions.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
+                      ))
+                    ) : (
+                      <option value={204}>Inglaterra (ID: 204)</option>
+                    )}
+                  </select>
+                  <span className="text-[10px] text-gray-500">País asignado al equipo en Team.csv.</span>
+                </div>
               </div>
 
               <div>
@@ -1046,7 +1105,7 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
                         <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
                       ))
                     ) : (
-                      <option value={204}>Argentina (ID: 204)</option>
+                      <option value={204}>Inglaterra (ID: 204)</option>
                     )}
                   </select>
                 </div>

@@ -63,7 +63,7 @@
   position: relative;
   width: 100%;
   flex-grow: 1;
-  background: #0b0f19;
+  background: transparent;
   overflow: hidden;
   display: flex;
   align-items: flex-end;
@@ -96,9 +96,10 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 50%;
-  background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, transparent 100%);
+  height: 35%;
+  background: linear-gradient(to top, rgba(12, 12, 14, 0.7) 0%, transparent 100%);
   z-index: 3;
+  pointer-events: none;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

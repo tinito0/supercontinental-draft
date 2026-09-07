@@ -255,8 +255,8 @@ export const ManagerChat = memo(function ManagerChat({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200" onClick={handleClose}>
-      <div className="w-full sm:max-w-3xl h-[100dvh] sm:h-[78vh] bg-gray-950 border border-white/10 sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col relative" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-300" onClick={handleClose}>
+      <div className="w-full sm:max-w-3xl h-[100dvh] sm:h-[78vh] bg-gray-950 border border-white/10 sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gray-900/90">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-300">

@@ -138,16 +138,17 @@ export async function generatePlayersCsv(allTeamPlayers) {
 }
 
 /**
- * Genera Team.csv con el ID de PES destino y el nombre del equipo de la liga
+ * Genera Team.csv con el ID de PES destino, el nombre del equipo de la liga y su país
  */
-export function generateTeamCsv(teamId, teamName) {
+export function generateTeamCsv(teamId, teamName, teamNationality = 204) {
   const headers = "Id;Name;Country;Stadium;Coach;National;NameJapanese;NameSpanish;NameLatamSpanish;NameEnglish;NameUSEnglish;NameItalian;NamePortuguese;NameBrazilian;NameFrench;NameGerman;NameDutch;NameSwedish;NameRussian;NameGreek;NameTurkish;NameSimplifiedChinese;NameDatabase;NameEmpty1;NameEmpty2;NameEmpty3;NameEmpty4;ShortNameLicensed;ShortNameFake;Abbreviation;Commentary;StadiumFile;StadiumName;StadiumFileName;EmblemFile;EmblemFileName;Rival1;Rival2;Rival3;Banner1;Banner2;Banner3;Banner4;Kit1;Kit2;Kit3;Kit4;Kit5;Kit6;Kit7;Kit8;Kit9;Kit10;TeamColor1R;TeamColor1G;TeamColor1B;TeamColor2R;TeamColor2G;TeamColor2B;TurfPattern;SidelineColour;SeatColour;GoalStyle;NetPattern;GoalNettingDesign;GoalNettingColor1R;GoalNettingColor1G;GoalNettingColor1B;GoalNettingColor2R;GoalNettingColor2G;GoalNettingColor2B;Sponsor1;Sponsor2;Sponsor3;SponsorFile1;SponsorFile2;SponsorFile3;SponsorColorR;SponsorColorG;SponsorColorB;EditName;EditEmblem;EditStadium;EditStadiumName;EditStadiumFile;EditStadiumDetails;EditStadiumDetails2;EditRivals;EditBanners;EditTeamColors;EditCoach;EditSponsorFile;EditSponsorColors;EditSponsor;Edit1;Fake;LicencedPlayers;LicencedKits;LicencedCoach;LicencedCoach2;FeederTeam;ParentTeam;NonPlayableLeague;HasAnthem;AnthemStandingStyle;AnthemPlayersSinging;AnthemStandingAngle;Value1;Value2;Value3;Value4;Value5;Value6;Value7;ValueFF;Team2020_1;Team2020_2;Team2020_3;Team2020_4;Team2020_5;Team2020_6;Team2020_7;Team2020_8;Team2020_9;Team2020_10;Team2020_11;Country2020_1;Country2020_2;Country2020_3;Country2020_4;Country2020_5;Value2020_1;Value2020_2;Value2020_3;Value2020_4;Value2020_5;Value2020_6;Value2020_7;Value2020_8;Value2020_9;Value2020_10;Value2020_11;Value2020_12;Value2020_13;Value2020_14;Value2020_15;Value2020_16;Value2020_17";
 
   const safeName = (teamName || 'Equipo').substring(0, 32);
   const abbr = safeName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase() || 'SCL';
   const coachId = (parseInt(teamId, 10) * 1000) + 1;
+  const countryId = parseInt(teamNationality, 10) || 204;
 
-  const row = `${teamId};${safeName};204;42;${coachId};False;${safeName};${safeName};${safeName};${safeName};${safeName};;;;;;;;;;;${safeName};;;;;;${abbr};${abbr};;-1;-1;;;-1;;0;0;0;;;;;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;-1;-1;-1;;;;0;0;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;0;0;0;False;0;0;0;-1;False;0;0;0;0;-1;0;0;0;0;128;0;177;0;0;100;132;102;146;204;228;204;232;760000;760000;-1;0;1;53152010;92488866;4;2;0;0;0;-1;0;0;0;0`;
+  const row = `${teamId};${safeName};${countryId};42;${coachId};False;${safeName};${safeName};${safeName};${safeName};${safeName};;;;;;;;;;;${safeName};;;;;;${abbr};${abbr};;-1;-1;;;-1;;0;0;0;;;;;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;-1;-1;-1;;;;0;0;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;0;0;0;False;0;0;0;-1;False;0;0;0;0;-1;0;0;0;0;128;0;177;0;0;100;132;102;146;204;228;204;232;760000;760000;-1;0;1;53152010;92488866;4;2;0;0;0;-1;0;0;0;0`;
 
   return `${headers}\n${row}\n`;
 }
@@ -237,7 +238,7 @@ export function generateAppearancesCsv(allTeamPlayers) {
 /**
  * Empaqueta y descarga el ZIP completo de Option File para PES
  */
-export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachName = 'Director Técnico', customTeamName = null, coachNationality = 204) {
+export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachName = 'Director Técnico', customTeamName = null, coachNationality = 204, teamNationality = 204) {
   const zip = new JSZip();
 
   const finalTeamName = (customTeamName && typeof customTeamName === 'string' && customTeamName.trim()) ? customTeamName.trim() : (teamData.name || 'Equipo');
@@ -267,7 +268,7 @@ export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachN
   // 3. Generar CSVs
   const rosterCsv = generateRosterCsv(targetPesTeamId, starters, subs, teamData.dorsals || {});
   const { csvContent: playersCsv, missingPlayers } = await generatePlayersCsv(allSquad);
-  const teamCsv = generateTeamCsv(targetPesTeamId, finalTeamName);
+  const teamCsv = generateTeamCsv(targetPesTeamId, finalTeamName, teamNationality);
   const coachCsv = generateCoachCsv(targetPesTeamId, coachName, coachNationality);
   const formationCsv = generateFormationCsv(targetPesTeamId, teamData.formation, starters, teamData.setPieces || {}, allSquad, teamData.tactics || {});
   const appearancesCsv = generateAppearancesCsv(allSquad);

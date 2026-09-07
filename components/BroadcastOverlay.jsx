@@ -275,6 +275,26 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           border: 1px solid rgba(148,163,184,0.42);
           overflow: hidden;
         }
+        .broadcast-ticker::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.28), transparent);
+          transform: skewX(-25deg);
+          animation: broadcastTickerSweep 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          pointer-events: none;
+        }
+        @keyframes broadcastTickerSweep {
+          0% {
+            transform: translateX(-200%) skewX(-25deg);
+          }
+          40%, 100% {
+            transform: translateX(350%) skewX(-25deg);
+          }
+        }
         .broadcast-ticker-label {
           align-self: stretch;
           display: flex;
@@ -285,6 +305,8 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           font-size: 13px;
           font-weight: 1000;
           text-transform: uppercase;
+          position: relative;
+          z-index: 1;
         }
         .broadcast-ticker-text {
           min-width: 0;
@@ -294,6 +316,8 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          position: relative;
+          z-index: 1;
         }
         .broadcast-panel {
           position: absolute;

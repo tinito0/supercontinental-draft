@@ -301,10 +301,10 @@ function App() {
   const location = useLocation();  // Derive "activeTab" from current URL path for backward compat with all existing code
   // pathToTab and tabToPath moved to module scope — see above App()
   const modalRoute = location.pathname.startsWith('/modal/') ? location.pathname.replace('/modal/', '') : '';
-  const modalBackgroundTab = modalRoute === 'compare' || modalRoute === 'tutorial' || modalRoute === 'filters'
-    ? 'Marketplace'
-    : 'My Team';
-  const activeTab = pathToTab[location.pathname] ?? modalBackgroundTab;
+  const currentTabPath = location.pathname.startsWith('/modal/')
+    ? (location.state?.from || (modalRoute === 'formation' ? '/my-team' : '/marketplace'))
+    : location.pathname;
+  const activeTab = pathToTab[currentTabPath] ?? 'Marketplace';
 
   // setActiveTab is a drop-in replacement that navigates to route
   // tabToPath at module scope — see above App()
@@ -324,16 +324,17 @@ function App() {
   }, [isSidebarOpen]);
 
   const openModalRoute = useCallback((modalName) => {
-    const from = location.pathname.startsWith('/modal/') ? '/marketplace' : location.pathname;
+    const from = location.pathname.startsWith('/modal/') ? (location.state?.from || '/marketplace') : location.pathname;
     navigate(`/modal/${modalName}`, { state: { from } });
-  }, [location.pathname, navigate]);
+  }, [location.pathname, location.state, navigate]);
 
   const closeModalRoute = useCallback((setter) => {
     setter?.(false);
     if (location.pathname.startsWith('/modal/')) {
-      navigate(location.state?.from || '/my-team', { replace: true });
+      const fallback = modalRoute === 'formation' ? '/my-team' : '/marketplace';
+      navigate(location.state?.from || fallback, { replace: true });
     }
-  }, [location.pathname, location.state, navigate]);
+  }, [location.pathname, location.state, modalRoute, navigate]);
 
   const [allPlayers, setAllPlayers] = useState([]);
   const [countryMap, setCountryMap] = useState({});
@@ -381,6 +382,7 @@ function App() {
   const [isTutorialVisible, setIsTutorialVisible] = useState(false);
   const [isFiltrosModalVisible, setIsFiltrosModalVisible] = useState(false);
   const [isCartVisible, setIsCartVisible] = useState(false);
+  const [cartInitialTab, setCartInitialTab] = useState('players');
   const [isTeamsModalVisible, setIsTeamsModalVisible] = useState(false);
   const [isAdminModalVisible, setIsAdminModalVisible] = useState(false);
   const [isSuggestionsModalVisible, setIsSuggestionsModalVisible] = useState(false);
@@ -571,6 +573,98 @@ function App() {
       return [{ ...notification, id, read: notification.read === true, createdAt: notification.createdAt || new Date().toISOString() }, ...prev].slice(0, 40);
     });
   }, []);
+
+  const handleNotificationClick = useCallback((notification) => {
+    if (!notification) return;
+
+    // 1. Marcar como leída
+    setNotifications(prev => prev.map(item => item.id === notification.id ? { ...item, read: true } : item));
+
+    // 2. Jugador específico
+    if (notification.playerId) {
+      setSelectedPlayerId(String(notification.playerId));
+      return;
+    }
+
+    // 3. Pestaña específica de Gestión de Equipo (CartModal)
+    if (notification.targetTab) {
+      if (['offers', 'sent', 'history', 'players'].includes(notification.targetTab)) {
+        setCartInitialTab(notification.targetTab);
+        openModalRoute('cart');
+        return;
+      }
+    }
+
+    // 4. Ofertas y traspasos
+    if (['offer', 'proposal'].includes(notification.type) || notification.category === 'offer' || notification.category === 'proposal') {
+      const isSent = notification.isSent || notification.status === 'countered';
+      setCartInitialTab(isSent ? 'sent' : 'offers');
+      openModalRoute('cart');
+      return;
+    }
+
+    if (notification.type === 'transfer' || notification.category === 'transfer') {
+      if (notification.targetModal === 'cart' || notification.action === 'cart') {
+        setCartInitialTab('history');
+        openModalRoute('cart');
+      } else {
+        openModalRoute('transfers');
+      }
+      return;
+    }
+
+    // 5. Modal específico
+    if (notification.targetModal) {
+      openModalRoute(notification.targetModal);
+      return;
+    }
+
+    // 6. Chat de Managers
+    if (notification.category === 'chat' || notification.type === 'chat') {
+      openModalRoute('chat');
+      return;
+    }
+
+    // 7. Torneo y Partidos
+    if (notification.category === 'tournament' || notification.type === 'tournament' || notification.type === 'match_result') {
+      openModalRoute('tournament');
+      return;
+    }
+
+    // 8. Alertas del sistema
+    if (notification.id === 'system-low-budget' || notification.category === 'finance') {
+      setCartInitialTab('players');
+      openModalRoute('cart');
+      return;
+    }
+
+    if (notification.id === 'system-market-closed') {
+      navigate('/marketplace');
+      return;
+    }
+
+    // 9. Ruta personalizada
+    if (notification.targetPath) {
+      navigate(notification.targetPath);
+      return;
+    }
+
+    // 10. Fallback contextual
+    if (notification.time === 'Traspaso' || String(notification.time || '').includes('Oferta') || String(notification.text || '').includes('TRASPASO')) {
+      setCartInitialTab('offers');
+      openModalRoute('cart');
+      return;
+    }
+  }, [navigate, openModalRoute]);
+
+  const handleToastClick = useCallback((toast) => {
+    if (!toast) return;
+    if (toast.playerId) {
+      setSelectedPlayerId(String(toast.playerId));
+    } else {
+      openModalRoute('transfers');
+    }
+  }, [openModalRoute]);
 
   // 3. CARGA DE DATOS OPTIMIZADA (CORREGIDO)
   useEffect(() => {
@@ -1120,8 +1214,12 @@ function App() {
       if (!prev[playerId]) {
         const player = playerById.get(String(playerId));
         if (player) {
+          const toastId = `${playerId}-${Date.now()}`;
+          const posColors = { DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444', MC: '#10b981', MCD: '#10b981', MO: '#10b981', MI: '#10b981', MD: '#10b981', DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6', PT: '#eab308' };
+          const posColorHex = posColors[player.POS_NOMBRE] || '#6b7280';
+
           newEvents.push({
-            id: `${playerId}-${Date.now()}`,
+            id: toastId,
             type: 'signing',
             playerName: player.Name,
             teamName: lockData.teamName || 'Equipo',
@@ -1130,6 +1228,37 @@ function App() {
             price: player.Precio,
             timestamp: new Date(),
           });
+
+          // Mostrar toast interactivo
+          setSigningToasts(prevToasts => [
+            {
+              toastId,
+              playerId: player.Id,
+              playerName: player.Name,
+              teamName: lockData.teamName || 'Equipo',
+              ovr: player.OVR_CALCULADO,
+              pos: player.POS_NOMBRE,
+              posColor: posColorHex,
+            },
+            ...prevToasts
+          ].slice(0, 3));
+
+          setTimeout(() => {
+            setSigningToasts(prevToasts => prevToasts.filter(t => t.toastId !== toastId));
+          }, 4500);
+
+          // Si lo fichó un rival, agregamos notificación interactiva
+          if (lockData.lockedBy && lockData.lockedBy !== userId) {
+            addNotification({
+              id: `signing-${playerId}-${Date.now()}`,
+              category: 'transfer',
+              type: 'transfer',
+              playerId: player.Id,
+              text: `⚽ ${lockData.teamName || 'Un rival'} fichó a ${player.Name} (${player.OVR_CALCULADO} OVR) por ${formatPriceShort(player.Precio)}.`,
+              time: 'Fichaje en vivo',
+              targetModal: 'transfers',
+            });
+          }
         }
       }
     });
@@ -1154,7 +1283,7 @@ function App() {
       setActivityFeed(prev => [...newEvents, ...prev].slice(0, 30)); // Keep last 30
     }
     prevLocksRef.current = { ...playerLocks };
-  }, [playerLocks, allPlayers, playerById]);
+  }, [playerLocks, allPlayers, playerById, userId, addNotification]);
 
   // Transfer proposals listener — listens for incoming trade offers
   useEffect(() => {
@@ -1192,47 +1321,75 @@ function App() {
           const data = change.doc.data();
           if (change.type === 'added') {
             if ((data.targetTeamId === userId && data.status === 'pending') || (data.senderId === userId && data.status === 'countered')) {
-              setNotifications(prev => [{
-                type: 'info',
-                text: `🤝 TRASPASO: ${data.senderTeamName} ofrece ${formatPriceShort((data.status === 'countered' ? data.counterAmount : data.offerAmount) / 1000000)} por ${data.playerName}.${data.message ? ` Mensaje: "${data.message}"` : ''}`,
-                time: 'Traspaso'
-              }, ...prev]);
+              addNotification({
+                id: `offer-incoming-${change.doc.id}`,
+                category: 'transfer',
+                type: 'offer',
+                offerId: change.doc.id,
+                playerId: data.playerId,
+                targetTab: 'offers',
+                text: `🤝 TRASPASO: ${data.senderTeamName || 'Un rival'} ofrece ${formatPriceShort((data.status === 'countered' ? data.counterAmount : data.offerAmount) / 1000000)} por ${data.playerName}.${data.message ? ` "${data.message}"` : ''}`,
+                time: 'Oferta recibida',
+                read: false,
+              });
             }
           }
           if (change.type === 'modified') {
             // Notify sender when their offer is rejected
             if (data.status === 'rejected' && data.senderId === userId) {
-              setNotifications(prev => [{
-                type: 'warning',
-                text: `❌ ${data.rejectedBy || 'Un equipo'} rechazó tu oferta por ${data.playerName}.`,
-                time: 'Traspaso'
-              }, ...prev]);
-            }
-            // Notify sender when their offer is accepted
-            if (data.status === 'accepted' && data.targetTeamId === userId) {
-              setNotifications(prev => [{
-                id: `transfer-sale-${change.doc.id}`,
-                type: 'transfer',
+              addNotification({
+                id: `offer-rejected-${change.doc.id}`,
                 category: 'transfer',
-                text: `Venta confirmada: ${data.playerName} fue transferido por ${formatPriceShort((data.counterAmount || data.offerAmount || 0) / 1000000)}.`,
-                time: 'Mercado',
+                type: 'warning',
+                offerId: change.doc.id,
+                playerId: data.playerId,
+                targetTab: 'sent',
+                text: `❌ ${data.rejectedBy || 'Un rival'} rechazó tu oferta por ${data.playerName}.`,
+                time: 'Oferta rechazada',
                 read: false,
-              }, ...prev]);
+              });
             }
+            // Notify seller when their offer is accepted
+            if (data.status === 'accepted' && data.targetTeamId === userId) {
+              addNotification({
+                id: `transfer-sale-${change.doc.id}`,
+                category: 'transfer',
+                type: 'transfer',
+                offerId: change.doc.id,
+                playerId: data.playerId,
+                targetTab: 'history',
+                text: `💰 Venta confirmada: ${data.playerName} fue transferido a ${data.senderTeamName || 'otro equipo'} por ${formatPriceShort((data.counterAmount || data.offerAmount || 0) / 1000000)}.`,
+                time: 'Traspaso completado',
+                read: false,
+              });
+            }
+            // Notify buyer when their offer is accepted
             if (data.status === 'accepted' && data.senderId === userId) {
-              setNotifications(prev => [{
-                type: 'info',
-                text: `✅ ¡Traspaso aceptado! ${data.playerName} ahora es tuyo.`,
-                time: 'Traspaso'
-              }, ...prev]);
+              addNotification({
+                id: `transfer-bought-${change.doc.id}`,
+                category: 'transfer',
+                type: 'offer',
+                offerId: change.doc.id,
+                playerId: data.playerId,
+                targetTab: 'players',
+                text: `✅ ¡Traspaso aceptado! ${data.playerName} ahora está en tu equipo.`,
+                time: 'Fichaje exitoso',
+                read: false,
+              });
             }
             // Notify when counter-offer received
             if (data.status === 'countered' && data.senderId === userId) {
-              setNotifications(prev => [{
-                type: 'info',
-                text: `🔄 ${data.counterBy || 'Un equipo'} te envió una contraoferta de ${formatPriceShort((data.counterAmount || 0) / 1000000)} por ${data.playerName}.`,
-                time: 'Traspaso'
-              }, ...prev]);
+              addNotification({
+                id: `offer-counter-${change.doc.id}`,
+                category: 'transfer',
+                type: 'offer',
+                offerId: change.doc.id,
+                playerId: data.playerId,
+                targetTab: 'sent',
+                text: `🔄 ${data.counterBy || 'Un rival'} te envió una contraoferta de ${formatPriceShort((data.counterAmount || 0) / 1000000)} por ${data.playerName}.`,
+                time: 'Contraoferta recibida',
+                read: false,
+              });
             }
           }
         });
@@ -1242,7 +1399,7 @@ function App() {
       }
     );
     return () => unsub();
-  }, [userId]);
+  }, [userId, addNotification]);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -1328,8 +1485,8 @@ function App() {
   }, [isAuthReady, userId, getManagerChatCollectionRef, addNotification]);
 
   useEffect(() => {
-    if (isManagerChatVisible) setUnreadChatCount(0);
-  }, [isManagerChatVisible]);
+    if (isManagerChatVisible || modalRoute === 'chat') setUnreadChatCount(0);
+  }, [isManagerChatVisible, modalRoute]);
 
   const handleSendChatMessage = useCallback(async (text, gifUrl = '') => {
     if (!userId || !userProfile) return false;
@@ -2172,6 +2329,7 @@ function App() {
                     cart={cart}
                     onRemoveFromCart={handleRemoveFromCart}
                     userProfile={userProfile}
+                    userId={userId}
                     totalCartCost={totalCartCost}
                     remainingBudget={remainingBudget}
                     incomingOffers={incomingOffers}
@@ -2354,10 +2512,16 @@ function App() {
       {(isCartVisible || modalRoute === 'cart') && (
         <CartModal
           isVisible={true}
-          onClose={() => closeModalRoute(setIsCartVisible)}
+          isPage={false}
+          initialTab={cartInitialTab}
+          onClose={() => {
+            setCartInitialTab('players');
+            closeModalRoute(setIsCartVisible);
+          }}
           cart={cart}
           onRemoveFromCart={handleRemoveFromCart}
           userProfile={userProfile}
+          userId={userId}
           totalCartCost={totalCartCost}
           remainingBudget={remainingBudget}
           incomingOffers={incomingOffers}
@@ -2471,12 +2635,7 @@ function App() {
         onClear={() => setNotifications([])}
         onDismissOne={(notification) => setNotifications(prev => prev.filter(item => item.id !== notification.id))}
         onMarkAllRead={() => setNotifications(prev => prev.map(item => ({ ...item, read: true })))}
-        onNotifClick={(notification) => {
-          setNotifications(prev => prev.map(item => item.id === notification.id ? { ...item, read: true } : item));
-          if (['offer', 'transfer'].includes(notification.type) || notification.category === 'transfer') {
-            openModalRoute('cart');
-          }
-        }}
+        onNotifClick={handleNotificationClick}
       />
 
       {/* BUDGET ALERT MODAL */}
@@ -2517,24 +2676,59 @@ function App() {
         {signingToasts.map(toast => (
           <div
             key={toast.toastId}
-            className="pointer-events-auto bg-gray-900/95 backdrop-blur-xl border border-gray-700/60 rounded-xl p-4 shadow-2xl animate-in slide-in-from-right-10 fade-in duration-400 flex items-center gap-3"
+            onClick={() => handleToastClick(toast)}
+            className="pointer-events-auto cursor-pointer bg-gray-900/95 backdrop-blur-xl border border-gray-700/60 hover:border-cyan-500/60 hover:bg-gray-800/95 transition-all rounded-xl p-3.5 shadow-2xl animate-in slide-in-from-right-10 fade-in duration-400 flex items-center gap-3 group active:scale-95"
             style={{ borderLeft: `4px solid ${toast.posColor}` }}
           >
-            <div className="text-lg">🔒</div>
+            <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-base shrink-0">🔒</div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-gray-200 leading-snug">
+              <p className="text-xs text-gray-200 leading-snug">
                 <span className="font-black text-white">{toast.teamName}</span>{' '}fichó a{' '}
                 <span className="font-bold text-white">{toast.playerName}</span>
               </p>
-              <p className="text-[11px] text-gray-500 mt-0.5 font-medium">
+              <p className="text-[10px] text-gray-500 mt-0.5 font-bold uppercase tracking-wider">
                 {toast.ovr} OVR · {toast.pos}
               </p>
             </div>
+            <span className="text-[10px] font-black text-cyan-400 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
+              Ver →
+            </span>
           </div>
         ))}
       </div>
     </>
   );
+
+  // Auto-sync: Sincronizar cart privado cuando playerLocks asigna o quita jugadores (ej. traspasos aceptados)
+  useEffect(() => {
+    if (!userId || !playerLocks || !allPlayers?.length) return;
+
+    // 1. Si un jugador está bloqueado por este usuario pero aún no está en su cart privado, añadirlo
+    Object.entries(playerLocks).forEach(([playerId, lock]) => {
+      if (lock.lockedBy === userId && !cart.some(p => String(p.Id) === String(playerId))) {
+        const fullPlayer = playerById.get(String(playerId));
+        if (fullPlayer) {
+          setDoc(getPrivateCartDocRef(userId, playerId), { ...fullPlayer, isFranchise: Boolean(lock.isFranchise) })
+            .catch(err => console.error('Error auto-sync agregando a cart:', err));
+        }
+      }
+    });
+
+    // 2. Si un jugador está en el cart privado pero playerLocks indica que pertenece a otro usuario, removerlo
+    cart.forEach(p => {
+      const lock = playerLocks[p.Id];
+      if (lock && lock.lockedBy && lock.lockedBy !== userId) {
+        deleteDoc(getPrivateCartDocRef(userId, p.Id))
+          .catch(err => console.error('Error auto-sync removiendo de cart:', err));
+      }
+    });
+
+    // 3. Sincronizar presupuesto de perfil si difiere del presupuesto público (actualizado por traspasos)
+    if (allTeams?.[userId]?.budget != null && userProfile && userProfile.budget !== allTeams[userId].budget) {
+      setDoc(getPrivateProfileRef(userId), { budget: allTeams[userId].budget }, { merge: true })
+        .catch(err => console.error('Error auto-sync actualizando presupuesto de perfil:', err));
+    }
+  }, [playerLocks, cart, allTeams, userProfile, userId, allPlayers, playerById, getPrivateCartDocRef, getPrivateProfileRef]);
 
   // Keep a compact, public squad snapshot so the public team board can show
   // both the XI and the substitutes without exposing the private cart.

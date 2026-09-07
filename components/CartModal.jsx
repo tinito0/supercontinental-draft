@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo, memo } from 'react';
+import React, { useRef, useState, useEffect, useMemo, memo } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { X, ShoppingCart, DollarSign, Shield, Users, Activity, Calendar, MapPin, ArrowRight, History } from 'lucide-react';
 import { formatPriceShort } from '../utils/helpers.js';
@@ -6,6 +6,7 @@ import { DEFAULT_BUDGET, APP_ID } from '../utils/constants.js';
 import { doc, runTransaction, updateDoc, collection, serverTimestamp, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
+import { ProposalChat } from './ProposalChat.jsx';
 
 // ─── KpiCard ────────────────────────────────────────────────────────────────
 const KpiCard = memo(function KpiCard({ title, value, icon: Icon, colorClass }) {
@@ -144,6 +145,8 @@ const NegotiationCard = memo(function NegotiationCard({
   allTeams,
   playerMap,
   allPlayers,
+  userId,
+  userProfile,
   isIncoming,
   isHistory,
   isProcessing,
@@ -243,16 +246,30 @@ const NegotiationCard = memo(function NegotiationCard({
           </div>
         </div>
       )}
+
+      {/* Negotiation Chat between managers */}
+      <ProposalChat
+        offerId={offer.id}
+        userId={userId || userProfile?.uid}
+        userProfile={userProfile}
+        isClosed={isHistory || ['accepted', 'rejected', 'withdrawn'].includes(offer.status)}
+      />
     </div>
   );
 });
 
-export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, onRemoveFromCart, userProfile, totalCartCost, remainingBudget, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams }) {
-  const [activeTab, setActiveTab] = useState('players');
+export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, onRemoveFromCart, userProfile, userId, totalCartCost, remainingBudget, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players' }) {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingOfferRef = useRef(null);
   const [counteringOfferId, setCounteringOfferId] = useState(null);
   const [counterAmount, setCounterAmount] = useState('');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isVisible]);
 
   // Antes: cart.sort(...) directo en el JSX mutaba el array del prop/estado (Array.prototype.sort
   // muta in-place) y volvía a ordenar en cada render. Acá se ordena una copia, una sola vez por cambio de cart.
@@ -275,61 +292,63 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         throw new Error("Oferta invalida: comprador y vendedor no pueden ser el mismo equipo.");
       }
 
-      const livePlayer = playerMap.get(String(offer.playerId)) || allPlayers?.find(p => p.Id === offer.playerId);
-      if (!livePlayer) throw "Jugador no encontrado en la base de datos";
+      const livePlayer = playerMap ? playerMap.get(String(offer.playerId)) : allPlayers?.find(p => String(p.Id) === String(offer.playerId));
+      if (!livePlayer) throw new Error("Jugador no encontrado en la base de datos.");
 
       let activeAmount = Number(getOfferAmount(offer));
       if (!Number.isFinite(activeAmount) || activeAmount <= 0) {
         throw new Error("Monto de oferta invalido.");
       }
 
-      // El presupuesto real disponible del comprador es budget - valor de su carrito actual
-      // (el campo "budget" en Firestore nunca se descuenta al fichar; el gasto se calcula
-      // siempre restando el carrito. Por eso NO se debe escribir el campo budget acá, o el
-      // dinero se cuenta dos veces). Hay que sumar el carrito ANTES de la transacción porque
-      // runTransaction no puede leer una collection completa, solo docs puntuales.
-      const buyerCartSnap = await getDocs(collection(db, `artifacts/${APP_ID}/users/${offer.senderId}/cart`));
-      const buyerCartTotal = buyerCartSnap.docs.reduce((sum, cartDoc) => {
-        const cartPlayer = cartDoc.data();
-        return sum + (cartPlayer.isFranchise ? 0 : (Number(cartPlayer.Precio) || 0) * 1000000);
-      }, 0);
+      // Calcular gasto del comprador sumando sus bloqueos activos en public/data/player_locks
+      // (evita leer la colección privada users/{buyerId}/cart, respetando Firestore Rules)
+      const locksSnap = await getDocs(collection(db, `artifacts/${APP_ID}/public/data/player_locks`));
+      let buyerCartTotal = 0;
+      locksSnap.forEach(docSnap => {
+        const lock = docSnap.data();
+        if (lock.lockedBy === offer.senderId && !lock.isFranchise) {
+          const p = playerMap ? playerMap.get(docSnap.id) : allPlayers?.find(pl => String(pl.Id) === docSnap.id);
+          if (p) {
+            buyerCartTotal += Math.round((Number(p.Precio) || 0) * 1000000);
+          }
+        }
+      });
 
       await runTransaction(db, async (transaction) => {
-        const buyerProfileRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/profile`, "data");
         const sellerProfileRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/profile`, "data");
-        const buyerDoc = await transaction.get(buyerProfileRef);
+        const buyerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.senderId);
+        const sellerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.targetTeamId);
+        const lockRef = doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(offer.playerId));
+        const sellerCartRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/cart`, String(offer.playerId));
+        const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
+
         const sellerDoc = await transaction.get(sellerProfileRef);
-        
-        if (!buyerDoc.exists() || !sellerDoc.exists()) throw "Perfiles no encontrados";
-        
-        const buyerBudget = buyerDoc.data().budget || 0;
-        const buyerProfile = buyerDoc.data();
+        const buyerTeamDoc = await transaction.get(buyerTeamPublicRef);
+        const sellerTeamDoc = await transaction.get(sellerTeamPublicRef);
+        const offerDoc = await transaction.get(offerRef);
+        const lockDoc = await transaction.get(lockRef);
+        const sellerCartDoc = await transaction.get(sellerCartRef);
+
+        if (!sellerDoc.exists()) throw new Error("Perfil de vendedor no encontrado.");
+
+        const buyerBudget = buyerTeamDoc.exists() ? (buyerTeamDoc.data().budget || 0) : 0;
         const sellerProfile = sellerDoc.data();
-        const buyerTeamName = offer.senderTeamName || buyerProfile.teamName || allTeams?.[offer.senderId]?.teamName || 'Equipo comprador';
+        const buyerTeamName = offer.senderTeamName || buyerTeamDoc.data()?.teamName || allTeams?.[offer.senderId]?.teamName || 'Equipo comprador';
         const sellerTeamName = offer.targetTeamName || sellerProfile.teamName || allTeams?.[offer.targetTeamId]?.teamName || 'Equipo rival';
-        const buyerTeamLogo = offer.senderTeamLogo || buyerProfile.logoUrl || allTeams?.[offer.senderId]?.logoUrl || '';
+        const buyerTeamLogo = offer.senderTeamLogo || buyerTeamDoc.data()?.logoUrl || allTeams?.[offer.senderId]?.logoUrl || '';
         const sellerTeamLogo = offer.targetTeamLogo || sellerProfile.logoUrl || allTeams?.[offer.targetTeamId]?.logoUrl || '';
 
         const buyerRemainingBudget = buyerBudget - buyerCartTotal;
-        if (buyerRemainingBudget < activeAmount) throw "El comprador no tiene fondos suficientes";
+        if (buyerRemainingBudget < activeAmount) throw new Error("El comprador no tiene fondos suficientes.");
 
-        // Verify the offer is still valid
-        const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
-        const offerDoc = await transaction.get(offerRef);
+        // Verificar validez de oferta
         activeAmount = Number(getOfferAmount(offerDoc.exists() ? offerDoc.data() : {}));
         if (!offerDoc.exists() || (offerDoc.data().status !== 'pending' && offerDoc.data().status !== 'countered')) {
           throw new Error("La oferta ya no es válida o ya fue procesada.");
         }
 
-        // Verify the seller still owns the player
-        const lockRef = doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(offer.playerId));
-        const lockDoc = await transaction.get(lockRef);
-        const sellerCartRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/cart`, String(offer.playerId));
-        const buyerCartRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/cart`, String(offer.playerId));
-        const sellerCartDoc = await transaction.get(sellerCartRef);
-        const buyerCartDoc = await transaction.get(buyerCartRef);
+        // Verificar propiedad del vendedor
         if (!sellerCartDoc.exists()) throw new Error('El jugador ya no está en el plantel vendedor.');
-        if (buyerCartDoc.exists()) throw new Error('El comprador ya tiene este jugador.');
         const ownedPlayer = sellerCartDoc.data();
         if (ownedPlayer.isFranchise || (lockDoc.exists() && lockDoc.data().isFranchise)) {
           throw new Error('Los jugadores franquicia no son transferibles.');
@@ -338,38 +357,55 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         if (!Number.isSafeInteger(activeAmount) || !playerBaseCost || activeAmount < playerBaseCost || activeAmount > playerBaseCost * 3) {
           throw new Error('El monto ya no cumple los límites del jugador.');
         }
-        if (Number(buyerBudget) - buyerCartTotal < activeAmount) {
-          throw new Error('El comprador no tiene fondos suficientes.');
-        }
         if (!lockDoc.exists() || lockDoc.data().lockedBy !== offer.targetTeamId) {
           throw new Error("El jugador ya no pertenece al equipo vendedor.");
         }
 
-        // 1. NO tocar el campo "budget" acá a propósito: en toda la app el presupuesto
-        // disponible se calcula como budget - valor del carrito (ver handleAddToCart /
-        // remainingBudget en app.jsx). Mover al jugador de carrito (paso 3) ya ajusta
-        // ese cálculo solo. Si además sumamos/restamos el campo budget, la plata se
-        // cuenta dos veces (ese era el bug: vendedor terminaba con presupuesto inflado).
+        const acceptedAt = new Date().toISOString();
 
-        // 2. Transfer lock ownership
+        // 1. Transferir lock al comprador
         transaction.update(lockRef, {
           lockedBy: offer.senderId,
           teamName: buyerTeamName,
-          lockedAt: new Date().toISOString()
+          lockedAt: acceptedAt
         });
 
-        // 3. Move player from seller cart to buyer cart
+        // 2. Remover jugador del cart del vendedor
         transaction.delete(sellerCartRef);
-        transaction.set(buyerCartRef, { ...ownedPlayer, isFranchise: false });
+
+        // 3. Actualizar presupuesto del vendedor
         const buyerBudgetAfter = buyerBudget + playerBaseCost - activeAmount;
         const sellerBudgetAfter = (Number(sellerProfile.budget) || 0) + activeAmount - playerBaseCost;
-        transaction.update(buyerProfileRef, { budget: buyerBudgetAfter });
         transaction.update(sellerProfileRef, { budget: sellerBudgetAfter });
-        transaction.set(doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.senderId), { budget: buyerBudgetAfter }, { merge: true });
-        transaction.set(doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.targetTeamId), { budget: sellerBudgetAfter }, { merge: true });
-        
-        // 4. Update offer status
-        const acceptedAt = new Date().toISOString();
+
+        // 4. Sincronizar rosters y presupuestos públicos en transacción atómica
+        const buyerCurrentRoster = (buyerTeamDoc.exists() && Array.isArray(buyerTeamDoc.data().roster)) ? buyerTeamDoc.data().roster : [];
+        const sellerCurrentRoster = (sellerTeamDoc.exists() && Array.isArray(sellerTeamDoc.data().roster)) ? sellerTeamDoc.data().roster : [];
+        const newBuyerRoster = [
+          ...buyerCurrentRoster.filter(p => String(p.Id) !== String(offer.playerId)),
+          {
+            Id: String(ownedPlayer.Id),
+            Name: ownedPlayer.Name || 'Jugador',
+            POS_NOMBRE: ownedPlayer.POS_NOMBRE || '',
+            OVR_CALCULADO: Number(ownedPlayer.OVR_CALCULADO) || 0,
+            available: true,
+          }
+        ];
+        const newSellerRoster = sellerCurrentRoster.filter(p => String(p.Id) !== String(offer.playerId));
+
+        transaction.set(buyerTeamPublicRef, {
+          budget: buyerBudgetAfter,
+          roster: newBuyerRoster,
+          rosterUpdatedAt: acceptedAt,
+        }, { merge: true });
+
+        transaction.set(sellerTeamPublicRef, {
+          budget: sellerBudgetAfter,
+          roster: newSellerRoster,
+          rosterUpdatedAt: acceptedAt,
+        }, { merge: true });
+
+        // 5. Actualizar estado de la oferta
         transaction.update(offerRef, {
           status: 'accepted',
           acceptedAt,
@@ -387,10 +423,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           })
         });
 
-        // 5. Delete old signing transfer entry (from when seller originally signed)
-        // (handled by cleanup — not critical inside transaction)
-
-        // 6. Write transfer event to live feed
+        // 6. Registrar en el feed de transferencias
         const transferRef = doc(collection(db, `artifacts/${APP_ID}/public/data/transfers`));
         transaction.set(transferRef, {
           playerId: offer.playerId,
@@ -754,6 +787,8 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
                   allTeams={allTeams}
                   playerMap={playerMap}
                   allPlayers={allPlayers}
+                  userId={userId}
+                  userProfile={userProfile}
                   isIncoming={true}
                   isProcessing={isProcessing}
                   counteringOfferId={counteringOfferId}
@@ -868,6 +903,8 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
                   allTeams={allTeams}
                   playerMap={playerMap}
                   allPlayers={allPlayers}
+                  userId={userId}
+                  userProfile={userProfile}
                   isIncoming={false}
                   isProcessing={isProcessing}
                   counteringOfferId={counteringOfferId}
@@ -930,6 +967,8 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
                   allTeams={allTeams}
                   playerMap={playerMap}
                   allPlayers={allPlayers}
+                  userId={userId}
+                  userProfile={userProfile}
                   isHistory={true}
                   isIncoming={offer.targetTeamId === userProfile?.uid}
                   isProcessing={isProcessing}

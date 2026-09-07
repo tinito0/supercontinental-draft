@@ -238,17 +238,32 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
         className="w-full sm:max-w-md h-[100dvh] sm:h-full bg-[#090b0f] flex flex-col shadow-2xl animate-in slide-in-from-right duration-300"
         onClick={event => event.stopPropagation()}
       >
-        <div className="shrink-0 p-4 sm:p-6 bg-gradient-to-r from-blue-900/20 to-transparent flex items-center justify-between shadow-[0_1px_0_rgba(59,130,246,0.08)]">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-blue-600/16 flex items-center justify-center flex-shrink-0 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.14)]">
+        <div className="shrink-0 p-4 sm:p-6 bg-gradient-to-r from-blue-900/25 via-blue-950/30 to-transparent flex items-center justify-between shadow-[0_1px_0_rgba(59,130,246,0.12)] relative overflow-hidden">
+          {/* Animated Sweep Shimmer Effect */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+            <div className="news-bar-sweep absolute inset-y-0 w-2/3 bg-gradient-to-r from-transparent via-cyan-400/[0.14] to-transparent -skew-x-12" />
+            <div className="news-bar-sweep-line absolute bottom-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/80 to-transparent" />
+          </div>
+
+          <div className="flex items-center gap-3 min-w-0 relative z-10">
+            <div className="w-11 h-11 rounded-xl bg-blue-600/16 flex items-center justify-center flex-shrink-0 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)] relative">
               <TrendingUp className="w-5 h-5 text-blue-300" />
+              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400" />
+              </span>
             </div>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-xl font-black text-white tracking-tight uppercase">Noticias en Vivo</h2>
-              <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Últimos movimientos</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-xl font-black text-white tracking-tight uppercase">Noticias en Vivo</h2>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
+                  Live
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Últimos movimientos</p>
             </div>
           </div>
-          <button onClick={onClose} className="min-w-11 min-h-11 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 transition">
+          <button onClick={onClose} className="min-w-11 min-h-11 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 transition relative z-10">
             <X size={20} />
           </button>
         </div>
@@ -305,6 +320,28 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
           0% { opacity: 0.55; max-height: 220px; }
           80% { opacity: 0.12; max-height: 220px; }
           100% { opacity: 0; max-height: 0; padding: 0; margin: 0; border: none; overflow: hidden; }
+        }
+        @keyframes newsBarSweep {
+          0% {
+            transform: translateX(-150%) skewX(-20deg);
+          }
+          45%, 100% {
+            transform: translateX(350%) skewX(-20deg);
+          }
+        }
+        @keyframes newsLineSweep {
+          0% {
+            transform: translateX(-100%);
+          }
+          50%, 100% {
+            transform: translateX(100%);
+          }
+        }
+        .news-bar-sweep {
+          animation: newsBarSweep 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        .news-bar-sweep-line {
+          animation: newsLineSweep 3.8s ease-in-out infinite;
         }
       `}</style>
     </div>

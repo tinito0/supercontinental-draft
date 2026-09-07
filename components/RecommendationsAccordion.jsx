@@ -87,7 +87,6 @@ export const RecommendationsAccordion = memo(function RecommendationsAccordion({
                     className="relative overflow-hidden"
                     style={{
                       aspectRatio: '3 / 2.85',
-                      backgroundColor: '#0a0a0c',
                       background: 'linear-gradient(168deg, #1a1a1f 0%, #0c0c0e 100%)',
                     }}
                   >
@@ -113,7 +112,7 @@ export const RecommendationsAccordion = memo(function RecommendationsAccordion({
 
                     <div
                       className="absolute bottom-0 left-0 right-0 z-[3] pointer-events-none"
-                      style={{ height: '60%', background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 45%, transparent 100%)' }}
+                      style={{ height: '35%', background: 'linear-gradient(to top, rgba(12, 12, 14, 0.7) 0%, transparent 100%)' }}
                     />
 
                     <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-1.5 px-2 py-1.5 pointer-events-none">
