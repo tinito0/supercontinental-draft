@@ -2716,7 +2716,7 @@ function App() {
 
     // 2. Si un jugador está en el cart privado pero playerLocks indica que pertenece a otro usuario, removerlo
     cart.forEach(p => {
-      const lock = playerLocks[p.Id];
+      const lock = playerLocks[String(p.Id)]; // String() fix: Firestore doc IDs siempre son string
       if (lock && lock.lockedBy && lock.lockedBy !== userId) {
         deleteDoc(getPrivateCartDocRef(userId, p.Id))
           .catch(err => console.error('Error auto-sync removiendo de cart:', err));
@@ -2724,8 +2724,11 @@ function App() {
     });
 
     // 3. Sincronizar presupuesto de perfil si difiere del presupuesto público (actualizado por traspasos)
-    if (allTeams?.[userId]?.budget != null && userProfile && userProfile.budget !== allTeams[userId].budget) {
-      setDoc(getPrivateProfileRef(userId), { budget: allTeams[userId].budget }, { merge: true })
+    // Number() fix: evitar false-negative por tipo (string vs number en comparación estricta)
+    const publicBudget = Number(allTeams?.[userId]?.budget);
+    const privateBudget = Number(userProfile?.budget);
+    if (!isNaN(publicBudget) && userProfile && publicBudget !== privateBudget) {
+      setDoc(getPrivateProfileRef(userId), { budget: publicBudget }, { merge: true })
         .catch(err => console.error('Error auto-sync actualizando presupuesto de perfil:', err));
     }
   }, [playerLocks, cart, allTeams, userProfile, userId, allPlayers, playerById, getPrivateCartDocRef, getPrivateProfileRef]);
