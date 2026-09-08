@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Send, AlertTriangle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
@@ -8,6 +8,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
   const [offerAmount, setOfferAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
@@ -15,6 +16,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!senderId || !targetTeamId || senderId === targetTeamId) {
       setError('No puedes enviarte una oferta a tu propio equipo.');
       return;
@@ -36,6 +38,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
       return;
     }
     
+    submittingRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -78,6 +81,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
       console.error('Error enviando propuesta:', err);
       setError('Hubo un error al enviar la propuesta. Inténtalo de nuevo.');
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

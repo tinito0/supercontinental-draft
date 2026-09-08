@@ -771,7 +771,12 @@ function App() {
 
         const profileRef = getPrivateProfileRef(uid);
         const publicTeamRef = getPublicTeamRef(uid);
-        const profileSnap = await getDoc(profileRef);
+        // Ambos documentos son necesarios, pero son independientes: leerlos en
+        // paralelo evita una ida y vuelta extra al iniciar sesión.
+        const [profileSnap, publicTeamSnap] = await Promise.all([
+          getDoc(profileRef),
+          getDoc(publicTeamRef),
+        ]);
 
         let profileData;
 
@@ -841,7 +846,6 @@ function App() {
             setAuthError(null);
           }
 
-          const publicTeamSnap = await getDoc(publicTeamRef);
           if (!publicTeamSnap.exists()) {
             await setDoc(publicTeamRef, {
               teamName: profileData.teamName,
@@ -854,17 +858,32 @@ function App() {
             // El presupuesto público se modifica en las transacciones de mercado.
             // Nunca lo restaures con una copia privada vieja al iniciar sesión.
             const publicBudget = Number(publicTeamSnap.data().budget);
+            const publicTeam = publicTeamSnap.data();
+            const syncBatch = writeBatch(db);
+            let needsSync = false;
             if (Number.isFinite(publicBudget) && publicBudget !== Number(profileData.budget)) {
-              await setDoc(profileRef, { budget: publicBudget }, { merge: true });
+              syncBatch.set(profileRef, { budget: publicBudget }, { merge: true });
+              needsSync = true;
               profileData = { ...profileData, budget: publicBudget };
             }
 
-            // Mantener los datos visuales sincronizados sin tocar el presupuesto.
-            await setDoc(publicTeamRef, {
+            // No escribimos el equipo público en cada login: sólo si alguno de
+            // los campos visibles cambió. Si también cambió el presupuesto, ambas
+            // correcciones se confirman juntas en el mismo batch.
+            const visualTeamData = {
               teamName: profileData.teamName,
               userId: uid,
               logoUrl: profileData.logoUrl || DEFAULT_LOGO,
-            }, { merge: true });
+            };
+            if (
+              publicTeam.teamName !== visualTeamData.teamName ||
+              publicTeam.userId !== visualTeamData.userId ||
+              publicTeam.logoUrl !== visualTeamData.logoUrl
+            ) {
+              syncBatch.set(publicTeamRef, visualTeamData, { merge: true });
+              needsSync = true;
+            }
+            if (needsSync) await syncBatch.commit();
           }
         }
 

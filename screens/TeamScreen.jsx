@@ -14,6 +14,14 @@ export default function TeamScreen() {
   // so extract userId from the URL path as fallback
   const userId = params.userId || location.pathname.split('/team/')[1]?.split('/')[0] || null;
   const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
   const [teamData, setTeamData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -250,9 +258,13 @@ export default function TeamScreen() {
           </div>
 
           <div className="shrink-0">
-             <button onClick={() => navigate('/')} className="px-6 py-3 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition shadow-lg uppercase text-sm tracking-tight">
-               Crear mi Equipo
-             </button>
+            <button
+              onClick={handleBack}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white/[0.08] hover:bg-white/[0.14] text-white font-black rounded-xl border border-white/10 hover:border-white/20 transition shadow-lg uppercase text-sm tracking-tight active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Volver atrás</span>
+            </button>
           </div>
         </div>
       </div>

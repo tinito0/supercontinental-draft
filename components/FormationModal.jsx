@@ -756,6 +756,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   // ── Share URL with popover ──
   const [shareUrl, setShareUrl] = useState('');
   const [isSharing, setIsSharing] = useState(false);
+  const sharingRef = useRef(false);
 
   const copyToClipboard = async (text) => {
     try {
@@ -778,6 +779,8 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   };
 
   const handleShareURL = async () => {
+    if (sharingRef.current) return;
+    sharingRef.current = true;
     setIsSharing(true);
     try {
       // Build slot data with player names embedded for public view
@@ -844,6 +847,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       console.error('Error al compartir formación:', err);
       showStatusMessage('error', 'Error al generar el enlace público.');
     }
+    sharingRef.current = false;
     setIsSharing(false);
   };
 

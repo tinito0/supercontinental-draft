@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { addDoc, collection, deleteDoc, doc, getDoc, increment, onSnapshot, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, runTransaction, Timestamp } from 'firebase/firestore';
 import { Clock, HelpCircle, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import { APP_ID, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
 import { formatPriceShort, getFlagUrl, getRegionById } from '../utils/helpers.js';
@@ -9,9 +9,9 @@ const RESULT_COUNT_MAX = 5;
 const MONTHLY_SEARCH_LIMIT = 5;
 
 const DEFAULT_SCOUTS = [
-  { id: 'scout-rapido', name: 'Tomás Ibarra', quality: 58, durationHours: 4, specialty: 'Respuesta rápida', description: 'Vuelve rápido, pero puede traer jugadores con más variación respecto a lo pedido.' },
-  { id: 'scout-equilibrado', name: 'Martín Sosa', quality: 74, durationHours: 8, specialty: 'Búsqueda confiable', description: 'Buen balance entre tiempo y precisión. Ideal para búsquedas normales.' },
-  { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 16, imageUrl: '/scouts/fefe-farfan.png', specialty: 'Elite total', description: 'El mejor ojeador de todos. Tarda mas porque filtra fino y prioriza coincidencias premium.' },
+  { id: 'scout-rapido', name: 'Tomás Ibarra', quality: 58, durationHours: 1, specialty: 'Respuesta rápida', description: 'Vuelve rápido, pero puede traer jugadores con más variación respecto a lo pedido.' },
+  { id: 'scout-equilibrado', name: 'Martín Sosa', quality: 74, durationHours: 2, specialty: 'Búsqueda confiable', description: 'Buen balance entre tiempo y precisión. Ideal para búsquedas normales.' },
+  { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 4, imageUrl: '/scouts/fefe-farfan.png', specialty: 'Elite total', description: 'El mejor ojeador de todos. Tarda mas porque filtra fino y prioriza coincidencias premium.' },
   { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantanea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para testear resultados.' },
 ];
 
@@ -122,6 +122,10 @@ function getTimeLeft(resolvesAt) {
   const minutes = Math.ceil((diff % 3600000) / 60000);
   if (hours <= 0) return `${minutes} min restantes`;
   return `${hours} h ${minutes} min restantes`;
+}
+
+function makeCriteriaFingerprint(scoutId, criteria) {
+  return `${scoutId}:${JSON.stringify(criteria)}`;
 }
 
 function matchRange(value, min, max, variance = 0) {
@@ -353,10 +357,12 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
   const [searches, setSearches] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const isCreatingRef = useRef(false);
   const [selectedScoutId, setSelectedScoutId] = useState('fefe-farfan');
   const [criteria, setCriteria] = useState(initialCriteria);
   const [monthlyUsage, setMonthlyUsage] = useState(0);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [clockTick, setClockTick] = useState(() => Date.now());
   const resolvingRef = useRef(new Set());
 
   const scouts = useMemo(() => DEFAULT_SCOUTS.filter(scout => isAdmin || scout.id !== 'scout-test'), [isAdmin]);
@@ -392,12 +398,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       const nextSearches = [];
       snap.docs.forEach(docSnap => {
         const data = { id: docSnap.id, ...docSnap.data() };
-        if (data.status === 'dismissed') {
-          deleteDoc(doc(db, `artifacts/${APP_ID}/users/${userId}/scout_searches`, docSnap.id)).catch(error => {
-            console.error('Error limpiando busqueda scout descartada:', error);
-          });
-          return;
-        }
+        if (data.status === 'dismissed') return;
         nextSearches.push(data);
       });
       setSearches(nextSearches.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)));
@@ -419,6 +420,21 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
     return () => unsubscribe();
   }, [scoutUsageRef]);
 
+  // El snapshot no se actualiza por el simple paso del tiempo. Programamos el
+  // próximo vencimiento para que una búsqueda se complete aun sin otros cambios.
+  useEffect(() => {
+    const nextResolveAt = searches
+      .filter(search => search.status === 'searching')
+      .map(search => Number(search.resolvesAtMs) || toMillis(search.resolvesAt))
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b)[0];
+    if (!nextResolveAt) return undefined;
+
+    const delay = Math.max(0, nextResolveAt - Date.now()) + 50;
+    const timeout = setTimeout(() => setClockTick(Date.now()), delay);
+    return () => clearTimeout(timeout);
+  }, [searches]);
+
   useEffect(() => {
     if (!scoutSearchesRef || allPlayers.length === 0) return;
     searches
@@ -428,12 +444,21 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         const scout = DEFAULT_SCOUTS.find(item => item.id === search.scoutId) || scouts[0] || DEFAULT_SCOUTS[0];
         const results = buildResults({ allPlayers, criteria: search.criteria || {}, scout, playerLocks });
         try {
-          await updateDoc(doc(db, `artifacts/${APP_ID}/users/${userId}/scout_searches`, search.id), {
-            status: 'done',
-            results,
-            resultIds: results.map(player => player.Id),
-            resolvedAt: Timestamp.now(),
+          const searchRef = doc(db, `artifacts/${APP_ID}/users/${userId}/scout_searches`, search.id);
+          const didResolve = await runTransaction(db, async (transaction) => {
+            const latest = await transaction.get(searchRef);
+            const latestData = latest.data();
+            const resolvesAt = Number(latestData?.resolvesAtMs) || toMillis(latestData?.resolvesAt);
+            if (!latest.exists() || latestData.status !== 'searching' || resolvesAt > Date.now()) return false;
+            transaction.update(searchRef, {
+              status: 'done',
+              results,
+              resultIds: results.map(player => player.Id),
+              resolvedAt: Timestamp.now(),
+            });
+            return true;
           });
+          if (!didResolve) return;
           addNotification?.({
             id: `scout-${search.id}`,
             category: 'scout',
@@ -447,11 +472,16 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
           resolvingRef.current.delete(search.id);
         }
       });
-  }, [addNotification, allPlayers, db, playerLocks, scoutSearchesRef, searches, scouts, userId]);
+  }, [addNotification, allPlayers, clockTick, db, playerLocks, scoutSearchesRef, searches, scouts, userId]);
 
   const handleCreate = async (event) => {
     event.preventDefault();
-    if (!scoutSearchesRef || isCreating) return;
+    if (!scoutSearchesRef || isCreatingRef.current) return;
+    if (monthlyUsage >= MONTHLY_SEARCH_LIMIT) {
+      showStatusMessage?.('error', 'Ya usaste los 5 scouts disponibles de este mes.');
+      return;
+    }
+
     const scout = scouts.find(item => item.id === selectedScoutId) || scouts[0];
     const stats = [
       criteria.statMin === '' ? null : { key: criteria.statKey, min: Number(criteria.statMin) },
@@ -465,54 +495,81 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       : Number(scout.durationHours || 12) * 60 * 60 * 1000;
     const resolvesAtDate = new Date(createdAtDate.getTime() + durationMs);
 
+    const normalizedCriteria = {
+      positionGroup: criteria.positionGroup,
+      positions: criteria.positions,
+      minAge: criteria.minAge,
+      maxAge: criteria.maxAge,
+      minOvr: criteria.minOvr,
+      maxOvr: criteria.maxOvr,
+      countryId: criteria.countryId,
+      region: criteria.region,
+      attention: criteria.attention,
+      considerBudget: criteria.considerBudget,
+      budgetMax,
+      stats,
+      traits,
+    };
+    const dedupeKey = makeCriteriaFingerprint(scout.id, normalizedCriteria);
+
+    // Evita altas duplicadas por doble clic o búsquedas idénticas en curso
+    const hasActiveDuplicate = searches.some(item => {
+      const pendingUntil = Number(item.resolvesAtMs) || toMillis(item.resolvesAt);
+      return item.dedupeKey === dedupeKey && item.status === 'searching' && pendingUntil > Date.now();
+    });
+    if (hasActiveDuplicate) {
+      showStatusMessage?.('error', 'Ya tenés una búsqueda idéntica en curso.');
+      return;
+    }
+
+    isCreatingRef.current = true;
     setIsCreating(true);
     try {
-      const usageSnap = scoutUsageRef ? await getDoc(scoutUsageRef) : null;
-      const currentUsage = Number(usageSnap?.data()?.count || monthlyUsage || 0);
-      if (currentUsage >= MONTHLY_SEARCH_LIMIT) {
-        showStatusMessage?.('error', 'Ya usaste los 5 scouts disponibles de este mes.');
-        return;
-      }
+      const newSearchRef = doc(scoutSearchesRef);
 
-      await addDoc(scoutSearchesRef, {
-        managerId: userId,
-        scoutId: scout.id,
-        scoutName: scout.name,
-        scoutQuality: scout.quality,
-        createdAt: Timestamp.fromDate(createdAtDate),
-        resolvesAt: Timestamp.fromDate(resolvesAtDate),
-        criteria: {
-          positionGroup: criteria.positionGroup,
-          positions: criteria.positions,
-          minAge: criteria.minAge,
-          maxAge: criteria.maxAge,
-          minOvr: criteria.minOvr,
-          maxOvr: criteria.maxOvr,
-          countryId: criteria.countryId,
-          region: criteria.region,
-          attention: criteria.attention,
-          considerBudget: criteria.considerBudget,
-          budgetMax,
-          stats,
-          traits,
-        },
-        status: 'searching',
-        results: [],
-        resultIds: [],
+      await runTransaction(db, async (transaction) => {
+        const usageSnap = scoutUsageRef ? await transaction.get(scoutUsageRef) : null;
+        const currentUsage = Number(usageSnap?.data()?.count || 0);
+        if (currentUsage >= MONTHLY_SEARCH_LIMIT) {
+          throw new Error('scout-limit-reached');
+        }
+
+        transaction.set(newSearchRef, {
+          managerId: userId,
+          scoutId: scout.id,
+          scoutName: scout.name,
+          scoutQuality: scout.quality,
+          createdAt: Timestamp.fromDate(createdAtDate),
+          resolvesAt: Timestamp.fromDate(resolvesAtDate),
+          resolvesAtMs: resolvesAtDate.getTime(),
+          criteria: normalizedCriteria,
+          dedupeKey,
+          status: 'searching',
+          results: [],
+          resultIds: [],
+        });
+
+        if (scoutUsageRef) {
+          transaction.set(scoutUsageRef, {
+            count: currentUsage + 1,
+            month: monthKey,
+            updatedAt: Timestamp.now(),
+          }, { merge: true });
+        }
       });
-      if (scoutUsageRef) {
-        await setDoc(scoutUsageRef, {
-          count: increment(1),
-          month: monthKey,
-          updatedAt: Timestamp.now(),
-        }, { merge: true });
-      }
       setCriteria(initialCriteria);
       showStatusMessage?.('success', scout.testDurationSeconds ? 'Busqueda scout de prueba creada. Vuelve en 1 segundo.' : `Busqueda scout creada. Vuelve en ${scout.durationHours || 12} horas.`);
     } catch (error) {
       console.error('Error creando busqueda scout:', error);
-      showStatusMessage?.('error', 'No se pudo crear la busqueda scout.');
+      if (error.message === 'scout-limit-reached') {
+        showStatusMessage?.('error', 'Ya usaste los 5 scouts disponibles de este mes.');
+      } else if (error.message === 'scout-search-duplicate') {
+        showStatusMessage?.('error', 'Ya tenés una búsqueda idéntica en curso.');
+      } else {
+        showStatusMessage?.('error', 'No se pudo crear la busqueda scout.');
+      }
     } finally {
+      isCreatingRef.current = false;
       setIsCreating(false);
     }
   };
@@ -549,14 +606,20 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <h3 className="text-sm font-black text-white uppercase">Nueva asignacion</h3>
+              <h3 className="text-sm font-black text-white uppercase">Nueva asignación</h3>
               <p className="text-xs text-gray-500">
                 {selectedScout?.testDurationSeconds ? 'Este ojeador de prueba vuelve en 1 segundo.' : `El resultado se libera cuando termina el trabajo de ${selectedScout?.durationHours || 12} horas.`}
               </p>
             </div>
-            <button data-scout-target="submit" disabled={isCreating} className="min-h-11 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-black transition">
-              {isCreating ? 'Creando...' : 'Enviar scout'}
-            </button>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${
+                monthlyUsage >= MONTHLY_SEARCH_LIMIT
+                  ? 'bg-red-500/10 border-red-500/20 text-red-300'
+                  : 'bg-white/[0.04] border-white/10 text-gray-400'
+              }`}>
+                Cupo: {monthlyUsage}/{MONTHLY_SEARCH_LIMIT}
+              </span>
+            </div>
           </div>
 
           <div data-scout-target="scout-picker" className="rounded-xl border border-white/10 bg-black/20 p-3">
@@ -779,6 +842,33 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 </div>
               ))}
             </div>
+          </div>
+
+          <div data-scout-target="submit" className="pt-2">
+            <button
+              type="submit"
+              disabled={isCreating || monthlyUsage >= MONTHLY_SEARCH_LIMIT}
+              className="w-full min-h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/30 active:scale-[0.99]"
+            >
+              {isCreating ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <span>Creando búsqueda...</span>
+                </>
+              ) : monthlyUsage >= MONTHLY_SEARCH_LIMIT ? (
+                <span>Cupo mensual agotado ({monthlyUsage}/{MONTHLY_SEARCH_LIMIT})</span>
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  <span>Enviar scout</span>
+                </>
+              )}
+            </button>
+            <p className="mt-2 text-center text-xs text-gray-500">
+              {monthlyUsage >= MONTHLY_SEARCH_LIMIT
+                ? 'Ya alcanzaste el límite de 5 búsquedas de este mes.'
+                : `La búsqueda consume 1 de tus ${MONTHLY_SEARCH_LIMIT} asignaciones mensuales (${monthlyUsage}/${MONTHLY_SEARCH_LIMIT} usadas).`}
+            </p>
           </div>
         </form>
 

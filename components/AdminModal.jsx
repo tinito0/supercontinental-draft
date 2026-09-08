@@ -4,7 +4,7 @@ import { onSnapshot, setDoc, deleteDoc, doc, getDocs, query, collection, writeBa
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { DEFAULT_LOGO, DEFAULT_BUDGET, APP_ID, FORMATIONS } from '../utils/constants.js';
+import { DEFAULT_LOGO, DEFAULT_BUDGET, APP_ID, FORMATIONS, DEFAULT_TACTICS } from '../utils/constants.js';
 import { formatPriceShort, formatBudget, formatPrice } from '../utils/helpers.js';
 import { DEFAULT_BROADCAST_OVERLAY } from './BroadcastOverlay.jsx';
 import { TournamentActionButton, TournamentField, TournamentPanel, TournamentSectionTitle, TournamentTabButton, tournamentBackdropClass, tournamentControlClass, tournamentShellClass } from './TournamentUI.jsx';
@@ -103,28 +103,60 @@ const GeneralAdminSection = memo(function GeneralAdminSection({ getMarketStatusD
   };
 
   const handleResetDraft = async () => {
-    if (!window.confirm("¡PELIGRO! Esto resetea la temporada completa: planteles, locks, ofertas, mercado en vivo y formaciones. ¿Continuar?")) return;
+    if (!window.confirm("¡PELIGRO! Esto resetea la temporada completa:\n\n• Borra planteles y carritos de todos los equipos.\n• Borra plantillas, alineaciones, tácticas, dorsales y suplentes.\n• Borra todos los usos y búsquedas del scout.\n• Borra bloqueos de jugadores, ofertas con mensajes, transferencias y noticias.\n• Mantiene intacto el presupuesto actual de cada equipo y el estado del mercado.\n\n¿Estás seguro de continuar?")) return;
     setIsSaving(true);
     try {
-      const [locks, legacyLocks, teams, offers, transfers, sharedFormations] = await Promise.all([
+      const [locks, legacyLocks, teams, offers, transfers, sharedFormations, news] = await Promise.all([
         getDocs(query(getPublicLocksCollectionRef())),
         getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/locks`))),
         getDocs(query(getPublicTeamsCollectionRef())),
         getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/offers`))),
         getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/transfers`))),
         getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/shared_formations`))),
+        getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/news`))),
       ]);
 
       const operations = [];
-      [locks, legacyLocks, offers, transfers, sharedFormations].forEach(snapshot => {
+
+      // Borrar locks, ofertas, transferencias, noticias y formaciones compartidas
+      [locks, legacyLocks, offers, transfers, sharedFormations, news].forEach(snapshot => {
         snapshot.forEach(d => operations.push({ type: 'delete', ref: d.ref }));
       });
 
-      const carts = await Promise.all(teams.docs.map(t => getDocs(collection(db, `artifacts/${APP_ID}/users/${t.id}/cart`))));
-      carts.forEach(c => c.forEach(d => operations.push({ type: 'delete', ref: d.ref })));
+      // Borrar subcolecciones de mensajes de cada oferta
+      const offerMessagesPromises = offers.docs.map(offerDoc =>
+        getDocs(collection(db, `artifacts/${APP_ID}/public/data/offers/${offerDoc.id}/messages`))
+      );
+      const offerMessagesSnapshots = await Promise.all(offerMessagesPromises);
+      offerMessagesSnapshots.forEach(messagesSnap => {
+        messagesSnap.forEach(d => operations.push({ type: 'delete', ref: d.ref }));
+      });
 
-      teams.docs.forEach(t => {
-        const profileRef = doc(db, `artifacts/${APP_ID}/users/${t.id}/profile`, "data");
+      // Recopilar todos los IDs de usuario / equipos únicos
+      const userIds = new Set(teams.docs.map(t => t.id));
+
+      // Para cada usuario: borrar cart, scout_usage, scout_searches
+      const userCollectionsPromises = Array.from(userIds).map(async (uid) => {
+        const [cartSnap, scoutUsageSnap, scoutSearchesSnap] = await Promise.all([
+          getDocs(collection(db, `artifacts/${APP_ID}/users/${uid}/cart`)),
+          getDocs(collection(db, `artifacts/${APP_ID}/users/${uid}/scout_usage`)),
+          getDocs(collection(db, `artifacts/${APP_ID}/users/${uid}/scout_searches`)),
+        ]);
+        return { uid, cartSnap, scoutUsageSnap, scoutSearchesSnap };
+      });
+
+      const userCollections = await Promise.all(userCollectionsPromises);
+
+      userCollections.forEach(({ uid, cartSnap, scoutUsageSnap, scoutSearchesSnap }) => {
+        // Borrar carritos de jugadores
+        cartSnap.forEach(d => operations.push({ type: 'delete', ref: d.ref }));
+        // Borrar usos de scout mensuales
+        scoutUsageSnap.forEach(d => operations.push({ type: 'delete', ref: d.ref }));
+        // Borrar historial y resultados de búsquedas scout
+        scoutSearchesSnap.forEach(d => operations.push({ type: 'delete', ref: d.ref }));
+
+        // Reiniciar plantilla y formación en perfil privado (manteniendo presupuesto)
+        const profileRef = doc(db, `artifacts/${APP_ID}/users/${uid}/profile`, "data");
         operations.push({
           type: 'set',
           ref: profileRef,
@@ -133,14 +165,35 @@ const GeneralAdminSection = memo(function GeneralAdminSection({ getMarketStatusD
             franchisePlayerId: null,
             lineup: {},
             dorsals: {},
-            formation: '4-3-3'
+            formation: '4-3-3',
+            setPieces: {},
+            tactics: DEFAULT_TACTICS,
+            availability: {},
+            matchBench: []
+          },
+          options: { merge: true }
+        });
+
+        // Reiniciar plantilla y formación en equipo público (manteniendo presupuesto)
+        const publicTeamRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, uid);
+        operations.push({
+          type: 'set',
+          ref: publicTeamRef,
+          data: {
+            lineup: {},
+            dorsals: {},
+            formation: '4-3-3',
+            setPieces: {},
+            tactics: DEFAULT_TACTICS,
+            availability: {},
+            matchBench: []
           },
           options: { merge: true }
         });
       });
 
       await commitBatchOperations(db, operations);
-      showStatusMessage('success', `Reset completado. Se limpiaron ${operations.length} registros.`);
+      showStatusMessage('success', `Reset completado con éxito. Se purgaron ${operations.length} registros (plantillas, carritos, scouts, locks y ofertas).`);
     } catch (e) {
       console.error(e);
       showStatusMessage('error', 'Error al resetear temporada.');
@@ -187,10 +240,20 @@ const GeneralAdminSection = memo(function GeneralAdminSection({ getMarketStatusD
       </div>
 
       {/* ZONA DE PELIGRO */}
-      <div className="p-4 bg-red-900/10 rounded-xl border border-red-900/50">
-        <h4 className="text-red-400 font-bold mb-2 flex items-center"><AlertTriangle className="w-4 h-4 mr-2" /> Zona de Peligro</h4>
-        <button onClick={handleResetDraft} disabled={isSaving} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg flex items-center disabled:opacity-50">
-          <RefreshCw className="w-4 h-4 mr-2" /> {isSaving ? 'Reseteando...' : 'Resetear Temporada'}
+      <div className="p-5 bg-red-950/20 rounded-xl border border-red-900/50 shadow-inner">
+        <h4 className="text-red-400 font-black mb-2 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> Zona de Peligro - Reseteo de Temporada
+        </h4>
+        <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+          Esta acción vacía todos los planteles (carritos), plantillas y formaciones (alineación, tácticas, dorsales y banco), borra los usos y búsquedas del scout, y elimina bloqueos de mercado, ofertas activas y transferencias. Conserva los presupuestos de los equipos y el estado del mercado actual.
+        </p>
+        <button
+          onClick={handleResetDraft}
+          disabled={isSaving}
+          className="bg-red-600 hover:bg-red-500 text-white font-black py-2.5 px-5 rounded-lg flex items-center gap-2 disabled:opacity-50 transition shadow-lg shadow-red-950/40"
+        >
+          <RefreshCw className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
+          {isSaving ? 'Reseteando temporada...' : 'Resetear Temporada'}
         </button>
       </div>
     </div>

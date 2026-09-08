@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown, Filter, RotateCcw, Save, Search, SlidersHorizontal, Trash2, X
 } from 'lucide-react';
@@ -135,6 +135,7 @@ export const FiltrosModal = memo(function FiltrosModal({
   const [newFilterName, setNewFilterName] = useState('');
   const [selectedColor, setSelectedColor] = useState('cyan');
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
+  const savingFilterRef = useRef(false);
   const activeFilters = useMemo(() => getActiveFilters(filters), [filters]);
   const visibleActiveFilters = activeFilters.slice(0, 8);
 
@@ -155,7 +156,8 @@ export const FiltrosModal = memo(function FiltrosModal({
   }, [getSavedFiltersCollectionRef, isVisible, userId]);
 
   const handleSaveFilter = async () => {
-    if (!newFilterName.trim() || !userId) return;
+    if (!newFilterName.trim() || !userId || savingFilterRef.current) return;
+    savingFilterRef.current = true;
     try {
       await addDoc(getSavedFiltersCollectionRef(userId), {
         name: newFilterName.trim(),
@@ -168,6 +170,8 @@ export const FiltrosModal = memo(function FiltrosModal({
     } catch (error) {
       console.error(error);
       showStatusMessage('error', 'Error al guardar.');
+    } finally {
+      savingFilterRef.current = false;
     }
   };
 
