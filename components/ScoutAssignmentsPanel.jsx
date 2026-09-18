@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, runTransaction, Timestamp } from 'firebase/firestore';
-import { Clock, HelpCircle, Search, Star, Trash2, UserPlus } from 'lucide-react';
+import { AlertCircle, Clock, HelpCircle, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import { APP_ID, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
 import { formatPriceShort, getFlagUrl, getRegionById } from '../utils/helpers.js';
 
@@ -14,6 +14,30 @@ const DEFAULT_SCOUTS = [
   { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 4, imageUrl: '/scouts/fefe-farfan.png', specialty: 'Elite total', description: 'El mejor ojeador de todos. Tarda mas porque filtra fino y prioriza coincidencias premium.' },
   { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantanea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para testear resultados.' },
 ];
+
+/* ── Posiciones con paleta unificada del mercado ── */
+const POS_COLOR = {
+  DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444',
+  MC: '#22c55e', MCD: '#22c55e', MO: '#22c55e', MI: '#22c55e', MD: '#22c55e',
+  DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6',
+  PT: '#eab308',
+};
+
+/* ── Umbrales dinámicos de color OVR consistentes con el mercado ── */
+const OVR_COLOR_THRESHOLDS = [
+  [90, '#1ec9a4'],
+  [85, '#a0dd00'],
+  [75, '#ffc400'],
+  [65, '#ec7d22'],
+];
+const OVR_COLOR_DEFAULT = '#94a3af';
+
+function getOvrColor(ovr) {
+  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
+    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
+  }
+  return OVR_COLOR_DEFAULT;
+}
 
 const SCOUT_TUTORIAL_STEPS = [
   {
@@ -310,17 +334,17 @@ function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
       )}
       <div className="scout-guide-popover" style={tooltipStyle}>
         <button type="button" onClick={onClose} className="scout-guide-skip">Saltar</button>
-        <div className="text-[10px] font-black uppercase text-emerald-300 mb-2">
+        <div className="text-[10px] font-black uppercase text-[#00b4d8] mb-2 tracking-wider">
           Paso {stepIndex + 1} de {steps.length}
         </div>
         <h3 className="text-base font-black text-white mb-2">{activeStep.title}</h3>
-        <p className="text-sm text-gray-300 leading-relaxed">{activeStep.description}</p>
+        <p className="text-sm text-slate-300 leading-relaxed">{activeStep.description}</p>
         <div className="flex items-center justify-between gap-3 mt-5">
           <button
             type="button"
             onClick={() => setStepIndex(index => Math.max(0, index - 1))}
             disabled={stepIndex === 0}
-            className="min-h-11 px-4 rounded-lg bg-white/[0.06] disabled:opacity-40 text-sm font-black text-white"
+            className="min-h-11 px-4 rounded-xl bg-[#111722] hover:bg-[#161f2e] border border-white/[0.08] disabled:opacity-40 text-sm font-bold text-slate-200 transition"
           >
             Anterior
           </button>
@@ -330,7 +354,7 @@ function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
               if (isLast) onClose();
               else setStepIndex(index => Math.min(steps.length - 1, index + 1));
             }}
-            className="min-h-11 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-black text-white"
+            className="min-h-11 px-5 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] text-sm font-black text-[#030712] transition shadow-md active:scale-95"
           >
             {isLast ? 'Finalizar' : 'Siguiente'}
           </button>
@@ -583,82 +607,100 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
   };
 
   return (
-    <div className="w-full h-full min-h-0 flex flex-col bg-[#0a0a0a]">
-      <div className="px-4 sm:px-6 py-4 border-b border-white/5">
+    <div className="w-full h-full min-h-0 flex flex-col bg-[#06080d] relative overflow-hidden text-slate-200">
+      {/* Sutil halo atmosférico cyan tipo radar */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-72 bg-[radial-gradient(ellipse_at_top,_rgba(0,180,216,0.08)_0%,_transparent_70%)] pointer-events-none z-0" />
+
+      {/* ── HEADER SUPERIOR ── */}
+      <div className="relative z-10 px-4 sm:px-6 py-4 bg-[#0c1017] border-b border-white/[0.08]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-base sm:text-xl font-black text-white flex items-center gap-2">
-              <Search className="w-5 h-5 text-emerald-400" /> Scout
+            <h2 className="text-base sm:text-xl font-black text-white flex items-center gap-2.5">
+              <Search className="w-5 h-5 text-[#00b4d8]" /> Scouting & Red de Ojeadores
             </h2>
-            <p className="text-xs text-gray-500 mt-1">Crea busquedas con cupo mensual y recibi candidatos para fichar.</p>
+            <p className="text-xs text-slate-400 mt-1">Asigna misiones de exploración táctica para descubrir talentos y promesas de fichaje.</p>
           </div>
           <button
             type="button"
             onClick={() => setIsGuideOpen(true)}
-            className="min-h-11 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-gray-300 text-xs font-black flex items-center gap-2"
+            className="min-h-11 px-4 rounded-xl bg-[#111722] hover:bg-[#161f2e] border border-white/[0.08] text-slate-200 text-xs font-bold flex items-center gap-2 transition shadow-sm cursor-pointer"
           >
-            <HelpCircle className="w-4 h-4" /> Ayuda
+            <HelpCircle className="w-4 h-4 text-[#00b4d8]" /> Ayuda
           </button>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-3 sm:px-6 py-4 space-y-4 pb-24">
-        <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
+      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto custom-scrollbar px-3 sm:px-6 py-4 space-y-4 pb-24">
+        <form onSubmit={handleCreate} className="rounded-2xl border border-white/[0.08] bg-[#0c1017] p-4 sm:p-6 space-y-5 shadow-xl backdrop-blur-sm">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <h3 className="text-sm font-black text-white uppercase">Nueva asignación</h3>
-              <p className="text-xs text-gray-500">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">Nueva asignación de exploración</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
                 {selectedScout?.testDurationSeconds ? 'Este ojeador de prueba vuelve en 1 segundo.' : `El resultado se libera cuando termina el trabajo de ${selectedScout?.durationHours || 12} horas.`}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${
                 monthlyUsage >= MONTHLY_SEARCH_LIMIT
-                  ? 'bg-red-500/10 border-red-500/20 text-red-300'
-                  : 'bg-white/[0.04] border-white/10 text-gray-400'
+                  ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                  : 'bg-[#111722] border-white/[0.08] text-slate-300'
               }`}>
-                Cupo: {monthlyUsage}/{MONTHLY_SEARCH_LIMIT}
+                Cupo mensual: <strong className="text-white">{monthlyUsage}</strong>/{MONTHLY_SEARCH_LIMIT}
               </span>
             </div>
           </div>
 
-          <div data-scout-target="scout-picker" className="rounded-xl border border-white/10 bg-black/20 p-3">
+          {/* Ojeadores */}
+          <div data-scout-target="scout-picker" className="rounded-xl border border-white/[0.08] bg-[#111722]/50 p-4">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
               <div>
-                <p className="text-xs font-black text-gray-300 uppercase">Ojeador</p>
-                <p className="text-xs text-gray-600">Cupo mensual: {monthlyUsage}/{MONTHLY_SEARCH_LIMIT}</p>
+                <p className="text-xs font-black text-slate-300 uppercase tracking-wider">Seleccionar Ojeador</p>
+                <p className="text-xs text-slate-400">Cupo mensual disponible: {MONTHLY_SEARCH_LIMIT - monthlyUsage} asignaciones restantes</p>
               </div>
               {monthlyUsage >= MONTHLY_SEARCH_LIMIT && (
-                <span className="text-xs font-black text-red-300 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
+                <span className="text-xs font-black text-red-300 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
                   Cupo agotado
                 </span>
               )}
             </div>
+
+            {monthlyUsage >= MONTHLY_SEARCH_LIMIT && (
+              <div className="mb-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3 flex items-center gap-2.5 text-xs text-red-200">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>Usaste los 5 scouts disponibles de este mes. El cupo se restablece automáticamente el 1° del próximo mes.</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
               {scouts.map(scout => {
                 const selected = selectedScoutId === scout.id;
+                const isQuotaFull = monthlyUsage >= MONTHLY_SEARCH_LIMIT;
                 return (
                   <button
                     key={scout.id}
                     type="button"
+                    disabled={isQuotaFull}
                     onClick={() => setSelectedScoutId(scout.id)}
-                    className={`min-h-[96px] rounded-xl border p-3 text-left transition flex gap-3 overflow-hidden ${
-                      selected
-                        ? 'bg-emerald-500/15 border-emerald-400 ring-2 ring-emerald-400/20'
-                        : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20'
+                    className={`min-h-[96px] rounded-xl border p-3.5 text-left transition flex gap-3 overflow-hidden cursor-pointer ${
+                      isQuotaFull
+                        ? 'opacity-40 cursor-not-allowed bg-[#111722]/40 border-white/5'
+                        : selected
+                        ? 'bg-[#00b4d8]/10 border-[#00b4d8] ring-2 ring-[#00b4d8]/30 shadow-[0_0_15px_rgba(0,180,216,0.15)]'
+                        : 'bg-[#111722] border-white/[0.08] hover:bg-[#161f2e] hover:border-white/[0.18]'
                     }`}
                   >
-                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-900 border border-white/10 flex-shrink-0">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-black/60 border border-white/10 flex-shrink-0">
                       {scout.imageUrl ? (
                         <img src={scout.imageUrl} alt={scout.name} className="w-full h-full object-cover object-top" onError={e => { e.currentTarget.style.display = 'none'; }} />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-sm font-black text-emerald-300">{scout.name.slice(0, 2).toUpperCase()}</div>
+                        <div className="w-full h-full flex items-center justify-center text-sm font-black text-[#00b4d8]">{scout.name.slice(0, 2).toUpperCase()}</div>
                       )}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-black text-white truncate">{scout.name}</p>
-                      <p className="text-[11px] font-bold text-emerald-300">Q{scout.quality} - {scout.testDurationSeconds ? '1 seg' : `${scout.durationHours} h`}</p>
-                      <p className="text-[11px] text-gray-500 line-clamp-2">{scout.specialty}</p>
+                      <p className="text-[11px] font-black text-[#00b4d8] mt-0.5">Q{scout.quality} • {scout.testDurationSeconds ? '1 seg' : `${scout.durationHours} h`}</p>
+                      <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{scout.specialty}</p>
                     </div>
                   </button>
                 );
@@ -667,45 +709,50 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label data-scout-target="position" className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Posicion</span>
+            <label data-scout-target="position" className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Zona del campo</span>
               <select
                 value={criteria.positionGroup}
                 onChange={e => setCriteria(prev => ({ ...prev, positionGroup: e.target.value, positions: [] }))}
-                className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white"
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
               >
-                <option value="">Cualquier posicion</option>
+                <option value="">Cualquier posición</option>
                 {Object.keys(positionGroups).map(group => <option key={group} value={group}>{group}</option>)}
               </select>
             </label>
-            <label data-scout-target="attention" className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Aspectos a prestar atencion</span>
-              <select value={criteria.attention} onChange={e => setCriteria(prev => ({ ...prev, attention: e.target.value }))} className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white">
+            <label data-scout-target="attention" className="space-y-1.5 md:col-span-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Aspectos a priorizar</span>
+              <select
+                value={criteria.attention}
+                onChange={e => setCriteria(prev => ({ ...prev, attention: e.target.value }))}
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
+              >
                 {attentionOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
             </label>
           </div>
 
-          <div data-scout-target="specific-position" className="rounded-xl border border-white/10 bg-black/20 p-3">
+          {/* Posición específica */}
+          <div data-scout-target="specific-position" className="rounded-xl border border-white/[0.08] bg-[#111722]/50 p-4">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
               <div>
-                <p className="text-xs font-black text-gray-300 uppercase">Posicion especifica</p>
-              <p className="text-xs text-gray-600">
-                {criteria.positionGroup ? 'Ninguna = se buscan jugadores aptos para toda la linea elegida.' : 'Cualquier posicion = no se filtra por zona del campo.'}
-              </p>
+                <p className="text-xs font-black text-slate-300 uppercase tracking-wider">Posición específica</p>
+                <p className="text-xs text-slate-400">
+                  {criteria.positionGroup ? 'Ninguna = se buscan jugadores aptos para toda la línea elegida.' : 'Cualquier posición = no se filtra por zona del campo.'}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setCriteria(prev => ({ ...prev, positions: [] }))}
-                className="min-h-11 px-3 rounded-lg text-xs font-black text-gray-400 hover:text-white hover:bg-white/[0.06]"
+                className="min-h-10 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white hover:bg-white/[0.06] transition cursor-pointer"
               >
-                Ninguna
+                Restablecer
               </button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
               {specificPositions.length === 0 && (
-                <div className="col-span-full min-h-11 rounded-lg border border-dashed border-white/10 flex items-center justify-center text-xs font-bold text-gray-600">
-                  Sin posicion especifica
+                <div className="col-span-full min-h-11 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-xs font-medium text-slate-400 px-3 text-center">
+                  {criteria.positionGroup ? 'No hay puestos específicos para esta línea' : 'Elegí una posición arriba (Arquero, Defensa, Medio o Delantero) para filtrar por puestos'}
                 </div>
               )}
               {specificPositions.map(pos => {
@@ -718,10 +765,10 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                       ...prev,
                       positions: selected ? prev.positions.filter(item => item !== pos) : [...prev.positions, pos],
                     }))}
-                    className={`min-h-11 rounded-lg border text-sm font-black transition ${
+                    className={`min-h-11 rounded-xl border text-sm font-black transition cursor-pointer ${
                       selected
-                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200'
-                        : 'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                        ? 'bg-[#00b4d8] border-[#00b4d8] text-[#030712] shadow-sm'
+                        : 'bg-[#111722] border-white/[0.08] text-slate-300 hover:text-white hover:bg-[#161f2e]'
                     }`}
                   >
                     {pos}
@@ -731,44 +778,65 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
             </div>
           </div>
 
+          {/* Área geográfica y presupuesto */}
           <div data-scout-target="area" className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label data-scout-target="budget" className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Pais</span>
-              <select value={criteria.countryId} onChange={e => setCriteria(prev => ({ ...prev, countryId: e.target.value }))} className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white">
+            <label data-scout-target="budget" className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">País</span>
+              <select
+                value={criteria.countryId}
+                onChange={e => setCriteria(prev => ({ ...prev, countryId: e.target.value }))}
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
+              >
                 <option value="">Cualquiera</option>
                 {sortedCountries.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
               </select>
             </label>
-            <label className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Region</span>
-              <select value={criteria.region} onChange={e => setCriteria(prev => ({ ...prev, region: e.target.value }))} className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white">
+            <label className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Región</span>
+              <select
+                value={criteria.region}
+                onChange={e => setCriteria(prev => ({ ...prev, region: e.target.value }))}
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
+              >
                 <option value="">Cualquiera</option>
                 {REGIONES.map(region => <option key={region} value={region}>{region}</option>)}
               </select>
             </label>
-            <label className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Presupuesto</span>
-              <select value={criteria.considerBudget} onChange={e => setCriteria(prev => ({ ...prev, considerBudget: e.target.value }))} className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white">
-                <option value="considerar">Considerar</option>
-                <option value="ignorar">Ignorar</option>
+            <label className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Presupuesto</span>
+              <select
+                value={criteria.considerBudget}
+                onChange={e => setCriteria(prev => ({ ...prev, considerBudget: e.target.value }))}
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
+              >
+                <option value="considerar">Considerar disponibles</option>
+                <option value="ignorar">Ignorar límite</option>
               </select>
             </label>
           </div>
 
+          {/* Atributos y rangos */}
           <div data-scout-target="attributes" className="grid grid-cols-2 md:grid-cols-7 gap-3">
             {[
-              ['minAge', 'Edad min'],
-              ['maxAge', 'Edad max'],
-              ['minOvr', 'OVR min'],
-              ['maxOvr', 'OVR max'],
+              ['minAge', 'Edad mín'],
+              ['maxAge', 'Edad máx'],
+              ['minOvr', 'OVR mín'],
+              ['maxOvr', 'OVR máx'],
             ].map(([key, label]) => (
-              <label key={key} className="space-y-1">
-                <span className="text-xs font-bold text-gray-500">{label}</span>
-                <input type="number" min="0" max="99" value={criteria[key]} onChange={e => setCriteria(prev => ({ ...prev, [key]: e.target.value }))} className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white" />
+              <label key={key} className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="99"
+                  value={criteria[key]}
+                  onChange={e => setCriteria(prev => ({ ...prev, [key]: e.target.value }))}
+                  className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
+                />
               </label>
             ))}
-            <label className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Presup. max</span>
+            <label className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Presup. máx</span>
               <input
                 type="number"
                 min="0"
@@ -777,17 +845,21 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 value={criteria.budgetMax}
                 onChange={e => setCriteria(prev => ({ ...prev, budgetMax: e.target.value }))}
                 disabled={criteria.considerBudget === 'ignorar'}
-                className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white disabled:opacity-40"
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors disabled:opacity-40"
               />
             </label>
-            <label className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Atributo 1</span>
-              <select value={criteria.statKey} onChange={e => setCriteria(prev => ({ ...prev, statKey: e.target.value }))} className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white">
+            <label className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Atributo 1</span>
+              <select
+                value={criteria.statKey}
+                onChange={e => setCriteria(prev => ({ ...prev, statKey: e.target.value }))}
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
+              >
                 {statOptions.map(key => <option key={key} value={key}>{STAT_NAMES_MAP[key] || key}</option>)}
               </select>
             </label>
-            <label className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Min 1</span>
+            <label className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mín 1</span>
               <input
                 type="number"
                 min="0"
@@ -795,21 +867,25 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 placeholder="Ej. 80"
                 value={criteria.statMin}
                 onChange={e => setCriteria(prev => ({ ...prev, statMin: e.target.value }))}
-                className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white"
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
               />
             </label>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Atributo 2 opcional</span>
-              <select value={criteria.statKey2} onChange={e => setCriteria(prev => ({ ...prev, statKey2: e.target.value, statMin2: e.target.value ? prev.statMin2 : '' }))} className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white">
+            <label className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Atributo 2 opcional</span>
+              <select
+                value={criteria.statKey2}
+                onChange={e => setCriteria(prev => ({ ...prev, statKey2: e.target.value, statMin2: e.target.value ? prev.statMin2 : '' }))}
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
+              >
                 <option value="">Sin segundo atributo</option>
                 {statOptions.filter(key => key !== criteria.statKey).map(key => <option key={key} value={key}>{STAT_NAMES_MAP[key] || key}</option>)}
               </select>
             </label>
-            <label className="space-y-1">
-              <span className="text-xs font-bold text-gray-500">Min 2</span>
+            <label className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mín 2</span>
               <input
                 type="number"
                 min="0"
@@ -818,53 +894,59 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 value={criteria.statMin2}
                 onChange={e => setCriteria(prev => ({ ...prev, statMin2: e.target.value }))}
                 disabled={!criteria.statKey2}
-                className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white disabled:opacity-40"
+                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors disabled:opacity-40"
               />
             </label>
           </div>
 
-          <label className="block space-y-1">
-            <span className="text-xs font-bold text-gray-500">Habilidad especial</span>
-            <select value={criteria.traitKey} onChange={e => setCriteria(prev => ({ ...prev, traitKey: e.target.value }))} className="w-full min-h-11 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white">
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Habilidad especial o rasgo</span>
+            <select
+              value={criteria.traitKey}
+              onChange={e => setCriteria(prev => ({ ...prev, traitKey: e.target.value }))}
+              className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
+            >
               <option value="">Sin habilidad puntual</option>
               {Object.entries(PLAYER_SKILLS_MAP).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
           </label>
 
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-100/80">
-            <p className="font-black text-emerald-200 mb-1">Diferencias entre ojeadores</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {/* Comparativa informativa de ojeadores */}
+          <div className="rounded-xl border border-[#00b4d8]/20 bg-[#00b4d8]/5 p-4 text-xs text-slate-300">
+            <p className="font-black text-[#00b4d8] uppercase tracking-wider mb-2">Especialidades de la red de ojeadores</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               {scouts.map(scout => (
-                <div key={scout.id} className="rounded-lg bg-black/20 border border-white/10 p-2">
-                  <p className="font-black text-white">{scout.name} - Q{scout.quality}</p>
-                  <p className="text-emerald-300">{scout.specialty}</p>
-                  <p className="text-gray-400 mt-1">{scout.description || 'Mayor calidad significa menos variacion y mejores coincidencias.'}</p>
+                <div key={scout.id} className="rounded-xl bg-[#0c1017] border border-white/[0.08] p-3 shadow-sm">
+                  <p className="font-black text-white">{scout.name} • <span className="text-[#00b4d8]">Q{scout.quality}</span></p>
+                  <p className="text-emerald-400 font-bold mt-0.5">{scout.specialty}</p>
+                  <p className="text-slate-400 mt-1 leading-relaxed">{scout.description || 'Mayor calidad significa menos variación y mejores coincidencias.'}</p>
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Botón de Enviar Scout */}
           <div data-scout-target="submit" className="pt-2">
             <button
               type="submit"
               disabled={isCreating || monthlyUsage >= MONTHLY_SEARCH_LIMIT}
-              className="w-full min-h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/30 active:scale-[0.99]"
+              className="w-full min-h-12 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] disabled:opacity-50 disabled:cursor-not-allowed text-[#030712] text-sm font-black uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40 active:scale-[0.99] cursor-pointer"
             >
               {isCreating ? (
                 <>
-                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  <span>Creando búsqueda...</span>
+                  <div className="w-4 h-4 rounded-full border-2 border-black/30 border-t-black animate-spin" />
+                  <span>Asignando misión de scout...</span>
                 </>
               ) : monthlyUsage >= MONTHLY_SEARCH_LIMIT ? (
                 <span>Cupo mensual agotado ({monthlyUsage}/{MONTHLY_SEARCH_LIMIT})</span>
               ) : (
                 <>
                   <Search className="w-4 h-4" />
-                  <span>Enviar scout</span>
+                  <span>Enviar asignación de scout</span>
                 </>
               )}
             </button>
-            <p className="mt-2 text-center text-xs text-gray-500">
+            <p className="mt-2 text-center text-xs text-slate-500 font-medium">
               {monthlyUsage >= MONTHLY_SEARCH_LIMIT
                 ? 'Ya alcanzaste el límite de 5 búsquedas de este mes.'
                 : `La búsqueda consume 1 de tus ${MONTHLY_SEARCH_LIMIT} asignaciones mensuales (${monthlyUsage}/${MONTHLY_SEARCH_LIMIT} usadas).`}
@@ -872,28 +954,39 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
           </div>
         </form>
 
-        <div className="space-y-3">
+        {/* Listado de Búsquedas Activas */}
+        <div className="space-y-4">
           {isLoading ? (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6 flex items-center gap-3 text-gray-400 text-sm font-bold">
-              <div className="w-5 h-5 rounded-full border-2 border-emerald-500/30 border-t-emerald-400 animate-spin" />
-              Cargando busquedas scout...
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c1017] p-8 flex items-center justify-center gap-3 text-slate-300 text-sm font-bold shadow-md">
+              <div className="w-5 h-5 rounded-full border-2 border-[#00b4d8]/30 border-t-[#00b4d8] animate-spin" />
+              <span>Cargando búsquedas de scout en curso...</span>
             </div>
           ) : searches.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/10 p-8 text-center">
-              <Search className="w-10 h-10 mx-auto text-gray-700 mb-3" />
-              <p className="text-sm text-gray-500 font-bold">Todavia no mandaste ningun scout.</p>
+            <div className="rounded-2xl border border-dashed border-white/10 bg-[#0c1017] p-10 text-center flex flex-col items-center justify-center">
+              <Search className="w-10 h-10 mx-auto text-slate-600 mb-3" />
+              <p className="text-base font-bold text-slate-300">Todavía no mandaste ningún scout.</p>
+              <p className="text-xs text-slate-500 mt-1">Configurá los filtros arriba y enviá a un ojeador a explorar talentos.</p>
             </div>
           ) : searches.map(search => (
-            <div key={search.id} className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
-              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5">
+            <div key={search.id} className="rounded-2xl border border-white/[0.08] bg-[#0c1017] overflow-hidden shadow-md">
+              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] bg-[#111722]/80">
                 <div>
-                  <p className="text-sm font-black text-white">{search.scoutName || 'Scout'} <span className="text-emerald-400">Q{search.scoutQuality || '-'}</span></p>
-                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                    <Clock className="w-3 h-3" /> {search.status === 'searching' ? getTimeLeft(search.resolvesAt) : search.status === 'done' ? 'Resultados listos' : 'Descartada'}
+                  <p className="text-sm font-black text-white flex items-center gap-2">
+                    {search.scoutName || 'Scout'}
+                    <span className="text-[#00b4d8] font-bold px-2 py-0.5 bg-[#00b4d8]/10 rounded-md text-xs border border-[#00b4d8]/20">
+                      Q{search.scoutQuality || '-'}
+                    </span>
+                  </p>
+                  <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
+                    <Clock className="w-3.5 h-3.5 text-[#00b4d8]" />
+                    {search.status === 'searching' ? getTimeLeft(search.resolvesAt) : search.status === 'done' ? 'Resultados listos para evaluar' : 'Descartada'}
                   </p>
                 </div>
                 {search.status !== 'dismissed' && (
-                  <button onClick={() => dismissSearch(search.id)} className="min-h-11 px-3 rounded-lg text-xs font-black text-red-300 hover:bg-red-500/10 flex items-center gap-2">
+                  <button
+                    onClick={() => dismissSearch(search.id)}
+                    className="min-h-10 px-3.5 rounded-xl text-xs font-black text-red-400 hover:bg-red-500/15 border border-transparent hover:border-red-500/25 transition flex items-center gap-1.5 cursor-pointer"
+                  >
                     <Trash2 className="w-4 h-4" /> Descartar
                   </button>
                 )}
@@ -903,31 +996,75 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
                   {search.results.map(player => {
                     const isWatchlisted = wishlistSet?.has(player.Id);
+                    const posColor = POS_COLOR[player.POS_NOMBRE] || '#94a3b8';
+                    const ovr = player.OVR_CALCULADO || 0;
+                    const ovrColor = getOvrColor(ovr);
+
                     return (
-                      <div key={player.Id} className="rounded-xl border border-white/10 bg-black/25 p-3">
-                        <div className="flex items-center gap-3">
-                          <img src={`/fotos_jugadores/${player.Id}.webp`} alt={player.Name} className="w-12 h-12 rounded-lg object-cover bg-gray-900" onError={e => { e.target.src = `https://placehold.co/48x48/111/333?text=${player.Name?.[0] || '?'}`; }} />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-black text-white truncate">{player.Name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200">{player.POS_NOMBRE}</span>
-                              <img src={getFlagUrl(player.Country1)} alt="" className="w-4 h-3 rounded-sm" onError={e => { e.target.style.display = 'none'; }} />
-                              <span className="text-xs text-gray-500">{player.Age} anos</span>
+                      <div
+                        key={player.Id}
+                        className="rounded-xl border border-white/[0.08] bg-[#111722]/70 hover:bg-[#161f2e] hover:border-[#00b4d8]/40 p-4 transition-all duration-200 shadow-sm group flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={`/fotos_jugadores/${player.Id}.webp`}
+                              alt={player.Name}
+                              className="w-12 h-12 rounded-xl object-cover bg-black/60 border border-white/10 flex-shrink-0"
+                              onError={e => {
+                                e.target.onerror = null;
+                                e.target.src = `https://placehold.co/48x48/111/444?text=${player.Name?.[0] || '?'}`;
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-black text-white group-hover:text-[#00b4d8] transition truncate">
+                                {player.Name}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span
+                                  className="text-[9px] font-black text-white px-1.5 py-0.5 rounded"
+                                  style={{ backgroundColor: posColor }}
+                                >
+                                  {player.POS_NOMBRE}
+                                </span>
+                                <img
+                                  src={getFlagUrl(player.Country1)}
+                                  alt=""
+                                  className="w-4 h-3 rounded-[2px] opacity-80"
+                                  onError={e => { e.target.style.display = 'none'; }}
+                                />
+                                <span className="text-xs text-slate-400 font-medium">{player.Age} años</span>
+                              </div>
                             </div>
+                            <span
+                              className="text-sm font-black px-2 py-0.5 rounded-md flex-shrink-0"
+                              style={{ color: ovrColor, backgroundColor: 'rgba(255,255,255,0.04)' }}
+                            >
+                              {ovr}
+                            </span>
                           </div>
-                          <div className="w-10 h-10 rounded-full bg-emerald-500 text-black flex items-center justify-center font-black">{player.OVR_CALCULADO}</div>
+
+                          <div className="mt-3.5 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs font-semibold">
+                            <span className="text-slate-400">Vel <strong className="text-white font-mono">{player.Speed || '-'}</strong></span>
+                            <span className="text-slate-400">Fin <strong className="text-white font-mono">{player.Finishing || '-'}</strong></span>
+                            <span className="text-emerald-400 font-black">{formatPriceShort(player.Precio)}</span>
+                          </div>
                         </div>
-                        <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
-                          <span>Vel {player.Speed || '-'}</span>
-                          <span>Fin {player.Finishing || '-'}</span>
-                          <span>{formatPriceShort(player.Precio)}</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 mt-3">
-                          <button disabled={isWatchlisted} onClick={() => onAddToWatchlist(player.Id)} className="min-h-11 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-50 text-xs font-black text-white flex items-center justify-center gap-1">
-                            <Star className="w-4 h-4" /> {isWatchlisted ? 'En watchlist' : 'Watchlist'}
+
+                        <div className="grid grid-cols-2 gap-2 mt-4 pt-2">
+                          <button
+                            disabled={isWatchlisted}
+                            onClick={() => onAddToWatchlist(player.Id)}
+                            className="min-h-10 rounded-xl bg-[#0c1017] hover:bg-black/60 border border-white/[0.08] disabled:opacity-50 text-xs font-bold text-yellow-400 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Star className="w-3.5 h-3.5" fill={isWatchlisted ? 'currentColor' : 'none'} />
+                            {isWatchlisted ? 'En watchlist' : 'Watchlist'}
                           </button>
-                          <button onClick={() => onPlayerClick(player)} className="min-h-11 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-black text-white flex items-center justify-center gap-1">
-                            <UserPlus className="w-4 h-4" /> Negociar
+                          <button
+                            onClick={() => onPlayerClick(player)}
+                            className="min-h-10 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] text-[#030712] text-xs font-black flex items-center justify-center gap-1.5 transition shadow-sm active:scale-95 cursor-pointer"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" /> Negociar
                           </button>
                         </div>
                       </div>

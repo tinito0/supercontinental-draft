@@ -23,11 +23,38 @@ textarea,
   touch-action: manipulation;
 }
 
+:root {
+  --app-bg: #f8fafc;
+  --app-surface: #ffffff;
+  --app-surface-elevated: #f1f5f9;
+  --app-border: #e2e8f0;
+  --app-border-hover: #cbd5e1;
+  --app-accent: #0284c7;
+  --app-accent-hover: #0369a1;
+  --app-text-primary: #0f172a;
+  --app-text-secondary: #475569;
+  --app-text-muted: #64748b;
+}
+
+.dark {
+  --app-bg: #06080d;
+  --app-surface: #0c1017;
+  --app-surface-elevated: #111722;
+  --app-border: rgba(255, 255, 255, 0.07);
+  --app-border-hover: rgba(255, 255, 255, 0.18);
+  --app-accent: #00b4d8;
+  --app-accent-hover: #38bdf8;
+  --app-text-primary: #f8fafc;
+  --app-text-secondary: #94a3b8;
+  --app-text-muted: #64748b;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #e0e0e0;
+  color: var(--app-text-primary);
   line-height: 1.6;
-  background-color: #0f0f0f;
+  background-color: var(--app-bg);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* --- Paleta de Colores para Estadísticas (Píldoras) --- */
@@ -266,7 +293,8 @@ body {
 
 /* Desktop: inline sidebar (default) */
 .sidebar {
-  background: #0a0a0a;
+  background: var(--app-surface, #06080d);
+  border-right: 1px solid var(--app-border, rgba(255, 255, 255, 0.07));
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -276,13 +304,13 @@ body {
   width: 0;
   min-width: 0;
   box-shadow: none;
-  transition: width 280ms ease-in-out, min-width 280ms ease-in-out;
+  transition: width 280ms ease-in-out, min-width 280ms ease-in-out, background-color 200ms ease;
 }
 
 .sidebar--open {
   width: 224px;
   min-width: 224px;
-  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.04);
+  box-shadow: 1px 0 0 var(--app-border, rgba(255, 255, 255, 0.07));
 }
 
 /* Hide X button on desktop */
@@ -945,11 +973,11 @@ body {
 .scout-guide-ring {
   position: fixed;
   z-index: 121;
-  border: 2px solid rgba(52, 211, 153, 0.95);
+  border: 2px solid rgba(0, 180, 216, 0.95);
   border-radius: 12px;
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.02),
-    0 0 28px rgba(52, 211, 153, 0.34);
+    0 0 28px rgba(0, 180, 216, 0.34);
   pointer-events: none;
   transition: left 180ms ease, top 180ms ease, width 180ms ease, height 180ms ease;
 }
@@ -958,11 +986,11 @@ body {
   position: fixed;
   z-index: 122;
   max-width: min(340px, calc(100vw - 24px));
-  border: 1px solid rgba(52, 211, 153, 0.28);
+  border: 1px solid rgba(0, 180, 216, 0.28);
   border-radius: 14px;
-  background: rgba(10, 10, 10, 0.96);
+  background: rgba(12, 16, 23, 0.96);
   padding: 16px;
-  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(14px);
   animation: scoutHelpIn 180ms ease-out both;
 }

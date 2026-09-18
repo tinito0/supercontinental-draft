@@ -30,15 +30,18 @@ const POSITIONS_LAYOUT = [
 const PosicionHeatmap = memo(function PosicionHeatmap({ player }) {
   return (
     <div className="h-full flex flex-col">
-      <h3 className="text-sm font-black text-gray-400 tracking-widest uppercase mb-4">Posiciones</h3>
-      <div className="flex-grow bg-[#0a0a0a]/50 rounded-lg p-3 flex items-center justify-center min-h-[220px] shadow-inner">
+      <div className="flex items-center justify-between mb-2.5">
+        <h3 className="text-xs font-semibold text-slate-300">Mapa de posiciones</h3>
+        <span className="text-xs text-slate-500 font-medium">Aptitud en campo</span>
+      </div>
+      <div className="flex-grow bg-[#0a0e16] rounded-xl p-3 flex items-center justify-center min-h-[220px] border border-slate-800/80">
         {/* 3-column × 7-row soccer-pitch grid */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
             gridTemplateRows: 'repeat(7, 1fr)',
-            gap: '4px',
+            gap: '5px',
             padding: '8px',
             width: '100%',
             maxWidth: '160px',
@@ -58,7 +61,7 @@ const PosicionHeatmap = memo(function PosicionHeatmap({ player }) {
                   backgroundColor: bgColor,
                   color: textColor,
                 }}
-                className="w-8 h-8 flex items-center justify-center rounded text-[10px] font-bold shadow-sm transition-transform hover:scale-110 cursor-default mx-auto"
+                className="w-8 h-8 flex items-center justify-center rounded text-xs font-bold shadow-xs mx-auto"
                 title={`Aptitud ${pos}: ${aptValue || 'N/A'}`}
               >
                 {pos}
@@ -74,31 +77,29 @@ const PosicionHeatmap = memo(function PosicionHeatmap({ player }) {
 const RadarChart = memo(function RadarChart({ player, isGK }) {
 
   const { data, options } = useMemo(() => {
-    let labels, dataValues;
+    const rawLabels = isGK
+      ? ['SHO', 'PAS', 'STR', 'GK', 'SPD', 'DRI']
+      : ['SHO', 'PAS', 'STR', 'DEF', 'SPD', 'DRI'];
 
-    if (isGK) {
-      // Arqueros: mismo hexágono que jugadores de campo, pero GK reemplaza a DEF
-      labels = ['SHO', 'PAS', 'STR', 'GK', 'SPD', 'DRI'];
-      dataValues = [
-        player.STAT_SHO,
-        player.STAT_PAS,
-        player.STAT_STR,
-        player.STAT_GK,
-        player.STAT_SPD,
-        player.STAT_DRI,
-      ];
-    } else {
-      // Campo: SHO, PAS, STR, DEF, SPD, DRI (orden horario del hexágono PES)
-      labels = ['SHO', 'PAS', 'STR', 'DEF', 'SPD', 'DRI'];
-      dataValues = [
-        player.STAT_SHO,
-        player.STAT_PAS,
-        player.STAT_STR,
-        player.STAT_DEF,
-        player.STAT_SPD,
-        player.STAT_DRI,
-      ];
-    }
+    const dataValues = isGK
+      ? [
+          player.STAT_SHO,
+          player.STAT_PAS,
+          player.STAT_STR,
+          player.STAT_GK,
+          player.STAT_SPD,
+          player.STAT_DRI,
+        ]
+      : [
+          player.STAT_SHO,
+          player.STAT_PAS,
+          player.STAT_STR,
+          player.STAT_DEF,
+          player.STAT_SPD,
+          player.STAT_DRI,
+        ];
+
+    const labels = rawLabels.map((l, i) => `${l} ${dataValues[i] ?? 0}`);
 
     const data = {
       labels: labels,
@@ -107,34 +108,36 @@ const RadarChart = memo(function RadarChart({ player, isGK }) {
           label: 'Habilidad',
           data: dataValues,
           fill: true,
-          backgroundColor: 'rgba(0, 200, 255, 0.15)',
-          borderColor: 'rgba(0, 200, 255, 0.8)',
-          pointBackgroundColor: 'rgba(0, 200, 255, 0.8)',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(0, 200, 255, 0.8)',
+          backgroundColor: 'rgba(0, 180, 216, 0.22)',
+          borderColor: '#00b4d8',
+          pointBackgroundColor: '#00b4d8',
+          pointBorderColor: '#ffffff',
+          pointHoverBackgroundColor: '#ffffff',
+          pointHoverBorderColor: '#00b4d8',
           borderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6,
+          pointRadius: 3.5,
+          pointHoverRadius: 5,
         },
       ],
     };
 
     const options = {
-      responsive: false,
+      responsive: true,
       maintainAspectRatio: true,
       scales: {
         r: {
-          min: 0,
+          min: 35,
           max: 100,
-          ticks: { display: false },
+          ticks: {
+            display: false,
+          },
           pointLabels: {
-            font: { size: 12 },
-            color: "rgba(255,255,255,0.85)",
+            font: { size: 10, weight: '600' },
+            color: "rgba(226, 232, 240, 0.85)",
             backdropColor: 'transparent',
           },
-          grid: { color: "rgba(255,255,255,0.1)", lineWidth: 1 },
-          angleLines: { color: "rgba(255,255,255,0.1)", lineWidth: 1 }
+          grid: { color: "rgba(255, 255, 255, 0.08)", lineWidth: 1 },
+          angleLines: { color: "rgba(255, 255, 255, 0.08)", lineWidth: 1 }
         }
       },
       plugins: { legend: { display: false } }
@@ -144,9 +147,14 @@ const RadarChart = memo(function RadarChart({ player, isGK }) {
   }, [player, isGK]);
 
   return (
-    <div className="flex flex-col items-center justify-center pt-2 pb-4">
-      <h3 className="text-[10px] font-bold text-gray-400 text-center mb-2 uppercase tracking-widest">Stats</h3>
-      <Radar data={data} options={options} width={260} height={260} />
+    <div className="flex flex-col items-center justify-center w-full pt-1 pb-1">
+      <div className="w-full flex items-center justify-between mb-2">
+        <h3 className="text-xs font-semibold text-slate-300">Perfil de atributos</h3>
+        <span className="text-xs text-slate-500 font-medium">Hexágono</span>
+      </div>
+      <div className="relative w-full h-[245px] flex items-center justify-center">
+        <Radar data={data} options={options} />
+      </div>
     </div>
   );
 });
@@ -278,32 +286,31 @@ const CelebrationPopup = memo(function CelebrationPopup({ player, onDismiss }) {
 
 const StatSection = memo(function StatSection({ title, statKeys, player }) {
   return (
-    <div className="stat-section p-5 rounded-2xl bg-[#16161a] border border-gray-800 shadow-xl transition-all duration-300 hover:border-gray-600">
-      <h4 className="text-xs font-black text-gray-400 tracking-wider uppercase mb-4 pb-3 border-b border-gray-800">
+    <div className="p-4 sm:p-5 rounded-2xl bg-[#111722] border border-white/[0.08]">
+      <h4 className="text-sm font-bold text-white tracking-wide uppercase mb-3 pb-2 border-b border-white/[0.08]">
         {title}
       </h4>
-      <div className="space-y-2">
+      <div className="space-y-1">
         {statKeys.map(key => {
           const value = player[key] || 0;
           let colorClass = '';
 
-          // --- LÓGICA ESPECIAL PARA PIE DÉBIL (Escala 1-4) ---
           if (key === 'WeakFootAcc' || key === 'WeakFootUsage') {
             const valNum = parseInt(value, 10);
-            if (valNum === 4) colorClass = 'stat-c-90';       // 4 = Excelente (Verde)
-            else if (valNum === 3) colorClass = 'stat-c-80';  // 3 = Bueno (Lima)
-            else if (valNum === 2) colorClass = 'stat-c-60';  // 2 = Regular (Naranja/Amarillo)
-            else colorClass = 'stat-c-50';                    // 1 (o 0) = Malo (Rojo)
-          }
-          // --- LÓGICA ESTÁNDAR (Escala 0-100) ---
-          else {
+            if (valNum === 4) colorClass = 'stat-c-90';
+            else if (valNum === 3) colorClass = 'stat-c-80';
+            else if (valNum === 2) colorClass = 'stat-c-60';
+            else colorClass = 'stat-c-50';
+          } else {
             colorClass = getStatAndOvrColorClass(value);
           }
 
           return (
-            <div key={key} className="flex justify-between items-center text-base">
-              <span className="text-gray-300">{STAT_NAMES_MAP[key] || key}</span>
-              <span className={`stat-value ${colorClass} px-2 py-0.5 rounded font-bold text-lg min-w-[2.5rem] text-center`}>
+            <div key={key} className="flex items-center justify-between py-1.5 border-b border-white/[0.03] last:border-0">
+              <span className="text-sm text-slate-300 truncate flex-1">
+                {STAT_NAMES_MAP[key] || key}
+              </span>
+              <span className={`stat-value ${colorClass} px-2.5 py-0.5 rounded-md font-mono font-bold text-sm min-w-[2.5rem] text-center tabular-nums inline-flex items-center justify-center`}>
                 {value}
               </span>
             </div>
@@ -320,19 +327,24 @@ const SkillsSection = memo(function SkillsSection({ player }) {
     .map(([, displayName]) => displayName);
 
   return (
-    <div className="stat-section p-5 rounded-2xl bg-[#16161a] border border-gray-800 shadow-xl transition-all duration-300 hover:border-gray-600">
-      <h4 className="text-xs font-black text-gray-400 tracking-wider uppercase mb-4 pb-3 border-b border-gray-800">
-        Habilidades de Jugador
-      </h4>
+    <div className="p-4 sm:p-5 rounded-xl bg-[#111722] border border-slate-800 shadow-sm">
+      <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-800">
+        <h4 className="text-xs sm:text-sm font-semibold text-white">
+          Habilidades del jugador
+        </h4>
+        <span className="text-xs text-slate-400 font-medium bg-slate-800 px-2.5 py-0.5 rounded">
+          {skills.length} activas
+        </span>
+      </div>
       <div className="flex flex-wrap gap-2">
         {skills.length > 0 ? (
           skills.map(skill => (
-            <span key={skill} className="skill-tag text-xs font-bold px-4 py-1.5 rounded bg-[#111] border border-blue-500/30 text-blue-300 shadow-sm">
+            <span key={skill} className="text-xs font-medium px-3 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-200">
               {skill}
             </span>
           ))
         ) : (
-          <span className="text-sm text-gray-500 italic">Sin habilidades especiales.</span>
+          <span className="text-xs text-slate-500 italic py-1">Sin habilidades especiales registradas.</span>
         )}
       </div>
     </div>
@@ -426,28 +438,28 @@ export const PlayerModal = memo(function PlayerModal({
       );
     }
 
-    const commonClasses = "flex items-center justify-center px-6 py-3 font-bold rounded-xl transition-all shadow-lg transform hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto";
+    const commonClasses = "flex items-center justify-center px-5 py-2.5 font-semibold rounded-lg transition-colors w-full sm:w-auto text-sm cursor-pointer";
 
     // Signed by current user -> show release button
     // In my cart
     if (cartStatus === 'IN_MY_CART') {
       if (isFranchisePlayer) {
         return (
-          <div className="flex flex-col items-center justify-center px-4 py-2 font-bold rounded-xl bg-purple-900/40 text-purple-400 border border-purple-700/50 w-full sm:w-auto">
-            <div className="flex items-center text-[10px] text-purple-400 uppercase tracking-widest mb-0.5">
-              <Crown className="w-3 h-3 mr-1" />
+          <div className="flex flex-col items-center justify-center px-4 py-2 font-semibold rounded-lg bg-purple-950/40 text-purple-300 border border-purple-500/30 w-full sm:w-auto">
+            <div className="flex items-center text-xs text-purple-400 mb-0.5 font-medium">
+              <Crown className="w-3.5 h-3.5 mr-1" />
               <span>Jugador Franquicia</span>
             </div>
-            <span className="text-white text-sm">Intransferible</span>
+            <span className="text-white text-sm font-semibold">Intransferible</span>
           </div>
         );
       }
       return (
         <button
           onClick={() => setShowReleaseConfirm(true)}
-          className={`${commonClasses} bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white border border-red-500/40 shadow-red-900/30`}
+          className={`${commonClasses} bg-rose-600 hover:bg-rose-500 text-white`}
         >
-          <Trash2 className="w-5 h-5 mr-2" />
+          <Trash2 className="w-4 h-4 mr-2" />
           Eliminar Fichaje
         </button>
       );
@@ -457,36 +469,36 @@ export const PlayerModal = memo(function PlayerModal({
     if (cartStatus === 'LOCKED_BY_OTHER') {
       if (isFranchisePlayer) {
         return (
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            <div className="flex flex-col items-center justify-center px-4 py-2 font-bold rounded-xl bg-gray-800/80 text-gray-400 border border-gray-700 cursor-not-allowed w-full sm:w-auto">
-              <div className="flex items-center text-[10px] text-red-400 uppercase tracking-widest mb-0.5">
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-[#111722] text-slate-400 border border-white/[0.08] cursor-not-allowed w-full sm:w-auto">
+              <div className="flex items-center text-[10px] text-red-400 uppercase tracking-wider mb-0.5 font-semibold">
                 <Lock className="w-3 h-3 mr-1" />
                 <span>Fichado por</span>
               </div>
-              <span className="text-white text-sm">{lockedTeamName || 'Otro equipo'}</span>
+              <span className="text-white text-sm font-bold">{lockedTeamName || 'Otro equipo'}</span>
             </div>
-            <div className="flex flex-col items-center justify-center px-4 py-2 font-bold rounded-xl bg-purple-900/40 text-purple-400 border border-purple-700/50 w-full sm:w-auto cursor-not-allowed">
-              <div className="flex items-center text-[10px] text-purple-400 uppercase tracking-widest mb-0.5">
+            <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-purple-950/30 text-purple-400 border border-purple-500/30 w-full sm:w-auto cursor-not-allowed">
+              <div className="flex items-center text-[10px] text-purple-400 uppercase tracking-wider mb-0.5 font-semibold">
                 <Crown className="w-3 h-3 mr-1" />
                 <span>Jugador Franquicia</span>
               </div>
-              <span className="text-white text-sm">Intransferible</span>
+              <span className="text-white text-sm font-bold">Intransferible</span>
             </div>
           </div>
         );
       }
       return (
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          <div className="flex flex-col items-center justify-center px-4 py-2 font-bold rounded-xl bg-gray-800/80 text-gray-400 border border-gray-700 cursor-not-allowed w-full sm:w-auto">
-            <div className="flex items-center text-[10px] text-red-400 uppercase tracking-widest mb-0.5">
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-[#111722] text-slate-400 border border-white/[0.08] cursor-not-allowed w-full sm:w-auto">
+            <div className="flex items-center text-[10px] text-red-400 uppercase tracking-wider mb-0.5 font-semibold">
               <Lock className="w-3 h-3 mr-1" />
               <span>Fichado por</span>
             </div>
-            <span className="text-white text-sm">{lockedTeamName || 'Otro equipo'}</span>
+            <span className="text-white text-sm font-bold">{lockedTeamName || 'Otro equipo'}</span>
           </div>
           <button 
             onClick={() => setShowProposalModal(true)}
-            className={`${commonClasses} bg-blue-600 hover:bg-blue-500 text-white border border-blue-500/50 shadow-blue-900/30 w-full sm:w-auto`}
+            className={`${commonClasses} bg-blue-600 hover:bg-blue-500 text-white w-full sm:w-auto`}
           >
             <Handshake className="w-4 h-4 mr-2" /> Traspaso
           </button>
@@ -504,8 +516,8 @@ export const PlayerModal = memo(function PlayerModal({
     const missingM = ((priceFull - remainingBudget) / 1000000).toFixed(1);
     const initialBudget = userProfile?.budget || remainingBudget;
     const budgetAfterPercent = canAfford ? Math.min(100, Math.max(0, (budgetAfter / initialBudget) * 100)) : 0;
-    const afterColor = budgetAfterPercent <= 20 ? 'text-red-400' : budgetAfterPercent <= 50 ? 'text-yellow-400' : 'text-emerald-400';
-    const barColor = budgetAfterPercent > 50 ? '#10b981' : budgetAfterPercent > 20 ? '#eab308' : '#ef4444';
+    const afterColor = budgetAfterPercent <= 20 ? 'text-rose-400' : budgetAfterPercent <= 50 ? 'text-amber-400' : 'text-emerald-400';
+    const barColor = budgetAfterPercent > 50 ? '#10b981' : budgetAfterPercent > 20 ? '#eab308' : '#f43f5e';
 
     const isFranchiseMarket = marketStatus?.status === 'FranchiseMarket';
 
@@ -516,38 +528,38 @@ export const PlayerModal = memo(function PlayerModal({
             <button
               onClick={() => handleSign(true)}
               disabled={isSigning}
-              className={`${commonClasses} ${isSigning ? 'bg-gray-700 text-gray-300 cursor-wait border border-gray-600 hover:-translate-y-0 active:scale-100' : 'bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 text-white shadow-yellow-900/30 border border-yellow-500/30'}`}
+              className={`${commonClasses} ${isSigning ? 'bg-slate-700 text-slate-300 cursor-wait' : 'bg-amber-600 hover:bg-amber-500 text-white'}`}
               title="Fichar gratis como jugador franquicia"
             >
               {isSigning ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
               ) : (
-                <Sparkles className="w-5 h-5 mr-1" />
+                <Sparkles className="w-4 h-4 mr-1.5" />
               )}
-              <span>{isSigning ? 'Procesando...' : '⭐ Jugador Franquicia ($0)'}</span>
+              <span>{isSigning ? 'Procesando...' : 'Jugador Franquicia ($0)'}</span>
             </button>
           </div>
         );
       } else if (meetsFranchiseCriteria && userProfile?.franchisePlayerUsed) {
         return (
-          <div className="flex flex-col items-center gap-2 w-full sm:w-auto">
-            <button disabled className={`${commonClasses} bg-gray-800/80 text-gray-500 cursor-not-allowed border border-gray-700 hover:-translate-y-0 active:scale-100`}>
-              <Lock className="w-5 h-5 mr-2 text-gray-600" />
+          <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
+            <button disabled className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
+              <Lock className="w-4 h-4 mr-2 text-slate-500" />
               Cupo Utilizado
             </button>
-            <span className="text-[10px] text-gray-500 font-bold uppercase text-center max-w-[200px]">
+            <span className="text-xs text-slate-500 text-center max-w-[200px]">
               Ya has fichado a tu Jugador Franquicia esta temporada
             </span>
           </div>
         );
       } else {
         return (
-          <div className="flex flex-col items-center gap-2 w-full sm:w-auto">
-            <button disabled className={`${commonClasses} bg-gray-800/80 text-gray-500 cursor-not-allowed border border-gray-700 hover:-translate-y-0 active:scale-100`}>
-              <DollarSign className="w-5 h-5 mr-2 text-gray-600" />
+          <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
+            <button disabled className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
+              <DollarSign className="w-4 h-4 mr-2 text-slate-500" />
               Mercado Restringido
             </button>
-            <span className="text-[10px] text-gray-500 font-bold uppercase text-center max-w-[200px]">
+            <span className="text-xs text-slate-500 text-center max-w-[200px]">
               El jugador no cumple los requisitos (Edad ≥ 31 y OVR 83-89)
             </span>
           </div>
@@ -557,55 +569,44 @@ export const PlayerModal = memo(function PlayerModal({
 
     // ─── Budget Impact Section ───
     const BudgetImpact = () => (
-      <div
-        className="w-full rounded-xl p-3.5 mb-3"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.07)',
-        }}
-      >
-        <div className="flex items-center gap-1.5 mb-3">
-          <span className="text-sm">💰</span>
-          <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Impacto en tu presupuesto</span>
+      <div className="w-full rounded-xl p-3 mb-2.5 bg-[#111722] border border-slate-800 shadow-sm">
+        <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
+          <span className="text-xs font-semibold text-slate-300">Impacto presupuestario</span>
+          <span className="text-xs font-semibold text-slate-400 tabular-nums">${currentBudgetM}M disp.</span>
         </div>
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500 font-medium">Disponible:</span>
-            <span className="text-xs font-bold text-white">${currentBudgetM}M</span>
+        <div className="space-y-1.5 text-xs">
+          <div className="flex justify-between items-center text-slate-400">
+            <span>Costo de fichaje:</span>
+            <span className="font-semibold text-rose-400 tabular-nums">- {formatPriceShort(priceMillions)}</span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500 font-medium">Costo fichaje:</span>
-            <span className="text-xs font-bold text-red-400">- {formatPriceShort(priceMillions)}</span>
-          </div>
-          <div className="border-t border-white/[0.06] my-1.5" />
           {canAfford ? (
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-gray-500 font-medium">Te quedarían:</span>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-black ${afterColor}`}>${budgetAfterM}M</span>
+            <div className="flex justify-between items-center pt-1.5 border-t border-slate-800/60">
+              <span className="text-slate-400">Restante estimado:</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`font-semibold tabular-nums ${afterColor}`}>${budgetAfterM}M</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                   budgetAfterPercent > 50 ? 'bg-emerald-500/15 text-emerald-400' :
-                  budgetAfterPercent > 20 ? 'bg-yellow-500/15 text-yellow-400' :
-                  'bg-red-500/15 text-red-400'
+                  budgetAfterPercent > 20 ? 'bg-amber-500/15 text-amber-400' :
+                  'bg-rose-500/15 text-rose-400'
                 }`}>
                   {budgetAfterPercent.toFixed(0)}%
                 </span>
-                {budgetAfterPercent <= 20 && <AlertTriangle className="w-3.5 h-3.5 text-red-400" />}
+                {budgetAfterPercent <= 20 && <AlertTriangle className="w-3 h-3 text-rose-400" />}
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <span className="text-xs font-bold text-red-400">
-                Presupuesto insuficiente, te faltan ${missingM}M
+            <div className="flex items-center gap-1.5 text-rose-400 pt-1">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-xs font-semibold">
+                Faltan ${missingM}M para completar
               </span>
             </div>
           )}
         </div>
         {canAfford && (
-          <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden mt-2.5">
+          <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden mt-2">
             <div
-              className="h-full rounded-full transition-all duration-500 ease-out"
+              className="h-full rounded-full transition-all duration-300"
               style={{ width: `${budgetAfterPercent}%`, background: barColor }}
             />
           </div>
@@ -617,9 +618,9 @@ export const PlayerModal = memo(function PlayerModal({
       return (
         <div className="flex flex-col items-center gap-0 w-full sm:w-auto">
           <BudgetImpact />
-          <button disabled className={`${commonClasses} bg-gray-800/80 text-gray-500 cursor-not-allowed border border-gray-700 hover:-translate-y-0 active:scale-100`}>
-            <DollarSign className="w-5 h-5 mr-2 text-gray-600" />
-            Presupuesto insuficiente
+          <button disabled className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
+            <DollarSign className="w-4 h-4 mr-1.5 text-slate-500" />
+            Presupuesto Insuficiente
           </button>
         </div>
       );
@@ -631,15 +632,15 @@ export const PlayerModal = memo(function PlayerModal({
         <button
           onClick={() => handleSign(false)}
           disabled={isSigning}
-          className={`${commonClasses} ${isSigning ? 'bg-gray-700 text-gray-300 cursor-wait border border-gray-600 hover:-translate-y-0 active:scale-100' : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-green-900/30 border border-green-500/30'}`}
+          className={`${commonClasses} ${isSigning ? 'bg-slate-700 text-slate-300 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
           title={`Fichar por ${formatPriceShort(priceMillions)}`}
         >
           {isSigning ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
           ) : (
-            <DollarSign className="w-5 h-5 mr-1" />
+            <DollarSign className="w-4 h-4 mr-1" />
           )}
-          <span>{isSigning ? 'Procesando...' : <>Fichar <span className="ml-1 opacity-90 font-black">{formatPriceShort(priceMillions)}</span></>}</span>
+          <span>{isSigning ? 'Procesando...' : <>Fichar <span className="ml-1 font-semibold opacity-90 tabular-nums">{formatPriceShort(priceMillions)}</span></>}</span>
         </button>
       </div>
     );
@@ -651,107 +652,122 @@ export const PlayerModal = memo(function PlayerModal({
     {showCelebration && <CelebrationPopup player={player} onDismiss={handleDismissCelebration} />}
     {/* Release Confirmation */}
     {showReleaseConfirm && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowReleaseConfirm(false)}>
-        <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-90 duration-300" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-red-400" /></div>
-            <h3 className="text-lg font-black text-white">Confirmar liberación</h3>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setShowReleaseConfirm(false)}>
+        <div className="bg-[#111722] border border-white/[0.1] rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center border border-red-500/20"><AlertTriangle className="w-5 h-5 text-red-400" /></div>
+            <h3 className="text-base font-bold text-white">Confirmar liberación</h3>
           </div>
-          <p className="text-gray-300 mb-6">¿Seguro que querés liberar a <span className="font-bold text-white">{player.Name}</span>?</p>
-          <div className="flex gap-3">
-            <button onClick={() => setShowReleaseConfirm(false)} className="flex-1 py-2.5 rounded-xl font-bold text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-600 transition">Cancelar</button>
-            <button onClick={handleRelease} disabled={isReleasing} className="flex-1 py-2.5 rounded-xl font-bold text-white bg-red-600 hover:bg-red-500 border border-red-500/50 transition disabled:opacity-50">
+          <p className="text-sm text-slate-300 mb-5">¿Seguro que querés liberar a <span className="font-bold text-white">{player.Name}</span>?</p>
+          <div className="flex gap-2.5">
+            <button onClick={() => setShowReleaseConfirm(false)} className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-300 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] transition">Cancelar</button>
+            <button onClick={handleRelease} disabled={isReleasing} className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-500 border border-red-400/30 transition disabled:opacity-50">
               {isReleasing ? 'Liberando...' : 'Confirmar'}
             </button>
           </div>
         </div>
       </div>
     )}
-    {/* MODIFICADO: p-0 en móvil, p-4 en escritorio. Animación fade-in */}
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300" onClick={onClose}>
+
+    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-[60] p-0 sm:p-4" onClick={onClose}>
       <div
-        // MODIFICADO: h-full en móvil, rounded-none en móvil. Animación zoom + slide
-        className="bg-gray-900/95 sm:rounded-2xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col border-0 sm:border border-gray-700/50 relative overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+        className="bg-slate-900 sm:rounded-xl shadow-xl w-full max-w-6xl h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col border-0 sm:border border-slate-800 relative overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* Fondo decorativo en el header */}
-        <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-blue-900/20 to-gray-900 pointer-events-none z-0"></div>
-
-        {/* Botón Cerrar (Más visible en móvil) */}
-        <button onClick={onClose} className="absolute top-4 right-4 z-50 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition backdrop-blur-sm border border-white/10">
-          <X size={24} />
+        {/* Botón Cerrar */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50 p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-colors"
+          aria-label="Cerrar modal"
+        >
+          <X size={20} />
         </button>
 
         {/* Contenido Scrollable */}
-        <div className="flex-grow min-h-0 overflow-y-auto p-4 sm:p-8 custom-scrollbar relative z-10 pb-20 sm:pb-8">
+        <div className="flex-grow min-h-0 overflow-y-auto p-4 sm:p-7 custom-scrollbar relative z-10 pb-20 sm:pb-6">
 
-          {/* 1. CABECERA DEL JUGADOR - REDISEÑO PES PREMIUM */}
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-8 border-b border-gray-800 pb-8 pt-4 sm:pt-0">
-            <div className="flex items-center gap-6 w-full lg:w-auto">
+          {/* 1. CABECERA DEL JUGADOR - SCOUTING BROADCAST */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-7 border-b border-slate-800 pb-6 pt-2 sm:pt-0">
+            <div className="flex items-center gap-5 sm:gap-6 w-full lg:w-auto">
               {/* FOTO y OVR */}
-              <div className="relative group shrink-0">
-                <div className="absolute inset-0 bg-cyan-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                <img
-                  src={`/fotos_jugadores/${player.Id}.webp`}
-                  alt={player.Name}
-                  className="w-28 h-28 sm:w-36 sm:h-36 rounded-full object-cover border-[3px] border-[#16161a] shadow-2xl relative z-10 bg-gradient-to-b from-gray-800 to-gray-900"
-                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/128x128/111/555?text=${player.Name.substring(0, 1)}`; }}
-                />
-                <div className={`absolute -bottom-2 -right-2 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full font-black text-xl sm:text-2xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border-2 border-gray-900 z-20 !text-black ${getStatAndOvrColorClass(player.OVR_CALCULADO)}`}>
+              <div className="relative shrink-0">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden border border-slate-700 bg-slate-800 shadow-md relative z-10">
+                  <img
+                    src={`/fotos_jugadores/${player.Id}.webp`}
+                    alt={player.Name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/128x128/111/555?text=${player.Name.substring(0, 1)}`; }}
+                  />
+                </div>
+                <div className={`absolute -bottom-2 -right-2 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg font-bold text-lg sm:text-xl border-2 border-slate-900 shadow-md z-20 tabular-nums !text-black ${getStatAndOvrColorClass(player.OVR_CALCULADO)}`}>
                   {player.OVR_CALCULADO}
                 </div>
               </div>
 
-              {/* DATOS */}
-              <div className="flex flex-col justify-center">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{player.Grupo}</span>
+              {/* DATOS DE IDENTIDAD */}
+              <div className="flex flex-col justify-center min-w-0">
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="text-xs font-medium text-slate-400">{player.Grupo}</span>
+                  {player.PlayingStyle && (
+                    <>
+                      <span className="text-slate-600 text-xs">•</span>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-300 bg-slate-800 px-2.5 py-0.5 rounded-md border border-slate-700">
+                        <Target className="w-3 h-3 text-slate-400" />
+                        {player.PlayingStyle}
+                      </span>
+                    </>
+                  )}
                 </div>
-                <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tighter leading-none mb-3 drop-shadow-md">{player.Name}</h1>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className={`px-4 py-1 rounded shadow-md text-xs font-black tracking-widest !text-black ${posColorClass}`}>
+
+                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight mb-2 truncate">
+                  {player.Name}
+                </h1>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className={`px-2.5 py-0.5 rounded text-xs font-bold !text-black ${posColorClass}`}>
                     {player.POS_NOMBRE}
                   </span>
-                  <div className="flex items-center space-x-2">
-                    <img src={country1FlagUrl} alt={country1Name} title={country1Name} className="h-5 rounded-sm shadow border border-gray-700" onError={(e) => e.target.style.display = 'none'} />
+
+                  <div className="flex items-center space-x-1.5 bg-[#111722] border border-slate-800 px-2.5 py-1 rounded-md">
+                    <img src={country1FlagUrl} alt={country1Name} title={country1Name} className="h-4 w-5 object-cover rounded-sm" onError={(e) => e.target.style.display = 'none'} />
                     {hasCountry2 && (
-                      <img src={country2FlagUrl} alt={country2Name} title={country2Name} className="h-5 rounded-sm shadow border border-gray-700 opacity-90" onError={(e) => e.target.style.display = 'none'} />
+                      <img src={country2FlagUrl} alt={country2Name} title={country2Name} className="h-4 w-5 object-cover rounded-sm opacity-80" onError={(e) => e.target.style.display = 'none'} />
                     )}
+                    <span className="text-xs text-slate-300 font-medium ml-1">{country1Name}</span>
                   </div>
-                  <span className="text-gray-300 text-xs font-bold flex items-center bg-gray-900 px-3 py-1.5 rounded border border-gray-800">
-                    {player.Age} años <span className="mx-2 text-gray-700">|</span> {player.Height}cm <span className="mx-2 text-gray-700">|</span> {player.Foot} <span className="mx-2 text-gray-700">|</span> {player.Weight}kg
+
+                  <span className="text-slate-300 text-xs font-medium flex items-center bg-[#111722] px-3 py-1 rounded-md border border-slate-800 tabular-nums">
+                    {player.Age} años <span className="mx-2 text-slate-600">·</span> {player.Height} cm <span className="mx-2 text-slate-600">·</span> {player.Foot} <span className="mx-2 text-slate-600">·</span> {player.Weight} kg
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* BOTÓN FICHAR ALINEADO DERECHA */}
-            <div className="flex flex-col items-end gap-2 w-full lg:w-auto shrink-0 mt-4 lg:mt-0">
+            {/* ACCIONES Y PRESUPUESTO */}
+            <div className="flex flex-col items-stretch lg:items-end gap-2 w-full lg:w-auto shrink-0 mt-3 lg:mt-0">
               {renderActionButton()}
             </div>
           </div>
 
-          {/* 2. INFO DETALLADA Y GRÁFICOS - REDISEÑO PES PREMIUM */}
-          <div className="flex flex-col lg:flex-row gap-8 mb-10">
+          {/* 2. INFO DETALLADA Y GRÁFICOS */}
+          <div className="flex flex-col lg:flex-row gap-6 mb-8">
 
             {/* LADO IZQUIERDO: RADAR Y HEATMAP */}
-            <div className="w-full lg:w-[280px] shrink-0 space-y-6 flex flex-col">
-              <div className="bg-[#16161a] rounded-2xl p-4 border border-gray-800 shadow-xl relative overflow-hidden group flex items-center justify-center">
-                <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="w-full lg:w-[280px] shrink-0 space-y-4 flex flex-col">
+              <div className="bg-[#111722] rounded-xl p-4 border border-white/[0.08] shadow-sm flex items-center justify-center">
                 <RadarChart player={player} isGK={isGK} />
               </div>
 
               {!isGK && (
-                <div className="bg-[#16161a] rounded-2xl p-4 border border-gray-800 shadow-xl relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="bg-[#111722] rounded-xl p-4 border border-white/[0.08] shadow-sm">
                   <PosicionHeatmap player={player} />
                 </div>
               )}
             </div>
 
             {/* LADO DERECHO: STATS EN GRILLA */}
-            <div className="flex-1 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="flex-1 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(isGK ? Object.entries(STATS_PORTERO) : Object.entries(STATS_JUGADOR_CAMPO))
                   .filter(([, statKeys]) => statKeys.length > 0)
                   .map(([title, statKeys]) => (
@@ -762,62 +778,66 @@ export const PlayerModal = memo(function PlayerModal({
             </div>
           </div>
 
-          {/* 3. ALTERNATIVAS SUGERIDAS */}
-          <div className="pt-6 border-t border-gray-700/50">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center">
-              <Sparkles className="w-5 h-5 text-yellow-400 mr-2" />
-              Alternativas Sugeridas (IA)
-            </h3>
+          {/* 3. PERFILES SIMILARES */}
+          <div className="pt-5 border-t border-slate-800">
+            <div className="flex items-center justify-between mb-3.5">
+              <h3 className="text-sm font-semibold text-white">
+                Jugadores de perfil similar
+              </h3>
+              <span className="text-xs text-slate-400 font-medium">
+                Misma posición y valoración cercana
+              </span>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               {similarPlayers.map(simPlayer => {
-                const ovr = simPlayer.OVR_CALCULADO;
-                let ovrBg = 'bg-gray-500';
-                if (ovr >= 90) ovrBg = 'bg-green-500';
-                else if (ovr >= 80) ovrBg = 'bg-lime-500';
-                else if (ovr >= 70) ovrBg = 'bg-yellow-500';
-                else if (ovr >= 60) ovrBg = 'bg-orange-500';
-                else ovrBg = 'bg-red-500';
-
-                const pos = simPlayer.POS_NOMBRE;
-                let posBg = 'bg-gray-600';
-                if (['DC', 'SD', 'EI', 'ED'].includes(pos)) posBg = 'bg-red-500';
-                else if (['MC', 'MCD', 'MO', 'MI', 'MD'].includes(pos)) posBg = 'bg-green-600';
-                else if (['DFC', 'LI', 'LD'].includes(pos)) posBg = 'bg-blue-500';
-                else if (['PT'].includes(pos)) posBg = 'bg-yellow-600';
+                const ovrDiff = (simPlayer.OVR_CALCULADO || 0) - (player.OVR_CALCULADO || 0);
 
                 return (
                   <div
                     key={simPlayer.Id}
                     onClick={() => { onClose(); onPlayerSwitch(simPlayer); }}
-                    className="group bg-gray-800/50 hover:bg-gray-700/80 rounded-xl p-3 flex items-center justify-between cursor-pointer transition-all border border-gray-700/50 hover:border-gray-500 shadow-sm hover:shadow-md"
+                    className="group bg-[#111722] hover:bg-[#151d2c] rounded-xl p-3 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer shadow-sm flex flex-col justify-between"
                   >
-                    <div className="flex items-center min-w-0">
-                      <img
-                        src={`/fotos_jugadores/${simPlayer.Id}.webp`}
-                        className="w-10 h-10 rounded-full object-cover mr-3 bg-gray-900 border border-gray-600 group-hover:border-gray-400 transition-colors"
-                        onError={(e) => e.target.src = `https://placehold.co/48x48/374151/e0e0e0?text=${simPlayer.Name.substring(0, 1)}`}
-                      />
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-white truncate group-hover:text-blue-300 transition-colors mb-0.5">
+                    <div className="flex items-center gap-2.5 mb-2.5">
+                      <div className="relative shrink-0">
+                        <img
+                          src={`/fotos_jugadores/${simPlayer.Id}.webp`}
+                          alt={simPlayer.Name}
+                          className="w-10 h-10 rounded-lg object-cover bg-[#0a0e16] border border-slate-800 transition-colors"
+                          onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/48x48/111/555?text=${simPlayer.Name.substring(0, 1)}`; }}
+                        />
+                        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold tabular-nums !text-black ${getStatAndOvrColorClass(simPlayer.OVR_CALCULADO)}`}>
+                          {simPlayer.OVR_CALCULADO}
+                        </div>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-slate-200 truncate group-hover:text-white transition-colors">
                           {simPlayer.Name}
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-gray-900 ${ovrBg}`}>
-                            {ovr}
-                          </div>
-                          <div className={`px-1.5 py-0.5 rounded text-[9px] font-bold text-white tracking-wide ${posBg}`}>
-                            {pos}
-                          </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold !text-black ${getPosColorClass(simPlayer.POS_NOMBRE)}`}>
+                            {simPlayer.POS_NOMBRE}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {simPlayer.Age} años
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right pl-2">
-                      <div className="text-green-400 font-bold text-xs">
+
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                      <div className="text-emerald-400 font-semibold tabular-nums">
                         {formatPriceShort(simPlayer.Precio)}
                       </div>
-                      <div className="text-[10px] text-gray-500 font-mono mt-0.5">
-                        {Math.round(simPlayer.similarityScore)}% Sim.
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-medium px-1 rounded ${ovrDiff > 0 ? 'text-emerald-400 bg-emerald-500/10' : ovrDiff < 0 ? 'text-slate-400 bg-white/[0.04]' : 'text-slate-400'}`}>
+                          {ovrDiff > 0 ? `+${ovrDiff}` : ovrDiff === 0 ? '=' : ovrDiff} OVR
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium tabular-nums">
+                          {Math.round(simPlayer.similarityScore)}%
+                        </span>
                       </div>
                     </div>
                   </div>

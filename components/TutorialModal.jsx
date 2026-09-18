@@ -6,7 +6,7 @@ const APP_TUTORIAL_STEPS = [
   {
     targetSelector: '[data-app-tour="menu"]',
     title: 'Menu principal',
-    description: 'Desde aca abris la navegacion. En mobile lo vas a usar para moverte entre Mercado, Mi Equipo, Scouting, Otros Equipos, Finanzas y Torneo.',
+    description: 'Desde aca abris la navegacion. En mobile lo vas a usar para moverte entre Mercado, Plantilla, Finanzas, Scouting, Otros Equipos y Torneo.',
   },
   {
     targetSelector: '[data-app-tour="team"]',

@@ -20,32 +20,38 @@ const TeamSelect = memo(function TeamSelect({ value, onChange, className = '' })
 });
 
 const MatchCard = memo(({ match, stage, index, isFinal, isEditing, updateMatch, getTeamLogo, titleOverride }) => {
-  if (!match) return <div className="w-[400px] h-48 bg-gray-900/50 border border-red-900/50 flex items-center justify-center text-red-500 font-mono text-xs">Error Data Match</div>;
+  if (!match) return <div className="w-56 h-20 bg-slate-100 dark:bg-slate-900 border border-red-500/30 flex items-center justify-center text-red-500 font-medium text-xs rounded-xl">Error de datos</div>;
 
   let cardTitle = titleOverride || "";
   if (!cardTitle) {
     if (isFinal) cardTitle = "GRAN FINAL";
     else if (stage === 'semis') cardTitle = "SEMIFINAL";
-    else if (stage === 'quarters') cardTitle = "CUARTOS DE FINAL";
+    else if (stage === 'quarters') cardTitle = "CUARTOS";
     else if (stage === 'rep_r1') cardTitle = (index === 0 || index === 2) ? "PRELIMINAR" : "REPECHAJE QF";
     else if (stage === 'rep_r2') cardTitle = "FASE FUSIÓN";
     else if (stage === 'rep_semis') cardTitle = "SEMIFINAL PLATA";
     else if (stage === 'rep_final') cardTitle = "GRAN FINAL PLATA";
   }
 
-  let widthClass = 'w-[400px]', heightClass = 'h-48', textTitleSize = 'text-sm tracking-widest', textNameSize = 'text-2xl', logoSize = 'w-16 h-16';
-  if (stage === 'final') { widthClass = 'w-[650px]'; heightClass = 'h-80'; textTitleSize = 'text-xl tracking-[0.5em]'; textNameSize = 'text-3xl'; logoSize = 'w-28 h-28'; }
-  else if (['semis', 'quarters', 'rep_final'].includes(stage)) { widthClass = 'w-[480px]'; heightClass = 'h-56'; textNameSize = 'text-xl'; }
-
-  const scaleClass = isFinal ? 'scale-105 z-30' : 'z-10';
-  const containerClass = isFinal ? 'bg-[#0f172a] border border-yellow-500/60 shadow-[0_0_120px_rgba(234,179,8,0.4)]' : 'bg-[#1e293b] border border-slate-600/50 shadow-2xl';
-  const headerClass = isFinal ? 'bg-gradient-to-r from-yellow-900/70 to-amber-900/70 text-yellow-100 border-b border-yellow-600/30' : 'bg-[#020617]/60 text-slate-300 border-b border-slate-700/50';
+  const containerClass = isFinal
+    ? 'border-amber-400/80 dark:border-amber-500/70 shadow-md ring-1 ring-amber-400/30'
+    : 'border-slate-200 dark:border-slate-800 shadow-sm';
 
   return (
-    <div className={`relative flex flex-col rounded-3xl overflow-hidden transition-transform duration-300 hover:scale-[1.02] ${widthClass} ${heightClass} ${containerClass} ${scaleClass}`}>
-      <div className={`py-2 px-4 text-center font-black uppercase ${textTitleSize} ${headerClass}`}>{cardTitle}</div>
-      <div className="flex-1 flex flex-col justify-center px-6 gap-3">
-        {['teamA', 'teamB'].map((teamKey) => {
+    <div
+      className={`relative flex flex-col rounded-xl overflow-hidden bg-white dark:bg-[#111722] border transition-all duration-200 w-[230px] sm:w-[250px] ${containerClass}`}
+      style={{ contain: 'content' }}
+    >
+      <div className={`py-1 px-3 text-center font-bold text-[10px] tracking-wider uppercase border-b ${
+        isFinal
+          ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
+          : 'bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800'
+      }`}>
+        {cardTitle}
+      </div>
+
+      <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800/60 p-1">
+        {['teamA', 'teamB'].map((teamKey, tIdx) => {
           const name = match[teamKey];
           const scoreKey = teamKey === 'teamA' ? 'scoreA' : 'scoreB';
           const score = match[scoreKey];
@@ -53,26 +59,47 @@ const MatchCard = memo(({ match, stage, index, isFinal, isEditing, updateMatch, 
           const opponentScore = match[teamKey === 'teamA' ? 'scoreB' : 'scoreA'];
           const isWinner = score !== '' && opponentScore !== '' && parseInt(score) > parseInt(opponentScore);
           const isLoser = score !== '' && opponentScore !== '' && parseInt(score) < parseInt(opponentScore);
-          const rowStyle = isLoser ? 'opacity-40 grayscale bg-black/20' : isWinner ? 'bg-gradient-to-r from-white/10 to-transparent shadow-inner' : '';
-          const textStyle = isWinner ? 'text-[#4ade80] drop-shadow-[0_0_15px_rgba(74,222,128,0.7)]' : isLoser ? 'text-slate-500' : 'text-slate-200';
 
           return (
-            <div key={teamKey} className={`flex justify-between items-center h-full max-h-28 rounded-2xl px-4 transition-all border border-transparent ${rowStyle}`}>
-              <div className="flex items-center gap-6 overflow-hidden w-full">
-                <div className="relative flex-shrink-0">
-                  <div className={`absolute inset-0 bg-white/10 blur-xl rounded-full ${isWinner ? 'opacity-60' : 'opacity-0'}`}></div>
-                  <img src={logo} className={`${logoSize} object-contain relative z-10 drop-shadow-xl ${!name || name === 'TBD' ? 'opacity-30' : ''}`} onError={(e) => e.target.src = DEFAULT_LOGO} />
-                </div>
+            <div key={teamKey} className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors ${
+              isWinner ? 'bg-emerald-500/10 dark:bg-emerald-500/15' : isLoser ? 'opacity-60' : ''
+            }`}>
+              <div className="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
+                <span className="text-[10px] text-slate-400 font-mono w-3.5 shrink-0">
+                  {stage === 'quarters' ? `${(index * 2) + tIdx + 1}°` : ''}
+                </span>
+                <img
+                  src={logo}
+                  alt=""
+                  className="w-5 h-5 object-contain shrink-0"
+                  onError={(e) => { e.target.src = DEFAULT_LOGO; }}
+                />
                 {isEditing ? (
-                  <TeamSelect value={name} onChange={(value) => updateMatch(stage, index, teamKey, value)} className="w-full px-2 py-1 text-lg font-bold" />
+                  <TeamSelect
+                    value={name}
+                    onChange={(value) => updateMatch(stage, index, teamKey, value)}
+                    className="w-full px-1.5 py-0.5 text-xs font-semibold"
+                  />
                 ) : (
-                  <span className={`${textNameSize} font-black truncate tracking-tight ${textStyle} leading-none pb-1`}>{name || 'TBD'}</span>
+                  <span className={`text-xs truncate ${isWinner ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
+                    {name || 'A definir'}
+                  </span>
                 )}
               </div>
+
               {isEditing ? (
-                <input type="number" value={score} onChange={(e) => updateMatch(stage, index, scoreKey, e.target.value)} className="w-16 h-14 bg-black/50 text-center rounded text-white text-3xl border border-slate-600 outline-none font-bold" />
+                <input
+                  type="number"
+                  value={score}
+                  onChange={(e) => updateMatch(stage, index, scoreKey, e.target.value)}
+                  className="w-8 h-6 bg-slate-100 dark:bg-black/50 text-center rounded text-slate-900 dark:text-white text-xs border border-slate-300 dark:border-slate-700 outline-none font-bold ml-1.5"
+                />
               ) : (
-                <div className={`w-14 flex items-center justify-center font-mono font-black text-5xl ${isWinner ? 'text-[#4ade80]' : 'text-slate-600'}`}>{score !== '' ? score : '-'}</div>
+                <span className={`text-xs font-mono font-bold tabular-nums ml-2 ${
+                  isWinner ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
+                }`}>
+                  {score !== '' ? score : '-'}
+                </span>
               )}
             </div>
           );
@@ -82,7 +109,7 @@ const MatchCard = memo(({ match, stage, index, isFinal, isEditing, updateMatch, 
   );
 });
 
-const BracketPair = memo(({ matchTop, matchBottom, stage, idxTop, idxBottom, isEditing, updateGeneric, getTeamLogo, side = 'left', gap = 'gap-80', connectorHeight = '6.5rem' }) => {
+const BracketPair = memo(({ matchTop, matchBottom, stage, idxTop, idxBottom, isEditing, updateGeneric, getTeamLogo, side = 'left', gap = 'gap-8 sm:gap-12' }) => {
   const isLeft = side === 'left';
   const handleUpdate = (s, index, field, value) => {
     updateGeneric(stage, index, field, value);
@@ -96,8 +123,10 @@ const BracketPair = memo(({ matchTop, matchBottom, stage, idxTop, idxBottom, isE
       <div className="relative z-10">
         <MatchCard match={matchBottom} stage={stage} index={idxBottom} isEditing={isEditing} updateMatch={handleUpdate} getTeamLogo={getTeamLogo} />
       </div>
-      <div className={`absolute w-16 border-slate-600/50 pointer-events-none ${isLeft ? 'right-0 border-r-4 rounded-r-3xl translate-x-full' : 'left-0 border-l-4 rounded-l-3xl -translate-x-full'}`} style={{ top: connectorHeight, bottom: connectorHeight }}>
-        <div className={`absolute top-1/2 w-12 h-1 bg-slate-600/50 ${isLeft ? 'right-0 translate-x-full' : 'left-0 -translate-x-full'}`}></div>
+      <div className={`hidden lg:block absolute w-8 border-slate-300 dark:border-slate-700/60 pointer-events-none ${
+        isLeft ? 'right-0 border-r-2 rounded-r-xl translate-x-full' : 'left-0 border-l-2 rounded-l-xl -translate-x-full'
+      }`} style={{ top: '25%', bottom: '25%' }}>
+        <div className={`absolute top-1/2 w-6 h-0.5 bg-slate-300 dark:bg-slate-700/60 ${isLeft ? 'right-0 translate-x-full' : 'left-0 -translate-x-full'}`} />
       </div>
     </div>
   );
@@ -158,9 +187,18 @@ const MatchCenter = memo(function MatchCenter({ matches, isEditing, onUpdate, on
     return String(a.date || '').localeCompare(String(b.date || ''));
   });
 
+  const groupedByRound = useMemo(() => {
+    return orderedMatches.reduce((acc, m) => {
+      const r = m.round || 'Jornada Regular';
+      if (!acc[r]) acc[r] = [];
+      acc[r].push(m);
+      return acc;
+    }, {});
+  }, [orderedMatches]);
+
   return (
-    <div className="w-full max-w-[1500px] px-8 py-10">
-      <TournamentSectionTitle title="CENTRO DE PARTIDOS" subtitle="AGENDA, RESULTADOS Y FIGURAS" />
+    <div className="w-full max-w-5xl mx-auto px-4 py-6">
+      <TournamentSectionTitle title="CENTRO DE PARTIDOS" subtitle="AGENDA Y RESULTADOS" />
       {isEditing && (
         <div className="mb-5 flex justify-end">
           <TournamentActionButton tone="green" onClick={onAdd}>Agregar partido</TournamentActionButton>
@@ -171,55 +209,127 @@ const MatchCenter = memo(function MatchCenter({ matches, isEditing, onUpdate, on
           <p className="py-12 text-center text-slate-400">Todavía no hay partidos cargados. El administrador puede crear la agenda desde Editar.</p>
         </TournamentPanel>
       ) : (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {orderedMatches.map((match) => {
-            const isCompleted = match.status === 'completed';
-            return (
-              <article key={match.id} className={`rounded-3xl border p-5 shadow-2xl ${isCompleted ? 'border-slate-700/70 bg-slate-950/70' : 'border-cyan-500/25 bg-cyan-950/15'}`}>
-                <div className="mb-4 flex items-center justify-between gap-3 text-[11px] font-black uppercase tracking-widest">
-                  {isEditing ? (
-                    <input value={match.round || ''} onChange={event => onUpdate(match.id, 'round', event.target.value)} placeholder="Fecha / fase" className="w-40 rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-white" />
-                  ) : <span className="text-cyan-300">{match.round || 'Partido de torneo'}</span>}
-                  <div className="flex items-center gap-2">
-                    <span className={isCompleted ? 'text-emerald-400' : 'text-yellow-300'}>{isCompleted ? 'Finalizado' : 'Próximo'}</span>
-                    {isEditing && <button type="button" onClick={() => onRemove(match.id)} className="rounded-md border border-red-500/40 bg-red-500/10 p-1.5 text-red-300 transition hover:bg-red-500 hover:text-white" title="Eliminar partido" aria-label="Eliminar partido"><Trash2 size={14} /></button>}
-                  </div>
-                </div>
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                  {['home', 'away'].map((side, index) => {
-                    const teamField = `${side}Team`;
-                    const scoreField = `${side}Score`;
-                    const teamName = match[teamField] || (side === 'home' ? 'Local' : 'Visitante');
-                    return (
-                      <React.Fragment key={side}>
-                        {index === 1 && <div className="text-center text-lg font-black text-slate-500">VS</div>}
-                        <div className={`min-w-0 ${side === 'away' ? 'order-3 text-right' : ''}`}>
-                          <img src={getTeamLogo(teamName)} alt="" className={`mb-2 h-12 w-12 object-contain ${side === 'away' ? 'ml-auto' : ''}`} onError={event => { event.currentTarget.src = DEFAULT_LOGO; }} />
-                          {isEditing ? <TeamSelect value={match[teamField] || ''} onChange={value => onUpdate(match.id, teamField, value)} className="w-full px-2 py-1 text-sm font-black" /> : <p className="truncate text-lg font-black uppercase text-white">{teamName}</p>}
-                          {isEditing ? <input type="number" value={match[scoreField] ?? ''} onChange={event => onUpdate(match.id, scoreField, event.target.value)} className={`mt-2 w-16 rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-center text-xl font-black text-white ${side === 'away' ? 'ml-auto block' : ''}`} /> : isCompleted && <p className="mt-2 text-3xl font-black text-white">{match[scoreField] ?? 0}</p>}
+        <div className="space-y-6">
+          {Object.entries(groupedByRound).map(([roundName, matchesInRound]) => (
+            <div key={roundName} className="space-y-2.5">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 dark:bg-slate-800/40 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800/60">
+                <span className="uppercase tracking-wider">{roundName}</span>
+                <span className="text-[11px] font-medium text-slate-500">
+                  {matchesInRound.length} {matchesInRound.length === 1 ? 'partido' : 'partidos'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {matchesInRound.map(match => {
+                  const isCompleted = match.status === 'completed';
+                  const homeWon = isCompleted && Number(match.homeScore) > Number(match.awayScore);
+                  const awayWon = isCompleted && Number(match.awayScore) > Number(match.homeScore);
+
+                  return (
+                    <article key={match.id} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-3.5 shadow-sm transition-all hover:border-slate-300 dark:hover:border-slate-700">
+                      {/* Top status */}
+                      <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+                        <span className="text-slate-500 font-medium text-[11px]">{match.date || 'Fecha a confirmar'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            isCompleted ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-300'
+                          }`}>
+                            {isCompleted ? 'Finalizado' : 'Próximo'}
+                          </span>
+                          {isEditing && (
+                            <button type="button" onClick={() => onRemove(match.id)} className="rounded p-1 text-red-400 hover:bg-red-500/10 transition" title="Eliminar partido">
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-                <div className="mt-5 grid grid-cols-1 gap-2 border-t border-white/5 pt-4 sm:grid-cols-3">
-                  {isEditing ? (
-                    <>
-                      <input type="date" value={match.date || ''} onChange={event => onUpdate(match.id, 'date', event.target.value)} className="rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-sm text-white" />
-                      <input value={match.mvp || ''} onChange={event => onUpdate(match.id, 'mvp', event.target.value)} placeholder="MVP" className="rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-sm text-white" />
-                      <select value={match.status || 'scheduled'} onChange={event => onUpdate(match.id, 'status', event.target.value)} className="rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-sm text-white"><option value="scheduled">Próximo</option><option value="completed">Finalizado</option></select>
-                      <input value={match.homeGoals || ''} onChange={event => onUpdate(match.id, 'homeGoals', event.target.value)} placeholder="Goleadores local" className="rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-sm text-white sm:col-span-1" />
-                      <input value={match.awayGoals || ''} onChange={event => onUpdate(match.id, 'awayGoals', event.target.value)} placeholder="Goleadores visitante" className="rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-sm text-white sm:col-span-2" />
-                      <input value={match.homeAssists || ''} onChange={event => onUpdate(match.id, 'homeAssists', event.target.value)} placeholder="Asistencias local" className="rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-sm text-white sm:col-span-1" />
-                      <input value={match.awayAssists || ''} onChange={event => onUpdate(match.id, 'awayAssists', event.target.value)} placeholder="Asistencias visitante" className="rounded-lg border border-slate-600 bg-black/40 px-2 py-1 text-sm text-white sm:col-span-2" />
-                      <label className="flex items-center gap-2 text-xs font-bold text-emerald-300"><input type="checkbox" checked={Boolean(match.homeConfirmed)} onChange={event => onUpdate(match.id, 'homeConfirmed', event.target.checked)} /> Confirmó local</label>
-                      <label className="flex items-center gap-2 text-xs font-bold text-emerald-300"><input type="checkbox" checked={Boolean(match.awayConfirmed)} onChange={event => onUpdate(match.id, 'awayConfirmed', event.target.checked)} /> Confirmó visitante</label>
-                    </>
-                  ) : <><span className="text-xs font-bold text-slate-400">{match.date || 'Fecha a confirmar'}</span><span className="text-xs font-bold text-yellow-300">{match.mvp ? `MVP: ${match.mvp}` : 'MVP pendiente'}</span><span className="text-xs font-bold text-slate-500">{match.homeGoals || match.awayGoals ? `${match.homeGoals || ''} ${match.awayGoals || ''}` : 'Goleadores pendientes'}</span>{(match.homeConfirmed && match.awayConfirmed) && <span className="text-xs font-black text-emerald-300">DTs confirmados</span>}</>}
-                </div>
-              </article>
-            );
-          })}
+                      </div>
+
+                      {/* Teams & Score Row */}
+                      <div className="space-y-2 py-1">
+                        {/* Local */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <img src={getTeamLogo(match.homeTeam)} alt="" className="w-6 h-6 object-contain shrink-0" onError={e => { e.currentTarget.src = DEFAULT_LOGO; }} />
+                            {isEditing ? (
+                              <TeamSelect value={match.homeTeam || ''} onChange={val => onUpdate(match.id, 'homeTeam', val)} className="w-full px-2 py-1 text-xs" />
+                            ) : (
+                              <span className={`text-sm truncate ${homeWon ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
+                                {match.homeTeam || 'Local'}
+                              </span>
+                            )}
+                          </div>
+                          {isEditing ? (
+                            <input type="number" value={match.homeScore ?? ''} onChange={e => onUpdate(match.id, 'homeScore', e.target.value)} className="w-10 h-7 rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-1 text-center text-sm font-bold text-slate-900 dark:text-white" />
+                          ) : isCompleted && (
+                            <span className={`text-base font-bold font-mono tabular-nums ${homeWon ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>
+                              {match.homeScore ?? 0}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Visitante */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <img src={getTeamLogo(match.awayTeam)} alt="" className="w-6 h-6 object-contain shrink-0" onError={e => { e.currentTarget.src = DEFAULT_LOGO; }} />
+                            {isEditing ? (
+                              <TeamSelect value={match.awayTeam || ''} onChange={val => onUpdate(match.id, 'awayTeam', val)} className="w-full px-2 py-1 text-xs" />
+                            ) : (
+                              <span className={`text-sm truncate ${awayWon ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
+                                {match.awayTeam || 'Visitante'}
+                              </span>
+                            )}
+                          </div>
+                          {isEditing ? (
+                            <input type="number" value={match.awayScore ?? ''} onChange={e => onUpdate(match.id, 'awayScore', e.target.value)} className="w-10 h-7 rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-1 text-center text-sm font-bold text-slate-900 dark:text-white" />
+                          ) : isCompleted && (
+                            <span className={`text-base font-bold font-mono tabular-nums ${awayWon ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>
+                              {match.awayScore ?? 0}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Goalscorers & Meta */}
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+                        {match.homeGoals || match.awayGoals ? (
+                          <div className="flex items-center gap-1.5 truncate text-slate-600 dark:text-slate-400">
+                            <span>⚽</span>
+                            <span className="truncate">{match.homeGoals || match.awayGoals}</span>
+                          </div>
+                        ) : (
+                          <span className="italic text-[10px]">Sin goles registrados</span>
+                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {match.mvp && (
+                            <span className="text-amber-600 dark:text-amber-300 font-semibold text-[10px]">
+                              MVP: {match.mvp}
+                            </span>
+                          )}
+                          {match.homeConfirmed && match.awayConfirmed && (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                              ✓ Confirmado
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {isEditing && (
+                        <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-2 text-xs">
+                          <input type="date" value={match.date || ''} onChange={event => onUpdate(match.id, 'date', event.target.value)} className="rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-slate-900 dark:text-white" />
+                          <input value={match.mvp || ''} onChange={event => onUpdate(match.id, 'mvp', event.target.value)} placeholder="MVP" className="rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-slate-900 dark:text-white" />
+                          <select value={match.status || 'scheduled'} onChange={event => onUpdate(match.id, 'status', event.target.value)} className="rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-slate-900 dark:text-white col-span-2">
+                            <option value="scheduled">Próximo</option>
+                            <option value="completed">Finalizado</option>
+                          </select>
+                          <input value={match.homeGoals || ''} onChange={event => onUpdate(match.id, 'homeGoals', event.target.value)} placeholder="Goleadores local (ej. Mbappé 34')" className="rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-slate-900 dark:text-white" />
+                          <input value={match.awayGoals || ''} onChange={event => onUpdate(match.id, 'awayGoals', event.target.value)} placeholder="Goleadores visita (ej. Rodri 78')" className="rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-slate-900 dark:text-white" />
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -501,19 +611,19 @@ export const TournamentModal = memo(function TournamentModal({ isVisible, isPage
       <div className={`${tournamentBackdropClass} z-0`}></div>
       <div className="relative z-10 w-full h-full flex flex-col" onClick={e => e.stopPropagation()}>
         {!isObsMode && (
-          <div className="flex justify-between items-center p-4 bg-slate-900/80 backdrop-blur border-b border-white/5 shrink-0">
-            <div className="flex items-center gap-3">
-              <img src={DEFAULT_LOGO} className="w-8 h-8 object-contain" alt="Logo" onError={(e) => e.target.style.display = 'none'} />
-              <span className="font-bold text-white tracking-widest text-sm">SCL DATA HUB</span>
+          <div className="flex flex-wrap justify-between items-center px-4 py-3 bg-white/95 dark:bg-[#0c1017]/95 backdrop-blur border-b border-slate-200 dark:border-white/10 shrink-0 gap-3">
+            <div className="flex items-center gap-2.5">
+              <img src={DEFAULT_LOGO} className="w-7 h-7 object-contain" alt="Logo" onError={(e) => e.target.style.display = 'none'} />
+              <span className="font-bold text-slate-900 dark:text-white tracking-wide text-sm">Torneo SCL</span>
             </div>
-            <div className="flex gap-1 bg-black/20 p-1 rounded-lg">
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
               <TournamentTabButton id="matches" label="Partidos" icon={CalendarDays} activeTab={activeTab} onClick={setActiveTab} />
               <TournamentTabButton id="groups" label="Tabla" icon={LayoutGrid} activeTab={activeTab} onClick={setActiveTab} />
               <TournamentTabButton id="bracket" label="Brackets" icon={Trophy} activeTab={activeTab} onClick={setActiveTab} />
               {isAdmin && <TournamentTabButton id="repechaje" label="Plata (Admin)" icon={ShieldAlert} activeTab={activeTab} onClick={setActiveTab} />}
               {isAdmin && <TournamentTabButton id="stats" label="Goleadores (Admin)" icon={Star} activeTab={activeTab} onClick={setActiveTab} />}
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               {isPage && (
                 <>
                   <TournamentActionButton onClick={() => handleCopyObsLink('groups')}>
@@ -535,15 +645,18 @@ export const TournamentModal = memo(function TournamentModal({ isVisible, isPage
                   {isEditing ? <><Save className="w-4 h-4 mr-2" /> Guardar</> : <><Edit2 className="w-4 h-4 mr-2" /> Editar</>}
                 </TournamentActionButton>
               )}
-              <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-white transition" title="Cerrar"><X size={24} /></button>
+              <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full text-slate-500 dark:text-slate-400 transition" title="Cerrar"><X size={20} /></button>
             </div>
           </div>
         )}
 
-        <div className="flex-grow flex flex-col items-center justify-center p-0 overflow-hidden relative">
+        <div className={`flex-grow relative ${isObsMode ? 'flex flex-col items-center justify-center p-0 overflow-hidden' : 'w-full h-full overflow-y-auto overflow-x-hidden p-3 sm:p-6 custom-scrollbar'}`}>
           <div
-            className={`w-[1920px] h-[1080px] flex flex-col items-center justify-center transition-transform duration-500 origin-center ${isObsMode ? '' : 'scale-[0.80]'}`}
-            style={isObsMode ? { transform: `scale(${obsContentScale})` } : undefined}
+            className={isObsMode ? 'w-[1920px] h-[1080px] flex flex-col items-center justify-center transition-transform duration-500 origin-center' : 'w-full max-w-7xl mx-auto flex flex-col'}
+            style={{
+              transform: isObsMode ? `scale(${obsContentScale})` : undefined,
+              contain: isObsMode ? 'content' : undefined,
+            }}
           >
 
             {activeTab === 'matches' && (
@@ -558,57 +671,68 @@ export const TournamentModal = memo(function TournamentModal({ isVisible, isPage
             )}
 
             {activeTab === 'groups' && (
-              <div className={`flex flex-col items-center w-full h-full scale-100 ${isObsMode ? 'justify-start pt-8' : 'justify-center'}`}>
+              <div className={`flex flex-col items-center w-full ${isObsMode ? 'h-full justify-start pt-8' : 'py-2'}`}>
                 <TournamentSectionTitle title="SUPERCONTINENTAL LEAGUE" subtitle="TABLA GENERAL" compact={isObsMode} />
-                <div className={`w-full ${isObsMode ? 'max-w-[1640px] px-12 mt-1' : 'max-w-[1400px] px-8 mt-8'}`}>
-                  <TournamentPanel title="Clasificación" className={`[&>div:last-child]:p-0 ${isObsMode ? '[&>div:first-child]:p-4 [&>div:first-child_h3]:text-3xl' : ''}`}>
-                    <table className="w-full text-left border-collapse">
-                      <thead className={`bg-black/40 text-slate-400 uppercase tracking-wider font-bold ${isObsMode ? 'text-sm' : 'text-lg'}`}>
+                <div className={`w-full ${isObsMode ? 'max-w-[1640px] px-12 mt-1' : 'max-w-5xl px-2 sm:px-4 mt-2'}`}>
+                  <TournamentPanel title="Clasificación" className="[&>div:last-child]:p-0">
+                    <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse min-w-[620px]">
+                      <thead className={`bg-slate-100 dark:bg-black/40 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800 ${isObsMode ? 'text-sm' : 'text-xs'}`}>
                         <tr>
-                          <th className={isObsMode ? 'px-6 py-2' : 'px-8 py-4'}>Club</th>
-                          <th className={`px-2 text-center w-16 ${isObsMode ? 'py-2' : 'py-4'}`}>PJ</th>
-                          <th className={`px-2 text-center w-16 text-green-400 ${isObsMode ? 'py-2' : 'py-4'}`}>G</th>
-                          <th className={`px-2 text-center w-16 text-yellow-400 ${isObsMode ? 'py-2' : 'py-4'}`}>GP</th>
-                          <th className={`px-2 text-center w-16 text-red-400 ${isObsMode ? 'py-2' : 'py-4'}`}>P</th>
-                          <th className={`px-2 text-center w-16 ${isObsMode ? 'py-2' : 'py-4'}`}>GF</th>
-                          <th className={`px-2 text-center w-16 ${isObsMode ? 'py-2' : 'py-4'}`}>GC</th>
-                          <th className={`px-2 text-center w-16 text-blue-400 ${isObsMode ? 'py-2' : 'py-4'}`}>DG</th>
-                          <th className={`${isObsMode ? 'px-6 py-2' : 'px-8 py-4'} text-right text-white w-24`}>PTS</th>
+                          <th className="py-2.5 px-3 w-10 text-center">#</th>
+                          <th className={isObsMode ? 'px-6 py-2' : 'px-4 py-2.5'}>Club</th>
+                          <th className="px-2 text-center w-10 sm:w-12 py-2.5">PJ</th>
+                          <th className="px-2 text-center w-10 sm:w-12 py-2.5">G</th>
+                          <th className="px-2 text-center w-10 sm:w-12 py-2.5">GP</th>
+                          <th className="px-2 text-center w-10 sm:w-12 py-2.5">P</th>
+                          <th className="px-2 text-center w-10 sm:w-12 py-2.5">GF</th>
+                          <th className="px-2 text-center w-10 sm:w-12 py-2.5">GC</th>
+                          <th className="px-2 text-center w-10 sm:w-12 py-2.5">DG</th>
+                          <th className={`${isObsMode ? 'px-6 py-2' : 'px-4 py-2.5'} text-right text-slate-900 dark:text-white font-bold w-14 sm:w-16`}>PTS</th>
                         </tr>
                       </thead>
-                      <tbody className={`divide-y divide-slate-700/30 font-medium ${isObsMode ? 'text-base' : 'text-xl'}`}>
+                      <tbody className={`divide-y divide-slate-200/80 dark:divide-slate-800 font-medium ${isObsMode ? 'text-base' : 'text-xs sm:text-sm'}`}>
                         {(isEditing ? localData.league : localData.league.filter(team => team.name && team.name !== 'Club...')).map((team, idx) => {
                           const isCurrentUser = userTeamName && userTeamName.trim().toLowerCase() === team.name?.trim().toLowerCase();
                           const isTop4 = idx < 4;
                           const isBottom3 = idx >= 9;
-                          const rowHighlightClass = isCurrentUser ? 'bg-cyan-500/20 shadow-[inset_0_0_20px_rgba(6,182,212,0.3)] border-b-2 border-cyan-500' : 
-                                                    isTop4 ? 'bg-green-500/5' : 
-                                                    isBottom3 ? 'bg-red-500/5' : 'bg-slate-500/5';
-                          const numberBg = isTop4 ? 'bg-green-600 text-black' : isBottom3 ? 'bg-red-600 text-white' : 'bg-slate-800 text-slate-500';
+                          const qualificationBorder = isTop4 ? 'border-l-[3px] border-emerald-500' : isBottom3 ? 'border-l-[3px] border-rose-500' : 'border-l-[3px] border-transparent';
+                          const rowHighlightClass = isCurrentUser ? 'bg-sky-500/10 dark:bg-cyan-500/15' : 'hover:bg-slate-50 dark:hover:bg-white/5';
+                          const numberColor = isTop4 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : isBottom3 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-400 font-medium';
+
                           return (
-                          <tr key={team.id || idx} className={`${rowHighlightClass} hover:bg-white/10 transition-colors`}>
-                            <td className={`flex items-center ${isObsMode ? 'gap-4 px-6 py-1.5' : 'gap-6 px-8 py-3'}`}>
-                              <div className={`${isObsMode ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm'} flex-shrink-0 flex items-center justify-center rounded-lg font-black ${numberBg}`}>{idx + 1}</div>
-                              <img src={getTeamLogo(team.name)} className={`${isObsMode ? 'w-7 h-7' : 'w-10 h-10'} object-contain flex-shrink-0`} onError={(e) => e.target.src = DEFAULT_LOGO} />
-                              {isEditing ? <TeamSelect value={team.name === 'Club...' ? '' : team.name} onChange={(value) => updateLeagueTeam(idx, 'name', value)} className="w-full px-2 py-1" /> : <span className={`whitespace-nowrap font-bold ${isTop4 ? 'text-white' : 'text-slate-300'}`}>{team.name}</span>}
+                          <tr key={team.id || idx} className={`${qualificationBorder} ${rowHighlightClass} transition-colors h-11 text-slate-800 dark:text-slate-200`}>
+                            <td className={`text-center text-xs font-mono tabular-nums ${numberColor}`}>
+                              {idx + 1}
                             </td>
-                            <td className="px-2 text-center text-slate-400">{team.pj}</td>
-                            <td className="px-2 text-center text-green-500/80">{isEditing ? <input type="number" className="w-10 bg-black/50 text-center" value={team.pg} onChange={(e) => updateLeagueTeam(idx, 'pg', e.target.value)} /> : team.pg}</td>
-                            <td className="px-2 text-center text-yellow-500/80">{isEditing ? <input type="number" className="w-10 bg-black/50 text-center" value={team.gpen} onChange={(e) => updateLeagueTeam(idx, 'gpen', e.target.value)} /> : team.gpen}</td>
-                            <td className="px-2 text-center text-red-500/80">{isEditing ? <input type="number" className="w-10 bg-black/50 text-center" value={team.pp} onChange={(e) => updateLeagueTeam(idx, 'pp', e.target.value)} /> : team.pp}</td>
-                            <td className="px-2 text-center text-slate-500">{isEditing ? <input type="number" className="w-10 bg-black/50 text-center" value={team.gf} onChange={(e) => updateLeagueTeam(idx, 'gf', e.target.value)} /> : team.gf}</td>
-                            <td className="px-2 text-center text-slate-500">{isEditing ? <input type="number" className="w-10 bg-black/50 text-center" value={team.gc} onChange={(e) => updateLeagueTeam(idx, 'gc', e.target.value)} /> : team.gc}</td>
-                            <td className="px-2 text-center font-bold text-blue-400">{(Number(team.gf) || 0) - (Number(team.gc) || 0)}</td>
-                            <td className={`${isObsMode ? 'px-6 text-xl' : 'px-8 text-2xl'} text-right font-black text-white`}>{team.pts}</td>
+                            <td className={`flex items-center ${isObsMode ? 'gap-4 px-6 py-1.5' : 'gap-2.5 sm:gap-3 px-3 sm:px-4 py-2'}`}>
+                              <img src={getTeamLogo(team.name)} className="w-6 h-6 sm:w-7 sm:h-7 object-contain flex-shrink-0" onError={(e) => { e.target.src = DEFAULT_LOGO; }} />
+                              {isEditing ? (
+                                <TeamSelect value={team.name === 'Club...' ? '' : team.name} onChange={(value) => updateLeagueTeam(idx, 'name', value)} className="w-full px-2 py-1 text-xs" />
+                              ) : (
+                                <span className={`whitespace-nowrap font-semibold text-xs sm:text-sm ${isTop4 ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
+                                  {team.name}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-2 text-center text-slate-500 tabular-nums">{team.pj}</td>
+                            <td className="px-2 text-center font-semibold tabular-nums">{isEditing ? <input type="number" className="w-9 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded text-center text-xs" value={team.pg} onChange={(e) => updateLeagueTeam(idx, 'pg', e.target.value)} /> : team.pg}</td>
+                            <td className="px-2 text-center text-slate-500 tabular-nums">{isEditing ? <input type="number" className="w-9 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded text-center text-xs" value={team.gpen} onChange={(e) => updateLeagueTeam(idx, 'gpen', e.target.value)} /> : team.gpen}</td>
+                            <td className="px-2 text-center text-slate-500 tabular-nums">{isEditing ? <input type="number" className="w-9 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded text-center text-xs" value={team.pp} onChange={(e) => updateLeagueTeam(idx, 'pp', e.target.value)} /> : team.pp}</td>
+                            <td className="px-2 text-center text-slate-500 tabular-nums">{isEditing ? <input type="number" className="w-9 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded text-center text-xs" value={team.gf} onChange={(e) => updateLeagueTeam(idx, 'gf', e.target.value)} /> : team.gf}</td>
+                            <td className="px-2 text-center text-slate-500 tabular-nums">{isEditing ? <input type="number" className="w-9 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded text-center text-xs" value={team.gc} onChange={(e) => updateLeagueTeam(idx, 'gc', e.target.value)} /> : team.gc}</td>
+                            <td className="px-2 text-center font-semibold tabular-nums">{(Number(team.gf) || 0) - (Number(team.gc) || 0)}</td>
+                            <td className={`${isObsMode ? 'px-6 text-lg' : 'px-4 text-sm sm:text-base'} text-right font-bold text-slate-900 dark:text-white tabular-nums`}>{team.pts}</td>
                           </tr>
                           );
                         })}
                       </tbody>
                     </table>
+                    </div>
                     {!isEditing && localData.league.filter(team => team.name && team.name !== 'Club...').length === 0 && (
-                      <div className="p-12 text-center border-t border-slate-700/40">
-                        <p className="text-2xl font-black text-white italic uppercase tracking-wider">Sin tabla cargada</p>
-                        <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.35em] mt-3">Carga equipos desde el panel del torneo</p>
+                      <div className="p-10 text-center border-t border-slate-800">
+                        <p className="text-lg font-bold text-white uppercase tracking-wide">Sin tabla cargada</p>
+                        <p className="text-xs text-slate-500 mt-2">Carga equipos desde el panel del torneo</p>
                       </div>
                     )}
                   </TournamentPanel>
@@ -617,82 +741,103 @@ export const TournamentModal = memo(function TournamentModal({ isVisible, isPage
             )}
 
             {activeTab === 'bracket' && (
-              <div className="flex flex-col items-center justify-center h-full">
+              <div className={`flex flex-col items-center justify-center ${isObsMode ? 'h-full' : 'py-4 w-full'}`}>
                 <TournamentSectionTitle title="SUPERCONTINENTAL LEAGUE" subtitle="ELIMINATORIAS ORO" />
-                <div className="flex items-center justify-center gap-16 w-full mt-8">
-                  {/* LEFT QUARTERS */}
-                  <BracketPair matchTop={localData.bracket.quarters[0]} matchBottom={localData.bracket.quarters[1]} stage="quarters" idxTop={0} idxBottom={1} side="left" isEditing={isEditing} updateGeneric={updateGeneric} getTeamLogo={getTeamLogo} />
-                  {/* LEFT SEMI */}
-                  <div className="flex flex-col items-center justify-center z-10 relative">
-                    <MatchCard match={localData.bracket.semis[0]} stage="semis" index={0} isEditing={isEditing} updateMatch={updateGeneric} getTeamLogo={getTeamLogo} />
-                    <div className={`absolute top-1/2 w-16 h-1 bg-slate-600/50 -z-10 -right-16`}></div>
+                <div className={`w-full ${isObsMode ? 'flex items-center justify-center gap-16 mt-8' : 'overflow-x-auto overflow-y-visible pb-12 pt-4 custom-scrollbar'}`}>
+                  <div className={`${isObsMode ? 'flex items-center justify-center gap-16' : 'min-w-[1300px] flex items-center justify-center gap-10 sm:gap-14 py-4 px-6 mx-auto'}`}>
+                    {/* LEFT QUARTERS */}
+                    <BracketPair matchTop={localData.bracket.quarters[0]} matchBottom={localData.bracket.quarters[1]} stage="quarters" idxTop={0} idxBottom={1} side="left" isEditing={isEditing} updateGeneric={updateGeneric} getTeamLogo={getTeamLogo} />
+                    {/* LEFT SEMI */}
+                    <div className="flex flex-col items-center justify-center z-10 relative">
+                      <MatchCard match={localData.bracket.semis[0]} stage="semis" index={0} isEditing={isEditing} updateMatch={updateGeneric} getTeamLogo={getTeamLogo} />
+                      <div className={`absolute top-1/2 w-16 h-1 bg-slate-600/50 -z-10 -right-16`}></div>
+                    </div>
+                    {/* FINAL */}
+                    <div className="flex flex-col items-center justify-center z-20 px-4 relative -mt-6">
+                      <div className="flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold uppercase tracking-wider">
+                        <Crown className="w-4 h-4" />
+                        <span>Gran Final</span>
+                      </div>
+                      <MatchCard match={localData.bracket.final} stage="final" index={0} isFinal={true} isEditing={isEditing} updateMatch={updateGeneric} getTeamLogo={getTeamLogo} />
+                    </div>
+                    {/* RIGHT SEMI */}
+                    <div className="flex flex-col items-center justify-center z-10 relative">
+                      <MatchCard match={localData.bracket.semis[1]} stage="semis" index={1} isEditing={isEditing} updateMatch={updateGeneric} getTeamLogo={getTeamLogo} />
+                      <div className={`absolute top-1/2 w-16 h-1 bg-slate-600/50 -z-10 -left-16`}></div>
+                    </div>
+                    {/* RIGHT QUARTERS */}
+                    <BracketPair matchTop={localData.bracket.quarters[2]} matchBottom={localData.bracket.quarters[3]} stage="quarters" idxTop={2} idxBottom={3} side="right" isEditing={isEditing} updateGeneric={updateGeneric} getTeamLogo={getTeamLogo} />
                   </div>
-                  {/* FINAL */}
-                  <div className="flex flex-col items-center justify-center z-20 px-4 relative -mt-16">
-                    <div className="text-yellow-500 animate-pulse mb-6 drop-shadow-[0_0_50px_rgba(234,179,8,0.6)]"><Crown size={120} strokeWidth={1.5} /></div>
-                    <MatchCard match={localData.bracket.final} stage="final" index={0} isFinal={true} isEditing={isEditing} updateMatch={updateGeneric} getTeamLogo={getTeamLogo} />
-                  </div>
-                  {/* RIGHT SEMI */}
-                  <div className="flex flex-col items-center justify-center z-10 relative">
-                    <MatchCard match={localData.bracket.semis[1]} stage="semis" index={1} isEditing={isEditing} updateMatch={updateGeneric} getTeamLogo={getTeamLogo} />
-                    <div className={`absolute top-1/2 w-16 h-1 bg-slate-600/50 -z-10 -left-16`}></div>
-                  </div>
-                  {/* RIGHT QUARTERS */}
-                  <BracketPair matchTop={localData.bracket.quarters[2]} matchBottom={localData.bracket.quarters[3]} stage="quarters" idxTop={2} idxBottom={3} side="right" isEditing={isEditing} updateGeneric={updateGeneric} getTeamLogo={getTeamLogo} />
                 </div>
               </div>
             )}
 
             {activeTab === 'repechaje' && (
-              <div className="flex flex-col items-center justify-center h-full w-full">
+              <div className={`flex flex-col items-center justify-center ${isObsMode ? 'h-full w-full' : 'py-4 w-full'}`}>
                 <TournamentSectionTitle title="SUPERCONTINENTAL LEAGUE" subtitle="COPA DE PLATA" />
-                <div className="flex items-center justify-center gap-24 w-full mt-12">
-                  <SilverBranch side="left" matchesR1={[localData.bracket.repechaje.r1[0], localData.bracket.repechaje.r1[1]]} matchR2={localData.bracket.repechaje.r2[0]} matchSemi={localData.bracket.repechaje.semis[0]} isEditing={isEditing} updateGeneric={updateGeneric} getTeamLogo={getTeamLogo} />
-                  <div className="flex flex-col items-center z-20 px-4 -mt-32">
-                    <div className="text-slate-500 opacity-60 mb-8 drop-shadow-2xl"><Trophy size={130} strokeWidth={1} /></div>
-                    <MatchCard match={localData.bracket.repechaje.final} stage="rep_final" index={0} isFinal={true} isEditing={isEditing} updateMatch={(s, i, f, v) => updateGeneric(['repechaje', 'final'], i, f, v)} getTeamLogo={getTeamLogo} />
+                <div className={`w-full ${isObsMode ? 'flex items-center justify-center gap-24 mt-12' : 'overflow-x-auto overflow-y-visible pb-12 pt-4 custom-scrollbar'}`}>
+                  <div className={`${isObsMode ? 'flex items-center justify-center gap-24' : 'min-w-[1400px] flex items-center justify-center gap-12 sm:gap-16 py-4 px-6 mx-auto'}`}>
+                    <SilverBranch side="left" matchesR1={[localData.bracket.repechaje.r1[0], localData.bracket.repechaje.r1[1]]} matchR2={localData.bracket.repechaje.r2[0]} matchSemi={localData.bracket.repechaje.semis[0]} isEditing={isEditing} updateGeneric={updateGeneric} getTeamLogo={getTeamLogo} />
+                    <div className="flex flex-col items-center z-20 px-4 -mt-6">
+                      <div className="flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-slate-500/10 dark:bg-slate-400/10 border border-slate-400/30 text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">
+                        <Trophy className="w-4 h-4 text-slate-400" />
+                        <span>Final Copa de Plata</span>
+                      </div>
+                      <MatchCard match={localData.bracket.repechaje.final} stage="rep_final" index={0} isFinal={true} isEditing={isEditing} updateMatch={(s, i, f, v) => updateGeneric(['repechaje', 'final'], i, f, v)} getTeamLogo={getTeamLogo} />
+                    </div>
+                    <SilverBranch side="right" matchesR1={[localData.bracket.repechaje.r1[2], localData.bracket.repechaje.r1[3]]} matchR2={localData.bracket.repechaje.r2[1]} matchSemi={localData.bracket.repechaje.semis[1]} isEditing={isEditing} updateGeneric={updateGeneric} getTeamLogo={getTeamLogo} />
                   </div>
-                  <SilverBranch side="right" matchesR1={[localData.bracket.repechaje.r1[2], localData.bracket.repechaje.r1[3]]} matchR2={localData.bracket.repechaje.r2[1]} matchSemi={localData.bracket.repechaje.semis[1]} isEditing={isEditing} updateGeneric={updateGeneric} getTeamLogo={getTeamLogo} />
                 </div>
               </div>
             )}
 
             {activeTab === 'stats' && (
-              <div className="flex flex-col items-center w-full h-full justify-center scale-100 px-20">
-                <TournamentSectionTitle title="LÍDERES INDIVIDUALES" subtitle="ESTADÍSTICAS REALES" />
-                <div className="grid grid-cols-2 gap-20 w-full max-w-[1500px] mt-10">
+              <div className={`flex flex-col items-center w-full ${isObsMode ? 'h-full justify-center scale-100 px-20' : 'max-w-5xl mx-auto py-4 px-4'}`}>
+                <TournamentSectionTitle title="LÍDERES INDIVIDUALES" subtitle="ESTADÍSTICAS DEL TORNEO" />
+                <div className={`w-full ${isObsMode ? 'grid grid-cols-2 gap-12 max-w-[1500px] mt-8' : 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-4'}`}>
                   {/* GOLEADORES */}
-                  <div className="bg-[#0f172a] rounded-3xl border border-slate-700/50 overflow-hidden shadow-2xl">
-                    <div className="bg-gradient-to-r from-yellow-600/20 to-transparent p-6 border-b border-slate-700/50 flex items-center gap-4">
-                       <Trophy className="text-yellow-500 w-8 h-8" />
-                       <h3 className="text-3xl font-black text-white italic tracking-wider">MÁXIMOS GOLEADORES</h3>
+                  <div className="bg-white dark:bg-[#0c1017] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="bg-slate-50 dark:bg-slate-900/80 px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                       <div className="flex items-center gap-2.5">
+                         <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                           <Trophy className="w-4 h-4" />
+                         </div>
+                         <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Máximos Goleadores</h3>
+                       </div>
+                       <span className="text-xs text-slate-400 font-medium">Goles</span>
                     </div>
-                    <div className="p-4 space-y-4">
+                    <div className="p-3 space-y-2 divide-y divide-slate-100 dark:divide-slate-800/60">
                       {localData.topScorers.map((player, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-black/30 p-4 rounded-2xl border border-white/5">
-                           <div className="flex items-center gap-4">
-                             <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center font-black text-slate-400">{idx+1}</div>
-                             <div className="flex flex-col">
+                        <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
+                           <div className="flex items-center gap-3">
+                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-amber-500 text-white shadow-sm' : idx === 1 ? 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200' : idx === 2 ? 'bg-amber-700/70 text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                               {idx + 1}
+                             </div>
+                             {player.team && (
+                               <img src={getTeamLogo(player.team)} className="w-6 h-6 object-contain" onError={(e) => { e.target.src = DEFAULT_LOGO; }} alt="" />
+                             )}
+                             <div className="flex flex-col min-w-0">
                                {isEditing ? (
                                  <>
-                                   <input placeholder="Nombre" value={player.name} onChange={e => updateStat('topScorers', idx, 'name', e.target.value)} className="bg-black/50 text-white px-2 py-1 mb-1 rounded border border-slate-700 text-sm"/>
-                                   <input placeholder="Club" value={player.team} onChange={e => updateStat('topScorers', idx, 'team', e.target.value)} className="bg-black/50 text-slate-400 px-2 py-1 rounded border border-slate-700 text-xs"/>
+                                   <input placeholder="Nombre" value={player.name} onChange={e => updateStat('topScorers', idx, 'name', e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white px-2 py-1 mb-1 rounded border border-slate-300 dark:border-slate-700 text-xs"/>
+                                   <input placeholder="Club" value={player.team} onChange={e => updateStat('topScorers', idx, 'team', e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-xs"/>
                                  </>
                                ) : (
                                  <>
-                                   <span className="text-xl font-black text-white uppercase">{player.name || '---'}</span>
-                                   <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">{player.team || '---'}</span>
+                                   <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">{player.name || '—'}</span>
+                                   <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{player.team || 'Sin equipo'}</span>
                                  </>
                                )}
                              </div>
                            </div>
-                           <div className="flex items-center gap-3">
+                           <div className="flex items-center gap-2 pl-3">
                              {isEditing ? (
-                               <input type="number" value={player.goals} onChange={e => updateStat('topScorers', idx, 'goals', e.target.value)} className="w-16 bg-blue-600/20 text-blue-400 text-center font-black text-2xl rounded p-2" />
+                               <input type="number" value={player.goals} onChange={e => updateStat('topScorers', idx, 'goals', e.target.value)} className="w-14 bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 text-center font-bold text-base rounded p-1 border border-sky-300 dark:border-sky-800" />
                              ) : (
-                               <div className="text-4xl font-black text-blue-400">{player.goals || 0}</div>
+                               <div className="min-w-[32px] text-right font-bold text-sm sm:text-base text-sky-600 dark:text-sky-400 tabular-nums">
+                                 {player.goals || 0}
+                               </div>
                              )}
-                             <span className="text-[10px] font-black text-slate-600 uppercase vertical-lr tracking-widest">GOLES</span>
                            </div>
                         </div>
                       ))}
@@ -700,37 +845,48 @@ export const TournamentModal = memo(function TournamentModal({ isVisible, isPage
                   </div>
 
                   {/* ASISTIDORES */}
-                  <div className="bg-[#0f172a] rounded-3xl border border-slate-700/50 overflow-hidden shadow-2xl">
-                    <div className="bg-gradient-to-r from-blue-600/20 to-transparent p-6 border-b border-slate-700/50 flex items-center gap-4">
-                       <Star className="text-blue-500 w-8 h-8" />
-                       <h3 className="text-3xl font-black text-white italic tracking-wider">MÁXIMOS ASISTIDORES</h3>
+                  <div className="bg-white dark:bg-[#0c1017] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="bg-slate-50 dark:bg-slate-900/80 px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                       <div className="flex items-center gap-2.5">
+                         <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                           <Star className="w-4 h-4" />
+                         </div>
+                         <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Máximos Asistidores</h3>
+                       </div>
+                       <span className="text-xs text-slate-400 font-medium">Asist</span>
                     </div>
-                    <div className="p-4 space-y-4">
+                    <div className="p-3 space-y-2 divide-y divide-slate-100 dark:divide-slate-800/60">
                       {localData.topAssisters.map((player, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-black/30 p-4 rounded-2xl border border-white/5">
-                           <div className="flex items-center gap-4">
-                             <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center font-black text-slate-400">{idx+1}</div>
-                             <div className="flex flex-col">
+                        <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
+                           <div className="flex items-center gap-3">
+                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-emerald-500 text-white shadow-sm' : idx === 1 ? 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200' : idx === 2 ? 'bg-emerald-700/70 text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                               {idx + 1}
+                             </div>
+                             {player.team && (
+                               <img src={getTeamLogo(player.team)} className="w-6 h-6 object-contain" onError={(e) => { e.target.src = DEFAULT_LOGO; }} alt="" />
+                             )}
+                             <div className="flex flex-col min-w-0">
                                {isEditing ? (
                                  <>
-                                   <input placeholder="Nombre" value={player.name} onChange={e => updateStat('topAssisters', idx, 'name', e.target.value)} className="bg-black/50 text-white px-2 py-1 mb-1 rounded border border-slate-700 text-sm"/>
-                                   <input placeholder="Club" value={player.team} onChange={e => updateStat('topAssisters', idx, 'team', e.target.value)} className="bg-black/50 text-slate-400 px-2 py-1 rounded border border-slate-700 text-xs"/>
+                                   <input placeholder="Nombre" value={player.name} onChange={e => updateStat('topAssisters', idx, 'name', e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white px-2 py-1 mb-1 rounded border border-slate-300 dark:border-slate-700 text-xs"/>
+                                   <input placeholder="Club" value={player.team} onChange={e => updateStat('topAssisters', idx, 'team', e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-xs"/>
                                  </>
                                ) : (
                                  <>
-                                   <span className="text-xl font-black text-white uppercase">{player.name || '---'}</span>
-                                   <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">{player.team || '---'}</span>
+                                   <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">{player.name || '—'}</span>
+                                   <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{player.team || 'Sin equipo'}</span>
                                  </>
                                )}
                              </div>
                            </div>
-                           <div className="flex items-center gap-3">
+                           <div className="flex items-center gap-2 pl-3">
                              {isEditing ? (
-                               <input type="number" value={player.assists} onChange={e => updateStat('topAssisters', idx, 'assists', e.target.value)} className="w-16 bg-emerald-600/20 text-emerald-400 text-center font-black text-2xl rounded p-2" />
+                               <input type="number" value={player.assists} onChange={e => updateStat('topAssisters', idx, 'assists', e.target.value)} className="w-14 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-center font-bold text-base rounded p-1 border border-emerald-300 dark:border-emerald-800" />
                              ) : (
-                               <div className="text-4xl font-black text-emerald-400">{player.assists || 0}</div>
+                               <div className="min-w-[32px] text-right font-bold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                 {player.assists || 0}
+                               </div>
                              )}
-                             <span className="text-[10px] font-black text-slate-600 uppercase vertical-lr tracking-widest">ASIST</span>
                            </div>
                         </div>
                       ))}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { X, Save, Upload, Crown, Settings, Users, Trash2, RefreshCw, UserCheck, Shield, Edit2, Power, Trophy, CalendarClock, Eye, Snowflake, XCircle, Gift, AlertTriangle, MessageSquarePlus, FileText, ClipboardList, Download, Plus, DollarSign, Package, Loader2 } from 'lucide-react';
+import { X, Save, Upload, Crown, Settings, Users, Trash2, RefreshCw, UserCheck, Shield, Edit2, Power, Trophy, CalendarClock, Eye, Snowflake, XCircle, Gift, AlertTriangle, MessageSquarePlus, FileText, ClipboardList, Download, Plus, DollarSign, Package, Loader2, Search, Radio } from 'lucide-react';
 import { onSnapshot, setDoc, deleteDoc, doc, getDocs, query, collection, writeBatch, getDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { jsPDF } from 'jspdf';
@@ -78,6 +78,8 @@ const GeneralAdminSection = memo(function GeneralAdminSection({ getMarketStatusD
   const [isSaving, setIsSaving] = useState(false);
   const [localStatus, setLocalStatus] = useState('loading');
   const [localOpenTime, setLocalOpenTime] = useState('');
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetConfirmInput, setResetConfirmInput] = useState('');
 
   useEffect(() => {
     const unsubscribe = onSnapshot(getMarketStatusDocRef(), (doc) => {
@@ -102,8 +104,8 @@ const GeneralAdminSection = memo(function GeneralAdminSection({ getMarketStatusD
     setIsSaving(false);
   };
 
-  const handleResetDraft = async () => {
-    if (!window.confirm("¡PELIGRO! Esto resetea la temporada completa:\n\n• Borra planteles y carritos de todos los equipos.\n• Borra plantillas, alineaciones, tácticas, dorsales y suplentes.\n• Borra todos los usos y búsquedas del scout.\n• Borra bloqueos de jugadores, ofertas con mensajes, transferencias y noticias.\n• Mantiene intacto el presupuesto actual de cada equipo y el estado del mercado.\n\n¿Estás seguro de continuar?")) return;
+  const handleConfirmResetDraft = async () => {
+    if (resetConfirmInput.trim().toUpperCase() !== 'RESETEAR') return;
     setIsSaving(true);
     try {
       const [locks, legacyLocks, teams, offers, transfers, sharedFormations, news] = await Promise.all([
@@ -194,6 +196,8 @@ const GeneralAdminSection = memo(function GeneralAdminSection({ getMarketStatusD
 
       await commitBatchOperations(db, operations);
       showStatusMessage('success', `Reset completado con éxito. Se purgaron ${operations.length} registros (plantillas, carritos, scouts, locks y ofertas).`);
+      setIsResetModalOpen(false);
+      setResetConfirmInput('');
     } catch (e) {
       console.error(e);
       showStatusMessage('error', 'Error al resetear temporada.');
@@ -202,19 +206,19 @@ const GeneralAdminSection = memo(function GeneralAdminSection({ getMarketStatusD
     }
   };
 
-  if (isLoading) return <div className="text-center text-gray-500 text-sm">Cargando...</div>;
+  if (isLoading) return <div className="text-center text-slate-400 text-xs py-8">Cargando configuración...</div>;
 
   return (
     <div className="space-y-8">
       {/* CONTROL DE MERCADO */}
-      <div className="bg-gray-800/40 p-6 rounded-xl border border-blue-500/30 shadow-lg">
-        <h4 className="text-sm font-bold text-blue-300 uppercase tracking-wider mb-4 flex items-center">
+      <div className="bg-[#0c1017] p-6 rounded-2xl border border-white/[0.08] shadow-lg">
+        <h4 className="text-xs font-black text-cyan-400 uppercase tracking-wider mb-4 flex items-center">
           <Settings className="w-4 h-4 mr-2" /> Control de Mercado
         </h4>
         <div className="space-y-3">
           {['open', 'closed', 'scheduled', 'FranchiseMarket'].map((status) => (
-            <label key={status} className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${localStatus === status ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-gray-900/50 border-gray-700 text-gray-400 hover:bg-gray-800'}`}>
-              <input type="radio" name="marketStatus" value={status} checked={localStatus === status} onChange={(e) => setLocalStatus(e.target.value)} className="form-radio h-4 w-4 text-blue-500 bg-gray-900 border-gray-600 focus:ring-blue-500 mr-3" />
+            <label key={status} className={`flex items-center p-3 rounded-xl border cursor-pointer transition-all ${localStatus === status ? 'bg-cyan-500/15 border-cyan-400 text-white shadow-sm shadow-cyan-500/10' : 'bg-white/[0.02] border-white/[0.06] text-slate-300 hover:bg-white/[0.05]'}`}>
+              <input type="radio" name="marketStatus" value={status} checked={localStatus === status} onChange={(e) => setLocalStatus(e.target.value)} className="form-radio h-4 w-4 text-cyan-400 bg-black/50 border-slate-600 focus:ring-cyan-400 mr-3" />
               <span className="text-sm font-medium">
                 {status === 'open' && 'Abierto (Libre)'}
                 {status === 'closed' && 'Cerrado (Mantenimiento)'}
@@ -227,35 +231,99 @@ const GeneralAdminSection = memo(function GeneralAdminSection({ getMarketStatusD
 
         {localStatus === 'scheduled' && (
           <div className="mt-4 pl-2 animate-in fade-in slide-in-from-top-2">
-            <label className="text-xs text-gray-400 block mb-1 font-bold uppercase">Fecha de Apertura</label>
-            <input type="datetime-local" value={localOpenTime} onChange={(e) => setLocalOpenTime(e.target.value)} className="w-full sm:w-auto px-4 py-2 bg-gray-900 text-white border border-gray-600 rounded-lg text-sm focus:border-blue-500 outline-none" />
+            <label className="text-xs text-slate-400 block mb-1 font-bold uppercase">Fecha de Apertura</label>
+            <input type="datetime-local" value={localOpenTime} onChange={(e) => setLocalOpenTime(e.target.value)} className="w-full sm:w-auto px-4 py-2 bg-black/50 text-white border border-white/10 rounded-lg text-sm focus:border-cyan-400 outline-none" />
           </div>
         )}
 
-        <div className="mt-6 pt-4 border-t border-gray-700/50 flex justify-end">
-          <button onClick={handleSaveStatus} disabled={isSaving} className="flex items-center px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg transition disabled:opacity-50">
+        <div className="mt-6 pt-4 border-t border-white/[0.06] flex justify-end">
+          <button onClick={handleSaveStatus} disabled={isSaving} className="flex items-center px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition disabled:opacity-50 active:scale-95">
             {isSaving ? 'Guardando...' : <><Save className="w-4 h-4 mr-2" /> Guardar Cambios</>}
           </button>
         </div>
       </div>
 
       {/* ZONA DE PELIGRO */}
-      <div className="p-5 bg-red-950/20 rounded-xl border border-red-900/50 shadow-inner">
-        <h4 className="text-red-400 font-black mb-2 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" /> Zona de Peligro - Reseteo de Temporada
-        </h4>
-        <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+      <div className="p-5 sm:p-6 bg-red-950/20 rounded-2xl border border-red-500/30 shadow-inner relative overflow-hidden">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="p-1.5 rounded-lg bg-red-500/20 text-red-400">
+            <AlertTriangle className="w-4 h-4" />
+          </span>
+          <h4 className="text-red-400 text-sm font-black uppercase tracking-wider">
+            Zona de Peligro — Reseteo Integral de Temporada
+          </h4>
+        </div>
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed max-w-2xl">
           Esta acción vacía todos los planteles (carritos), plantillas y formaciones (alineación, tácticas, dorsales y banco), borra los usos y búsquedas del scout, y elimina bloqueos de mercado, ofertas activas y transferencias. Conserva los presupuestos de los equipos y el estado del mercado actual.
         </p>
         <button
-          onClick={handleResetDraft}
+          onClick={() => { setIsResetModalOpen(true); setResetConfirmInput(''); }}
           disabled={isSaving}
-          className="bg-red-600 hover:bg-red-500 text-white font-black py-2.5 px-5 rounded-lg flex items-center gap-2 disabled:opacity-50 transition shadow-lg shadow-red-950/40"
+          className="bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider py-2.5 px-5 rounded-xl flex items-center gap-2 disabled:opacity-50 transition shadow-lg shadow-red-950/50 active:scale-95"
         >
           <RefreshCw className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
-          {isSaving ? 'Reseteando temporada...' : 'Resetear Temporada'}
+          Resetear Temporada...
         </button>
       </div>
+
+      {/* MODAL DOBLE CONFIRMACION RESET */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setIsResetModalOpen(false)}>
+          <div className="bg-[#0d121c] rounded-2xl border border-red-500/40 w-full max-w-lg shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 border-b border-red-500/20 pb-3">
+              <div className="p-2 bg-red-500/20 rounded-xl text-red-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white uppercase tracking-wide">Confirmación Crítica — Reseteo de Temporada</h3>
+                <p className="text-xs text-red-400 font-semibold">Esta acción es irreversible y purga planteles de todos los clubes</p>
+              </div>
+            </div>
+
+            <div className="bg-red-950/30 border border-red-500/20 rounded-xl p-4 text-xs text-slate-300 space-y-2">
+              <p className="font-bold text-red-300">Se purgarán los siguientes datos de TODOS los equipos:</p>
+              <ul className="list-disc list-inside space-y-1 text-slate-400 pl-1">
+                <li>Planteles y carritos de jugadores</li>
+                <li>Alineaciones, tácticas, dorsales y suplentes</li>
+                <li>Historial y créditos mensuales del Scout</li>
+                <li>Bloqueos de mercado, ofertas, noticias y transferencias</li>
+              </ul>
+              <p className="text-emerald-400 font-medium pt-1">✓ Se conservan los presupuestos actuales y el estado del mercado.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                Para confirmar, escribe <span className="text-red-400 font-mono font-black">RESETEAR</span> a continuación:
+              </label>
+              <input
+                type="text"
+                value={resetConfirmInput}
+                onChange={(e) => setResetConfirmInput(e.target.value)}
+                placeholder="RESETEAR"
+                className="w-full px-4 py-2.5 bg-black/60 border border-red-500/40 rounded-xl text-white font-mono text-sm uppercase outline-none focus:border-red-400"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => { setIsResetModalOpen(false); setResetConfirmInput(''); }}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmResetDraft}
+                disabled={resetConfirmInput.trim().toUpperCase() !== 'RESETEAR' || isSaving}
+                className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-red-600 hover:bg-red-500 disabled:opacity-30 disabled:cursor-not-allowed text-white transition flex items-center gap-2 shadow-lg shadow-red-950/50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
+                {isSaving ? 'Reseteando...' : 'Confirmar Reseteo Total'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });
@@ -290,7 +358,6 @@ const WhitelistUserRow = memo(function WhitelistUserRow({ user, getPublicTeamRef
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validar tipo y tamaño (opcional, ej: max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       showStatusMessage('error', 'La imagen es muy pesada (Máx 2MB).');
       return;
@@ -311,47 +378,47 @@ const WhitelistUserRow = memo(function WhitelistUserRow({ user, getPublicTeamRef
   };
 
   return (
-    <div className="bg-gray-800/40 p-3 rounded-xl border border-gray-700/50 hover:border-gray-600 transition flex flex-col sm:flex-row sm:items-center gap-3">
+    <div className="bg-[#0c1017] p-3.5 rounded-xl border border-white/[0.08] hover:border-cyan-500/30 transition flex flex-col sm:flex-row sm:items-center gap-3">
       {isEditing ? (
         <div className="flex-grow grid grid-cols-1 sm:grid-cols-12 gap-3 items-center w-full">
-          {/* Columna 1: Upload y Preview (2 cols) */}
+          {/* Columna 1: Upload y Preview */}
           <div className="sm:col-span-2 flex justify-center sm:justify-start relative group">
-            <img src={data.logoUrl || DEFAULT_LOGO} className="w-10 h-10 rounded-full object-cover border border-gray-600 bg-gray-900" onError={(e) => e.target.src = DEFAULT_LOGO} />
-            <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+            <img src={data.logoUrl || DEFAULT_LOGO} className="w-10 h-10 rounded-full object-cover border border-white/10 bg-black/50" onError={(e) => e.target.src = DEFAULT_LOGO} />
+            <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
               <Upload size={12} className="text-white" />
               <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
             </label>
-            {isUploading && <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full"><div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}
+            {isUploading && <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full"><div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div></div>}
           </div>
 
-          {/* Columna 2: Inputs (8 cols) */}
+          {/* Columna 2: Inputs */}
           <div className="sm:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <input type="text" value={data.teamName} onChange={e => setData({ ...data, teamName: e.target.value })} className="bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-white text-sm focus:border-blue-500 outline-none w-full" placeholder="Nombre Equipo" />
+            <input type="text" value={data.teamName} onChange={e => setData({ ...data, teamName: e.target.value })} className="bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:border-cyan-400 outline-none w-full" placeholder="Nombre Equipo" />
             <div className="relative">
-              <span className="absolute left-2 top-1.5 text-gray-500 text-xs">$</span>
-              <input type="number" value={data.budget} onChange={e => setData({ ...data, budget: e.target.value })} className="bg-gray-900 border border-gray-600 rounded pl-5 pr-3 py-1.5 text-white text-sm focus:border-blue-500 outline-none w-full" placeholder="Presupuesto" />
+              <span className="absolute left-2.5 top-1.5 text-slate-400 text-xs">$</span>
+              <input type="number" value={data.budget} onChange={e => setData({ ...data, budget: e.target.value })} className="bg-black/50 border border-white/10 rounded-lg pl-6 pr-3 py-1.5 text-white text-sm focus:border-cyan-400 outline-none w-full font-mono" placeholder="Presupuesto" />
             </div>
           </div>
 
-          {/* Columna 3: Botones (2 cols) */}
+          {/* Columna 3: Botones */}
           <div className="sm:col-span-2 flex gap-2 justify-end">
-            <button onClick={handleSave} disabled={isSaving || isUploading} className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-500 transition"><Save size={16} /></button>
-            <button onClick={() => setIsEditing(false)} className="bg-gray-600 text-white p-2 rounded-lg hover:bg-gray-500 transition"><X size={16} /></button>
+            <button onClick={handleSave} disabled={isSaving || isUploading} className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-500 transition"><Save size={16} /></button>
+            <button onClick={() => setIsEditing(false)} className="bg-slate-700 text-white p-2 rounded-lg hover:bg-slate-600 transition"><X size={16} /></button>
           </div>
         </div>
       ) : (
         <>
           <div className="flex items-center space-x-3 flex-grow min-w-0">
-            <img src={user.logoUrl || DEFAULT_LOGO} className="w-10 h-10 rounded-full object-cover border border-gray-600 bg-gray-900" onError={(e) => e.target.src = DEFAULT_LOGO} />
+            <img src={user.logoUrl || DEFAULT_LOGO} className="w-10 h-10 rounded-full object-cover border border-white/10 bg-black/50" onError={(e) => e.target.src = DEFAULT_LOGO} />
             <div className="min-w-0">
               <div className="font-bold text-white text-sm truncate">{user.teamName}</div>
-              <div className="text-[10px] text-gray-500 font-mono truncate">{user.uid}</div>
+              <div className="text-[10px] text-slate-400 font-mono truncate">{user.uid}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto sm:ml-0">
-            <span className="text-xs font-mono text-green-400 bg-green-900/20 px-2 py-1 rounded border border-green-900/50 mr-2">{formatBudget(user.budget)}</span>
-            <button onClick={() => setIsEditing(true)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition" title="Editar"><Edit2 size={16} /></button>
-            <button onClick={handleToggleWhitelist} className={`p-2 rounded-lg transition ${user.inWhitelist ? 'text-green-400 bg-green-900/20 hover:bg-green-900/40' : 'text-gray-500 bg-gray-900 hover:bg-gray-700'}`} title={user.inWhitelist ? "Quitar de Whitelist" : "Añadir a Whitelist"}>
+            <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/30 px-2.5 py-1 rounded-lg border border-emerald-500/20 mr-2">{formatBudget(user.budget)}</span>
+            <button onClick={() => setIsEditing(true)} className="p-2 text-slate-400 hover:text-white hover:bg-white/[0.06] rounded-lg transition" title="Editar"><Edit2 size={16} /></button>
+            <button onClick={handleToggleWhitelist} className={`p-2 rounded-lg transition ${user.inWhitelist ? 'text-emerald-400 bg-emerald-950/30 border border-emerald-500/30 hover:bg-emerald-900/40' : 'text-slate-500 bg-black/40 border border-white/[0.06] hover:bg-white/[0.06]'}`} title={user.inWhitelist ? "Quitar de Whitelist" : "Añadir a Whitelist"}>
               <UserCheck size={16} />
             </button>
           </div>
@@ -362,11 +429,9 @@ const WhitelistUserRow = memo(function WhitelistUserRow({ user, getPublicTeamRef
 });
 
 const WhitelistAdminSection = memo(function WhitelistAdminSection({ getPublicTeamsCollectionRef, getPublicTeamRef, getPrivateProfileRef, storage, db, showStatusMessage }) {
-  // Lógica de fetch igual que antes, solo renderiza WhitelistUserRow.
-  // Por brevedad, mantiene la lógica de fetchAllUsers acá.
-  // Si necesitás el código completo de esta sección, es igual al anterior pero envuelto.
   const [allUsers, setAllUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchAllUsers = useCallback(async () => {
     setIsLoading(true);
@@ -405,18 +470,56 @@ const WhitelistAdminSection = memo(function WhitelistAdminSection({ getPublicTea
 
   useEffect(() => { fetchAllUsers(); }, [fetchAllUsers]);
 
-  if (isLoading) return <div className="text-center p-4 text-xs text-gray-500">Cargando usuarios...</div>
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm.trim()) return allUsers;
+    const term = searchTerm.toLowerCase().trim();
+    return allUsers.filter(u =>
+      (u.teamName && u.teamName.toLowerCase().includes(term)) ||
+      (u.uid && u.uid.toLowerCase().includes(term))
+    );
+  }, [allUsers, searchTerm]);
+
+  if (isLoading) return <div className="text-center p-8 text-xs text-slate-400">Cargando usuarios...</div>;
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-end mb-2 px-1">
-        <p className="text-xs text-gray-400">Gestión de usuarios y permisos de acceso (Whitelist).</p>
-        <button onClick={fetchAllUsers} className="text-blue-400 text-xs hover:underline"><RefreshCw size={12} className="inline mr-1" />Actualizar</button>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <p className="text-xs text-slate-400">Gestión de usuarios y permisos de acceso (Whitelist).</p>
+        <button onClick={fetchAllUsers} className="text-cyan-400 text-xs hover:underline flex items-center self-end sm:self-auto"><RefreshCw size={12} className="inline mr-1" />Actualizar</button>
       </div>
-      <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-        {allUsers.map(user => (
-          <WhitelistUserRow key={user.uid} user={user} getPublicTeamRef={getPublicTeamRef} getPrivateProfileRef={getPrivateProfileRef} storage={storage} db={db} showStatusMessage={showStatusMessage} onDataChange={fetchAllUsers} />
-        ))}
+
+      {/* SEARCH BAR */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar por equipo o UID..."
+          className="w-full bg-[#080c14] border border-white/[0.08] rounded-xl pl-9 pr-8 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500/50"
+        />
+        {searchTerm && (
+          <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      <div className="flex justify-between items-center text-[11px] text-slate-500 px-1">
+        <span>Mostrando {filteredUsers.length} de {allUsers.length} usuarios</span>
+        <span>Whitelist activa: {allUsers.filter(u => u.inWhitelist).length}</span>
+      </div>
+
+      <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
+        {filteredUsers.length === 0 ? (
+          <div className="text-center py-10 text-slate-500 text-xs border border-dashed border-white/[0.08] rounded-xl">
+            No se encontraron usuarios coincidentes con "{searchTerm}".
+          </div>
+        ) : (
+          filteredUsers.map(user => (
+            <WhitelistUserRow key={user.uid} user={user} getPublicTeamRef={getPublicTeamRef} getPrivateProfileRef={getPrivateProfileRef} storage={storage} db={db} showStatusMessage={showStatusMessage} onDataChange={fetchAllUsers} />
+          ))
+        )}
       </div>
     </div>
   );
@@ -426,6 +529,7 @@ const WhitelistAdminSection = memo(function WhitelistAdminSection({ getPublicTea
 const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollectionRef, getPublicTeamRef, getPrivateProfileRef, storage, db, showStatusMessage }) {
   const [teams, setTeams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null); // null = new, object = editing
   const [formData, setFormData] = useState({ teamName: '', budget: 0, logoUrl: '', country: 204, manualStats: {} });
@@ -481,6 +585,16 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
 
   useEffect(() => { fetchTeams(); }, [fetchTeams]);
 
+  const filteredTeams = useMemo(() => {
+    if (!searchTerm.trim()) return teams;
+    const term = searchTerm.toLowerCase().trim();
+    return teams.filter(t => 
+      (t.teamName && t.teamName.toLowerCase().includes(term)) ||
+      (t.uid && t.uid.toLowerCase().includes(term)) ||
+      (t.email && t.email.toLowerCase().includes(term))
+    );
+  }, [teams, searchTerm]);
+
   const openNewTeamModal = () => {
     setEditingTeam(null);
     setFormData({ teamName: '', budget: DEFAULT_BUDGET, logoUrl: '', country: 204, manualStats: {} });
@@ -534,8 +648,6 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
         await batch.commit();
         showStatusMessage('success', `Equipo "${formData.teamName}" actualizado.`);
       } else {
-        // Creating a new team entry requires a userId; admin can't create users here.
-        // but can pre-register a slot. For now show explanation.
         showStatusMessage('error', 'Para agregar un equipo nuevo, el usuario debe registrarse primero. Luego podés editarlo acá.');
         setIsSaving(false);
         return;
@@ -553,12 +665,9 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
     if (!window.confirm(`¿Seguro que querés eliminar el equipo "${team.teamName}"? Esta acción no se puede deshacer.`)) return;
     try {
       const batch = writeBatch(db);
-      // Delete public team doc
       batch.delete(getPublicTeamRef(team.uid));
-      // Delete all cart items
       const cartSnap = await getDocs(collection(db, `artifacts/${APP_ID}/users/${team.uid}/cart`));
       cartSnap.forEach(d => batch.delete(d.ref));
-      // Delete player locks belonging to this user
       const locksSnap = await getDocs(collection(db, `artifacts/${APP_ID}/public/data/player_locks`));
       locksSnap.forEach(d => {
         if (d.data().lockedBy === team.uid) batch.delete(d.ref);
@@ -576,17 +685,14 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
     if (!window.confirm(`¿Resetear el Jugador Franquicia de "${team.teamName}"? Esto liberará su cupo y eliminará al jugador de su plantilla.`)) return;
     try {
       const batch = writeBatch(db);
-      // 1. Read the franchise player ID from the profile
       const profileSnap = await getDoc(getPrivateProfileRef(team.uid));
       const franchisePlayerId = profileSnap.exists() ? profileSnap.data().franchisePlayerId : null;
 
-      // 2. Reset franchise flags in profile
       batch.set(getPrivateProfileRef(team.uid), {
         franchisePlayerUsed: false,
         franchisePlayerId: null
       }, { merge: true });
 
-      // 3. If there was a franchise player, remove its lock and cart entry
       if (franchisePlayerId) {
         const lockRef = doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(franchisePlayerId));
         batch.delete(lockRef);
@@ -603,97 +709,122 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
     }
   };
 
-  if (isLoading) return <div className="text-center p-8"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div><p className="text-gray-400 text-sm">Cargando equipos...</p></div>;
+  if (isLoading) return <div className="text-center p-8"><div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div><p className="text-slate-400 text-xs">Cargando equipos...</p></div>;
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-2">
-        <div>
-          <p className="text-xs text-gray-400">Gestión de equipos registrados en la liga.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={fetchTeams} className="text-blue-400 text-xs hover:underline flex items-center"><RefreshCw size={12} className="mr-1" />Actualizar</button>
-          <button onClick={openNewTeamModal} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition shadow active:scale-95">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <p className="text-xs text-slate-400">Gestión de equipos registrados en la liga.</p>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <button onClick={fetchTeams} className="text-cyan-400 text-xs hover:underline flex items-center"><RefreshCw size={12} className="mr-1" />Actualizar</button>
+          <button onClick={openNewTeamModal} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition shadow active:scale-95">
             <Plus size={14} /> Agregar Equipo
           </button>
         </div>
       </div>
 
+      {/* SEARCH BAR */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar equipo por nombre, ID o email..."
+          className="w-full bg-[#080c14] border border-white/[0.08] rounded-xl pl-9 pr-8 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500/50"
+        />
+        {searchTerm && (
+          <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      <div className="flex justify-between items-center text-[11px] text-slate-500 px-1">
+        <span>Mostrando {filteredTeams.length} de {teams.length} equipos</span>
+      </div>
+
       {teams.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-gray-700 rounded-2xl">
-          <Users className="w-12 h-12 text-gray-700 mb-3" />
-          <p className="text-gray-500 font-medium mb-4">No hay equipos registrados todavía.</p>
-          <button onClick={openNewTeamModal} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition">
+        <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-white/[0.08] rounded-2xl">
+          <Users className="w-12 h-12 text-slate-600 mb-3" />
+          <p className="text-slate-400 font-medium mb-4 text-xs">No hay equipos registrados todavía.</p>
+          <button onClick={openNewTeamModal} className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition">
             Agregá tu primer equipo
           </button>
         </div>
       ) : (
         <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
-          {teams.map(team => (
-            <div key={team.uid} className="flex items-center gap-4 p-4 bg-gray-800/40 rounded-xl border border-gray-700/50 hover:border-gray-600 transition group">
-              {/* Badge */}
-              <img
-                src={team.logoUrl || DEFAULT_LOGO}
-                alt="Escudo"
-                className="w-11 h-11 rounded-xl object-contain bg-black/50 p-1 border border-gray-700 flex-shrink-0"
-                onError={(e) => e.target.src = DEFAULT_LOGO}
-              />
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-white uppercase tracking-wide truncate">{team.teamName}</h4>
-                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                  <span className="text-[10px] text-gray-600 font-mono">ID: {team.uid.substring(0, 8)}</span>
-                  {team.email && <span className="text-[10px] text-gray-500 truncate max-w-[150px]">{team.email}</span>}
-                </div>
-              </div>
-              {/* Stats */}
-              <div className="flex items-center gap-4 text-right flex-shrink-0">
-                <div>
-                  <p className="text-[9px] text-gray-600 uppercase font-bold">Jugadores</p>
-                  <p className="text-sm font-black text-white/70">{team.playerCount}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-gray-600 uppercase font-bold">Presupuesto</p>
-                  <p className="text-sm font-black text-emerald-400">{formatBudget(team.budget)}</p>
-                </div>
-              </div>
-              {/* Actions */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0">
-                <button onClick={() => openEditTeamModal(team)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition" title="Editar equipo">
-                  <Edit2 size={14} />
-                </button>
-                <button onClick={() => handleResetFranchise(team)} className="p-2 rounded-lg hover:bg-purple-500/10 text-gray-400 hover:text-purple-400 transition" title="Resetear Jugador Franquicia">
-                  <Crown size={14} />
-                </button>
-                <button onClick={() => handleDeleteTeam(team)} className="p-2 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition" title="Eliminar equipo">
-                  <Trash2 size={14} />
-                </button>
-              </div>
+          {filteredTeams.length === 0 ? (
+            <div className="text-center py-10 text-slate-500 text-xs border border-dashed border-white/[0.08] rounded-xl">
+              No se encontraron equipos que coincidan con "{searchTerm}".
             </div>
-          ))}
+          ) : (
+            filteredTeams.map(team => (
+              <div key={team.uid} className="flex items-center gap-4 p-3.5 bg-[#0c1017] rounded-xl border border-white/[0.08] hover:border-cyan-500/30 transition group">
+                {/* Badge */}
+                <img
+                  src={team.logoUrl || DEFAULT_LOGO}
+                  alt="Escudo"
+                  className="w-11 h-11 rounded-xl object-contain bg-black/50 p-1 border border-white/10 flex-shrink-0"
+                  onError={(e) => e.target.src = DEFAULT_LOGO}
+                />
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-black text-white uppercase tracking-wide truncate group-hover:text-cyan-400 transition-colors">{team.teamName}</h4>
+                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                    <span className="text-[10px] text-slate-400 font-mono">ID: {team.uid.substring(0, 8)}</span>
+                    {team.email && <span className="text-[10px] text-slate-400 truncate max-w-[150px]">{team.email}</span>}
+                  </div>
+                </div>
+                {/* Stats */}
+                <div className="flex items-center gap-4 text-right flex-shrink-0">
+                  <div>
+                    <p className="text-[9px] text-slate-400 uppercase font-bold">Jugadores</p>
+                    <p className="text-sm font-black text-white font-mono">{team.playerCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-400 uppercase font-bold">Presupuesto</p>
+                    <p className="text-sm font-black text-emerald-400 font-mono">{formatBudget(team.budget)}</p>
+                  </div>
+                </div>
+                {/* Actions */}
+                <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition flex-shrink-0">
+                  <button onClick={() => openEditTeamModal(team)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition" title="Editar equipo">
+                    <Edit2 size={14} />
+                  </button>
+                  <button onClick={() => handleResetFranchise(team)} className="p-2 rounded-lg hover:bg-purple-500/10 text-slate-400 hover:text-purple-400 transition" title="Resetear Jugador Franquicia">
+                    <Crown size={14} />
+                  </button>
+                  <button onClick={() => handleDeleteTeam(team)} className="p-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition" title="Eliminar equipo">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-5 border-b border-gray-700">
-              <h3 className="text-lg font-bold text-white">{editingTeam ? 'Editar Equipo' : 'Agregar Equipo'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-white p-1 rounded-full hover:bg-white/10 transition"><X size={18} /></button>
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[70] p-4" onClick={() => setShowModal(false)}>
+          <div className="bg-[#0c1017] rounded-2xl border border-white/[0.1] w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-white/[0.08]">
+              <h3 className="text-base font-black text-white uppercase tracking-wider">{editingTeam ? 'Editar Equipo' : 'Agregar Equipo'}</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition"><X size={18} /></button>
             </div>
-            <div className="p-5 space-y-5">
+            <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
               {/* Logo preview + upload */}
               <div className="flex items-center gap-4">
                 <img
                   src={formData.logoUrl || DEFAULT_LOGO}
                   alt="Escudo"
-                  className="w-16 h-16 rounded-xl object-contain bg-black/50 p-1.5 border border-gray-700"
+                  className="w-16 h-16 rounded-xl object-contain bg-black/50 p-1.5 border border-white/10"
                   onError={(e) => e.target.src = DEFAULT_LOGO}
                 />
                 <div className="flex-1">
-                  <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Escudo</label>
-                  <label className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 cursor-pointer hover:bg-gray-700 transition">
+                  <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Escudo</label>
+                  <label className="flex items-center gap-2 px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-xs text-slate-300 cursor-pointer hover:bg-white/[0.05] transition">
                     <Upload size={14} /> {isUploading ? 'Subiendo...' : 'Subir imagen'}
                     <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={isUploading} />
                   </label>
@@ -701,33 +832,33 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
               </div>
               {/* Team name */}
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Nombre del equipo</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Nombre del equipo</label>
                 <input
                   type="text"
                   value={formData.teamName}
                   onChange={e => setFormData(prev => ({ ...prev, teamName: e.target.value }))}
-                  className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg text-sm outline-none focus:border-blue-500 transition"
+                  className="w-full px-4 py-2.5 bg-black/40 text-white border border-white/10 rounded-lg text-sm outline-none focus:border-cyan-400 transition"
                   placeholder="Ej: Club Atlético SuperCont"
                 />
               </div>
               {/* Budget */}
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Presupuesto ($)</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Presupuesto ($)</label>
                 <input
                   type="number"
                   value={formData.budget}
                   onChange={e => setFormData(prev => ({ ...prev, budget: Number(e.target.value) || 0 }))}
-                  className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg text-sm outline-none focus:border-blue-500 transition"
+                  className="w-full px-4 py-2.5 bg-black/40 text-white border border-white/10 rounded-lg text-sm font-mono outline-none focus:border-cyan-400 transition"
                   placeholder="0"
                 />
               </div>
               {/* Country / Nationality */}
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Nacionalidad / País del Club</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Nacionalidad / País del Club</label>
                 <select
                   value={formData.country || 204}
                   onChange={e => setFormData(prev => ({ ...prev, country: Number(e.target.value) }))}
-                  className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg text-sm outline-none focus:border-blue-500 transition cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-black/40 text-white border border-white/10 rounded-lg text-xs outline-none focus:border-cyan-400 transition cursor-pointer"
                 >
                   {countryOptions.length > 0 ? (
                     countryOptions.map(c => (
@@ -738,46 +869,46 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
                   )}
                 </select>
               </div>
-              <div className="border-t border-gray-700 pt-4">
+              <div className="border-t border-white/[0.08] pt-4">
                 <p className="mb-3 text-xs font-black uppercase tracking-wider text-cyan-300">Estadísticas públicas (edición manual)</p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                   {[
                     ['played', 'Partidos'], ['wins', 'Ganados'], ['draws', 'Empatados'], ['losses', 'Perdidos'],
                     ['gf', 'Goles a favor'], ['ga', 'Goles en contra'], ['titles', 'Títulos'],
                   ].map(([field, label]) => (
                     <label key={field} className="block">
-                      <span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">{label}</span>
+                      <span className="mb-1 block text-[10px] font-bold uppercase text-slate-400">{label}</span>
                       <input
                         type="number"
                         min="0"
                         value={formData.manualStats?.[field] ?? ''}
                         onChange={e => setFormData(prev => ({ ...prev, manualStats: { ...prev.manualStats, [field]: e.target.value } }))}
-                        className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"
+                        className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white outline-none focus:border-cyan-400 font-mono"
                       />
                     </label>
                   ))}
                 </div>
                 <label className="mt-3 block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Rivalidad</span>
+                  <span className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Rivalidad</span>
                   <input
                     type="text"
                     value={formData.manualStats?.rival ?? ''}
                     onChange={e => setFormData(prev => ({ ...prev, manualStats: { ...prev.manualStats, rival: e.target.value } }))}
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"
+                    className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white outline-none focus:border-cyan-400"
                     placeholder="Ej: SK Konya"
                   />
                 </label>
-                <p className="mt-2 text-[10px] text-gray-500">Los campos cargados reemplazan el cálculo automático del perfil público.</p>
+                <p className="mt-2 text-[10px] text-slate-500">Los campos cargados reemplazan el cálculo automático del perfil público.</p>
               </div>
               {editingTeam && (
-                <div className="text-xs text-gray-500 bg-gray-800/50 p-3 rounded-lg border border-gray-700/50">
-                  <span className="font-bold text-gray-400">User ID:</span> {editingTeam.uid}
+                <div className="text-xs text-slate-400 bg-black/30 p-3 rounded-xl border border-white/[0.06]">
+                  <span className="font-bold text-slate-300">User ID:</span> <span className="font-mono text-[11px]">{editingTeam.uid}</span>
                 </div>
               )}
             </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-gray-700">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-400 font-bold text-sm hover:text-white transition">Cancelar</button>
-              <button onClick={handleSaveTeam} disabled={isSaving} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-lg transition shadow disabled:opacity-50 active:scale-95">
+            <div className="flex justify-end gap-3 p-5 border-t border-white/[0.08]">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-400 font-bold text-xs hover:text-white transition">Cancelar</button>
+              <button onClick={handleSaveTeam} disabled={isSaving} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition shadow disabled:opacity-50 active:scale-95">
                 <Save size={14} /> {isSaving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
@@ -791,6 +922,7 @@ const TeamsAdminSection = memo(function TeamsAdminSection({ getPublicTeamsCollec
 const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProfileRef, db, showStatusMessage }) => {
   const [teamsData, setTeamsData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // 1. CARGA DE DATOS (Aseguramos que traiga players, formation y lineup)
   const fetchData = async () => {
@@ -1010,62 +1142,94 @@ const TemplateAdminSection = memo(({ getPublicTeamsCollectionRef, getPrivateProf
     doc.save(`Plantilla_${team.name.replace(/\s+/g, '_')}_Tactico.pdf`);
   };
 
+  const filteredTeamsData = useMemo(() => {
+    if (!searchTerm.trim()) return teamsData;
+    const term = searchTerm.toLowerCase().trim();
+    return teamsData.filter(t => (t.name && t.name.toLowerCase().includes(term)) || (t.id && t.id.toLowerCase().includes(term)));
+  }, [teamsData, searchTerm]);
+
   return (
     <div className="space-y-4">
-      <button onClick={fetchData} className="text-blue-400 text-sm flex items-center hover:underline mb-4">
-        <RefreshCw size={14} className="mr-1" /> Recargar Datos de Plantillas
-      </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <p className="text-xs text-slate-400">Exportación de plantillas tácticas a PDF y Option File para PES 2021.</p>
+        <button onClick={fetchData} className="text-cyan-400 text-xs flex items-center hover:underline self-end sm:self-auto">
+          <RefreshCw size={12} className="mr-1" /> Recargar Plantillas
+        </button>
+      </div>
+
+      {/* SEARCH BAR */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Filtrar por club o ID..."
+          className="w-full bg-[#080c14] border border-white/[0.08] rounded-xl pl-9 pr-8 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500/50"
+        />
+        {searchTerm && (
+          <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+            <X size={14} />
+          </button>
+        )}
+      </div>
 
       {isLoading ? (
         <div className="text-center p-8">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-          <p className="text-gray-400 text-sm">Recopilando datos de todos los equipos...</p>
+          <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <p className="text-slate-400 text-xs">Recopilando datos de todos los equipos...</p>
         </div>
       ) : teamsData.length === 0 ? (
-        <div className="text-center p-8 text-gray-500 border border-dashed border-gray-700 rounded-xl">
-          No hay datos cargados. Pulsa "Recargar Datos".
+        <div className="text-center p-8 text-slate-500 text-xs border border-dashed border-white/[0.08] rounded-xl">
+          No hay datos cargados. Pulsa "Recargar Plantillas".
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {teamsData.map(team => (
-            <div key={team.id} className="bg-gray-800/40 border border-gray-700 rounded-xl p-4 hover:bg-gray-800/60 transition">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h4 className="font-bold text-white text-lg">{team.name}</h4>
-                  <p className="text-xs text-gray-500 font-mono">ID: {team.id.substring(0, 8)}</p>
-                </div>
-                <span className="bg-blue-900/30 text-blue-300 text-xs px-2 py-1 rounded border border-blue-500/20">
-                  {team.players.length} Jugadores
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
-                <span className="flex items-center"><ClipboardList size={12} className="mr-1" /> {FORMATIONS[team.formation]?.name || team.formation}</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                <button
-                  onClick={() => generatePDF(team)}
-                  className="bg-gray-700/80 hover:bg-gray-700 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center transition border border-gray-600 active:scale-95"
-                >
-                  <Download size={14} className="mr-1.5" /> PDF Táctico
-                </button>
-                <button
-                  onClick={() => {
-                    setPesExportModalTeam(team);
-                    setTargetPesTeamId(103);
-                    setTargetTeamName(team.name || '');
-                    setTargetTeamNationality(team.country || 204);
-                    setTargetCoachName(team.name ? `DT ${team.name}` : 'Director Técnico');
-                    setTargetCoachNationality(204);
-                  }}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center transition shadow-lg active:scale-95"
-                >
-                  <Package size={14} className="mr-1.5" /> Exportar PES (.zip)
-                </button>
-              </div>
+          {filteredTeamsData.length === 0 ? (
+            <div className="col-span-2 text-center py-10 text-slate-500 text-xs border border-dashed border-white/[0.08] rounded-xl">
+              No se encontraron plantillas para "{searchTerm}".
             </div>
-          ))}
+          ) : (
+            filteredTeamsData.map(team => (
+              <div key={team.id} className="bg-[#0c1017] border border-white/[0.08] rounded-xl p-4 hover:border-cyan-500/30 transition">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-bold text-white text-base">{team.name}</h4>
+                    <p className="text-[10px] text-slate-400 font-mono">ID: {team.id.substring(0, 8)}</p>
+                  </div>
+                  <span className="bg-cyan-500/10 text-cyan-300 text-[11px] font-bold px-2 py-0.5 rounded-lg border border-cyan-500/20">
+                    {team.players.length} Jugadores
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
+                  <span className="flex items-center"><ClipboardList size={12} className="mr-1" /> {FORMATIONS[team.formation]?.name || team.formation}</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                  <button
+                    onClick={() => generatePDF(team)}
+                    className="bg-white/[0.04] hover:bg-white/[0.08] text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center transition border border-white/[0.08] active:scale-95"
+                  >
+                    <Download size={14} className="mr-1.5" /> PDF Táctico
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPesExportModalTeam(team);
+                      setTargetPesTeamId(103);
+                      setTargetTeamName(team.name || '');
+                      setTargetTeamNationality(team.country || 204);
+                      setTargetCoachName(team.name ? `DT ${team.name}` : 'Director Técnico');
+                      setTargetCoachNationality(204);
+                    }}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center transition shadow-lg active:scale-95"
+                  >
+                    <Package size={14} className="mr-1.5" /> Exportar PES (.zip)
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
@@ -1365,8 +1529,8 @@ const OverlayAdminSection = memo(function OverlayAdminSection({
               ['showLowerThird', 'Lower third'],
               ['showTicker', 'Ticker'],
             ].map(([field, label]) => (
-              <label key={field} className={`flex items-center justify-between rounded-2xl border px-4 py-3 cursor-pointer transition ${form[field] ? 'bg-blue-500/10 border-blue-500/50 text-white shadow-[inset_0_0_24px_rgba(59,130,246,0.12)]' : 'bg-black/30 border-slate-700/70 text-slate-400 hover:bg-white/5'}`}>
-                <span className="font-black text-sm uppercase tracking-wider">{label}</span>
+              <label key={field} className={`flex items-center justify-between rounded-xl border px-4 py-3 cursor-pointer transition ${form[field] ? 'bg-blue-500/10 border-blue-500/50 text-white' : 'bg-black/30 border-slate-700/70 text-slate-400 hover:bg-white/5'}`}>
+                <span className="font-semibold text-sm text-slate-200">{label}</span>
                 <input
                   type="checkbox"
                   checked={Boolean(form[field])}
@@ -1389,7 +1553,242 @@ const OverlayAdminSection = memo(function OverlayAdminSection({
   );
 });
 
-export const AdminModal = memo(function AdminModal({ isVisible, isPage, onClose, ...props }) {
+const TorneoAdminSection = memo(function TorneoAdminSection({
+  tournamentData,
+  allTeams,
+  onOpenTournamentModal,
+  showStatusMessage,
+}) {
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  const copyUrl = async (key, url) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedKey(key);
+      showStatusMessage('success', 'Enlace copiado al portapapeles.');
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch {
+      showStatusMessage('error', 'Error al copiar.');
+    }
+  };
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const obsLinks = [
+    {
+      key: 'live',
+      title: 'Overlay Marcador En Vivo',
+      desc: 'Marcador, tiempo, escudos, lower third y ticker para la transmisión en directo.',
+      url: `${origin}/overlay?scene=live`,
+      badge: 'Transmisión',
+      badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    },
+    {
+      key: 'groups',
+      title: 'Tabla General de Posiciones',
+      desc: 'Tabla de clasificación en vivo con puntos, DG y partidos jugados en 1080p.',
+      url: `${origin}/torneo?mode=obs&view=groups`,
+      badge: 'Fase Regular',
+      badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    },
+    {
+      key: 'bracket',
+      title: 'Llaves Eliminatorias (Oro)',
+      desc: 'Bracket de cuartos, semifinales y Gran Final de la SuperContinental League.',
+      url: `${origin}/torneo?mode=obs&view=bracket`,
+      badge: 'Playoffs',
+      badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    },
+    {
+      key: 'repechaje',
+      title: 'Copa de Plata (Repechaje)',
+      desc: 'Cuadro de eliminación para los equipos de fase de repechaje.',
+      url: `${origin}/torneo?mode=obs&view=repechaje`,
+      badge: 'Repechaje',
+      badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    },
+    {
+      key: 'goleadores',
+      title: 'Líderes de Goleo',
+      desc: 'Ranking individual con los máximos goleadores del torneo.',
+      url: `${origin}/torneo?mode=obs&view=goleadores`,
+      badge: 'Estadísticas',
+      badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    },
+    {
+      key: 'previa',
+      title: 'Escena Previa',
+      desc: 'Rótulo de previa de transmisión con titular y subtítulo personalizable.',
+      url: `${origin}/overlay?scene=previa`,
+      badge: 'Previa',
+      badgeColor: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    },
+    {
+      key: 'descanso',
+      title: 'Escena Entretiempo',
+      desc: 'Rótulo de descanso/medio tiempo con marcador fijado.',
+      url: `${origin}/overlay?scene=descanso`,
+      badge: 'Entretiempo',
+      badgeColor: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    },
+    {
+      key: 'final',
+      title: 'Escena Post-Partido',
+      desc: 'Rótulo de finalización con estadísticas y resultado definitivo.',
+      url: `${origin}/overlay?scene=final`,
+      badge: 'Post-Partido',
+      badgeColor: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    },
+  ];
+
+  const leagueTeamsCount = tournamentData?.league?.filter(t => t.name && t.name !== 'Club...')?.length || 0;
+  const matchesCount = tournamentData?.matches?.length || 0;
+  const completedMatches = tournamentData?.matches?.filter(m => m.status === 'completed')?.length || 0;
+  const topScorer = tournamentData?.topScorers?.[0];
+
+  return (
+    <div className="space-y-6">
+      {/* HUB BANNER & LAUNCHER */}
+      <div className="bg-gradient-to-br from-[#0c1322] via-[#090d16] to-[#06080d] p-6 rounded-2xl border border-cyan-500/20 shadow-xl relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                <Trophy className="w-5 h-5" />
+              </span>
+              <h3 className="text-base font-black text-white uppercase tracking-wider">Centro de Control de Torneo & OBS</h3>
+              <span className="px-2 py-0.5 rounded text-xs font-semibold bg-sky-500/10 border border-sky-500/25 text-sky-400">
+                ADMIN EXCLUSIVE
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 max-w-xl leading-relaxed mt-1">
+              El módulo de torneos está optimizado exclusivamente para transmisiones OBS y gestión del administrador. Usa los enlaces directos transparentes para tus escenas o abre el gestor para editar cruces y partidos.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenTournamentModal) {
+                  onOpenTournamentModal();
+                } else {
+                  navigate('/torneo');
+                }
+              }}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-2 transition cursor-pointer"
+            >
+              <Trophy className="w-4 h-4" /> Abrir Gestor de Torneo
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/torneo')}
+              className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
+            >
+              Pantalla Completa ↗
+            </button>
+          </div>
+        </div>
+
+        {/* METRICS STRIP */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-white/[0.07] relative z-10">
+          <div className="bg-black/30 rounded-xl p-3 border border-white/[0.05]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Equipos en Tabla</span>
+            <span className="text-lg font-black text-white font-mono">{leagueTeamsCount}</span>
+          </div>
+          <div className="bg-black/30 rounded-xl p-3 border border-white/[0.05]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Partidos Jugados</span>
+            <span className="text-lg font-black text-emerald-400 font-mono">{completedMatches} <span className="text-xs text-slate-500">/ {matchesCount}</span></span>
+          </div>
+          <div className="bg-black/30 rounded-xl p-3 border border-white/[0.05]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Goleador Actual</span>
+            <span className="text-sm font-black text-cyan-400 truncate block">{topScorer?.name ? `${topScorer.name} (${topScorer.goals || 0})` : 'Sin datos'}</span>
+          </div>
+          <div className="bg-black/30 rounded-xl p-3 border border-white/[0.05]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Modo OBS</span>
+            <span className="text-sm font-black text-amber-400 flex items-center gap-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 1080p Activo
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* OBS DIRECT LINKS GRID */}
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <Radio className="w-4 h-4 text-cyan-400" /> Fuentes de Navegador para OBS Studio
+          </h4>
+          <span className="text-[11px] text-slate-400">Resolución recomendada: 1920x1080 (Fondo Transparente)</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {obsLinks.map((link) => {
+            const isCopied = copiedKey === link.key;
+            return (
+              <div
+                key={link.key}
+                className="bg-[#0c1017] hover:bg-[#101724] p-4 rounded-xl border border-white/[0.08] hover:border-cyan-500/30 transition-all flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors">
+                      {link.title}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${link.badgeColor}`}>
+                      {link.badge}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                    {link.desc}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
+                  <input
+                    type="text"
+                    readOnly
+                    value={link.url}
+                    className="flex-1 bg-black/40 border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-[11px] text-slate-400 font-mono truncate select-all focus:outline-none"
+                  />
+                  <button
+                    onClick={() => copyUrl(link.key, link.url)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
+                      isCopied
+                        ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                        : 'bg-white/[0.06] hover:bg-cyan-500 hover:text-slate-950 text-slate-300'
+                    }`}
+                  >
+                    {isCopied ? '¡Copiado!' : 'Copiar'}
+                  </button>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-white transition"
+                    title="Previsualizar escena"
+                  >
+                    <Eye size={14} />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+export const AdminModal = memo(function AdminModal({
+  isVisible,
+  isPage,
+  onClose,
+  tournamentData,
+  onUpdateTournament,
+  onOpenTournamentModal,
+  ...props
+}) {
   const [activeTab, setActiveTab] = useState('general');
   const TabButton = ({ tabId, label, icon: Icon }) => (
     <TournamentTabButton id={tabId} label={label} icon={Icon} activeTab={activeTab} onClick={setActiveTab} />
@@ -1398,20 +1797,26 @@ export const AdminModal = memo(function AdminModal({ isVisible, isPage, onClose,
   if (!isVisible && !isPage) return null;
 
   return (
-    <div className={isPage ? "w-full h-full flex flex-col animate-in fade-in duration-300" : "fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300"} onClick={!isPage ? onClose : undefined}>
-      <div className={isPage ? "w-full h-full min-h-0 flex flex-col relative overflow-hidden" : "bg-gray-900/95 sm:rounded-2xl shadow-2xl w-full max-w-5xl h-[100dvh] sm:h-[90vh] flex flex-col border-0 sm:border border-gray-700/50 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"} onClick={!isPage ? (e => e.stopPropagation()) : undefined}>
-        <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-700 bg-gray-800/80 sticky top-0 z-10">
-          <h2 className="text-xl font-bold text-white">Admin Panel</h2>
-          {!isPage && <button onClick={onClose}><X size={24} /></button>}
+    <div className={isPage ? "w-full h-full flex flex-col animate-in fade-in duration-300" : "fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300"} onClick={!isPage ? onClose : undefined}>
+      <div className={isPage ? "w-full h-full min-h-0 flex flex-col relative overflow-hidden bg-[#06080d]" : "bg-[#0c1017] sm:rounded-2xl shadow-2xl w-full max-w-5xl h-[100dvh] sm:h-[90vh] flex flex-col border-0 sm:border border-white/[0.08] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"} onClick={!isPage ? (e => e.stopPropagation()) : undefined}>
+        <div className="flex justify-between items-center p-4 sm:p-5 border-b border-white/[0.08] bg-[#0c1017] sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-white tracking-wide">Panel de Administración</h2>
+            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-sky-500/10 border border-sky-500/25 text-sky-400">
+              v2.6.0
+            </span>
+          </div>
+          {!isPage && <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition"><X size={20} /></button>}
         </div>
 
-        {/* Botón para la pestaña Usuarios */}
-        <div className="flex border-b border-gray-700 bg-gray-900/50 px-2 sm:px-4 overflow-x-auto">
+        {/* Pestañas de administración */}
+        <div className="flex border-b border-white/[0.08] bg-[#080c14] px-2 sm:px-4 overflow-x-auto">
           <TabButton tabId="general" label="Config" icon={Settings} />
           <TabButton tabId="equipos" label="Equipos" icon={Shield} />
           <TabButton tabId="users" label="Usuarios" icon={Users} />
+          <TabButton tabId="torneo" label="Torneo & OBS" icon={Trophy} />
           <TabButton tabId="templates" label="Plantillas" icon={FileText} />
-          <TabButton tabId="overlay" label="Overlay OBS" icon={Eye} />
+          <TabButton tabId="overlay" label="Marcador En Vivo" icon={Radio} />
           <TabButton tabId="suggestions" label="Buzón" icon={MessageSquarePlus} />
         </div>
 
@@ -1419,6 +1824,14 @@ export const AdminModal = memo(function AdminModal({ isVisible, isPage, onClose,
           {activeTab === 'general' && <GeneralAdminSection {...props} />}
           {activeTab === 'equipos' && <TeamsAdminSection {...props} />}
           {activeTab === 'users' && <WhitelistAdminSection {...props} />}
+          {activeTab === 'torneo' && (
+            <TorneoAdminSection
+              tournamentData={tournamentData}
+              allTeams={props.allTeams}
+              onOpenTournamentModal={onOpenTournamentModal}
+              showStatusMessage={props.showStatusMessage}
+            />
+          )}
           {activeTab === 'templates' && <TemplateAdminSection {...props} />}
           {activeTab === 'overlay' && <OverlayAdminSection {...props} />}
           {activeTab === 'suggestions' && <SuggestionsAdminSection {...props} />}

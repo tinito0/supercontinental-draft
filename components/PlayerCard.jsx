@@ -96,8 +96,8 @@ export const PlayerCard = memo(function PlayerCard({
       <div className="player-card__photo-wrapper">
         <button
           onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(player.Id); }}
-          className={`absolute top-2 right-2 z-20 p-1.5 rounded-full transition-all duration-200 backdrop-blur-sm
-            ${isWishlisted ? 'bg-yellow-500/20 text-yellow-400' : 'bg-black/30 text-white/50 hover:bg-black/50 hover:text-white'}`}
+          className={`absolute top-2 right-2 z-20 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full transition-all duration-200 backdrop-blur-sm cursor-pointer
+            ${isWishlisted ? 'bg-yellow-500/25 text-yellow-400' : 'bg-black/40 text-white/60 hover:bg-black/60 hover:text-white'}`}
           title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}
         >
           <Star className="w-4 h-4" fill={isWishlisted ? "currentColor" : "none"} />
@@ -198,7 +198,7 @@ export const PlayerCard = memo(function PlayerCard({
         {isInMyCart && !isLockedByOther && (
           <>
             <div className="player-card__owned-stripe" />
-            <div className="absolute top-2 left-2 z-30 bg-cyan-500/90 text-black font-black text-[8px] uppercase tracking-wider px-2 py-1 rounded shadow-lg border border-cyan-300/40">
+            <div className="absolute top-2 left-2 z-30 bg-[#00b4d8] text-[#030712] font-black text-[8px] uppercase tracking-wider px-2 py-1 rounded shadow-md">
               EN TU EQUIPO
             </div>
           </>

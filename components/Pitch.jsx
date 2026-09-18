@@ -52,7 +52,7 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
         ${holdingPlayer && !isHoldingThis ? 'hover:scale-110' : ''}
         ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}
       `}
-      style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', width: '76px' }}
+      style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', width: 'clamp(58px, 18vw, 76px)' }}
       title={player ? player.Name : readOnlySlot?.name || pos}
     >
       {hasPlayer ? (
@@ -66,8 +66,8 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
           )}
           {/* Avatar circle */}
           <div
-            className={`w-14 h-14 rounded-full overflow-hidden shadow-xl flex-shrink-0 flex items-center justify-center border-2 ${slotColors.ring}`}
-            style={{ boxShadow: `0 4px 10px rgba(0,0,0,0.45), 0 0 14px ${slotColors.glow}` }}
+            className={`w-14 h-14 rounded-full overflow-hidden shadow-md flex-shrink-0 flex items-center justify-center border-2 ${slotColors.ring}`}
+            style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.35)' }}
           >
             {playerImageId && !isCapturing ? (
               <img
@@ -82,7 +82,7 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
               />
             ) : (
               <div className={`w-full h-full ${slotColors.bg} flex items-center justify-center`}>
-                <span className="text-white/80 font-black text-xl" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                <span className="text-white/90 font-bold text-lg">
                   {playerName ? playerName[0].toUpperCase() : '?'}
                 </span>
               </div>
@@ -90,19 +90,18 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
           </div>
           {/* Position and OVR Row */}
           <div className="flex flex-row items-center justify-center gap-1 mt-1">
-            <span className={`px-1.5 py-[2px] text-[9px] font-black rounded-md border ${slotColors.badge} text-white leading-none shadow-md`}
-                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.35)' }}>
+            <span className={`px-1.5 py-[2px] text-[9px] font-bold rounded border ${slotColors.badge} text-white leading-none shadow-sm`}>
               {player?.POS_NOMBRE || readOnlySlot?.pos || pos}
             </span>
             {playerOvr && (
-              <span className={`min-w-6 px-1.5 py-[2px] text-center text-[10px] font-black rounded-md leading-none shadow-md ${ovrColorClass}`}>
+              <span className={`min-w-6 px-1.5 py-[2px] text-center text-[10px] font-bold rounded leading-none shadow-sm ${ovrColorClass}`}>
                 {playerOvr}
               </span>
             )}
           </div>
           {/* Player name */}
-          <span className="block mt-0.5 text-[11px] font-black text-white truncate max-w-[72px] text-center leading-none"
-            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.5)' }}>
+          <span className="block mt-0.5 text-[11px] font-bold text-white truncate max-w-[74px] text-center leading-none"
+            style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}>
             {playerName}
           </span>
         </div>
@@ -111,16 +110,15 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
         <div className="flex flex-col items-center">
           <div className={`w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center
             transition-all
-            ${holdingPlayer ? 'animate-pulse border-green-400/70 bg-green-500/15' : 'border-white/25 bg-white/5'}
-            ${!isReadOnly ? 'group-hover:bg-white/15 group-hover:border-white/50' : ''}`}
+            ${holdingPlayer ? 'animate-pulse border-emerald-400/80 bg-emerald-500/20' : 'border-white/30 bg-white/5'}
+            ${!isReadOnly ? 'group-hover:bg-white/15 group-hover:border-white/60' : ''}`}
           >
-            <span className={`text-xs font-black ${emptyColors.text} ${!isReadOnly ? 'group-hover:text-white' : ''} transition-colors`}>
+            <span className={`text-xs font-bold ${emptyColors.text} ${!isReadOnly ? 'group-hover:text-white' : ''} transition-colors`}>
               {pos}
             </span>
           </div>
           {/* Spacer to match filled slot height */}
-          <span className="block mt-1 text-[11px] font-bold text-white/30 leading-none"
-            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+          <span className="block mt-1 text-[11px] font-semibold text-white/40 leading-none">
             {pos}
           </span>
           <div className="mt-0.5 h-[14px]"></div>
@@ -141,18 +139,18 @@ export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlaye
   return (
     <div 
       ref={pitchRef}
-      className="relative w-full aspect-[3/4] bg-[#1a3a2a] rounded-lg overflow-hidden border-2 border-white/10 shadow-2xl"
+      className="relative w-full aspect-[3/4] bg-[#183624] rounded-xl overflow-hidden border border-emerald-900/40 shadow-xl"
       style={{
-        backgroundImage: 'radial-gradient(circle at center, #2d5a3f 0%, #1a3a2a 100%)'
+        backgroundImage: 'repeating-linear-gradient(0deg, #1b3d2b, #1b3d2b 32px, #163222 32px, #163222 64px)'
       }}
     >
       {/* Pitch Lines */}
-      <div className="absolute inset-4 border border-white/20 pointer-events-none" />
-      <div className="absolute inset-x-4 top-4 h-1/2 border-b border-white/20 pointer-events-none" />
-      <div className="absolute left-1/2 top-4 -translate-x-1/2 w-32 h-16 border-x border-b border-white/20 pointer-events-none" />
-      <div className="absolute left-1/2 bottom-4 -translate-x-1/2 w-32 h-16 border-x border-t border-white/20 pointer-events-none" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border border-white/20 rounded-full pointer-events-none" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-white/20 rounded-full pointer-events-none" />
+      <div className="absolute inset-4 border border-white/25 pointer-events-none" />
+      <div className="absolute inset-x-4 top-4 h-1/2 border-b border-white/25 pointer-events-none" />
+      <div className="absolute left-1/2 top-4 -translate-x-1/2 w-36 h-18 border-x border-b border-white/25 pointer-events-none" />
+      <div className="absolute left-1/2 bottom-4 -translate-x-1/2 w-36 h-18 border-x border-t border-white/25 pointer-events-none" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border border-white/25 rounded-full pointer-events-none" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white/30 rounded-full pointer-events-none" />
 
       {/* Slots */}
       {formation?.layout?.map((slot, idx) => (

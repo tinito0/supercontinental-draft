@@ -255,24 +255,24 @@ export const ManagerChat = memo(function ManagerChat({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-300" onClick={handleClose}>
-      <div className="w-full sm:max-w-3xl h-[100dvh] sm:h-[78vh] bg-gray-950 border border-white/10 sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gray-900/90">
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200" onClick={handleClose}>
+      <div className="w-full sm:max-w-3xl h-[100dvh] sm:h-[78vh] bg-white dark:bg-[#0c1017] border border-slate-200 dark:border-slate-800 sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-300">
-              <MessageSquareText className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400">
+              <MessageSquareText className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-black uppercase tracking-wide text-white">Chat de Managers</h2>
-              <p className="text-[11px] text-gray-500 font-semibold truncate">Para negociar, apurar un poquito y dejar todo por escrito.</p>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Chat de Managers</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Negociaciones y traspasos directos entre equipos.</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setShowTutorial(true)} className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 transition" title="Ver tutorial y reglas">
-              <HelpCircle className="w-5 h-5" />
+            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Ver tutorial y reglas">
+              <HelpCircle className="w-4 h-4" />
             </button>
-            <button onClick={handleClose} className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 transition">
-              <X className="w-5 h-5" />
+            <button onClick={handleClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -284,11 +284,11 @@ export const ManagerChat = memo(function ManagerChat({
               onScroll={updateBottomState}
               onWheel={e => e.stopPropagation()}
               onTouchMove={e => e.stopPropagation()}
-              className="manager-chat-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5 sm:py-4 space-y-2 custom-scrollbar"
+              className="manager-chat-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5 sm:py-4 space-y-2 custom-scrollbar bg-slate-50/50 dark:bg-black/20"
             >
               {messages.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-center px-6">
-                  <p className="text-sm text-gray-500 font-semibold">Todavia no hay mensajes. Tira una propuesta, menciona a un manager o manda un GIF con altura, no seas tibio.</p>
+                  <p className="text-xs text-slate-400 font-medium">Todavía no hay mensajes en la sala. Empieza una conversación o menciona a otro mánager.</p>
                 </div>
               ) : (
                 messages.map(message => {
@@ -296,27 +296,27 @@ export const ManagerChat = memo(function ManagerChat({
                   const isTransfer = message.transferIntent;
                   return (
                     <div key={message.id} className={`manager-chat-message ${mine ? 'manager-chat-message--mine' : 'manager-chat-message--received'}`}>
-                      <div className={`manager-chat-bubble rounded-xl px-3 py-2 border ${mine ? 'bg-cyan-600/16 border-cyan-500/30' : 'bg-white/[0.04] border-white/10'}`}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <img src={message.senderLogoUrl || DEFAULT_LOGO} alt="" className="w-5 h-5 rounded object-contain bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
-                          <span className="text-[11px] font-black uppercase tracking-wide text-white truncate">{message.senderTeamName || 'Manager'}</span>
+                      <div className={`manager-chat-bubble rounded-xl px-3 py-2 border ${mine ? 'bg-sky-600 text-white border-sky-500' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white'}`}>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <img src={message.senderLogoUrl || DEFAULT_LOGO} alt="" className="w-4 h-4 rounded object-contain bg-slate-100 dark:bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
+                          <span className={`text-[11px] font-bold truncate ${mine ? 'text-sky-100' : 'text-slate-900 dark:text-white'}`}>{message.senderTeamName || 'Manager'}</span>
                           {isTransfer && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                            <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.2 rounded ${mine ? 'bg-white/20 text-white' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'}`}>
                               <Handshake className="w-3 h-3" /> Traspaso
                             </span>
                           )}
                         </div>
-                        {message.text && <p className="text-sm text-gray-100 whitespace-pre-wrap break-words leading-snug">{renderMessageText(message)}</p>}
+                        {message.text && <p className={`text-xs whitespace-pre-wrap break-words leading-relaxed ${mine ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{renderMessageText(message)}</p>}
                         {message.gifUrl && (
                           <img
                             src={message.gifUrl}
                             alt="GIF enviado"
                             loading="lazy"
-                            className="manager-chat-gif mt-2 rounded-lg border border-white/10 object-contain bg-black/30"
+                            className="manager-chat-gif mt-2 rounded-lg border border-slate-200 dark:border-white/10 object-contain bg-black/30"
                             onError={e => { e.target.style.display = 'none'; }}
                           />
                         )}
-                        <div className="text-[10px] text-gray-500 text-right mt-1">{getMessageDate(message.createdAt)}</div>
+                        <div className={`text-[10px] text-right mt-1 font-medium ${mine ? 'text-sky-200' : 'text-slate-400'}`}>{getMessageDate(message.createdAt)}</div>
                       </div>
                     </div>
                   );
@@ -325,7 +325,7 @@ export const ManagerChat = memo(function ManagerChat({
               <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSend} className="manager-chat-composer shrink-0 p-3 border-t border-white/10 bg-gray-900/95">
+            <form onSubmit={handleSend} className="manager-chat-composer shrink-0 p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90">
               {transferIntent && (
                 <div className="mb-2 inline-flex items-center gap-2 text-[11px] text-emerald-300 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">
                   <Handshake className="w-3.5 h-3.5" /> Se marcara como conversacion de traspaso.
@@ -417,15 +417,15 @@ export const ManagerChat = memo(function ManagerChat({
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={handleComposerKeyDown}
-                    placeholder={`Escribi como ${userProfile?.teamName || 'manager'}... @aspra y autocomplete, corta.`}
-                    className="w-full max-h-28 min-h-[44px] resize-none bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/60 placeholder:text-gray-600"
+                    placeholder={`Escribe un mensaje como ${userProfile?.teamName || 'manager'}...`}
+                    className="w-full max-h-28 min-h-[44px] resize-none bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500 placeholder:text-slate-400"
                     maxLength={500}
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowGifPicker(prev => !prev)}
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center transition ${showGifPicker || selectedGifUrl ? 'bg-fuchsia-600 text-white' : 'bg-white/[0.05] text-gray-400 hover:text-white hover:bg-white/[0.08]'}`}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${showGifPicker || selectedGifUrl ? 'bg-purple-600 text-white' : 'bg-slate-100 dark:bg-white/[0.05] text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'}`}
                   title="Mandar GIF"
                 >
                   <Image className="w-4 h-4" />
@@ -433,7 +433,7 @@ export const ManagerChat = memo(function ManagerChat({
                 <button
                   type="submit"
                   disabled={(!text.trim() && !selectedGifUrl) || isSending}
-                  className="w-11 h-11 rounded-xl bg-cyan-600 text-white flex items-center justify-center hover:bg-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className="w-9 h-9 rounded-lg bg-sky-600 text-white flex items-center justify-center hover:bg-sky-500 disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
                   title="Enviar"
                 >
                   <Send className="w-4 h-4" />

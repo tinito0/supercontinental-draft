@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Radar } from 'react-chartjs-2';
-import { X } from 'lucide-react';
+import { X, Target } from 'lucide-react';
 import { STAT_NAMES_MAP, STATS_JUGADOR_CAMPO, STATS_PORTERO, PLAYER_SKILLS_MAP } from '../utils/constants.js';
 import { getPosColorClass, getStatAndOvrColorClass, formatPriceShort } from '../utils/helpers.js';
 
@@ -8,11 +8,10 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
   if (!isVisible || !playerA || !playerB) return null;
 
   const isGK = playerA.Grupo === 'Arqueros' || playerB.Grupo === 'Arqueros';
-
   const statGroups = isGK ? STATS_PORTERO : STATS_JUGADOR_CAMPO;
 
   // Hexágono PES en sentido horario: SHO, PAS, STR, DEF/GK, SPD, DRI
-  const radarLabels = isGK
+  const rawLabels = isGK
     ? ['SHO', 'PAS', 'STR', 'GK', 'SPD', 'DRI']
     : ['SHO', 'PAS', 'STR', 'DEF', 'SPD', 'DRI'];
 
@@ -20,49 +19,56 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
     ? [p.STAT_SHO, p.STAT_PAS, p.STAT_STR, p.STAT_GK, p.STAT_SPD, p.STAT_DRI]
     : [p.STAT_SHO, p.STAT_PAS, p.STAT_STR, p.STAT_DEF, p.STAT_SPD, p.STAT_DRI];
 
+  const dataA = getRadarData(playerA);
+  const dataB = getRadarData(playerB);
+
+  const radarLabels = rawLabels.map((l, i) => `${dataA[i] ?? 0} ${l} ${dataB[i] ?? 0}`);
+
   const radarData = useMemo(() => ({
     labels: radarLabels,
     datasets: [
       {
         label: playerA.Name,
-        data: getRadarData(playerA),
-        backgroundColor: 'rgba(0, 150, 255, 0.3)',
-        borderColor: 'rgb(0, 150, 255)',
+        data: dataA,
+        backgroundColor: 'rgba(0, 180, 216, 0.20)',
+        borderColor: '#00b4d8',
         borderWidth: 2,
-        pointBackgroundColor: 'rgb(0, 150, 255)',
-        pointBorderColor: '#fff',
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        pointBackgroundColor: '#00b4d8',
+        pointBorderColor: '#ffffff',
+        pointRadius: 3.5,
+        pointHoverRadius: 5,
       },
       {
         label: playerB.Name,
-        data: getRadarData(playerB),
-        backgroundColor: 'rgba(255, 50, 50, 0.3)',
-        borderColor: 'rgb(255, 50, 50)',
+        data: dataB,
+        backgroundColor: 'rgba(249, 115, 22, 0.20)',
+        borderColor: '#f97316',
         borderWidth: 2,
-        pointBackgroundColor: 'rgb(255, 50, 50)',
-        pointBorderColor: '#fff',
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        pointBackgroundColor: '#f97316',
+        pointBorderColor: '#ffffff',
+        pointRadius: 3.5,
+        pointHoverRadius: 5,
       }
     ]
-  }), [playerA, playerB, isGK]);
+  }), [playerA.Name, playerB.Name, dataA, dataB, radarLabels]);
 
   const radarOptions = useMemo(() => ({
-    responsive: false,
+    responsive: true,
     maintainAspectRatio: true,
     scales: {
       r: {
-        min: 0,
+        min: 35,
         max: 100,
-        ticks: { display: false },
+        ticks: {
+          display: false,
+        },
         pointLabels: {
-          font: { size: 12 },
-          color: "rgba(255,255,255,0.85)",
+          font: { size: 10, weight: '600' },
+          color: "rgba(226, 232, 240, 0.85)",
           backdropColor: 'transparent',
         },
-        grid: { color: "rgba(255,255,255,0.1)", lineWidth: 1 },
-        angleLines: { color: "rgba(255,255,255,0.1)", lineWidth: 1 }
+        grid: { color: "rgba(255, 255, 255, 0.08)", lineWidth: 1 },
+        angleLines: { color: "rgba(255, 255, 255, 0.08)", lineWidth: 1 }
       }
     },
     plugins: { legend: { display: false } }
@@ -74,133 +80,182 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
   const StatBarRow = ({ label, valA, valB, isWeakFoot }) => {
     const numA = Number(valA) || 0;
     const numB = Number(valB) || 0;
-    const maxVal = isWeakFoot ? 4 : 99;
-    const pctA = Math.min((numA / maxVal) * 100, 100);
-    const pctB = Math.min((numB / maxVal) * 100, 100);
 
-    let colorTextA = 'text-gray-500 font-medium';
-    let colorTextB = 'text-gray-500 font-medium';
-    let colorBarA = 'bg-gray-700';
-    let colorBarB = 'bg-gray-700';
-    let glowA = '';
-    let glowB = '';
+    const isAWin = numA > numB;
+    const isBWin = numB > numA;
 
-    if (numA > numB) {
-      colorTextA = 'text-blue-400 font-black scale-110';
-      colorBarA = 'bg-blue-500';
-      glowA = 'shadow-[0_0_10px_rgba(59,130,246,0.5)]';
-    } else if (numB > numA) {
-      colorTextB = 'text-red-400 font-black scale-110';
-      colorBarB = 'bg-red-500';
-      glowB = 'shadow-[0_0_10px_rgba(239,68,68,0.5)]';
-    } else {
-      colorTextA = 'text-yellow-400 font-bold';
-      colorTextB = 'text-yellow-400 font-bold';
-      colorBarA = 'bg-yellow-500';
-      colorBarB = 'bg-yellow-500';
-    }
+    const colorClassA = getStatAndOvrColorClass(numA);
+    const colorClassB = getStatAndOvrColorClass(numB);
 
     return (
-      <div className="mb-3 group">
-        <div className="flex justify-between items-end mb-1.5 text-sm relative">
-          <span className={`w-12 text-left text-lg transition-all duration-300 ${colorTextA} z-10`}>{numA}</span>
-          <span className="absolute left-1/2 -translate-x-1/2 bottom-0.5 text-[10px] font-bold uppercase tracking-widest text-gray-600 group-hover:text-gray-400 transition-colors bg-gray-900 px-2 z-20">{label}</span>
-          <div className="absolute bottom-2 left-14 right-14 h-px bg-gray-800/50 z-0"></div>
-          <span className={`w-12 text-right text-lg transition-all duration-300 ${colorTextB} z-10`}>{numB}</span>
-        </div>
-        <div className="flex items-center h-2.5 bg-gray-800/50 rounded-full overflow-hidden border border-gray-700/30">
-          <div className="flex-1 flex justify-end h-full"><div style={{ width: `${pctA}%` }} className={`h-full rounded-l-full transition-all duration-500 ${colorBarA} ${glowA}`}></div></div>
-          <div className="w-0.5 h-full bg-gray-900 z-10"></div>
-          <div className="flex-1 flex justify-start h-full"><div style={{ width: `${pctB}%` }} className={`h-full rounded-r-full transition-all duration-500 ${colorBarB} ${glowB}`}></div></div>
-        </div>
+      <div className="flex items-center justify-between py-1.5 border-b border-white/[0.03] last:border-0">
+        {/* Pill Jugador A */}
+        <span
+          className={`stat-value ${colorClassA} px-2.5 py-0.5 rounded-md font-mono font-bold text-sm min-w-[2.5rem] text-center tabular-nums shrink-0 inline-flex items-center justify-center ${
+            isAWin ? 'ring-1 ring-cyan-400/60' : 'opacity-75'
+          }`}
+        >
+          {numA}
+        </span>
+
+        {/* Nombre de la estadística */}
+        <span className="flex-1 text-center text-sm text-slate-300 truncate px-2">
+          {label}
+        </span>
+
+        {/* Pill Jugador B */}
+        <span
+          className={`stat-value ${colorClassB} px-2.5 py-0.5 rounded-md font-mono font-bold text-sm min-w-[2.5rem] text-center tabular-nums shrink-0 inline-flex items-center justify-center ${
+            isBWin ? 'ring-1 ring-orange-400/60' : 'opacity-75'
+          }`}
+        >
+          {numB}
+        </span>
       </div>
     );
   };
 
+  const ovrDiff = (playerA.OVR_CALCULADO || 0) - (playerB.OVR_CALCULADO || 0);
+
   return (
-    // MODIFICADO: p-0 en móvil
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300" onClick={onClose}>
-      <div className="bg-[#0a0a0a]/95 sm:rounded-2xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:max-h-[90vh] flex flex-col border-0 sm:border border-white/10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-[60] p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-slate-900 sm:rounded-xl shadow-xl w-full max-w-6xl h-[100dvh] sm:max-h-[92vh] flex flex-col border-0 sm:border border-slate-800 overflow-hidden relative" onClick={e => e.stopPropagation()}>
 
-        {/* HEADER DUELO */}
-        <div className="relative bg-[#111114]/95 p-4 sm:p-6 border-b border-white/10 flex justify-between items-center shrink-0">
+        {/* HEADER DUELO STICKY */}
+        <div className="sticky top-0 z-30 bg-slate-900 p-3 sm:p-4 pr-12 sm:pr-4 border-b border-slate-800 flex justify-between items-center shrink-0">
 
-          {/* JUGADOR A (AZUL) */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-1">
-            <div className="relative">
-              <img src={`/fotos_jugadores/${playerA.Id}.webp`} className="w-12 h-12 sm:w-20 sm:h-20 rounded-xl object-cover border border-cyan-400/40 shadow-lg shadow-cyan-900/20 bg-gray-900" onError={(e) => e.target.src = `https://placehold.co/100x100/374151/e0e0e0`} />
-              <div className={`absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-10 sm:h-10 flex items-center justify-center rounded-full font-black text-[10px] sm:text-sm shadow-md ring-2 sm:ring-4 ring-gray-900 !text-black ${getStatAndOvrColorClass(playerA.OVR_CALCULADO)}`}>
+          {/* JUGADOR A */}
+          <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+            <div className="relative shrink-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-slate-700 bg-slate-800 shadow-sm">
+                <img
+                  src={`/fotos_jugadores/${playerA.Id}.webp`}
+                  alt={playerA.Name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/100x100/111/555?text=${playerA.Name.substring(0, 1)}`; }}
+                />
+              </div>
+              <div className={`absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded font-bold text-[10px] sm:text-xs tabular-nums !text-black ${getStatAndOvrColorClass(playerA.OVR_CALCULADO)}`}>
                 {playerA.OVR_CALCULADO}
               </div>
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-2xl font-black text-white leading-none tracking-tight truncate uppercase italic">{playerA.Name}</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded text-black ${getPosColorClass(playerA.POS_NOMBRE)}`}>{playerA.POS_NOMBRE}</span>
-                <span className="text-xs sm:text-sm font-bold text-cyan-400">{formatPriceShort(playerA.Precio)}</span>
+              <h3 className="text-xs sm:text-base font-bold text-white leading-tight truncate">
+                {playerA.Name}
+              </h3>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded !text-black ${getPosColorClass(playerA.POS_NOMBRE)}`}>
+                  {playerA.POS_NOMBRE}
+                </span>
+                <span className="text-xs font-semibold text-slate-300 tabular-nums">
+                  {formatPriceShort(playerA.Precio)}
+                </span>
+                {playerA.PlayingStyle && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+                    <Target className="w-3 h-3 text-slate-400" />
+                    {playerA.PlayingStyle}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* VS CENTRAL */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10">
-              <div className="text-xl sm:text-4xl font-black text-white/80 italic tracking-tighter drop-shadow-sm">
-              VS
-            </div>
+          {/* CENTRO: DUEL BADGE */}
+          <div className="flex flex-col items-center justify-center px-2 shrink-0">
+            <span className="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 tabular-nums">
+              {ovrDiff > 0 ? `+${ovrDiff} A` : ovrDiff < 0 ? `+${Math.abs(ovrDiff)} B` : 'PARIDAD'}
+            </span>
           </div>
 
-          {/* JUGADOR B (ROJO) */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end text-right">
+          {/* JUGADOR B */}
+          <div className="flex items-center gap-3 sm:gap-4 flex-1 justify-end text-right min-w-0">
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-2xl font-black text-white leading-none tracking-tight truncate uppercase italic">{playerB.Name}</h3>
-              <div className="flex items-center gap-2 mt-1 justify-end">
-                <span className="text-xs sm:text-sm font-bold text-red-400">{formatPriceShort(playerB.Precio)}</span>
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded text-black ${getPosColorClass(playerB.POS_NOMBRE)}`}>{playerB.POS_NOMBRE}</span>
+              <h3 className="text-xs sm:text-base font-bold text-white leading-tight truncate">
+                {playerB.Name}
+              </h3>
+              <div className="flex items-center gap-2 mt-1 justify-end flex-wrap">
+                {playerB.PlayingStyle && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+                    <Target className="w-3 h-3 text-slate-400" />
+                    {playerB.PlayingStyle}
+                  </span>
+                )}
+                <span className="text-xs font-semibold text-slate-300 tabular-nums">
+                  {formatPriceShort(playerB.Precio)}
+                </span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded !text-black ${getPosColorClass(playerB.POS_NOMBRE)}`}>
+                  {playerB.POS_NOMBRE}
+                </span>
               </div>
             </div>
-            <div className="relative">
-              <img src={`/fotos_jugadores/${playerB.Id}.webp`} className="w-12 h-12 sm:w-20 sm:h-20 rounded-xl object-cover border border-red-400/40 shadow-lg shadow-red-900/20 bg-gray-900" onError={(e) => e.target.src = `https://placehold.co/100x100/374151/e0e0e0`} />
-              <div className={`absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-10 sm:h-10 flex items-center justify-center rounded-full font-black text-[10px] sm:text-sm shadow-md ring-2 sm:ring-4 ring-gray-900 !text-black ${getStatAndOvrColorClass(playerB.OVR_CALCULADO)}`}>
+            <div className="relative shrink-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-slate-700 bg-slate-800 shadow-sm">
+                <img
+                  src={`/fotos_jugadores/${playerB.Id}.webp`}
+                  alt={playerB.Name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/100x100/111/555?text=${playerB.Name.substring(0, 1)}`; }}
+                />
+              </div>
+              <div className={`absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded font-bold text-[10px] sm:text-xs tabular-nums !text-black ${getStatAndOvrColorClass(playerB.OVR_CALCULADO)}`}>
                 {playerB.OVR_CALCULADO}
               </div>
             </div>
           </div>
 
-          <button onClick={onClose} className="absolute top-2 right-2 text-gray-500 hover:text-white p-2 rounded-lg hover:bg-white/[0.06] transition z-50">
-            <X size={20} />
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 z-50 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-colors"
+            title="Cerrar"
+            aria-label="Cerrar comparador"
+          >
+            <X size={18} />
           </button>
         </div>
 
         {/* CONTENIDO SCROLLABLE */}
-        <div className="flex-grow overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-[#0a0a0a] pb-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white/[0.03] p-4 rounded-xl border border-white/[0.06] shadow-inner backdrop-blur-sm flex flex-col items-center justify-center">
-                <Radar data={radarData} options={radarOptions} width={260} height={260} />
-                <div className="flex justify-center items-center mt-3 gap-4 text-xs font-bold">
-                  <div className="flex items-center gap-1.5 text-blue-400">
-                    <span className="w-3 h-3 rounded-full bg-[rgba(0,150,255,0.3)] border border-[rgb(0,150,255)]"></span>
-                    {playerA.Name.split(' ').pop()}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-red-400">
-                    <span className="w-3 h-3 rounded-full bg-[rgba(255,50,50,0.3)] border border-[rgb(255,50,50)]"></span>
-                    {playerB.Name.split(' ').pop()}
+        <div className="relative z-10 flex-grow overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+
+            {/* COLUMNA IZQUIERDA: RADAR Y FÍSICO */}
+            <div className="lg:col-span-4 space-y-4">
+              <div className="bg-[#111722] p-4 rounded-xl border border-slate-800 shadow-sm flex flex-col items-center justify-center">
+                <div className="w-full flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-300">Superposición de atributos</span>
+                  <div className="flex items-center gap-3 text-xs font-medium">
+                    <span className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      {playerA.Name.split(' ').pop()}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      {playerB.Name.split(' ').pop()}
+                    </span>
                   </div>
                 </div>
+                <div className="relative w-full h-[245px] flex items-center justify-center">
+                  <Radar data={radarData} options={radarOptions} />
+                </div>
               </div>
-              <div className="bg-white/[0.03] p-5 rounded-xl border border-white/[0.06]">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 text-center border-b border-gray-700/50 pb-2">Físico</h4>
+
+              <div className="bg-[#111722] p-4 sm:p-5 rounded-xl border border-slate-800 shadow-sm">
+                <h4 className="text-xs sm:text-sm font-semibold text-white mb-3 text-center border-b border-slate-800 pb-2">
+                  Biometría y Perfil
+                </h4>
                 <StatBarRow label="Edad" valA={playerA.Age} valB={playerB.Age} isWeakFoot={false} />
                 <StatBarRow label="Altura" valA={playerA.Height} valB={playerB.Height} isWeakFoot={false} />
                 <StatBarRow label="Peso" valA={playerA.Weight} valB={playerB.Weight} isWeakFoot={false} />
               </div>
             </div>
 
+            {/* COLUMNA DERECHA: GRUPOS DE ATRIBUTOS */}
             <div className="lg:col-span-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(statGroups).map(([groupName, statKeys]) => (
-                  <div key={groupName} className="bg-white/[0.03] p-5 rounded-xl border border-white/[0.06] shadow-sm hover:border-white/[0.12] transition">
-                    <h4 className="text-xs font-bold text-blue-300 uppercase tracking-widest mb-5 text-center border-b border-blue-500/20 pb-2">{groupName}</h4>
+                  <div key={groupName} className="bg-[#111722] p-4 sm:p-5 rounded-xl border border-slate-800 shadow-sm transition">
+                    <h4 className="text-xs sm:text-sm font-semibold text-white mb-3 text-center border-b border-slate-800 pb-2">
+                      {groupName}
+                    </h4>
                     {statKeys.map(key => {
                       const isWF = key === 'WeakFootAcc' || key === 'WeakFootUsage';
                       return <StatBarRow key={key} label={STAT_NAMES_MAP[key] || key} valA={playerA[key]} valB={playerB[key]} isWeakFoot={isWF} />;
@@ -211,50 +266,76 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
             </div>
           </div>
 
-          {/* ── HABILIDADES DE JUGADOR ── */}
-          <div className="bg-white/[0.03] p-5 sm:p-6 rounded-xl border border-white/[0.06] shadow-sm mt-6">
-             <h4 className="text-sm font-black text-gray-400 tracking-wider uppercase mb-5 pb-3 border-b border-gray-700/50 text-center">
-               Habilidades de Jugador
-             </h4>
-             <div className="flex flex-col md:flex-row relative">
-               {/* Left Player */}
-               <div className="flex-1 flex flex-col items-center md:items-end md:pr-10 mb-6 md:mb-0">
-                  <h5 className="text-xs font-bold text-blue-400 mb-3 uppercase">{playerA.Name}</h5>
+          {/* ── HABILIDADES DE JUGADOR COMPARATIVAS ── */}
+          <div className="bg-[#111722] p-4 sm:p-5 rounded-xl border border-slate-800 shadow-sm mt-4">
+            <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-slate-800">
+              <h4 className="text-xs sm:text-sm font-semibold text-white">
+                Habilidades especiales ({skillsA.length} vs {skillsB.length})
+              </h4>
+              <div className="flex items-center gap-3 text-xs font-medium text-slate-400">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-blue-500/30 border border-blue-500" /> {playerA.Name.split(' ').pop()}</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500" /> {playerB.Name.split(' ').pop()}</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-slate-700 border border-slate-500" /> Compartidas</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Player A Skills */}
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium text-slate-300">
+                  {playerA.Name} ({skillsA.length})
+                </div>
+                <div className="flex flex-wrap gap-1.5">
                   {skillsA.length > 0 ? (
-                    <div className="flex flex-wrap justify-center md:justify-end gap-2">
-                       {skillsA.map(skill => {
-                          const isShared = skillsB.includes(skill);
-                          const bg = isShared ? 'bg-yellow-500/20' : 'bg-blue-500/20';
-                          const text = isShared ? 'text-yellow-400' : 'text-blue-300';
-                          const border = isShared ? 'border-yellow-500/30' : 'border-blue-500/30';
-                          return <span key={skill} className={`text-xs font-bold px-3 py-1.5 rounded border shadow-sm ${bg} ${text} ${border}`}>{skill}</span>;
-                       })}
-                    </div>
-                  ) : <span className="text-sm text-gray-500 italic">Sin habilidades especiales</span>}
-               </div>
+                    skillsA.map(skill => {
+                      const isShared = skillsB.includes(skill);
+                      return (
+                        <span
+                          key={skill}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-md border ${
+                            isShared
+                              ? 'bg-slate-800/90 text-slate-200 border-slate-700'
+                              : 'bg-blue-500/10 text-blue-300 border-blue-500/25'
+                          }`}
+                        >
+                          {skill} {isShared && '✓'}
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="text-xs text-slate-500 italic">Sin habilidades especiales</span>
+                  )}
+                </div>
+              </div>
 
-               {/* Center VS */}
-               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex items-center justify-center">
-                  <div className="w-px h-16 bg-gray-700"></div>
-                  <span className="absolute bg-gray-900 px-2 text-xs font-black text-gray-500">VS</span>
-               </div>
-
-               {/* Right Player */}
-               <div className="flex-1 flex flex-col items-center md:items-start md:pl-10">
-                  <h5 className="text-xs font-bold text-red-400 mb-3 uppercase">{playerB.Name}</h5>
+              {/* Player B Skills */}
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium text-slate-300">
+                  {playerB.Name} ({skillsB.length})
+                </div>
+                <div className="flex flex-wrap gap-1.5">
                   {skillsB.length > 0 ? (
-                    <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                       {skillsB.map(skill => {
-                          const isShared = skillsA.includes(skill);
-                          const bg = isShared ? 'bg-yellow-500/20' : 'bg-red-500/20';
-                          const text = isShared ? 'text-yellow-400' : 'text-red-300';
-                          const border = isShared ? 'border-yellow-500/30' : 'border-red-500/30';
-                          return <span key={skill} className={`text-xs font-bold px-3 py-1.5 rounded border shadow-sm ${bg} ${text} ${border}`}>{skill}</span>;
-                       })}
-                    </div>
-                  ) : <span className="text-sm text-gray-500 italic">Sin habilidades especiales</span>}
-               </div>
-             </div>
+                    skillsB.map(skill => {
+                      const isShared = skillsA.includes(skill);
+                      return (
+                        <span
+                          key={skill}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-md border ${
+                            isShared
+                              ? 'bg-slate-800/90 text-slate-200 border-slate-700'
+                              : 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+                          }`}
+                        >
+                          {skill} {isShared && '✓'}
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="text-xs text-slate-500 italic">Sin habilidades especiales</span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -24,19 +24,19 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
   const team = allTeams?.[teamId];
   if (team?.logoUrl) {
     return (
-      <span className="relative w-6 h-6 rounded-full bg-black/35 overflow-hidden flex-shrink-0 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.14)]">
+      <span className="relative w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
         <img
           src={team.logoUrl}
           alt=""
           loading="lazy"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           onError={event => { event.currentTarget.style.display = 'none'; }}
         />
       </span>
     );
   }
   return (
-    <span className="w-6 h-6 rounded-full bg-blue-600/20 flex items-center justify-center text-[8px] font-black text-blue-200 flex-shrink-0 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.14)]">
+    <span className="w-5 h-5 rounded-full bg-sky-500/15 flex items-center justify-center text-[8px] font-bold text-sky-600 dark:text-sky-400 flex-shrink-0 border border-sky-500/20">
       {getInitials(teamName)}
     </span>
   );
@@ -44,16 +44,16 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
 
 const TransferSkeleton = memo(function TransferSkeleton() {
   return (
-    <div className="rounded-2xl bg-white/[0.03] p-4 animate-pulse shadow-[inset_0_0_0_1px_rgba(59,130,246,0.06)]">
+    <div className="rounded-xl bg-slate-100 dark:bg-slate-900/60 p-3.5 animate-pulse border border-slate-200/60 dark:border-slate-800/60">
       <div className="flex items-start gap-3">
-        <div className="w-12 h-12 rounded-xl bg-white/10" />
+        <div className="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-800" />
         <div className="flex-1 space-y-2">
-          <div className="h-4 w-3/4 rounded bg-white/10" />
-          <div className="h-3 w-1/2 rounded bg-white/8" />
+          <div className="h-3.5 w-3/4 rounded bg-slate-200 dark:bg-slate-800" />
+          <div className="h-2.5 w-1/2 rounded bg-slate-200 dark:bg-slate-800/70" />
         </div>
-        <div className="h-7 w-16 rounded-lg bg-white/10" />
+        <div className="h-6 w-14 rounded bg-slate-200 dark:bg-slate-800" />
       </div>
-      <div className="mt-4 h-9 rounded-xl bg-white/8" />
+      <div className="mt-3 h-8 rounded-lg bg-slate-200 dark:bg-slate-800/50" />
     </div>
   );
 });
@@ -61,61 +61,70 @@ const TransferSkeleton = memo(function TransferSkeleton() {
 const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams }) {
   if (transfer.type === 'match_result') {
     return (
-      <article className="relative overflow-hidden rounded-2xl border border-emerald-500/15 bg-emerald-950/15 p-4 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.04)]">
-        <div className="mb-3 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-emerald-300"><span>Resultado final</span><span>{transfer.round || 'Torneo'}</span></div>
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-          <span className="truncate text-sm font-black uppercase text-white">{transfer.homeTeam}</span>
-          <strong className="rounded-xl bg-black/30 px-3 py-2 text-xl font-black text-emerald-300">{transfer.homeScore} - {transfer.awayScore}</strong>
-          <span className="truncate text-sm font-black uppercase text-white">{transfer.awayTeam}</span>
+      <article className="relative overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/20 p-3.5">
+        <div className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+          <span>Resultado Final</span>
+          <span>{transfer.round || 'Torneo'}</span>
         </div>
-        {transfer.mvp && <p className="mt-3 text-center text-xs font-bold text-yellow-300">MVP: {transfer.mvp}</p>}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
+          <span className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{transfer.homeTeam}</span>
+          <strong className="rounded-lg bg-emerald-500/15 dark:bg-emerald-500/20 px-2.5 py-1 text-sm font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
+            {transfer.homeScore} - {transfer.awayScore}
+          </strong>
+          <span className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{transfer.awayTeam}</span>
+        </div>
+        {transfer.mvp && <p className="mt-2 text-center text-[11px] font-medium text-amber-600 dark:text-amber-400">MVP: {transfer.mvp}</p>}
       </article>
     );
   }
+
   const isFranchise = transfer.isFranchise === true;
   const isTransfer = transfer.type === 'transfer';
   const time = getTransferTime(transfer.timestamp);
-  const accent = isReleased ? 'bg-red-500/50' : isTransfer ? 'bg-purple-500/70' : isFranchise ? 'bg-yellow-500/70' : 'bg-blue-500/60';
 
   if (isTransfer && !isReleased) {
     return <TransferPlayerCard transfer={transfer} allTeams={allTeams} compact />;
   }
 
+  const borderLeftTone = isReleased
+    ? 'border-l-rose-500'
+    : isTransfer
+    ? 'border-l-purple-500'
+    : isFranchise
+    ? 'border-l-amber-500'
+    : 'border-l-sky-500';
+
   return (
     <article
-      className={`group rounded-2xl p-4 transition-all duration-300 relative overflow-hidden ${
-        isReleased
-          ? 'bg-white/[0.015] opacity-55 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.08)]'
-          : 'bg-white/[0.035] hover:bg-white/[0.065] shadow-[inset_0_0_0_1px_rgba(59,130,246,0.06)] hover:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]'
+      className={`group rounded-xl p-3.5 border border-slate-200 dark:border-slate-800 border-l-[3px] ${borderLeftTone} transition-all duration-200 bg-white dark:bg-[#0f141f] shadow-sm hover:shadow ${
+        isReleased ? 'opacity-60 line-through' : ''
       }`}
       style={isReleased ? { animation: 'transferFeedFadeOut 5s ease-out forwards' } : undefined}
     >
-      <div className={`absolute top-0 left-0 w-1 h-full ${accent}`} />
-
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gray-950 overflow-hidden flex-shrink-0 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.12)]">
+        <div className="min-w-0 flex items-center gap-2.5">
+          <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
             <img
               src={`/fotos_jugadores/${transfer.playerId}.webp`}
               alt={transfer.playerName}
               loading="lazy"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-top"
               onError={(event) => {
                 event.currentTarget.src = `https://placehold.co/48x48/111/333?text=${transfer.playerName?.charAt(0) || '?'}`;
               }}
             />
           </div>
           <div className="min-w-0">
-            <h4 className={`text-sm font-black leading-tight truncate ${isReleased ? 'text-gray-600 line-through' : 'text-white group-hover:text-blue-200'}`}>
+            <h4 className={`text-xs font-bold leading-snug truncate ${isReleased ? 'text-slate-500 line-through' : 'text-slate-900 dark:text-white'}`}>
               {transfer.playerName}
             </h4>
             <div className="mt-1 flex items-center gap-2">
-              <span className={`text-[10px] font-black uppercase tracking-wide ${
-                isTransfer ? 'text-purple-300' : isFranchise ? 'text-yellow-300' : 'text-blue-300'
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                isTransfer ? 'text-purple-600 dark:text-purple-400' : isFranchise ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400'
               }`}>
                 {isTransfer ? 'Traspaso' : isFranchise ? 'Franquicia' : 'Fichaje'}
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] text-gray-500 font-bold">
+              <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-medium">
                 <Clock className="w-3 h-3" /> {time}
               </span>
             </div>
@@ -123,38 +132,34 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
         </div>
 
         {isReleased ? (
-          <span className="shrink-0 rounded-lg bg-red-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-red-300 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.12)]">
+          <span className="shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
             Liberado
           </span>
         ) : isFranchise ? (
-          <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-yellow-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-yellow-300 shadow-[inset_0_0_0_1px_rgba(234,179,8,0.12)]">
+          <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
             <Star className="w-3 h-3" fill="currentColor" /> Gratis
           </span>
         ) : (
-          <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-black ${
-            isTransfer
-              ? 'bg-purple-500/10 text-purple-300 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.12)]'
-              : 'bg-emerald-500/10 text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]'
-          }`}>
+          <span className="shrink-0 rounded px-2 py-0.5 text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 tabular-nums">
             {formatPriceShort(transfer.price)}
           </span>
         )}
       </div>
 
-      <div className="mt-4 rounded-xl bg-black/18 px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.035)]">
+      <div className="mt-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 px-2.5 py-1.5 border border-slate-100 dark:border-slate-800/60">
         {isTransfer ? (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 text-xs">
             <TeamVisual teamId={transfer.fromTeamId} teamName={transfer.fromTeamName} allTeams={allTeams} />
-            <span className="min-w-0 truncate text-[11px] font-black uppercase text-gray-500">{transfer.fromTeamName}</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-300 flex-shrink-0" />
+            <span className="min-w-0 truncate font-medium text-slate-500 dark:text-slate-400">{transfer.fromTeamName}</span>
+            <ArrowRight className="w-3 h-3 text-slate-400 flex-shrink-0" />
             <TeamVisual teamId={transfer.teamId} teamName={transfer.teamName} allTeams={allTeams} />
-            <span className="min-w-0 truncate text-[11px] font-black uppercase text-gray-200">{transfer.teamName}</span>
+            <span className="min-w-0 truncate font-semibold text-slate-900 dark:text-white">{transfer.teamName}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 text-xs">
             <TeamVisual teamId={transfer.teamId} teamName={transfer.teamName} allTeams={allTeams} />
-            <p className="min-w-0 truncate text-[11px] text-gray-400">
-              Fichado por <span className="font-black uppercase text-gray-200">{transfer.teamName}</span>
+            <p className="min-w-0 truncate text-slate-500 dark:text-slate-400">
+              Fichado por <span className="font-semibold text-slate-900 dark:text-white">{transfer.teamName}</span>
             </p>
           </div>
         )}
@@ -208,10 +213,6 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
     return () => unsubscribe();
   }, [db, isVisible, shouldPrefetch]);
 
-  // Historical signing retention
-  // A market event is historical news. A later sale must not make the
-  // original signing disappear from the live feed.
-
   useEffect(() => {
     return () => {
       Object.values(releaseTimersRef.current).forEach(clearTimeout);
@@ -233,42 +234,34 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end sm:items-center sm:justify-end z-[70] animate-in fade-in duration-300" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center sm:justify-end z-[70] animate-in fade-in duration-200" onClick={onClose}>
       <div
-        className="w-full sm:max-w-md h-[100dvh] sm:h-full bg-[#090b0f] flex flex-col shadow-2xl animate-in slide-in-from-right duration-300"
+        className="w-full sm:max-w-md h-[100dvh] sm:h-full bg-white dark:bg-[#0c1017] flex flex-col shadow-2xl border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-250"
         onClick={event => event.stopPropagation()}
       >
-        <div className="shrink-0 p-4 sm:p-6 bg-gradient-to-r from-blue-900/25 via-blue-950/30 to-transparent flex items-center justify-between shadow-[0_1px_0_rgba(59,130,246,0.12)] relative overflow-hidden">
-          {/* Animated Sweep Shimmer Effect */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-            <div className="news-bar-sweep absolute inset-y-0 w-2/3 bg-gradient-to-r from-transparent via-cyan-400/[0.14] to-transparent -skew-x-12" />
-            <div className="news-bar-sweep-line absolute bottom-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/80 to-transparent" />
-          </div>
-
-          <div className="flex items-center gap-3 min-w-0 relative z-10">
-            <div className="w-11 h-11 rounded-xl bg-blue-600/16 flex items-center justify-center flex-shrink-0 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)] relative">
-              <TrendingUp className="w-5 h-5 text-blue-300" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400" />
-              </span>
+        {/* Header */}
+        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/40">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0 text-sky-600 dark:text-sky-400">
+              <TrendingUp className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-xl font-black text-white tracking-tight uppercase">Noticias en Vivo</h2>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
-                  Live
+                <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Centro de Traspasos</h2>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                  En Vivo
                 </span>
               </div>
-              <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Últimos movimientos</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Últimos movimientos del mercado</p>
             </div>
           </div>
-          <button onClick={onClose} className="min-w-11 min-h-11 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 transition relative z-10">
-            <X size={20} />
+          <button onClick={onClose} className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <X size={18} />
           </button>
         </div>
 
-        <div className="shrink-0 flex gap-2 px-4 pb-3 sm:px-6">
+        {/* Filter Tabs */}
+        <div className="shrink-0 flex gap-1.5 px-4 py-2.5 sm:px-5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/20">
           {[
             ['all', 'Todo'],
             ['transfers', 'Traspasos'],
@@ -278,23 +271,28 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
             <button
               key={id}
               onClick={() => setFilter(id)}
-              className={`min-h-9 rounded-lg px-3 text-[10px] font-black uppercase tracking-wide transition ${filter === id ? 'bg-cyan-400 text-slate-950' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+              className={`min-h-8 rounded-lg px-3 text-xs font-semibold transition ${
+                filter === id
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
             >
               {label}
             </button>
           ))}
         </div>
 
-        <div className="flex-grow min-h-0 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-3">
+        {/* List Content */}
+        <div className="flex-grow min-h-0 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-2.5">
           {loading ? (
             <>
               {[0, 1, 2, 3].map(item => <TransferSkeleton key={item} />)}
             </>
           ) : visibleTransfers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-center p-8 space-y-4 opacity-55">
-              <History size={48} className="text-gray-600" />
-              <p className="text-gray-400 font-bold">Aún no hay movimientos en este mercado.</p>
-              <p className="text-xs text-gray-600">Cuando haya fichajes o traspasos, aparecen acá.</p>
+            <div className="flex flex-col items-center justify-center h-64 text-center p-8 space-y-3 opacity-60">
+              <History size={40} className="text-slate-400" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Aún no hay movimientos en este mercado.</p>
+              <p className="text-xs text-slate-400">Cuando haya fichajes o traspasos, aparecerán aquí.</p>
             </div>
           ) : (
             visibleTransfers.map(transfer => (
@@ -308,40 +306,19 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
           )}
         </div>
 
-        <div className="shrink-0 p-4 sm:p-5 bg-black/20 text-center pb-[max(16px,env(safe-area-inset-bottom))] shadow-[0_-1px_0_rgba(59,130,246,0.08)]">
-          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.3em]">
-            SCL Draft Monitoring System
+        {/* Footer */}
+        <div className="shrink-0 px-4 py-3 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-800 text-center pb-[max(12px,env(safe-area-inset-bottom))]">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            Supercontinental League • Mercado Oficial
           </p>
         </div>
       </div>
 
       <style>{`
         @keyframes transferFeedFadeOut {
-          0% { opacity: 0.55; max-height: 220px; }
-          80% { opacity: 0.12; max-height: 220px; }
+          0% { opacity: 0.6; max-height: 200px; }
+          80% { opacity: 0.15; max-height: 200px; }
           100% { opacity: 0; max-height: 0; padding: 0; margin: 0; border: none; overflow: hidden; }
-        }
-        @keyframes newsBarSweep {
-          0% {
-            transform: translateX(-150%) skewX(-20deg);
-          }
-          45%, 100% {
-            transform: translateX(350%) skewX(-20deg);
-          }
-        }
-        @keyframes newsLineSweep {
-          0% {
-            transform: translateX(-100%);
-          }
-          50%, 100% {
-            transform: translateX(100%);
-          }
-        }
-        .news-bar-sweep {
-          animation: newsBarSweep 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-        .news-bar-sweep-line {
-          animation: newsLineSweep 3.8s ease-in-out infinite;
         }
       `}</style>
     </div>

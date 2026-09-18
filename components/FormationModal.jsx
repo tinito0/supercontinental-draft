@@ -6,15 +6,16 @@ import html2canvas from 'html2canvas';
 import { FORMATIONS, APP_ID, DEFAULT_LOGO, DEFAULT_TACTICS } from '../utils/constants.js';
 import { getPosColorClass, formatPriceShort } from '../utils/helpers.js';
 
-export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange, isBench, onBenchChange }) => (
-  <div className={`flex items-center justify-between gap-2 p-2 w-full rounded-xl border transition-all duration-200 ${isSelected ? 'bg-blue-600/20 border-blue-500 shadow-md shadow-blue-500/10' : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-800/70'}`}>
-    <button onClick={() => onPlayerClick(player)} className="flex items-center gap-2 min-w-0 flex-1 text-left">
-      <img crossOrigin="anonymous" src={`/fotos_jugadores/${player.Id}.webp`} className="w-8 h-8 object-cover rounded-full bg-gray-900 border border-gray-600 shrink-0" onError={(e) => e.target.src = `https://placehold.co/40x40/374151/e0e0e0?text=${player.Name.substring(0, 1)}`} />
+export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange }) => (
+  <div className={`flex items-center justify-between gap-2 p-2 w-full rounded-xl border transition-all duration-200 ${isSelected ? 'bg-cyan-500/20 border-cyan-400 shadow-md shadow-cyan-500/10' : 'bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06]'}`}>
+    <button onClick={() => onPlayerClick(player)} className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer">
+      <img crossOrigin="anonymous" src={`/fotos_jugadores/${player.Id}.webp`} className="w-8 h-8 object-cover rounded-full bg-gray-900 border border-white/10 shrink-0" onError={(e) => e.target.src = `https://placehold.co/40x40/374151/e0e0e0?text=${player.Name.substring(0, 1)}`} />
       <div className="min-w-0 flex-1">
         <div className={`text-xs font-bold truncate leading-tight ${isSelected ? 'text-cyan-300' : 'text-gray-100'}`}>{player.Name}</div>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className={`text-[9px] font-black px-1 py-0.2 rounded text-black shrink-0 ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
           <span className="text-[10px] text-gray-400 font-mono shrink-0">{formatPriceShort(player.Precio || player.Valor || player.Price)}</span>
+          <span className="text-[9px] font-bold text-slate-400 bg-white/[0.04] px-1 py-0.2 rounded border border-white/[0.06]">Suplente</span>
         </div>
       </div>
     </button>
@@ -22,7 +23,7 @@ export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, do
       <input
         type="text"
         placeholder="#"
-        className="w-7 h-7 bg-black/50 text-center text-white text-xs font-bold rounded-lg border border-gray-600 focus:border-cyan-400 outline-none"
+        className="w-7 h-7 bg-black/50 text-center text-white text-xs font-bold rounded-lg border border-white/15 focus:border-cyan-400 outline-none"
         value={dorsal || ''}
         onChange={(e) => onDorsalChange(player.Id, e.target.value)}
         maxLength={2}
@@ -31,19 +32,10 @@ export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, do
       <button
         type="button"
         onClick={() => onAvailabilityChange(player.Id, !isAvailable)}
-        className={`h-7 px-1.5 text-[9px] font-black uppercase rounded-lg transition active:scale-95 ${isAvailable ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}
+        className={`h-7 px-1.5 text-[9px] font-black uppercase rounded-lg transition active:scale-95 cursor-pointer ${isAvailable ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}
         title="Disponibilidad para próxima fecha"
       >
         {isAvailable ? 'OK' : 'Baja'}
-      </button>
-      <button
-        type="button"
-        disabled={!isAvailable}
-        onClick={() => onBenchChange(player.Id)}
-        className={`h-7 px-1.5 text-[9px] font-black uppercase rounded-lg transition disabled:opacity-30 active:scale-95 ${isBench ? 'bg-cyan-400 text-slate-950 font-bold shadow' : 'bg-white/5 text-gray-400 border border-white/10 hover:text-white'}`}
-        title="Convocar al banco de suplentes"
-      >
-        Banco
       </button>
     </div>
   </div>
@@ -304,7 +296,7 @@ function formatRolePlayerOption(player, roleKey, dorsals = {}) {
     case 'rightCorner':
       return `${pos} ${d}${name} (BP: ${pk} · Efecto: ${curl} · ${footLabel})`;
     case 'penalty':
-      return `${pos} ${d}${name} (${hasPenaltySpec ? '🎯 Esp. Penales | ' : ''}BP: ${pk} · Fin: ${fin})`;
+      return `${pos} ${d}${name} (${hasPenaltySpec ? '🎯 Esp. Penales | ' : ''}BP: ${pk})`;
     case 'secondKicker':
       return `${pos} ${d}${name} (BP: ${pk} · Efecto: ${curl} · ${footLabel})`;
     case 'header1':
@@ -336,7 +328,7 @@ export const RolesPanel = memo(function RolesPanel({
     { key: 'longFK', label: 'Tiro Libre Largo', icon: Zap, color: 'text-amber-400', statLabel: 'Balón Parado · Potencia' },
     { key: 'leftCorner', label: 'Córner Izquierdo', icon: Target, color: 'text-blue-400', statLabel: 'Balón Parado · Efecto · Pie' },
     { key: 'rightCorner', label: 'Córner Derecho', icon: Target, color: 'text-blue-400', statLabel: 'Balón Parado · Efecto · Pie' },
-    { key: 'penalty', label: 'Penales', icon: Shield, color: 'text-emerald-400', statLabel: 'Balón Parado · Finalización' },
+    { key: 'penalty', label: 'Penales', icon: Shield, color: 'text-emerald-400', statLabel: 'Balón Parado' },
     { key: 'secondKicker', label: 'Segundo Tirador', icon: Users, color: 'text-purple-400', statLabel: 'Balón Parado · Efecto · Pie' },
     { key: 'header1', label: 'Rematador al Cabeceo 1', icon: Activity, color: 'text-red-400', statLabel: 'Cabeceo · Salto · Altura' },
     { key: 'header2', label: 'Rematador al Cabeceo 2', icon: Activity, color: 'text-red-400', statLabel: 'Cabeceo · Salto · Altura' },
@@ -490,7 +482,8 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const pendingAutoSaveRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [mobileTab, setMobileTab] = useState('pitch'); // 'pitch' | 'squad'
+  const [mobileTab, setMobileTab] = useState('pitch'); // 'pitch' | 'squad' | 'tactics'
+  const [mobileTacticsSubTab, setMobileTacticsSubTab] = useState('tactics'); // 'tactics' | 'roles'
   const [showSharePopover, setShowSharePopover] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const pitchRef = useRef(null);
@@ -625,10 +618,10 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
       const batch = writeBatch(db);
       
-      const benchToSave = matchBench.filter(playerId =>
-        !validSavedIds.has(String(playerId)) &&
-        (cart || []).some(player => String(player.Id ?? player.id ?? '') === String(playerId))
-      ).slice(0, 7);
+      // Banco automático: todos los jugadores de la plantilla que no están en el 11 inicial
+      const benchToSave = (cart || [])
+        .map(player => String(player.Id ?? player.id ?? player.playerId ?? ''))
+        .filter(id => id && !validSavedIds.has(id));
 
       const saveData = {
         formation: formationToSave,
@@ -656,7 +649,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     } finally {
       setIsSaving(false);
     }
-  }, [sanitizeLineup, lineup, selectedFormation, dorsals, setPieces, tactics, availability, matchBench, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db, isPage, onClose]);
+  }, [sanitizeLineup, lineup, selectedFormation, dorsals, setPieces, tactics, availability, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db, isPage, onClose]);
 
   const handleDorsalChange = useCallback((playerId, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -665,20 +658,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
   const handleAvailabilityChange = useCallback((playerId, isAvailable) => {
     setAvailability(prev => ({ ...prev, [playerId]: isAvailable }));
-    if (!isAvailable) setMatchBench(prev => prev.filter(id => String(id) !== String(playerId)));
   }, []);
-
-  const handleBenchChange = useCallback((playerId) => {
-    setMatchBench(prev => {
-      const id = String(playerId);
-      if (prev.includes(id)) return prev.filter(item => item !== id);
-      if (prev.length >= 7) {
-        showStatusMessage('warning', 'El banco admite hasta 7 suplentes.');
-        return prev;
-      }
-      return [...prev, id];
-    });
-  }, [showStatusMessage]);
 
   const handleDownloadImage = async () => {
     if (!pitchRef.current || isCapturing) return;
@@ -804,9 +784,10 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         });
       }
 
-      const bench = matchBench
-        .map(id => cart.find(p => String(p.Id) === String(id)))
-        .filter(Boolean)
+      const starterIds = new Set(Object.values(slotsWithNames).map(s => String(s.playerId)));
+      const bench = (cart || [])
+        .filter(p => !starterIds.has(String(p.Id)))
+        .sort((a, b) => (Number(b.OVR_CALCULADO) || 0) - (Number(a.OVR_CALCULADO) || 0))
         .map(player => ({
           playerId: String(player.Id),
           name: player.Name,
@@ -896,12 +877,12 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           <ImageIcon className="w-3.5 h-3.5" />Exportar
         </button>
       </div>
-      <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-300">
-        Convocados al banco: {matchBench.length}/7 · El resto queda como reserva
+      <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-center text-[10px] font-bold text-slate-400">
+        Suplentes ({availablePlayers.length}) · Integran el banco automáticamente
       </div>
       <div className="relative" ref={sharePopoverRef}>
         <button onClick={handleShareURL} disabled={isSharing}
-          className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-sm font-bold rounded-lg py-2.5 flex items-center justify-center gap-2 transition border border-blue-500/20 disabled:opacity-50">
+          className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-sm font-bold rounded-lg py-2.5 flex items-center justify-center gap-2 transition border border-cyan-500/30 disabled:opacity-50">
           {isSharing ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Generando...</>
           ) : (
@@ -911,18 +892,18 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
         {/* ── Share Popover ── */}
         {showSharePopover && (
-          <div className="absolute left-0 right-0 top-full mt-2 bg-gray-800 border border-gray-600/50 rounded-xl p-3 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="absolute left-0 right-0 top-full mt-2 bg-[#0c1017] border border-white/15 rounded-xl p-3 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center gap-2 mb-2">
               <input
                 type="text"
                 readOnly
                 value={shareUrl}
-                className="flex-1 bg-black/40 text-gray-300 text-xs font-mono px-3 py-2 rounded-lg border border-gray-700 outline-none select-all"
+                className="flex-1 bg-black/50 text-gray-300 text-xs font-mono px-3 py-2 rounded-lg border border-white/10 outline-none select-all"
                 onClick={(e) => e.target.select()}
               />
               <button
                 onClick={handleCopyAgain}
-                className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shrink-0 active:scale-95"
+                className="flex items-center gap-1 px-3 py-2 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold rounded-lg transition shrink-0 active:scale-95"
               >
                 <Copy className="w-3 h-3" /> Copiar
               </button>
@@ -939,23 +920,32 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   );
 
   const HoldingBanner = (
-    <div className={`px-4 py-2.5 ${holdingPlayer ? 'bg-blue-900/20' : ''}`}
+    <div className={`px-4 py-2.5 ${holdingPlayer ? 'bg-cyan-500/10 border-b border-cyan-500/20' : ''}`}
       style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-      <h3 className="text-sm font-bold text-white">{holdingPlayer ? <><Move className="w-4 h-4 inline mr-2 animate-bounce" /> Moviendo a: {holdingPlayer.player.Name}</> : "Selecciona un jugador..."}</h3>
+      <h3 className="text-sm font-bold text-white">{holdingPlayer ? <><Move className="w-4 h-4 inline mr-2 animate-bounce text-cyan-400" /> Moviendo a: {holdingPlayer.player.Name}</> : "Selecciona un jugador..."}</h3>
     </div>
   );
 
   const PlayerList = (
-    <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-2 bg-gray-900/20 pb-20 lg:pb-4">
+    <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-2 bg-[#06080d]/40 pb-20 lg:pb-4">
       {availablePlayers.map(player => (
-        <FormationPlayerItem key={player.Id} player={player} onPlayerClick={handlePlayerClick} isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id} dorsal={dorsals[player.Id]} onDorsalChange={handleDorsalChange} isAvailable={availability[player.Id] !== false} onAvailabilityChange={handleAvailabilityChange} isBench={matchBench.includes(String(player.Id))} onBenchChange={handleBenchChange} />
+        <FormationPlayerItem
+          key={player.Id}
+          player={player}
+          onPlayerClick={handlePlayerClick}
+          isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id}
+          dorsal={dorsals[player.Id]}
+          onDorsalChange={handleDorsalChange}
+          isAvailable={availability[player.Id] !== false}
+          onAvailabilityChange={handleAvailabilityChange}
+        />
       ))}
       {availablePlayers.length === 0 && <p className="text-gray-500 text-sm italic text-center py-4">Todos tus jugadores están en la cancha.</p>}
     </div>
   );
 
   const PitchView = (
-    <div className="flex-1 flex items-center justify-center p-2 lg:p-4 overflow-hidden bg-[#050505]">
+    <div className="flex-1 flex items-center justify-center p-2 lg:p-4 overflow-hidden bg-[#06080d]">
       <div style={{ aspectRatio: '3/4', height: '100%', maxHeight: '100%', maxWidth: '100%', position: 'relative' }}>
         <Pitch
           pitchRef={pitchRef}
@@ -971,65 +961,55 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   );
 
   return (
-    <div className={isPage ? "w-full h-full flex flex-col animate-in fade-in duration-300" : "fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300"} onClick={!isPage ? onClose : undefined}>
-      <div className={isPage ? "w-full h-full flex flex-col relative overflow-hidden" : "bg-gray-900/95 sm:rounded-2xl shadow-2xl w-full max-w-7xl h-full sm:h-[90vh] flex flex-col border-0 sm:border border-gray-700/50 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"} onClick={!isPage ? (e => e.stopPropagation()) : undefined}>
+    <div className={isPage ? "w-full h-full flex flex-col animate-in fade-in duration-300" : "fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300"} onClick={!isPage ? onClose : undefined}>
+      <div className={isPage ? "w-full h-full flex flex-col relative overflow-hidden" : "bg-[#0c1017] sm:rounded-2xl shadow-2xl w-full max-w-7xl h-full sm:h-[90vh] flex flex-col border-0 sm:border border-white/[0.08] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"} onClick={!isPage ? (e => e.stopPropagation()) : undefined}>
 
         {/* ── HEADER ── */}
         <div className="flex justify-between items-center px-4 lg:px-5 py-3 shrink-0"
           style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.05)' }}>
           <div className="flex items-center gap-2.5">
-            <ClipboardList className="w-5 h-5 text-cyan-500" />
-            <h2 className="text-base font-black text-white">Pizarra Táctica</h2>
+            <ClipboardList className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-base font-black text-white tracking-wide">Pizarra Táctica</h2>
           </div>
-          {!isPage && <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:text-white hover:bg-white/[0.06] transition"><X size={18} /></button>}
+          {!isPage && <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition"><X size={18} /></button>}
         </div>
 
         {/* ── MOBILE TAB SWITCHER (visible only on < lg) ── */}
-        <div className="flex lg:hidden shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="flex lg:hidden shrink-0 bg-[#080c14]" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <button
             onClick={() => setMobileTab('pitch')}
-            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all ${
+            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all flex items-center justify-center gap-1.5 ${
               mobileTab === 'pitch'
                 ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
-                : 'text-gray-500 hover:text-gray-300'
+                : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            🏟️ Cancha
+            <Sliders className="w-3.5 h-3.5" /> Cancha
           </button>
           <button
             onClick={() => setMobileTab('squad')}
-            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all relative ${
+            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all flex items-center justify-center gap-1.5 relative ${
               mobileTab === 'squad'
                 ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
-                : 'text-gray-500 hover:text-gray-300'
+                : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            👥 Plantilla
+            <Users className="w-3.5 h-3.5" /> Convocados
             {availablePlayers.length > 0 && (
-              <span className="ml-1 bg-gray-700 text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              <span className="ml-1 bg-white/10 text-gray-300 text-[10px] font-bold px-1.5 py-0.2 rounded-full border border-white/10">
                 {availablePlayers.length}
               </span>
             )}
           </button>
           <button
-            onClick={() => setMobileTab('roles')}
-            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all ${
-              mobileTab === 'roles'
-                ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
-                : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            🎯 Pateadores
-          </button>
-          <button
             onClick={() => setMobileTab('tactics')}
-            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all ${
+            className={`flex-1 py-2.5 text-xs font-bold text-center transition-all flex items-center justify-center gap-1.5 ${
               mobileTab === 'tactics'
                 ? 'text-cyan-400 bg-cyan-500/10 border-b-2 border-cyan-400'
-                : 'text-gray-500 hover:text-gray-300'
+                : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            ⚙️ Estrategia
+            <Target className="w-3.5 h-3.5" /> Estrategia S1
           </button>
         </div>
 
@@ -1047,29 +1027,29 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                 <button
                   type="button"
                   onClick={() => setSidebarTab('players')}
-                  className={`flex-1 py-1 text-[11px] font-bold rounded-md transition ${
+                  className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition flex items-center justify-center gap-1 ${
                     sidebarTab === 'players' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
                   }`}
                 >
-                  👥 Plantilla
+                  <Users className="w-3.5 h-3.5" /> Convocados
                 </button>
                 <button
                   type="button"
                   onClick={() => setSidebarTab('roles')}
-                  className={`flex-1 py-1 text-[11px] font-bold rounded-md transition ${
+                  className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition flex items-center justify-center gap-1 ${
                     sidebarTab === 'roles' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
                   }`}
                 >
-                  🎯 Pateadores
+                  <Target className="w-3.5 h-3.5" /> Balón Parado
                 </button>
                 <button
                   type="button"
                   onClick={() => setSidebarTab('tactics')}
-                  className={`flex-1 py-1 text-[11px] font-bold rounded-md transition ${
+                  className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition flex items-center justify-center gap-1 ${
                     sidebarTab === 'tactics' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
                   }`}
                 >
-                  ⚙️ Estrategia
+                  <Sliders className="w-3.5 h-3.5" /> Táctica S1
                 </button>
               </div>
 
@@ -1097,7 +1077,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           </div>
 
           {/* === MOBILE LAYOUT (< lg): tabbed === */}
-          <div className="flex lg:hidden flex-col flex-grow overflow-hidden">
+          <div className="flex lg:hidden flex-col flex-grow overflow-hidden bg-[#06080d]">
             {mobileTab === 'pitch' ? (
               <>
                 {/* Compact controls above pitch on mobile */}
@@ -1110,18 +1090,40 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                 {HoldingBanner}
                 {PlayerList}
               </>
-            ) : mobileTab === 'roles' ? (
-              <RolesPanel
-                starterPlayers={starterPlayers}
-                setPieces={setPieces}
-                onSetPieceChange={handleSetPieceChange}
-                dorsals={dorsals}
-              />
             ) : (
-              <TacticsPanel
-                tactics={tactics}
-                onTacticsChange={handleTacticsChange}
-              />
+              <div className="flex flex-col flex-1 overflow-hidden">
+                <div className="flex bg-black/40 p-1 mx-3 my-2 rounded-lg border border-white/5 shrink-0 gap-1">
+                  <button
+                    onClick={() => setMobileTacticsSubTab('tactics')}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition flex items-center justify-center gap-1.5 ${
+                      mobileTacticsSubTab === 'tactics' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Sliders className="w-3.5 h-3.5" /> Táctica S1
+                  </button>
+                  <button
+                    onClick={() => setMobileTacticsSubTab('roles')}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition flex items-center justify-center gap-1.5 ${
+                      mobileTacticsSubTab === 'roles' ? 'bg-cyan-500/20 text-cyan-300 shadow' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Target className="w-3.5 h-3.5" /> Balón Parado
+                  </button>
+                </div>
+                {mobileTacticsSubTab === 'tactics' ? (
+                  <TacticsPanel
+                    tactics={tactics}
+                    onTacticsChange={handleTacticsChange}
+                  />
+                ) : (
+                  <RolesPanel
+                    starterPlayers={starterPlayers}
+                    setPieces={setPieces}
+                    onSetPieceChange={handleSetPieceChange}
+                    dorsals={dorsals}
+                  />
+                )}
+              </div>
             )}
           </div>
 

@@ -14,70 +14,69 @@ export const TOURNAMENT_THEME = {
   slateConnector: 'rgba(71,85,105,0.5)',
 };
 
-export const tournamentShellClass = 'bg-[#020617] overflow-hidden font-sans relative';
-export const tournamentBackdropClass = 'absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1e293b] via-[#020617] to-black pointer-events-none';
+export const tournamentShellClass = 'bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white overflow-hidden font-sans relative transition-colors';
+export const tournamentBackdropClass = 'absolute inset-0 bg-slate-100/50 dark:bg-[#020617] pointer-events-none';
 
 export const TournamentSectionTitle = memo(function TournamentSectionTitle({ title, subtitle, compact = false }) {
   return (
-    <div className={`flex flex-col items-center ${compact ? 'mb-8' : 'mb-8 md:mb-16'} z-20 relative w-full shrink-0`}>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[600px] h-[100px] md:h-[150px] bg-blue-600/15 blur-[60px] md:blur-[100px] rounded-full pointer-events-none"></div>
-      <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 animate-in fade-in slide-in-from-top-4 duration-700 text-center md:text-left">
-        <div className="h-1 w-12 md:w-20 bg-gradient-to-r from-transparent to-blue-500 rounded-full"></div>
-        <h2 className={`${compact ? 'text-3xl md:text-5xl' : 'text-4xl md:text-7xl'} font-black text-white italic tracking-tighter uppercase leading-none drop-shadow-2xl`}>{title}</h2>
-        <div className="h-1 w-12 md:w-20 bg-gradient-to-l from-transparent to-blue-500 rounded-full"></div>
-      </div>
-      <p className="text-blue-400 font-bold tracking-[0.5em] md:tracking-[1em] uppercase mt-4 text-[10px] md:text-xs animate-in fade-in duration-1000 pl-2 md:pl-4">{subtitle}</p>
+    <div className={`flex flex-col items-center ${compact ? 'mb-3 sm:mb-5' : 'mb-5 sm:mb-7'} z-20 relative w-full shrink-0 text-center px-4`}>
+      <h2 className={`${compact ? 'text-lg sm:text-xl md:text-2xl' : 'text-xl sm:text-2xl md:text-3xl'} font-bold text-slate-900 dark:text-white tracking-tight`}>
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="text-sky-600 dark:text-sky-400 font-medium text-xs sm:text-sm mt-1">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 });
 
 export const TournamentTabButton = memo(function TournamentTabButton({ id, tabId, label, icon: Icon, activeTab, onClick }) {
   const targetId = id || tabId;
+  const isActive = activeTab === targetId;
   return (
     <button
+      type="button"
       onClick={() => onClick(targetId)}
-      className={`flex items-center px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 whitespace-nowrap
-        ${activeTab === targetId ? 'border-blue-500 text-blue-400 bg-white/5' : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
+      className={`flex items-center px-3 sm:px-4 py-2 font-semibold text-xs sm:text-sm transition-all rounded-lg whitespace-nowrap cursor-pointer
+        ${isActive
+          ? 'bg-sky-600 dark:bg-sky-600 text-white shadow-sm'
+          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+        }`}
     >
-      {Icon && <Icon className="w-4 h-4 mr-2" />}{label}
+      {Icon && <Icon className="w-4 h-4 mr-1.5" />}{label}
     </button>
   );
 });
 
 export const TournamentPanel = memo(function TournamentPanel({ title, icon: Icon, accent = 'blue', compact = false, children, className = '' }) {
-  const accentClasses = {
-    blue: 'from-blue-600/20 text-blue-400',
-    yellow: 'from-yellow-600/20 text-yellow-400',
-    green: 'from-green-600/20 text-green-400',
-    slate: 'from-slate-600/20 text-slate-300',
-  };
-  const accentClass = accentClasses[accent] || accentClasses.blue;
   return (
-    <section className={`bg-[#0f172a] rounded-3xl border border-slate-700/50 overflow-hidden shadow-2xl ${className}`}>
+    <section className={`bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm dark:shadow-xl ${className}`}>
       {title && (
-        <div className={`${compact ? `bg-gradient-to-r ${accentClass} to-transparent p-5` : 'bg-slate-800/50 p-6'} border-b border-slate-700/50 flex items-center gap-4`}>
-          {Icon && <Icon className="w-6 h-6" />}
-          <h3 className={`${compact ? 'text-2xl' : 'text-4xl pl-2'} font-black text-white italic tracking-wider uppercase`}>{title}</h3>
+        <div className={`${compact ? 'bg-slate-50 dark:bg-slate-800/40 px-4 py-2.5' : 'bg-slate-50 dark:bg-slate-800/60 px-5 py-3.5'} border-b border-slate-200 dark:border-slate-800 flex items-center gap-2.5`}>
+          {Icon && <Icon className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
+          <h3 className={`${compact ? 'text-sm' : 'text-base'} font-bold text-slate-900 dark:text-white tracking-normal`}>{title}</h3>
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className="p-3 sm:p-5">{children}</div>
     </section>
   );
 });
 
 export const TournamentActionButton = memo(function TournamentActionButton({ children, onClick, disabled, tone = 'blue', className = '' }) {
   const toneClasses = {
-    blue: 'bg-blue-600/30 text-blue-400 hover:bg-blue-600/50 border-blue-500/30',
-    yellow: 'bg-yellow-600/30 text-yellow-400 hover:bg-yellow-600/50 border-yellow-500/30',
-    green: 'bg-green-600 text-white hover:bg-green-500 border-green-500/30',
-    slate: 'bg-slate-600/30 text-slate-300 hover:bg-slate-600/50 border-slate-500/30',
-    red: 'bg-red-600/30 text-red-300 hover:bg-red-600/50 border-red-500/30',
+    blue: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 hover:bg-sky-500/25 border-sky-500/30',
+    yellow: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border-amber-500/30',
+    green: 'bg-emerald-600 text-white hover:bg-emerald-500 border-emerald-500/30',
+    slate: 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-700',
+    red: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 hover:bg-rose-500/25 border-rose-500/30',
   };
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center justify-center px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition border disabled:opacity-50 disabled:cursor-not-allowed ${toneClasses[tone] || toneClasses.blue} ${className}`}
+      className={`flex items-center justify-center px-4 py-2 rounded-xl font-bold text-xs transition border disabled:opacity-50 disabled:cursor-not-allowed ${toneClasses[tone] || toneClasses.blue} ${className}`}
     >
       {children}
     </button>
@@ -87,10 +86,11 @@ export const TournamentActionButton = memo(function TournamentActionButton({ chi
 export function TournamentField({ label, children }) {
   return (
     <label className="block min-w-0">
-      <span className="text-[10px] text-slate-500 block mb-1.5 font-black uppercase tracking-widest">{label}</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1.5 font-semibold">{label}</span>
       {children}
     </label>
   );
 }
 
-export const tournamentControlClass = 'w-full bg-black/50 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40';
+export const tournamentControlClass = 'w-full bg-slate-50 dark:bg-black/50 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/40';
+

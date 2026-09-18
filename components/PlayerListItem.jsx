@@ -35,8 +35,8 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
     <div
       onClick={() => onSelectPlayer?.(player.Id)}
       className={`
-        group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer relative overflow-hidden
-        ${isLockedByOther ? 'opacity-50 grayscale-[0.5]' : isInMyCart ? 'bg-emerald-900/10 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]' : 'border border-white/5 hover:bg-white/[0.04] hover:-translate-y-px'}`}
+        group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer relative overflow-hidden bg-[#0c1017]
+        ${isLockedByOther ? 'opacity-50 grayscale-[0.5]' : isInMyCart ? 'bg-emerald-950/20 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]' : 'border border-white/[0.08] hover:border-white/[0.18] hover:bg-[#111722] hover:-translate-y-px'}`}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
@@ -45,7 +45,7 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
         <button
           onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(player.Id); }}
           className={`p-1.5 rounded-full transition-all duration-200 shrink-0
-            ${isWishlisted ? 'text-yellow-400 hover:text-yellow-300' : 'text-gray-500 hover:text-white'}`}
+            ${isWishlisted ? 'text-yellow-400 hover:text-yellow-300' : 'text-slate-400 hover:text-white'}`}
           title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}
         >
           <Star className="w-5 h-5" fill={isWishlisted ? "currentColor" : "none"} />
@@ -67,7 +67,7 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
 
         <div className="min-w-0 pl-1">
           <div className="flex items-center space-x-2 mb-0.5">
-            <span className="font-bold text-white truncate text-sm sm:text-base group-hover:text-blue-200 transition-colors">{player.Name}</span>
+            <span className="font-bold text-white truncate text-sm sm:text-base group-hover:text-[#00b4d8] transition-colors">{player.Name}</span>
             <img src={countryFlagUrl} className="w-3.5 h-2.5 rounded-sm shadow-sm opacity-90 hidden sm:block" onError={(e) => e.target.style.display = 'none'} />
           </div>
           <div className="flex items-center space-x-2 text-[10px] sm:text-xs text-gray-400 font-medium">

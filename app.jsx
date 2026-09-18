@@ -74,6 +74,7 @@ import {
   Trash2,
   AlertTriangle,
   ArrowLeftRight,
+  Search,
 } from 'lucide-react';
 
 
@@ -106,6 +107,7 @@ import {
 function useFirebaseData(userId, isAuthReady, getPrivateCartCollectionRef, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, getPrivateProfileRef, setError, setIsLoading) {
   const [cart, setCart] = useState([]);
   const [playerLocks, setPlayerLocks] = useState({});
+  const [isLocksLoaded, setIsLocksLoaded] = useState(false);
   const [allTeams, setAllTeams] = useState({});
   const [userProfile, setUserProfile] = useState(null);
 
@@ -141,13 +143,17 @@ function useFirebaseData(userId, isAuthReady, getPrivateCartCollectionRef, getPu
 
   // Cargar datos públicos (Bloqueos y Equipos)
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!isAuthReady) {
+      setIsLocksLoaded(false);
+      return;
+    }
 
     const unsubLocks = onSnapshot(getPublicLocksCollectionRef(),
       (snap) => {
         const data = {};
         snap.docs.forEach(d => data[d.id] = d.data());
         setPlayerLocks(data);
+        setIsLocksLoaded(true);
       },
       (err) => handleError("Public Locks", err)
     );
@@ -163,7 +169,7 @@ function useFirebaseData(userId, isAuthReady, getPrivateCartCollectionRef, getPu
     return () => { unsubLocks(); unsubTeams(); };
   }, [isAuthReady, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, handleError]);
 
-  return { cart, playerLocks, allTeams, userProfile };
+  return { cart, playerLocks, isLocksLoaded, allTeams, userProfile };
 }
 
 const initialDetailedStats = Object.values(DETAILED_STAT_KEYS).flat().reduce((acc, stat) => {
@@ -476,10 +482,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedName(filters.name);
-    }, 250);
-    return () => clearTimeout(timeoutId);
+    setDebouncedName(filters.name);
   }, [filters.name]);
 
   // Prefetch de los modals más usados (Jugador, Comparador, Carrito, Otros Equipos,
@@ -554,7 +557,7 @@ function App() {
   const getBroadcastOverlayDocRef = useCallback(() => doc(db, `artifacts/${APP_ID}/public/data/broadcast`, 'overlay'), []);
   const getSuggestionsCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/suggestions`), []);
   const getManagerChatCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/manager_chat`), []);
-  const { cart, playerLocks, allTeams, userProfile } = useFirebaseData(
+  const { cart, playerLocks, isLocksLoaded, allTeams, userProfile } = useFirebaseData(
     userId, isAuthReady, getPrivateCartCollectionRef, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, getPrivateProfileRef, setAppError, setIsLoading);
   const shouldLoadPlayerDatabase = useMemo(() => {
     if (isSpecialMode || location.pathname.startsWith('/overlay') || location.pathname.startsWith('/team/') || location.pathname.startsWith('/tactics/view/')) {
@@ -566,8 +569,20 @@ function App() {
     return tabsThatNeedPlayers.has(activeTab) || modalsThatNeedPlayers.has(modalRoute) || Boolean(selectedPlayerId) || compareList.length > 0;
   }, [activeTab, compareList.length, isSpecialMode, location.pathname, modalRoute, selectedPlayerId]);
 
+  const dismissedNotifIdsRef = useRef(new Set(
+    (() => {
+      try {
+        return JSON.parse(sessionStorage.getItem('dismissed_notif_ids') || '[]');
+      } catch {
+        return [];
+      }
+    })()
+  ));
+
   const addNotification = useCallback((notification) => {
     const id = notification.id || `${notification.category || notification.type || 'notif'}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    if (dismissedNotifIdsRef.current.has(id)) return;
+
     setNotifications(prev => {
       if (prev.some(n => n.id === id)) return prev;
       return [{ ...notification, id, read: notification.read === true, createdAt: notification.createdAt || new Date().toISOString() }, ...prev].slice(0, 40);
@@ -1107,7 +1122,7 @@ function App() {
     return sorted;
   }, [allPlayers, filters, sortConfig, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName]);
 
-  const pageSize = isMobileViewport ? 48 : 64;
+  const pageSize = isMobileViewport ? 24 : 64;
   const [displayCount, setDisplayCount] = useState(64);
 
   // Reset displayCount on filter, search or sort change
@@ -1122,7 +1137,7 @@ function App() {
   const handleLoadMore = useCallback(() => {
     setDisplayCount(prev => {
       if (prev >= filteredPlayers.length) return prev;
-      return Math.min(prev + (isMobileViewport ? 48 : 64), filteredPlayers.length);
+      return Math.min(prev + (isMobileViewport ? 24 : 64), filteredPlayers.length);
     });
   }, [isMobileViewport, filteredPlayers.length]);
 
@@ -1132,36 +1147,35 @@ function App() {
     if (!isMobileViewport || visiblePlayers.length >= filteredPlayers.length) return;
     const sentinel = mobileSentinelRef.current;
 
-    let observer = null;
+    // Usar IntersectionObserver nativo de alta eficiencia
     if (sentinel && typeof IntersectionObserver !== 'undefined') {
-      observer = new IntersectionObserver((entries) => {
+      const observer = new IntersectionObserver((entries) => {
         if (entries[0]?.isIntersecting) {
           handleLoadMore();
         }
-      }, { rootMargin: '600px' });
+      }, { rootMargin: '400px' });
       observer.observe(sentinel);
+      return () => observer.disconnect();
     }
 
-    // Scroll listener fallback for mobile containers
-    const scrollContainer = document.getElementById('main-content');
+    // Fallback optimizado con requestAnimationFrame solo si IntersectionObserver no existe
+    let ticking = false;
+    const scrollContainer = document.getElementById('main-content') || window;
     const handleScroll = () => {
-      if (!scrollContainer) return;
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-      if (scrollHeight - scrollTop - clientHeight < 800) {
-        handleLoadMore();
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const el = document.getElementById('main-content');
+          if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 600) {
+            handleLoadMore();
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    }
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      if (observer) observer.disconnect();
-      if (scrollContainer) scrollContainer.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scroll', handleScroll);
-    };
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, [isMobileViewport, visiblePlayers.length, filteredPlayers.length, handleLoadMore]);
 
   // Mantener una función "applyFilters" vacía por si algún componente hijo la pide
@@ -1244,21 +1258,29 @@ function App() {
   }, [isMobileViewport, isSmallMobileViewport, isXlViewport]);
 
   // --- ACTIVITY FEED: Detectar fichajes en tiempo real ---
+  const isLocksInitializedRef = useRef(false);
+  const seenSigningsRef = useRef(new Set());
   useEffect(() => {
-    if (!playerLocks || !allPlayers || allPlayers.length === 0) return;
+    if (!isLocksLoaded || !playerLocks || !allPlayers || allPlayers.length === 0) return;
     const prev = prevLocksRef.current;
-    if (prev === null) {
-      // Primera carga, solo guardar referencia
+    if (!isLocksInitializedRef.current || prev === null) {
+      // Primera carga real, solo guardar referencia sin emitir alertas retroactivas
       prevLocksRef.current = { ...playerLocks };
+      Object.entries(playerLocks).forEach(([pId, lock]) => {
+        seenSigningsRef.current.add(`${pId}-${lock.lockedBy || 'locked'}`);
+      });
+      isLocksInitializedRef.current = true;
       return;
     }
     const newEvents = [];
     // Detectar NUEVOS fichajes (locks que no existían antes)
     Object.entries(playerLocks).forEach(([playerId, lockData]) => {
-      if (!prev[playerId]) {
+      const lockKey = `${playerId}-${lockData.lockedBy || 'locked'}`;
+      if (!prev[playerId] && !seenSigningsRef.current.has(lockKey)) {
+        seenSigningsRef.current.add(lockKey);
         const player = playerById.get(String(playerId));
         if (player) {
-          const toastId = `${playerId}-${Date.now()}`;
+          const toastId = `toast-${playerId}-${lockData.lockedBy || Date.now()}`;
           const posColors = { DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444', MC: '#10b981', MCD: '#10b981', MO: '#10b981', MI: '#10b981', MD: '#10b981', DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6', PT: '#eab308' };
           const posColorHex = posColors[player.POS_NOMBRE] || '#6b7280';
 
@@ -1273,28 +1295,28 @@ function App() {
             timestamp: new Date(),
           });
 
-          // Mostrar toast interactivo
-          setSigningToasts(prevToasts => [
-            {
-              toastId,
-              playerId: player.Id,
-              playerName: player.Name,
-              teamName: lockData.teamName || 'Equipo',
-              ovr: player.OVR_CALCULADO,
-              pos: player.POS_NOMBRE,
-              posColor: posColorHex,
-            },
-            ...prevToasts
-          ].slice(0, 3));
-
-          setTimeout(() => {
-            setSigningToasts(prevToasts => prevToasts.filter(t => t.toastId !== toastId));
-          }, 4500);
-
-          // Si lo fichó un rival, agregamos notificación interactiva
+          // Mostrar toast interactivo solo si lo fichó un rival
           if (lockData.lockedBy && lockData.lockedBy !== userId) {
+            setSigningToasts(prevToasts => [
+              {
+                toastId,
+                playerId: player.Id,
+                playerName: player.Name,
+                teamName: lockData.teamName || 'Equipo',
+                ovr: player.OVR_CALCULADO,
+                pos: player.POS_NOMBRE,
+                posColor: posColorHex,
+              },
+              ...prevToasts.filter(t => t.toastId !== toastId)
+            ].slice(0, 2));
+
+            setTimeout(() => {
+              setSigningToasts(prevToasts => prevToasts.filter(t => t.toastId !== toastId));
+            }, 4000);
+
+            // Si lo fichó un rival, agregamos notificación con ID determinístico
             addNotification({
-              id: `signing-${playerId}-${Date.now()}`,
+              id: `signing-${playerId}-${lockData.lockedBy}`,
               category: 'transfer',
               type: 'transfer',
               playerId: player.Id,
@@ -1327,11 +1349,15 @@ function App() {
       setActivityFeed(prev => [...newEvents, ...prev].slice(0, 30)); // Keep last 30
     }
     prevLocksRef.current = { ...playerLocks };
-  }, [playerLocks, allPlayers, playerById, userId, addNotification]);
+  }, [isLocksLoaded, playerLocks, allPlayers, playerById, userId, addNotification]);
 
   // Transfer proposals listener — listens for incoming trade offers
+  const offersInitializedRef = useRef(false);
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      offersInitializedRef.current = false;
+      return;
+    }
     const q = query(
       collection(db, `artifacts/${APP_ID}/public/data/offers`),
       or(
@@ -1360,6 +1386,12 @@ function App() {
         setIncomingOffers(incoming);
         setSentOffers(sent);
         setOfferHistory(history);
+
+        // Evitar disparar notificaciones para ofertas preexistentes al conectar
+        if (!offersInitializedRef.current) {
+          offersInitializedRef.current = true;
+          return;
+        }
 
         snap.docChanges().forEach(change => {
           const data = change.doc.data();
@@ -1450,33 +1482,37 @@ function App() {
 
     const systemNotifs = [];
 
-    // Alerta 1: Presupuesto Bajo (Menos de 10M)
-    if (remainingBudget < 10000000 && remainingBudget > 0) {
+    // Alerta 1: Presupuesto Bajo (Menos de 10M) - solo si no fue descartada
+    if (remainingBudget < 10000000 && remainingBudget > 0 && !dismissedNotifIdsRef.current.has('system-low-budget')) {
       systemNotifs.push({
         id: 'system-low-budget',
         category: 'system',
         type: 'warning',
         text: '⚠️ ¡Cuidado! Tu presupuesto es bajo (<10M).',
-        time: 'Finanzas'
+        time: 'Finanzas',
       });
     }
 
-    // Alerta 2: Mercado Cerrado
-    if (marketStatus.status === 'closed') {
+    // Alerta 2: Mercado Cerrado - solo si no fue descartada
+    if (marketStatus.status === 'closed' && !dismissedNotifIdsRef.current.has('system-market-closed')) {
       systemNotifs.push({
         id: 'system-market-closed',
         category: 'system',
         type: 'info',
         text: '🔒 El mercado está cerrado actualmente.',
-        time: 'Info'
+        time: 'Info',
       });
     }
 
-    // Solo actualizamos si la cantidad cambió para evitar bucles
-    setNotifications(prev => [
-      ...systemNotifs,
-      ...prev.filter(notif => notif.category !== 'system')
-    ].slice(0, 40));
+    setNotifications(prev => {
+      const prevReadMap = new Map(prev.map(n => [n.id, n.read]));
+      const updatedSystem = systemNotifs.map(n => ({
+        ...n,
+        read: prevReadMap.has(n.id) ? prevReadMap.get(n.id) : false
+      }));
+      const nonSystem = prev.filter(notif => notif.category !== 'system');
+      return [...updatedSystem, ...nonSystem].slice(0, 40);
+    });
   }, [remainingBudget, marketStatus.status, userProfile]);
 
   useEffect(() => {
@@ -1731,10 +1767,16 @@ function App() {
   }, [remainingBudget, userProfile?.budget]);
 
   // Show budget alert modal when signing pushes below 20%
-  const prevBudgetPercentRef = useRef(100);
+  const prevBudgetPercentRef = useRef(null);
   useEffect(() => {
-    if (prevBudgetPercentRef.current > 20 && budgetPercent <= 20 && budgetPercent > 0) {
+    if (prevBudgetPercentRef.current === null) {
+      prevBudgetPercentRef.current = budgetPercent;
+      return;
+    }
+    const hasShownAlert = sessionStorage.getItem('budget_alert_shown') === 'true';
+    if (!hasShownAlert && prevBudgetPercentRef.current > 20 && budgetPercent <= 20 && budgetPercent > 0) {
       setShowBudgetAlert(true);
+      try { sessionStorage.setItem('budget_alert_shown', 'true'); } catch {}
     }
     prevBudgetPercentRef.current = budgetPercent;
   }, [budgetPercent]);
@@ -1932,6 +1974,33 @@ function App() {
   }
 
   if (location.pathname.startsWith('/torneo')) {
+    if (isObsMode) {
+      if (!tournamentData)
+        return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
+
+      return (
+        <div className="min-h-screen bg-[#0a0a0a] text-gray-200">
+          <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
+            <TournamentModal
+              isVisible={true}
+              onClose={() => { navigate('/marketplace'); }}
+              tournamentData={tournamentData}
+              isAdmin={false}
+              onUpdateTournament={handleUpdateTournament}
+              allTeams={allTeams}
+              initialTab={initialTab}
+              isPage={true}
+              userTeamName={userProfile?.teamName}
+            />
+          </Suspense>
+        </div>
+      );
+    }
+
+    if (!isAuthReady) {
+      return <LoadingScreen message="Cargando torneo..." />;
+    }
+
     if (!tournamentData)
       return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
 
@@ -1940,7 +2009,13 @@ function App() {
         <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
           <TournamentModal
             isVisible={true}
-            onClose={() => { window.location.href = '/'; }}
+            onClose={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/marketplace');
+              }
+            }}
             tournamentData={tournamentData}
             isAdmin={isAdmin}
             onUpdateTournament={handleUpdateTournament}
@@ -2109,12 +2184,13 @@ function App() {
           initialBudget={userProfile?.budget}
         />
 
-        <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="flex-1 flex flex-col overflow-hidden relative bg-slate-50 dark:bg-[#06080d] transition-colors">
           {/* TOP HEADER con hamburger */}
           <TopHeader
             userProfile={userProfile}
             unreadCount={notifications.filter(notification => notification.read !== true).length}
             unreadChatCount={unreadChatCount}
+            remainingBudget={remainingBudget}
             onNotificationClick={() => {
               setAreNotificationsWarmed(true);
               setIsNotificationPanelOpen(!isNotificationPanelOpen);
@@ -2136,7 +2212,7 @@ function App() {
           <div className="flex-1 overflow-hidden w-full flex relative">
 
             {/* CENTER VIEW - MARKETPLACE MULTIPLEXING */}
-            <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8 flex flex-col" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
+            <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8 flex flex-col bg-slate-50 dark:bg-[#06080d] transition-colors" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
               {/* Render content based on active tab, for now Marketplace is the main functional view */}
               <div data-app-tour="marketplace" className={activeTab === 'Marketplace' ? (isMobileViewport ? 'flex flex-col' : 'flex-1 min-h-0 flex flex-col') : 'hidden'}>
 
@@ -2145,6 +2221,7 @@ function App() {
                 <SearchBar
                   filters={filters}
                   setFilters={setFilters}
+                  resetFilters={resetFilters}
                   setIsFiltrosModalVisible={(value) => value ? openModalRoute('filters') : closeModalRoute(setIsFiltrosModalVisible)}
                   sortConfig={sortConfig}
                   setSortConfig={setSortConfig}
@@ -2192,15 +2269,45 @@ function App() {
                   />
                 )}
                 {remainingBudget > 0 && remainingBudget < 1000000 && allPlayers.length > 0 && smartRecommendations.length === 0 && (
-                  <div className="mb-6 text-center py-4 px-6 bg-gray-800/50 rounded-xl border border-gray-700/50">
-                    <p className="text-sm text-gray-400 font-bold">Tu presupuesto no alcanza para más fichajes</p>
+                  <div className="mb-6 text-center py-4 px-6 bg-[#0c1017] rounded-2xl border border-white/[0.08] shadow-lg">
+                    <p className="text-sm text-slate-300 font-bold">Tu presupuesto no alcanza para más fichajes</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Libera jugadores o negocia ventas en Finanzas para ampliar tu saldo disponible</p>
                   </div>
                 )}
                 </div>
                 {/* Fin del header */}
 
                 <div className={isMobileViewport ? "mt-1 flex flex-col" : "flex-1 min-h-0 mt-1 flex flex-col"} data-app-tour="players" id="player-list">
-                  {isMobileViewport ? (
+                  {filteredPlayers.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-white/10 bg-[#0c1017] p-8 sm:p-14 text-center flex flex-col items-center justify-center my-6">
+                      <div className="w-16 h-16 rounded-2xl bg-[#00b4d8]/10 border border-[#00b4d8]/20 flex items-center justify-center text-[#00b4d8] mb-4">
+                        <Search className="w-8 h-8" />
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-black text-white">No se encontraron jugadores</h3>
+                      <p className="text-xs sm:text-sm text-slate-400 max-w-md mt-1.5">
+                        Ningún jugador coincide con los filtros aplicados o el término de búsqueda actual.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetFilters();
+                            setFilters(initialFilters);
+                          }}
+                          className="px-5 py-2.5 bg-[#00b4d8] hover:bg-[#38bdf8] text-[#030712] font-black text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer"
+                        >
+                          Restablecer todos los filtros
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openModalRoute('filters')}
+                          className="px-5 py-2.5 bg-[#111722] hover:bg-[#161f2e] text-slate-200 border border-white/10 font-bold text-xs rounded-xl transition active:scale-95 cursor-pointer"
+                        >
+                          Ajustar filtros
+                        </button>
+                      </div>
+                    </div>
+                  ) : isMobileViewport ? (
                     <div className={viewMode === 'list'
                       ? 'space-y-2.5'
                       : `grid gap-3 sm:gap-4 ${
@@ -2257,7 +2364,7 @@ function App() {
                           <button
                             type="button"
                             onClick={handleLoadMore}
-                            className="px-6 py-2 bg-gray-800/80 hover:bg-gray-700 text-cyan-400 font-bold text-xs rounded-xl border border-gray-700/80 hover:border-cyan-500/50 shadow-md transition active:scale-95 flex items-center gap-2"
+                            className="px-6 py-2.5 bg-[#111722] hover:bg-[#151c2a] text-[#00b4d8] font-black text-xs rounded-xl border border-white/[0.08] hover:border-[#00b4d8]/40 shadow-md transition active:scale-95 flex items-center gap-2"
                           >
                             <span>Cargar más jugadores ({visiblePlayers.length} de {filteredPlayers.length})</span>
                           </button>
@@ -2305,7 +2412,7 @@ function App() {
 
               {/* VISTAS MODULARES EN LUGAR DE PLACEHOLDERS */}
               <Suspense fallback={null}>
-                {activeTab === 'Torneo' && (
+                {activeTab === 'Torneo' && isAdmin && (
                   <TournamentModal
                     isVisible={true}
                     onClose={() => setActiveTab('Marketplace')}
@@ -2406,6 +2513,7 @@ function App() {
                     storage={storage}
                     db={db}
                     showStatusMessage={showStatusMessage}
+                    onOpenTournamentModal={() => setIsTournamentModalVisible(true)}
                   />
                 )}
               </Suspense>
@@ -2609,9 +2717,15 @@ function App() {
           storage={storage}
           db={db}
           showStatusMessage={showStatusMessage}
+          tournamentData={tournamentData}
+          onUpdateTournament={handleUpdateTournament}
+          onOpenTournamentModal={() => {
+            setIsAdminModalVisible(false);
+            setIsTournamentModalVisible(true);
+          }}
         />
       )}
-      {(isTournamentModalVisible || modalRoute === 'tournament') && (
+      {(isTournamentModalVisible || modalRoute === 'tournament') && isAdmin && (
         <TournamentModal
           isVisible={true}
           onClose={() => closeModalRoute(setIsTournamentModalVisible)}
@@ -2676,8 +2790,20 @@ function App() {
         notifications={notifications}
         isLoading={!areNotificationsWarmed && notifications.length === 0}
         onClose={() => setIsNotificationPanelOpen(false)}
-        onClear={() => setNotifications([])}
-        onDismissOne={(notification) => setNotifications(prev => prev.filter(item => item.id !== notification.id))}
+        onClear={() => {
+          notifications.forEach(n => dismissedNotifIdsRef.current.add(n.id));
+          try {
+            sessionStorage.setItem('dismissed_notif_ids', JSON.stringify(Array.from(dismissedNotifIdsRef.current).slice(-100)));
+          } catch {}
+          setNotifications([]);
+        }}
+        onDismissOne={(notification) => {
+          dismissedNotifIdsRef.current.add(notification.id);
+          try {
+            sessionStorage.setItem('dismissed_notif_ids', JSON.stringify(Array.from(dismissedNotifIdsRef.current).slice(-100)));
+          } catch {}
+          setNotifications(prev => prev.filter(item => item.id !== notification.id));
+        }}
         onMarkAllRead={() => setNotifications(prev => prev.map(item => ({ ...item, read: true })))}
         onNotifClick={handleNotificationClick}
       />
@@ -2737,6 +2863,16 @@ function App() {
             <span className="text-[10px] font-black text-cyan-400 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
               Ver →
             </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSigningToasts(prev => prev.filter(t => t.toastId !== toast.toastId));
+              }}
+              className="w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-white/10 shrink-0"
+              title="Cerrar aviso"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         ))}
       </div>

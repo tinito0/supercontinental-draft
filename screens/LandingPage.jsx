@@ -1,108 +1,159 @@
-import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
+import React, { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react';
 import { 
   ChevronRight, Shield, Users, Zap, BarChart2, Trophy, 
-  ArrowLeftRight, Sparkles, Target, Lock, Globe, MessageCircle,
-  BookOpen, ChevronDown, ExternalLink, Package, Sliders, Activity, Radio, Cpu
+  ArrowLeftRight, Target, Lock, Globe, MessageCircle,
+  BookOpen, ChevronDown, ExternalLink, Package, Sliders, Radio, Cpu,
+  Volume2, VolumeX, Check, Download, Search, Filter, Play, RefreshCw, Layers, CheckCircle2
 } from 'lucide-react';
 import { APP_NAME } from '../utils/constants.js';
 
 /* ═══════════════════════════════════════════════════════════════════
-   SHOWCASE PLAYERS — real player data for the carousel
+   SHOWCASE PLAYERS
    ═══════════════════════════════════════════════════════════════════ */
 const SHOWCASE_PLAYERS = [
   { id: 110718, name: 'K. MBAPPÉ',         ovr: 91, pos: 'DC',  price: 62.02, posColor: '#ef4444' },
-  { id: 110815, name: 'RODRI',             ovr: 91, pos: 'MCD', price: 58.03, posColor: '#22c55e' },
+  { id: 110815, name: 'RODRI',             ovr: 91, pos: 'MCD', price: 58.03, posColor: '#10b981' },
   { id: 44383,  name: 'T. COURTOIS',       ovr: 91, pos: 'PT',  price: 45.94, posColor: '#eab308' },
   { id: 133543, name: 'E. HAALAND',        ovr: 90, pos: 'DC',  price: 58.44, posColor: '#ef4444' },
   { id: 117047, name: 'VINÍCIUS JR.',      ovr: 90, pos: 'EI',  price: 58.44, posColor: '#ef4444' },
   { id: 47287,  name: 'H. KANE',           ovr: 90, pos: 'DC',  price: 52.41, posColor: '#ef4444' },
-  { id: 132933, name: 'J. BELLINGHAM',     ovr: 89, pos: 'MO',  price: 48.23, posColor: '#22c55e' },
+  { id: 132933, name: 'J. BELLINGHAM',     ovr: 89, pos: 'MO',  price: 48.23, posColor: '#10b981' },
   { id: 57123,  name: 'M. SALAH',          ovr: 89, pos: 'ED',  price: 48.13, posColor: '#ef4444' },
   { id: 44840,  name: 'V. VAN DIJK',       ovr: 89, pos: 'DFC', price: 34.72, posColor: '#3b82f6' },
   { id: 108657, name: 'LAUTARO MARTÍNEZ',  ovr: 89, pos: 'DC',  price: 55.01, posColor: '#ef4444' },
   { id: 7511,   name: 'L. MESSI',          ovr: 88, pos: 'SD',  price: 37.53, posColor: '#ef4444' },
-  { id: 44379,  name: 'K. DE BRUYNE',      ovr: 88, pos: 'MO',  price: 35.90, posColor: '#22c55e' },
+  { id: 44379,  name: 'K. DE BRUYNE',      ovr: 88, pos: 'MO',  price: 35.90, posColor: '#10b981' },
 ];
 
+/* Formations data for Interactive Tactical Board */
+const FORMATIONS_DATA = {
+  '4-3-3': {
+    name: '4-3-3 Ofensiva',
+    style: 'Posesión y presión alta',
+    players: [
+      { id: 44383,  name: 'Courtois',   pos: 'PT',  ovr: 91, x: 50, y: 88 },
+      { id: 44840,  name: 'Van Dijk',   pos: 'DFC', ovr: 89, x: 34, y: 72 },
+      { id: 108657, name: 'Rüdiger',    pos: 'DFC', ovr: 87, x: 66, y: 72 },
+      { id: 110815, name: 'Rodri',      pos: 'MCD', ovr: 91, x: 50, y: 56 },
+      { id: 44379,  name: 'De Bruyne',  pos: 'MC',  ovr: 88, x: 30, y: 44 },
+      { id: 132933, name: 'Bellingham', pos: 'MO',  ovr: 89, x: 70, y: 44 },
+      { id: 117047, name: 'Vinícius',   pos: 'EI',  ovr: 90, x: 18, y: 24 },
+      { id: 57123,  name: 'Salah',      pos: 'ED',  ovr: 89, x: 82, y: 24 },
+      { id: 133543, name: 'Haaland',    pos: 'DC',  ovr: 90, x: 50, y: 16 },
+    ],
+    tactics: {
+      attackStyle: 'Posesión',
+      buildup: 'Pase corto',
+      attackArea: 'Por el centro',
+      defLine: '8 / 10',
+      pressure: 'Agresiva en campo rival',
+      corners: 'K. De Bruyne',
+      freekicks: 'L. Messi',
+      penalties: 'H. Kane'
+    }
+  },
+  '4-2-3-1': {
+    name: '4-2-3-1 Control',
+    style: 'Equilibrio y transición rápida',
+    players: [
+      { id: 44383,  name: 'Courtois',   pos: 'PT',  ovr: 91, x: 50, y: 88 },
+      { id: 44840,  name: 'Van Dijk',   pos: 'DFC', ovr: 89, x: 35, y: 74 },
+      { id: 108657, name: 'Rüdiger',    pos: 'DFC', ovr: 87, x: 65, y: 74 },
+      { id: 110815, name: 'Rodri',      pos: 'MCD', ovr: 91, x: 36, y: 58 },
+      { id: 44379,  name: 'De Bruyne',  pos: 'MC',  ovr: 88, x: 64, y: 58 },
+      { id: 132933, name: 'Bellingham', pos: 'MO',  ovr: 89, x: 50, y: 38 },
+      { id: 117047, name: 'Vinícius',   pos: 'EI',  ovr: 90, x: 20, y: 34 },
+      { id: 57123,  name: 'Salah',      pos: 'ED',  ovr: 89, x: 80, y: 34 },
+      { id: 110718, name: 'Mbappé',     pos: 'DC',  ovr: 91, x: 50, y: 16 },
+    ],
+    tactics: {
+      attackStyle: 'Contraataque',
+      buildup: 'Pase largo y desmarque',
+      attackArea: 'Por bandas',
+      defLine: '6 / 10',
+      pressure: 'Contención en bloque medio',
+      corners: 'M. Salah',
+      freekicks: 'K. De Bruyne',
+      penalties: 'K. Mbappé'
+    }
+  },
+  '3-5-2': {
+    name: '3-5-2 Contragolpe',
+    style: 'Densidad central y doble punta',
+    players: [
+      { id: 44383,  name: 'Courtois',   pos: 'PT',  ovr: 91, x: 50, y: 88 },
+      { id: 44840,  name: 'Van Dijk',   pos: 'DFC', ovr: 89, x: 50, y: 74 },
+      { id: 108657, name: 'Rüdiger',    pos: 'DFC', ovr: 87, x: 28, y: 72 },
+      { id: 110815, name: 'Saliba',     pos: 'DFC', ovr: 87, x: 72, y: 72 },
+      { id: 44379,  name: 'De Bruyne',  pos: 'MC',  ovr: 88, x: 36, y: 52 },
+      { id: 132933, name: 'Bellingham', pos: 'MO',  ovr: 89, x: 64, y: 52 },
+      { id: 117047, name: 'Vinícius',   pos: 'MI',  ovr: 90, x: 16, y: 44 },
+      { id: 57123,  name: 'Salah',      pos: 'MD',  ovr: 89, x: 84, y: 44 },
+      { id: 133543, name: 'Haaland',    pos: 'DC',  ovr: 90, x: 38, y: 18 },
+      { id: 110718, name: 'Mbappé',     pos: 'DC',  ovr: 91, x: 62, y: 18 },
+    ],
+    tactics: {
+      attackStyle: 'Contraataque fluido',
+      buildup: 'Directo y vertical',
+      attackArea: 'Mixta',
+      defLine: '5 / 10',
+      pressure: 'Intensiva tras pérdida',
+      corners: 'K. De Bruyne',
+      freekicks: 'L. Messi',
+      penalties: 'E. Haaland'
+    }
+  }
+};
+
 /* ═══════════════════════════════════════════════════════════════════
-   MINI PLAYER CARD — for the carousel
+   MINI PLAYER CARD — authentic sports card design
    ═══════════════════════════════════════════════════════════════════ */
 const MiniCard = memo(function MiniCard({ player }) {
-  function getOvrColor(ovr) {
-    if (ovr >= 90) return '#facc15';
-    if (ovr >= 85) return '#4ade80';
-    return '#a3e635';
+  function getOvrClass(ovr) {
+    if (ovr >= 90) return 'ovr-gold';
+    if (ovr >= 85) return 'ovr-silver';
+    return 'ovr-bronze';
   }
-  const ovrColor = getOvrColor(player.ovr);
 
   return (
     <div className="landing-card">
       <div className="landing-card__photo-wrap">
-        <div className="landing-card__glow" style={{ background: `radial-gradient(ellipse at 50% 70%, ${player.posColor}30 0%, transparent 65%)` }} />
         <img
           src={`/fotos_jugadores/${player.id}.webp`}
           alt={player.name}
           className="landing-card__photo"
           loading="lazy"
           decoding="async"
-          width="180"
+          width="190"
           height="220"
-          onError={e => { e.target.onerror = null; e.target.src = `https://placehold.co/200x240/111/333?text=${player.name.substring(0, 2)}`; }}
+          onError={e => { 
+            e.target.onerror = null; 
+            e.target.src = `https://placehold.co/200x240/10141e/ffffff?text=${player.name.substring(0, 2)}`; 
+          }}
         />
         <div className="landing-card__fade" />
-        <div className="landing-card__info-strip">
-          <div className="landing-card__ovr-badge" style={{ background: `${ovrColor}22`, borderColor: `${ovrColor}60` }}>
-            <span style={{ color: ovrColor, fontSize: '1.5rem', fontWeight: 900, lineHeight: 1, textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>{player.ovr}</span>
+        <div className="landing-card__meta-bar">
+          <div className={`landing-card__ovr-badge ${getOvrClass(player.ovr)}`}>
+            <span>{player.ovr}</span>
           </div>
-          <span className="landing-card__pos" style={{ background: player.posColor, color: '#fff', boxShadow: `0 2px 8px ${player.posColor}50` }}>
+          <span className="landing-card__pos" style={{ borderColor: player.posColor, color: '#fff' }}>
             {player.pos}
           </span>
         </div>
       </div>
       <div className="landing-card__bottom">
-        <h4 className="landing-card__name">{player.name}</h4>
-        <span className="landing-card__price">${player.price.toFixed(2)}M</span>
+        <h4 className="landing-card__name" title={player.name}>{player.name}</h4>
+        <div className="landing-card__price-row">
+          <span className="landing-card__price-label">VALOR MERCADO</span>
+          <span className="landing-card__price">${player.price.toFixed(2)}M</span>
+        </div>
       </div>
     </div>
   );
 });
 
 /* ═══════════════════════════════════════════════════════════════════
-   ANIMATED COUNTER — counts up on scroll
-   ═══════════════════════════════════════════════════════════════════ */
-function AnimatedCounter({ end, suffix = '', prefix = '' }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef(null);
-  const hasAnimated = useRef(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !hasAnimated.current) {
-        hasAnimated.current = true;
-        let start = 0;
-        const duration = 1800;
-        const startTime = performance.now();
-        const animate = (now) => {
-          const elapsed = now - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          const eased = 1 - Math.pow(1 - progress, 3);
-          setCount(Math.round(eased * end));
-          if (progress < 1) requestAnimationFrame(animate);
-        };
-        requestAnimationFrame(animate);
-      }
-    }, { threshold: 0.3 });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [end]);
-
-  return <span ref={ref}>{prefix}{count}{suffix}</span>;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   SCROLL REVEAL WRAPPER
+   SCROLL REVEAL HELPER
    ═══════════════════════════════════════════════════════════════════ */
 function Reveal({ children, delay = 0, className = '' }) {
   const ref = useRef(null);
@@ -112,8 +163,11 @@ function Reveal({ children, delay = 0, className = '' }) {
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) { setVisible(true); observer.disconnect(); }
-    }, { threshold: 0.15 });
+      if (entry.isIntersecting) { 
+        setVisible(true); 
+        observer.disconnect(); 
+      }
+    }, { threshold: 0.1 });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -124,8 +178,8 @@ function Reveal({ children, delay = 0, className = '' }) {
       className={className}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(30px)',
-        transition: `opacity 0.7s ease ${delay}ms, transform 0.7s ease ${delay}ms`,
+        transform: visible ? 'translateY(0)' : 'translateY(20px)',
+        transition: `opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
       }}
     >
       {children}
@@ -134,105 +188,492 @@ function Reveal({ children, delay = 0, className = '' }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   MAIN LANDING PAGE
+   INTERACTIVE WEB MODEL SHOWCASE (SIMULATOR)
    ═══════════════════════════════════════════════════════════════════ */
-const HERO_PLAYERS = SHOWCASE_PLAYERS.slice(0, 5);
+function WebAppModel() {
+  const [activeTab, setActiveTab] = useState('pitch'); // 'pitch' | 'market' | 'export'
+  const [selectedFormation, setSelectedFormation] = useState('4-3-3');
+  const [marketFilter, setMarketFilter] = useState('ALL');
+  const [simulatedBudget, setSimulatedBudget] = useState(87.98);
+  const [signedPlayers, setSignedPlayers] = useState([110718]); // Mbappé signed by default
+  const [exportStep, setExportStep] = useState('ready'); // 'ready' | 'generating' | 'done'
 
-function HeroPitchPreview() {
+  // Current formation data
+  const currentFormation = FORMATIONS_DATA[selectedFormation] || FORMATIONS_DATA['4-3-3'];
+
+  // Market simulation list
+  const marketPlayers = useMemo(() => [
+    { id: 110718, name: 'K. Mbappé', pos: 'DC', ovr: 91, price: 62.02, club: 'Real Madrid' },
+    { id: 110815, name: 'Rodri', pos: 'MCD', ovr: 91, price: 58.03, club: 'Man City' },
+    { id: 44383,  name: 'T. Courtois', pos: 'PT', ovr: 91, price: 45.94, club: 'Real Madrid' },
+    { id: 133543, name: 'E. Haaland', pos: 'DC', ovr: 90, price: 58.44, club: 'Man City' },
+    { id: 132933, name: 'J. Bellingham', pos: 'MO', ovr: 89, price: 48.23, club: 'Real Madrid' },
+    { id: 44840,  name: 'V. Van Dijk', pos: 'DFC', ovr: 89, price: 34.72, club: 'Liverpool' },
+  ], []);
+
+  const filteredMarket = useMemo(() => {
+    if (marketFilter === 'ALL') return marketPlayers;
+    if (marketFilter === 'FW') return marketPlayers.filter(p => ['DC', 'EI', 'ED'].includes(p.pos));
+    if (marketFilter === 'MF') return marketPlayers.filter(p => ['MCD', 'MC', 'MO'].includes(p.pos));
+    if (marketFilter === 'DF') return marketPlayers.filter(p => ['DFC', 'LI', 'LD'].includes(p.pos));
+    if (marketFilter === 'GK') return marketPlayers.filter(p => p.pos === 'PT');
+    return marketPlayers;
+  }, [marketPlayers, marketFilter]);
+
+  const toggleSignPlayer = (player) => {
+    const isSigned = signedPlayers.includes(player.id);
+    if (isSigned) {
+      setSignedPlayers(prev => prev.filter(id => id !== player.id));
+      setSimulatedBudget(prev => +(prev + player.price).toFixed(2));
+    } else {
+      if (simulatedBudget >= player.price) {
+        setSignedPlayers(prev => [...prev, player.id]);
+        setSimulatedBudget(prev => +(prev - player.price).toFixed(2));
+      }
+    }
+  };
+
+  const handleSimulateExport = () => {
+    setExportStep('generating');
+    setTimeout(() => {
+      setExportStep('done');
+      setTimeout(() => setExportStep('ready'), 3500);
+    }, 1200);
+  };
+
   return (
-    <div className="landing-hero__pitch" aria-hidden="true">
-      <div className="landing-hero__pitch-line landing-hero__pitch-line--box" />
-      <div className="landing-hero__pitch-line landing-hero__pitch-line--mid" />
-      {HERO_PLAYERS.map((player, index) => (
-        <div key={player.id} className={`landing-hero__player landing-hero__player--${index + 1}`}>
-          <img
-            src={`/fotos_jugadores/${player.id}.webp`}
-            alt=""
-            loading={index < 2 ? 'eager' : 'lazy'}
-            decoding="async"
-            width="64"
-            height="64"
-          />
-          <span className="landing-hero__player-meta">
-            <b style={{ background: player.posColor }}>{player.pos}</b>
-            <strong>{player.ovr}</strong>
-          </span>
+    <div className="web-model">
+      {/* App Shell Top Header Preview */}
+      <div className="web-model__shell-header">
+        <div className="web-model__shell-controls">
+          <span className="web-model__shell-dot web-model__shell-dot--red" />
+          <span className="web-model__shell-dot web-model__shell-dot--yellow" />
+          <span className="web-model__shell-dot web-model__shell-dot--green" />
+          <span className="web-model__shell-url">supercontinental.app / draft-workspace</span>
         </div>
-      ))}
+
+        {/* Navigation Tabs */}
+        <div className="web-model__tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'pitch'}
+            onClick={() => setActiveTab('pitch')}
+            className={`web-model__tab ${activeTab === 'pitch' ? 'is-active' : ''}`}
+          >
+            <Sliders className="w-4 h-4" />
+            <span>Pizarra Táctica S1</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'market'}
+            onClick={() => setActiveTab('market')}
+            className={`web-model__tab ${activeTab === 'market' ? 'is-active' : ''}`}
+          >
+            <Zap className="w-4 h-4" />
+            <span>Mercado en Vivo</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'export'}
+            onClick={() => setActiveTab('export')}
+            className={`web-model__tab ${activeTab === 'export' ? 'is-active' : ''}`}
+          >
+            <Package className="w-4 h-4" />
+            <span>Option File PES 2021</span>
+          </button>
+        </div>
+      </div>
+
+      {/* App Body Content */}
+      <div className="web-model__body">
+        {/* ─── TAB 1: PIZARRA TÁCTICA ─── */}
+        {activeTab === 'pitch' && (
+          <div className="web-model__pitch-view">
+            {/* Left: Tactical Pitch Board */}
+            <div className="web-model__pitch-col">
+              <div className="web-model__pitch-controls">
+                <span className="web-model__label">Formación Activa:</span>
+                <div className="web-model__formation-btns">
+                  {Object.keys(FORMATIONS_DATA).map(fKey => (
+                    <button
+                      key={fKey}
+                      type="button"
+                      onClick={() => setSelectedFormation(fKey)}
+                      className={`web-model__pill-btn ${selectedFormation === fKey ? 'is-selected' : ''}`}
+                    >
+                      {fKey}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pitch Canvas Simulation */}
+              <div className="web-model__pitch-canvas">
+                {/* Turf Grass & Lines */}
+                <div className="web-model__pitch-line web-model__pitch-line--box-top" />
+                <div className="web-model__pitch-line web-model__pitch-line--box-bottom" />
+                <div className="web-model__pitch-line web-model__pitch-line--halfway" />
+                <div className="web-model__pitch-line web-model__pitch-line--center-circle" />
+
+                {/* Tactical Player Nodes on Field */}
+                {currentFormation.players.map((p, idx) => (
+                  <div
+                    key={`${p.name}-${idx}`}
+                    className="web-model__pitch-player"
+                    style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                    title={`${p.name} (${p.pos} · ${p.ovr})`}
+                  >
+                    <div className="web-model__player-disc">
+                      <img
+                        src={`/fotos_jugadores/${p.id}.webp`}
+                        alt=""
+                        className="web-model__player-photo"
+                        onError={e => {
+                          e.target.onerror = null;
+                          e.target.src = `https://placehold.co/80x80/0f141d/ffffff?text=${p.name.substring(0, 2)}`;
+                        }}
+                      />
+                      <span className="web-model__player-pos-badge">{p.pos}</span>
+                    </div>
+                    <span className="web-model__player-name-tag">{p.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Tactics S1 Parameters Panel */}
+            <div className="web-model__tactics-col">
+              <div className="web-model__panel-header">
+                <Sliders className="w-4 h-4 text-cyan-400" />
+                <h4>Estrategia S1 (Preset Oficial)</h4>
+              </div>
+
+              <div className="web-model__tactic-item">
+                <span className="web-model__tactic-label">Estilo de Ataque</span>
+                <span className="web-model__tactic-val">{currentFormation.tactics.attackStyle}</span>
+              </div>
+              <div className="web-model__tactic-item">
+                <span className="web-model__tactic-label">Construcción</span>
+                <span className="web-model__tactic-val">{currentFormation.tactics.buildup}</span>
+              </div>
+              <div className="web-model__tactic-item">
+                <span className="web-model__tactic-label">Zona de Ataque</span>
+                <span className="web-model__tactic-val">{currentFormation.tactics.attackArea}</span>
+              </div>
+              <div className="web-model__tactic-item">
+                <span className="web-model__tactic-label">Línea Defensiva</span>
+                <span className="web-model__tactic-val">{currentFormation.tactics.defLine}</span>
+              </div>
+              <div className="web-model__tactic-item">
+                <span className="web-model__tactic-label">Tipo de Presión</span>
+                <span className="web-model__tactic-val">{currentFormation.tactics.pressure}</span>
+              </div>
+
+              <div className="web-model__divider" />
+
+              <div className="web-model__panel-header">
+                <Target className="w-4 h-4 text-amber-400" />
+                <h4>Lanzadores Asignados PES</h4>
+              </div>
+              <div className="web-model__tactic-item">
+                <span className="web-model__tactic-label">Tiros Libres</span>
+                <span className="web-model__tactic-val text-amber-300">{currentFormation.tactics.freekicks}</span>
+              </div>
+              <div className="web-model__tactic-item">
+                <span className="web-model__tactic-label">Penales</span>
+                <span className="web-model__tactic-val text-amber-300">{currentFormation.tactics.penalties}</span>
+              </div>
+              <div className="web-model__tactic-item">
+                <span className="web-model__tactic-label">Saques de Esquina</span>
+                <span className="web-model__tactic-val text-amber-300">{currentFormation.tactics.corners}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB 2: MERCADO EN VIVO ─── */}
+        {activeTab === 'market' && (
+          <div className="web-model__market-view">
+            {/* Market Status Bar */}
+            <div className="web-model__market-status-bar">
+              <div className="web-model__budget-pill">
+                <span className="web-model__budget-lbl">Presupuesto Restante:</span>
+                <span className="web-model__budget-num">${simulatedBudget.toFixed(2)}M</span>
+              </div>
+              <div className="web-model__market-filters">
+                {[
+                  { key: 'ALL', label: 'Todos' },
+                  { key: 'FW', label: 'Delanteros' },
+                  { key: 'MF', label: 'Medios' },
+                  { key: 'DF', label: 'Defensas' },
+                  { key: 'GK', label: 'Porteros' },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setMarketFilter(f.key)}
+                    className={`web-model__filter-chip ${marketFilter === f.key ? 'is-selected' : ''}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Market Players Grid */}
+            <div className="web-model__market-grid">
+              {filteredMarket.map(p => {
+                const isSigned = signedPlayers.includes(p.id);
+                return (
+                  <div key={p.id} className={`web-model__market-item ${isSigned ? 'is-signed' : ''}`}>
+                    <img
+                      src={`/fotos_jugadores/${p.id}.webp`}
+                      alt={p.name}
+                      className="web-model__market-thumb"
+                      onError={e => {
+                        e.target.onerror = null;
+                        e.target.src = `https://placehold.co/60x60/10141e/ffffff?text=${p.name.substring(0, 2)}`;
+                      }}
+                    />
+                    <div className="web-model__market-info">
+                      <div className="web-model__market-name-row">
+                        <span className="web-model__market-name">{p.name}</span>
+                        <span className="web-model__market-ovr">{p.ovr}</span>
+                      </div>
+                      <div className="web-model__market-sub-row">
+                        <span className="web-model__market-pos">{p.pos}</span>
+                        <span className="web-model__market-price">${p.price.toFixed(2)}M</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleSignPlayer(p)}
+                      className={`web-model__action-btn ${isSigned ? 'is-danger' : 'is-primary'}`}
+                    >
+                      {isSigned ? 'Liberar' : 'Fichar'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB 3: OPTION FILE EXPORT ─── */}
+        {activeTab === 'export' && (
+          <div className="web-model__export-view">
+            <div className="web-model__export-meta">
+              <h4>Ecosistema de Archivos para Editor EJOGC327 (PES 2021)</h4>
+              <p>Generación automática de tablas relacionales CSV listas para importar sin pasos manuales.</p>
+            </div>
+
+            <div className="web-model__files-grid">
+              {[
+                { name: 'Formation.csv', desc: 'Coordenadas X/Y de los 11 titulares, suplentes y Preset S1.' },
+                { name: 'Roster.csv', desc: 'Fichas de 23 jugadores vinculados al equipo y dorsales oficiales.' },
+                { name: 'Players.csv', desc: 'Estadísticas, habilidades especiales y posiciones adaptadas al motor PES.' },
+                { name: 'Appearances.csv', desc: 'Identificadores de rostros, accesorios y botines.' },
+                { name: 'Team.csv', desc: 'Nombre, director técnico, ID de club y colores institucionales.' }
+              ].map(f => (
+                <div key={f.name} className="web-model__file-card">
+                  <div className="web-model__file-header">
+                    <Package className="w-4 h-4 text-cyan-400" />
+                    <span className="web-model__file-name">{f.name}</span>
+                    <span className="web-model__file-badge">CSV VÁLIDO</span>
+                  </div>
+                  <p className="web-model__file-desc">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="web-model__export-action-bar">
+              <button
+                type="button"
+                onClick={handleSimulateExport}
+                disabled={exportStep === 'generating'}
+                className="web-model__download-btn"
+              >
+                {exportStep === 'generating' ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-cyan-300" />
+                    <span>Empaquetando CSVs...</span>
+                  </>
+                ) : exportStep === 'done' ? (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>¡Paquete Option File Listo (.ZIP)!</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span>Generar y Descargar Option File (.ZIP)</span>
+                  </>
+                )}
+              </button>
+              <span className="web-model__export-compat">Compatibilidad comprobada con PES 2021 Season Update (PC / PS4 / PS5)</span>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   MAIN LANDING PAGE COMPONENT
+   ═══════════════════════════════════════════════════════════════════ */
 export function LandingPage({ onEnter }) {
-  // Duplicate cards for infinite scroll illusion
+  const videoRef = useRef(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+
+  // Toggle video audio
+  const handleToggleAudio = () => {
+    if (videoRef.current) {
+      const nextMuted = !videoRef.current.muted;
+      videoRef.current.muted = nextMuted;
+      setIsMuted(nextMuted);
+      if (!nextMuted) {
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  };
+
+  // Duplicate cards for seamless infinite scroll
   const carouselCards = useMemo(() => [...SHOWCASE_PLAYERS, ...SHOWCASE_PLAYERS], []);
 
   return (
     <div className="landing-root">
-
-      {/* ═══════════ HERO ═══════════ */}
-      <section className="landing-hero">
-        {/* Background effects */}
-        <div className="landing-hero__bg">
-          <div className="landing-hero__grid" />
-        </div>
-
-        <div className="landing-hero__content">
-          {/* Badge PES */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-black uppercase tracking-wider mb-6 animate-pulse shadow-lg shadow-cyan-500/10">
-            <Package className="w-4 h-4 text-cyan-400" /> PES 2021 Option File Compatible · Actualización 2.0
+      {/* ═══════════ TOP NAVIGATION ═══════════ */}
+      <header className="landing-nav">
+        <div className="landing-nav__inner">
+          <div className="landing-nav__brand">
+            <img src="/logo.webp" alt="SCL" className="landing-nav__logo" width="34" height="34" />
+            <div className="landing-nav__titles">
+              <span className="landing-nav__title">{APP_NAME}</span>
+              <span className="landing-nav__subtitle">LIGA MASTER PES 2021</span>
+            </div>
           </div>
 
-          {/* Logo */}
-          <div className="landing-hero__logo-wrap">
-            <div className="landing-hero__logo-glow" />
-            <img src="/logo.webp" alt="SCL Logo" className="landing-hero__logo" width="140" height="140" decoding="async" />
+          <div className="landing-nav__links">
+            <a href="#modelo-web" className="landing-nav__link">Plataforma Web</a>
+            <a href="#pilares" className="landing-nav__link">Pilares</a>
+            <a href="#reglamento" className="landing-nav__link">Reglamento</a>
+            <a href="#comunidad" className="landing-nav__link">Comunidad</a>
+          </div>
+
+          <div className="landing-nav__right">
+            <div className="landing-nav__status">
+              <span className="landing-nav__status-dot" />
+              <span className="landing-nav__status-text">MERCADO ACTIVO</span>
+            </div>
+
+            <button onClick={onEnter} className="landing-nav__btn">
+              <span>Ingresar</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ═══════════ HERO SECTION WITH VIDEO BACKGROUND ═══════════ */}
+      <section className="landing-hero">
+        {/* Ambient Video Background */}
+        <div className="landing-hero__video-wrap">
+          <video
+            ref={videoRef}
+            autoPlay
+            loop
+            muted={isMuted}
+            playsInline
+            preload="auto"
+            onLoadedData={() => setVideoLoaded(true)}
+            className={`landing-hero__video ${videoLoaded ? 'is-loaded' : ''}`}
+          >
+            <source src="/intro.mp4" type="video/mp4" />
+          </video>
+          <div className="landing-hero__vignette" />
+        </div>
+
+        {/* Audio Toggle Button */}
+        <button
+          type="button"
+          onClick={handleToggleAudio}
+          className="landing-hero__audio-btn"
+          aria-label={isMuted ? "Activar sonido del video" : "Silenciar video"}
+        >
+          {isMuted ? (
+            <>
+              <VolumeX className="w-4 h-4 text-gray-300" />
+              <span>Activar sonido</span>
+            </>
+          ) : (
+            <>
+              <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <span className="text-emerald-300">Sonido activo</span>
+            </>
+          )}
+        </button>
+
+        {/* Hero Content */}
+        <div className="landing-hero__content">
+          <div className="landing-hero__tagline">
+            TEMPORADA OFICIAL · PES 2021 SEASON UPDATE
           </div>
 
           <h1 className="landing-hero__title">
-            {APP_NAME} <span className="landing-hero__dot">.</span>
+            GESTIÓN TÁCTICA Y MERCADO EN TIEMPO REAL
           </h1>
-          <p className="landing-hero__subtitle">
-            Armá tu equipo soñado, definí tus estrategias tácticas en la nube y exportá tu plantel listo para jugar en PES 2021.
+
+          <p className="landing-hero__desc">
+            Diseñá tu plantilla, dominá las finanzas sin solapamientos, configurá tu estrategia S1 y exportá directamente a PES 2021.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-8 max-w-2xl">
-            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-400" /> Mercado en Vivo
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5 text-cyan-400" /> Tácticas S1 & Balón Parado
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold flex items-center gap-1.5">
-              <Package className="w-3.5 h-3.5 text-blue-400" /> Exportador Option File (.zip)
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 text-emerald-400" /> Overlay OBS Streams
-            </span>
-          </div>
-
-          <HeroPitchPreview />
-
-          <button onClick={onEnter} className="landing-hero__cta">
-            <span>Ingresar al Draft</span>
-            <ChevronRight className="landing-hero__cta-icon" />
-          </button>
-
-          {/* Scroll hint */}
-          <div className="landing-hero__scroll-hint">
-            <ChevronDown className="landing-hero__scroll-icon" />
+          <div className="landing-hero__actions">
+            <button onClick={onEnter} className="landing-hero__cta-primary">
+              <span>Ingresar a la Plataforma</span>
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            <a href="#modelo-web" className="landing-hero__cta-secondary">
+              Explorar el Modelo Web
+            </a>
           </div>
         </div>
+
+        {/* Scroll Indicator */}
+        <a href="#modelo-web" className="landing-hero__scroll" aria-label="Ir al simulador de la plataforma">
+          <ChevronDown className="w-5 h-5" />
+        </a>
       </section>
 
-      {/* ═══════════ PLAYER CAROUSEL ═══════════ */}
-      <section className="landing-section landing-carousel-section">
+      {/* ═══════════ INTERACTIVE WEB MODEL (SHOWCASE) ═══════════ */}
+      <section id="modelo-web" className="landing-section">
         <Reveal>
-          <h2 className="landing-section__title">
-            <Sparkles className="landing-section__title-icon" style={{ color: '#facc15' }} />
-            Los Mejores del Mundo
-          </h2>
-          <p className="landing-section__desc">Más de 1.000 jugadores con estadísticas oficiales y atributos del motor de PES 2021.</p>
+          <div className="landing-section__header">
+            <h2 className="landing-section__title">La Plataforma en Acción</h2>
+            <p className="landing-section__desc">
+              Interactuá con el modelo de las tres herramientas clave utilizadas por cada manager en la liga.
+            </p>
+          </div>
+        </Reveal>
+
+        <Reveal delay={100}>
+          <WebAppModel />
+        </Reveal>
+      </section>
+
+      {/* ═══════════ PLAYER SHOWCASE CAROUSEL ═══════════ */}
+      <section className="landing-section landing-showcase">
+        <Reveal>
+          <div className="landing-section__header">
+            <h2 className="landing-section__title">Figuras del Mercado</h2>
+            <p className="landing-section__desc">
+              Más de 1.000 jugadores clasificados con valoraciones y atributos extraídos del motor oficial de PES 2021.
+            </p>
+          </div>
         </Reveal>
 
         <div className="landing-carousel">
@@ -244,228 +685,190 @@ export function LandingPage({ onEnter }) {
         </div>
       </section>
 
-      {/* ═══════════ HOW IT WORKS ═══════════ */}
-      <section className="landing-section">
+      {/* ═══════════ 3 PLATFORM PILLARS ═══════════ */}
+      <section id="pilares" className="landing-section">
         <Reveal>
-          <h2 className="landing-section__title">
-            <Target className="landing-section__title-icon" style={{ color: '#60a5fa' }} />
-            ¿Cómo Funciona el Draft?
-          </h2>
+          <div className="landing-section__header">
+            <h2 className="landing-section__title">Pilares de Competición</h2>
+            <p className="landing-section__desc">
+              Un entorno cerrado y sincronizado para garantizar seriedad deportiva y máxima inmersión.
+            </p>
+          </div>
         </Reveal>
 
-        <div className="landing-steps">
-          <Reveal delay={100} className="landing-step">
-            <div className="landing-step__num">1</div>
-            <div className="landing-step__icon-wrap" style={{ background: 'rgba(16,185,129,0.1)', borderColor: 'rgba(16,185,129,0.3)' }}>
-              <Shield className="landing-step__icon" style={{ color: '#34d399' }} />
+        <div className="landing-pillars">
+          {/* Pilar 1 */}
+          <Reveal delay={100} className="landing-pillar">
+            <div className="landing-pillar__icon-wrap">
+              <Shield className="w-6 h-6 text-cyan-400" />
             </div>
-            <h3 className="landing-step__title">Presupuesto y Fichajes</h3>
-            <p className="landing-step__desc">
-              Administrá tu presupuesto oficial. Cada fichaje se sincroniza en vivo y bloquea al jugador al instante para todos los rivales.
+            <h3 className="landing-pillar__title">Mercado y Finanzas en Vivo</h3>
+            <p className="landing-pillar__desc">
+              Presupuestos auditados en la nube. Al fichar un jugador, queda bloqueado inmediatamente para el resto de los rivales sin duplicaciones.
             </p>
+            <ul className="landing-pillar__features">
+              <li><CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" /> Sincronización instantánea en Firebase</li>
+              <li><CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" /> Centro de traspasos e intercambios formales</li>
+              <li><CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" /> Ficha de Jugador Franquicia por temporada</li>
+            </ul>
           </Reveal>
 
-          <Reveal delay={250} className="landing-step">
-            <div className="landing-step__num">2</div>
-            <div className="landing-step__icon-wrap" style={{ background: 'rgba(56,189,248,0.1)', borderColor: 'rgba(56,189,248,0.3)' }}>
-              <Sliders className="landing-step__icon" style={{ color: '#38bdf8' }} />
+          {/* Pilar 2 */}
+          <Reveal delay={200} className="landing-pillar">
+            <div className="landing-pillar__icon-wrap">
+              <Sliders className="w-6 h-6 text-emerald-400" />
             </div>
-            <h3 className="landing-step__title">Pizarra Táctica & Estrategia</h3>
-            <p className="landing-step__desc">
-              Posicioná a tus 11 titulares, configurá la estrategia de ataque/defensa (Preset S1) y designá a tus lanzadores de balón parado.
+            <h3 className="landing-pillar__title">Pizarra Táctica y Preset S1</h3>
+            <p className="landing-pillar__desc">
+              Definí tu 11 titular, convocados y estrategia completa (posesión, contraataque, líneas defensivas, presión y contención).
             </p>
+            <ul className="landing-pillar__features">
+              <li><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> Posicionamiento táctico en campo interactivo</li>
+              <li><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> Asignación de lanzadores de tiros libres y penales</li>
+              <li><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> Criterio guiado por atributos reales de PES</li>
+            </ul>
           </Reveal>
 
-          <Reveal delay={400} className="landing-step">
-            <div className="landing-step__num">3</div>
-            <div className="landing-step__icon-wrap" style={{ background: 'rgba(99,102,241,0.1)', borderColor: 'rgba(99,102,241,0.3)' }}>
-              <Package className="landing-step__icon" style={{ color: '#818cf8' }} />
+          {/* Pilar 3 */}
+          <Reveal delay={300} className="landing-pillar">
+            <div className="landing-pillar__icon-wrap">
+              <Package className="w-6 h-6 text-indigo-400" />
             </div>
-            <h3 className="landing-step__title">Exportación a PES 2021</h3>
-            <p className="landing-step__desc">
-              Descargá el paquete ZIP de Option File y cargalo directamente en el editor EJOGC327 para jugar la liga en tu consola o PC.
+            <h3 className="landing-pillar__title">Option File y Transmisión</h3>
+            <p className="landing-pillar__desc">
+              Exportá un archivo ZIP con CSVs listos para importar en el editor EJOGC327 y disputar los partidos en PC o consola.
             </p>
+            <ul className="landing-pillar__features">
+              <li><CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" /> Formation.csv, Roster.csv, Team.csv y más</li>
+              <li><CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" /> Overlays limpios listos para OBS Studio</li>
+              <li><CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" /> IA Scout para encontrar sustitutos y gemelos</li>
+            </ul>
           </Reveal>
         </div>
       </section>
 
-      {/* ═══════════ FEATURES ═══════════ */}
-      <section className="landing-section">
+      {/* ═══════════ TOURNAMENT RULES ═══════════ */}
+      <section id="reglamento" className="landing-section">
         <Reveal>
-          <h2 className="landing-section__title">
-            <Zap className="landing-section__title-icon" style={{ color: '#f59e0b' }} />
-            Herramientas de Manager de Élite
-          </h2>
-        </Reveal>
-
-        <div className="landing-features">
-          {[
-            { 
-              icon: Package, 
-              color: '#38bdf8', 
-              title: 'Option File PES 2021', 
-              desc: 'Exportación ZIP completa con Formation.csv, Roster.csv, Players.csv, Appearances.csv, Team.csv y Coach.csv.' 
-            },
-            { 
-              icon: Sliders, 
-              color: '#22c55e', 
-              title: 'Estrategia Táctica S1', 
-              desc: 'Ajustá posesión/contraataque, pases, áreas de ataque, líneas defensivas, presión y densidad con guardado automático.' 
-            },
-            { 
-              icon: Target, 
-              color: '#fbbf24', 
-              title: 'Lanzadores y Roles PES', 
-              desc: 'Elegí capitán, tiros libres, penales y rematadores guiado por atributos reales (Balón Parado, Efecto, Salto, Capitanía).' 
-            },
-            { 
-              icon: Users, 
-              color: '#f43f5e', 
-              title: 'Mercado Multijugador', 
-              desc: 'Fichajes en tiempo real con presupuesto compartido, cláusulas de rescisión y alertas inmediatas.' 
-            },
-            { 
-              icon: ArrowLeftRight, 
-              color: '#a78bfa', 
-              title: 'Centro de Traspasos', 
-              desc: 'Proponé ofertas formales, intercambios de jugadores, dinero y contraofertas con otros managers.' 
-            },
-            { 
-              icon: BarChart2, 
-              color: '#38bdf8', 
-              title: 'Radar & Comparador 1v1', 
-              desc: 'Enfrentá dos jugadores frente a frente con gráficos de radar, heatmaps y más de 30 atributos detallados.' 
-            },
-            { 
-              icon: Radio, 
-              color: '#ec4899', 
-              title: 'Overlay OBS para Streams', 
-              desc: 'Marcador en vivo, alineaciones y placas gráficas transparentes listas para transmisiones en Twitch o YouTube.' 
-            },
-            { 
-              icon: Cpu, 
-              color: '#10b981', 
-              title: 'IA Scout Inteligente', 
-              desc: 'Algoritmo de recomendación que encuentra sustitutos y gemelos estadísticos cuando un jugador ya fue fichado.' 
-            },
-          ].map((f, i) => (
-            <Reveal key={f.title} delay={i * 80} className="landing-feature">
-              <div className="landing-feature__icon-wrap" style={{ background: `${f.color}15`, border: `1px solid ${f.color}30` }}>
-                <f.icon style={{ color: f.color, width: 22, height: 22 }} />
-              </div>
-              <h3 className="landing-feature__title">{f.title}</h3>
-              <p className="landing-feature__desc">{f.desc}</p>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════ RULES ═══════════ */}
-      <section className="landing-section">
-        <Reveal>
-          <h2 className="landing-section__title">
-            <BookOpen className="landing-section__title-icon" style={{ color: '#c084fc' }} />
-            Reglas del Draft
-          </h2>
+          <div className="landing-section__header">
+            <h2 className="landing-section__title">Reglamento del Draft</h2>
+            <p className="landing-section__desc">
+              Pautas claras para asegurar paridad deportiva, transparencia y dinamismo económico.
+            </p>
+          </div>
         </Reveal>
 
         <Reveal delay={100}>
-          <div className="landing-rules">
+          <div className="landing-rules-grid">
             {[
-              'Cada manager comienza con un presupuesto asignado por la administración.',
-              'Los fichajes son en tiempo real: si fichás a un jugador, se bloquea para todos al instante.',
-              'Podés vender un jugador en cualquier momento y recuperar el 100% de su valor.',
-              'Existe la opción de proponer traspasos a otros managers con ofertas, contraofertas e intercambio de fichas.',
-              'El Jugador Franquicia es una ficha especial que se puede usar una vez por temporada.',
-              'En la Pizarra podés definir tu 11 titular, suplentes convocados, dorsales y estrategia táctica S1.',
-            ].map((rule, i) => (
-              <div key={i} className="landing-rule">
-                <span className="landing-rule__num">{i + 1}</span>
-                <p className="landing-rule__text">{rule}</p>
+              {
+                title: 'Presupuesto Asignado',
+                desc: 'Cada manager comienza con un presupuesto oficial fijado por la administración. No se permiten balances negativos.'
+              },
+              {
+                title: 'Bloqueo Inmediato',
+                desc: 'El mercado opera en tiempo real: cuando fichás a un jugador, se bloquea al instante para los demás competidores.'
+              },
+              {
+                title: 'Ventas al 100%',
+                desc: 'Podés liberar un jugador en cualquier momento y recuperar el 100% de su valor para reinvertir en el mercado.'
+              },
+              {
+                title: 'Centro de Traspasos',
+                desc: 'Proponé intercambios formales de jugadores, acuerdos económicos o contraofertas directas con otros managers.'
+              },
+              {
+                title: 'Jugador Franquicia',
+                desc: 'Disponés de una ficha especial de jugador franquicia protegida que podés utilizar durante toda la temporada.'
+              },
+              {
+                title: 'Alineaciones Obligatorias',
+                desc: 'Todo equipo debe tener guardado su 11 titular, suplentes y estrategia S1 antes de la disputa de cada fecha.'
+              }
+            ].map(rule => (
+              <div key={rule.title} className="landing-rule-card">
+                <h3 className="landing-rule-card__title">{rule.title}</h3>
+                <p className="landing-rule-card__desc">{rule.desc}</p>
               </div>
             ))}
           </div>
         </Reveal>
       </section>
 
-      {/* ═══════════ STATS ═══════════ */}
-      <section className="landing-section">
-        <div className="landing-stats">
-          <Reveal delay={0} className="landing-stat">
-            <div className="landing-stat__value"><AnimatedCounter end={1000} prefix="+" /></div>
-            <div className="landing-stat__label">Jugadores disponibles</div>
-          </Reveal>
-          <Reveal delay={150} className="landing-stat">
-            <div className="landing-stat__value"><AnimatedCounter end={15} prefix="+" /></div>
-            <div className="landing-stat__label">Formaciones tácticas</div>
-          </Reveal>
-          <Reveal delay={300} className="landing-stat">
-            <div className="landing-stat__value"><AnimatedCounter end={12} /></div>
-            <div className="landing-stat__label">Parámetros tácticos PES</div>
-          </Reveal>
-          <Reveal delay={450} className="landing-stat">
-            <div className="landing-stat__value"><AnimatedCounter end={100} suffix="%" /></div>
-            <div className="landing-stat__label">Sincronizado en vivo</div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ═══════════ LINKS / COMMUNITY ═══════════ */}
-      <section className="landing-section">
+      {/* ═══════════ COMMUNITY CHANNELS ═══════════ */}
+      <section id="comunidad" className="landing-section">
         <Reveal>
-          <h2 className="landing-section__title">
-            <MessageCircle className="landing-section__title-icon" style={{ color: '#34d399' }} />
-            Comunidad & Torneos
-          </h2>
-          <p className="landing-section__desc">Mantenete conectado con los otros managers de la liga.</p>
+          <div className="landing-section__header">
+            <h2 className="landing-section__title">Canales de Coordinación</h2>
+            <p className="landing-section__desc">
+              Mantenete comunicado con la organización y los otros managers para coordinar fechas y anuncios.
+            </p>
+          </div>
         </Reveal>
 
         <Reveal delay={100}>
-          <div className="landing-links">
-            <a href="https://chat.whatsapp.com" target="_blank" rel="noopener noreferrer" className="landing-link landing-link--whatsapp">
-              <div className="landing-link__icon-wrap">
-                <MessageCircle style={{ width: 24, height: 24 }} />
+          <div className="landing-community-grid">
+            <a
+              href="https://chat.whatsapp.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-community-card landing-community-card--whatsapp"
+            >
+              <div className="landing-community-card__icon">
+                <MessageCircle className="w-6 h-6" />
               </div>
-              <div>
-                <h3 className="landing-link__title">Grupo de WhatsApp</h3>
-                <p className="landing-link__desc">Coordiná fichajes, fechas y novedades</p>
+              <div className="landing-community-card__info">
+                <h4>Grupo de WhatsApp</h4>
+                <p>Anuncios oficiales, altas de mercado y coordinación de fechas.</p>
               </div>
-              <ExternalLink className="landing-link__arrow" />
+              <ExternalLink className="landing-community-card__arrow" />
             </a>
 
-            <a href="https://discord.gg" target="_blank" rel="noopener noreferrer" className="landing-link landing-link--discord">
-              <div className="landing-link__icon-wrap">
-                <Globe style={{ width: 24, height: 24 }} />
+            <a
+              href="https://discord.gg"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-community-card landing-community-card--discord"
+            >
+              <div className="landing-community-card__icon">
+                <Globe className="w-6 h-6" />
               </div>
-              <div>
-                <h3 className="landing-link__title">Servidor de Discord</h3>
-                <p className="landing-link__desc">Chat en vivo, streamings y anuncios</p>
+              <div className="landing-community-card__info">
+                <h4>Servidor de Discord</h4>
+                <p>Salas de transmisión en vivo, soporte técnico y canales de debate.</p>
               </div>
-              <ExternalLink className="landing-link__arrow" />
+              <ExternalLink className="landing-community-card__arrow" />
             </a>
           </div>
         </Reveal>
       </section>
 
-      {/* ═══════════ FINAL CTA ═══════════ */}
-      <section className="landing-section landing-final-cta">
-        <Reveal>
-          <img src="/logo.webp" alt="" className="landing-final-cta__logo" width="80" height="80" loading="lazy" decoding="async" />
-          <h2 className="landing-final-cta__title">¿Listo para armar tu equipo?</h2>
-          <p className="landing-final-cta__desc">
-            El mercado está abierto. Diseñá tu estrategia y conquistá la Supercontinental.
+      {/* ═══════════ FINAL CALL TO ACTION ═══════════ */}
+      <section className="landing-cta-banner">
+        <div className="landing-cta-banner__inner">
+          <img src="/logo.webp" alt="SCL" className="landing-cta-banner__logo" width="68" height="68" />
+          <h2 className="landing-cta-banner__title">¿Listo para armar tu plantilla?</h2>
+          <p className="landing-cta-banner__desc">
+            Accedé a la plataforma, definí tu esquema táctico y competí en la Supercontinental.
           </p>
-          <button onClick={onEnter} className="landing-hero__cta" style={{ marginTop: '2rem' }}>
+          <button onClick={onEnter} className="landing-hero__cta-primary">
             <span>Ingresar al Draft</span>
-            <ChevronRight className="landing-hero__cta-icon" />
+            <ChevronRight className="w-5 h-5" />
           </button>
-        </Reveal>
+        </div>
       </section>
 
       {/* ═══════════ FOOTER ═══════════ */}
       <footer className="landing-footer">
-        <p>© 2025 – 2027 {APP_NAME}. Todos los derechos reservados.</p>
-        <p className="landing-footer__sub">Hecho con ⚽ para la comunidad de PES 2021.</p>
+        <div className="landing-footer__inner">
+          <div className="landing-footer__brand">
+            <img src="/logo.webp" alt="SCL" width="22" height="22" />
+            <span>{APP_NAME}</span>
+          </div>
+          <p className="landing-footer__copy">
+            © {new Date().getFullYear()} {APP_NAME}. Plataforma de gestión para PES 2021 Season Update.
+          </p>
+        </div>
       </footer>
     </div>
   );

@@ -8,20 +8,42 @@ import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { ProposalChat } from './ProposalChat.jsx';
 
+/* ── Posiciones con paleta unificada del mercado ── */
+const POS_COLOR = {
+  DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444',
+  MC: '#22c55e', MCD: '#22c55e', MO: '#22c55e', MI: '#22c55e', MD: '#22c55e',
+  DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6',
+  PT: '#eab308',
+};
+
+/* ── Umbrales dinámicos de color OVR consistentes con el mercado ── */
+const OVR_COLOR_THRESHOLDS = [
+  [90, '#1ec9a4'],
+  [85, '#a0dd00'],
+  [75, '#ffc400'],
+  [65, '#ec7d22'],
+];
+const OVR_COLOR_DEFAULT = '#94a3af';
+
+function getOvrColor(ovr) {
+  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
+    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
+  }
+  return OVR_COLOR_DEFAULT;
+}
+
 // ─── KpiCard ────────────────────────────────────────────────────────────────
 const KpiCard = memo(function KpiCard({ title, value, icon: Icon, colorClass }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl px-4 py-3"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="flex items-center gap-3.5 rounded-xl px-4 py-3 bg-[#0c1017] border border-white/[0.08] shadow-sm">
       {Icon && (
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colorClass?.replace('text-', 'bg-').replace('400', '900/60').replace('purple', 'purple')}`}
-          style={{ background: 'rgba(255,255,255,0.06)' }}>
-          <Icon className={`w-4 h-4 ${colorClass}`} />
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#111722] border border-white/[0.08]">
+          <Icon className={`w-4 h-4 ${colorClass || 'text-[#00b4d8]'}`} />
         </div>
       )}
       <div>
-        <p className="text-[10px] text-gray-600 uppercase font-bold tracking-wider leading-tight">{title}</p>
-        <p className="text-lg font-black text-white leading-tight">{value}</p>
+        <p className="text-xs text-slate-400 font-medium leading-tight">{title}</p>
+        <p className="text-lg font-bold text-white leading-tight mt-0.5 tabular-nums">{value}</p>
       </div>
     </div>
   );
@@ -32,21 +54,17 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
   const livePlayer = playerMap ? playerMap.get(String(player.Id)) : allPlayers?.find(p => p.Id === player.Id);
   const precio = livePlayer ? livePlayer.Precio : player.Precio;
   const ovr = player.OVR_CALCULADO || 0;
-  let ovrColor = 'text-orange-400';
-  if (ovr > 85) ovrColor = 'text-green-400';
-  else if (ovr >= 70) ovrColor = 'text-yellow-400';
-
-  const posColors = { DC: 'bg-red-600', SD: 'bg-red-600', EI: 'bg-red-600', ED: 'bg-red-600', MC: 'bg-green-700', MCD: 'bg-green-700', MO: 'bg-green-700', MI: 'bg-green-700', MD: 'bg-green-700', DFC: 'bg-blue-700', LI: 'bg-blue-700', LD: 'bg-blue-700', PT: 'bg-yellow-600' };
-  const posBg = posColors[player.POS_NOMBRE] || 'bg-gray-700';
+  const ovrColor = getOvrColor(ovr);
+  const posColor = POS_COLOR[player.POS_NOMBRE] || '#94a3af';
 
   return (
     <div
-      className="flex items-center gap-3 bg-white/[0.03] hover:bg-white/[0.06] rounded-xl p-3
-        border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 cursor-pointer group"
+      className="flex items-center gap-3.5 bg-[#0c1017] hover:bg-[#111722] rounded-xl p-3.5
+        border border-white/[0.08] hover:border-[#00b4d8]/40 transition-all duration-200 cursor-pointer group shadow-sm"
       onClick={onCardClick}
     >
       {/* Photo */}
-      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
+      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-black/60 border border-white/10">
         <img
           src={`/fotos_jugadores/${player.Id}.webp`}
           alt={player.Name}
@@ -57,24 +75,33 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <span className={`text-[9px] font-black text-white px-1.5 py-0.5 rounded ${posBg}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: posColor }}
+          >
             {player.POS_NOMBRE}
           </span>
-          <span className={`text-xs font-black ${ovrColor}`}>{ovr}</span>
+          <span
+            className="text-xs font-bold px-1.5 py-0.5 rounded-md tabular-nums"
+            style={{ color: ovrColor, backgroundColor: 'rgba(255,255,255,0.06)' }}
+          >
+            {ovr}
+          </span>
         </div>
-        <p className="text-sm font-bold text-white/90 truncate leading-tight">{player.Name}</p>
-        <p className="text-xs text-emerald-400 font-bold mt-0.5">
-          ${precio?.toFixed(2)}M
+        <p className="text-sm font-semibold text-white group-hover:text-[#00b4d8] truncate leading-tight transition">{player.Name}</p>
+        <p className="text-xs text-emerald-400 font-semibold mt-1 tabular-nums">
+          {formatPriceShort(precio)}
         </p>
       </div>
 
       {/* Remove btn */}
       <button
         onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center
-          text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
+          text-slate-400 hover:text-red-400 hover:bg-red-500/15 border border-transparent hover:border-red-500/25 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
         title="Quitar del equipo"
+        aria-label={`Quitar a ${player.Name} del equipo`}
       >
         <X className="w-4 h-4" />
       </button>
@@ -176,7 +203,7 @@ const NegotiationCard = memo(function NegotiationCard({
   };
 
   return (
-    <div className="rounded-2xl bg-white/[0.025] p-4 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.055)]">
+    <div className="rounded-2xl bg-[#0c1017] border border-white/[0.08] hover:border-white/[0.14] p-4 sm:p-5 shadow-md transition-all">
       {offer.status === 'accepted' ? (
         <TransferPlayerCard transfer={transferData} player={livePlayer} allTeams={allTeams} compact />
       ) : (
@@ -186,15 +213,15 @@ const NegotiationCard = memo(function NegotiationCard({
               <img
                 src={`/fotos_jugadores/${offer.playerId}.webp`}
                 alt={offer.playerName}
-                className="h-12 w-12 rounded-xl bg-black/40 object-cover shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
+                className="h-12 w-12 rounded-xl bg-black/60 border border-white/10 object-cover"
                 onError={(event) => { event.currentTarget.style.display = 'none'; }}
               />
               <div className="min-w-0">
-                <h4 className="truncate text-sm font-black uppercase italic text-white">{offer.playerName}</h4>
+                <h4 className="truncate text-sm font-black uppercase text-white">{offer.playerName}</h4>
                 <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px] font-black uppercase">
-                  <span className="min-w-0 truncate text-cyan-300">{senderName}</span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-500" />
-                  <span className="min-w-0 truncate text-purple-300">{targetName}</span>
+                  <span className="min-w-0 truncate text-[#00b4d8]">{senderName}</span>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                  <span className="min-w-0 truncate text-purple-400">{targetName}</span>
                 </div>
               </div>
             </div>
@@ -202,29 +229,29 @@ const NegotiationCard = memo(function NegotiationCard({
           </div>
 
           <div className="w-full shrink-0 lg:w-auto lg:min-w-[250px]">
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-black/22 px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.035)]">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{getOfferStatusLabel(offer.status)}</span>
-              <span className="text-lg font-black text-emerald-300">{formatPriceShort((activeAmount || 0) / 1000000)}</span>
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-[#111722] border border-white/[0.08] px-3.5 py-2.5 shadow-sm">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{getOfferStatusLabel(offer.status)}</span>
+              <span className="text-lg font-black text-emerald-400">{formatPriceShort((activeAmount || 0) / 1000000)}</span>
             </div>
 
             {!isHistory && counteringOfferId === offer.id ? (
               <div className="flex w-full flex-wrap items-center gap-2">
                 <div className="relative min-w-[120px] flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                   <input
                     type="number"
                     step="0.1"
                     value={counterAmount}
                     onChange={(event) => setCounterAmount(event.target.value)}
                     placeholder="Monto"
-                    className="min-h-11 w-full rounded-xl bg-black/36 py-2 pl-7 pr-8 text-sm font-bold text-white outline-none shadow-[inset_0_0_0_1px_rgba(34,211,238,0.12)] focus:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.36)]"
+                    className="min-h-11 w-full rounded-xl bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] py-2 pl-7 pr-8 text-sm font-bold text-white outline-none transition-colors"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">M</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">M</span>
                 </div>
-                <button onClick={() => onCounter(offer)} disabled={isProcessing || !counterAmount} className="min-h-11 rounded-xl bg-yellow-500/16 px-4 text-xs font-black uppercase text-yellow-200 transition hover:bg-yellow-500/24 disabled:opacity-50">
+                <button onClick={() => onCounter(offer)} disabled={isProcessing || !counterAmount} className="min-h-11 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-4 text-xs font-black uppercase text-amber-300 transition disabled:opacity-50 cursor-pointer">
                   Enviar
                 </button>
-                <button onClick={() => { setCounteringOfferId(null); setCounterAmount(''); }} className="min-h-11 rounded-xl bg-white/[0.04] px-4 text-xs font-black uppercase text-gray-300 transition hover:bg-white/[0.07]">
+                <button onClick={() => { setCounteringOfferId(null); setCounterAmount(''); }} className="min-h-11 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] px-4 text-xs font-black uppercase text-slate-300 transition cursor-pointer">
                   Cancelar
                 </button>
               </div>
@@ -232,12 +259,12 @@ const NegotiationCard = memo(function NegotiationCard({
               <div className="flex w-full flex-wrap gap-2">
                 {isIncoming ? (
                   <>
-                    <button onClick={() => onReject(offer)} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-red-500/12 px-4 text-xs font-black uppercase text-red-300 transition hover:bg-red-500/20 disabled:opacity-50">Rechazar</button>
-                    <button onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-yellow-500/12 px-4 text-xs font-black uppercase text-yellow-300 transition hover:bg-yellow-500/20 disabled:opacity-50">Contraoferta</button>
-                    <button onClick={() => onAccept(offer)} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-cyan-500 px-4 text-xs font-black uppercase text-black transition hover:bg-cyan-300 disabled:opacity-50">Aceptar</button>
+                    <button onClick={() => onReject(offer)} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 px-4 text-xs font-black uppercase text-red-300 transition disabled:opacity-50 cursor-pointer">Rechazar</button>
+                    <button onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-4 text-xs font-black uppercase text-amber-300 transition disabled:opacity-50 cursor-pointer">Contraoferta</button>
+                    <button onClick={() => onAccept(offer)} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] px-4 text-xs font-black uppercase text-[#030712] transition shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer">Aceptar</button>
                   </>
                 ) : (
-                  <button onClick={() => onWithdraw(offer)} disabled={isProcessing} className="min-h-11 w-full rounded-xl bg-red-500/12 px-4 text-xs font-black uppercase text-red-300 transition hover:bg-red-500/20 disabled:opacity-50">
+                  <button onClick={() => onWithdraw(offer)} disabled={isProcessing} className="min-h-11 w-full rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 px-4 text-xs font-black uppercase text-red-300 transition disabled:opacity-50 cursor-pointer">
                     Retirar Oferta
                   </button>
                 )}
@@ -651,33 +678,36 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   if (!isVisible && !isPage) return null;
 
   const inner = (
-    <div className="w-full h-full min-h-0 flex flex-col bg-[#0a0a0a]">
+    <div className="w-full h-full min-h-0 flex flex-col bg-[#06080d] relative overflow-hidden">
       {/* ── Header ── */}
-      <div className="flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4 shrink-0"
-        style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.05)' }}>
+      <div className="relative z-10 flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 shrink-0 bg-[#0c1017] border-b border-white/[0.08]">
         <div>
-          <h2 className="text-base sm:text-xl font-black text-white flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 text-cyan-500" /> Gestión de Equipo
+          <h2 className="text-base sm:text-xl font-bold text-white flex items-center gap-2.5">
+            <DollarSign className="w-5 h-5 text-[#00b4d8]" /> Finanzas & Plantilla
           </h2>
-          <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5 uppercase tracking-widest font-bold truncate max-w-[220px] sm:max-w-none">
-            {userProfile?.teamName}
+          <p className="text-xs text-slate-400 mt-0.5 font-medium truncate max-w-[220px] sm:max-w-none">
+            {userProfile?.teamName || 'Mi Equipo'}
           </p>
         </div>
         {!isPage && (
           <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:text-white hover:bg-white/[0.06] transition">
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition">
             <X className="w-5 h-5" />
           </button>
         )}
       </div>
 
-      {/* ── Budget Breakdown — Cohesive Card ── */}
+      {/* ── Budget Breakdown — Cohesive 4-KPI Card ── */}
       {(() => {
         const initialBudget = userProfile?.budget || DEFAULT_BUDGET || 0;
-        const pct = initialBudget > 0 ? Math.min(100, Math.max(0, (remainingBudget / initialBudget) * 100)) : 0;
+        const committedInOffers = (sentOffers || [])
+          .filter(o => o.status === 'pending' || o.status === 'countered')
+          .reduce((sum, o) => sum + (Number(getOfferAmount(o)) || 0), 0);
+        const liquidBudget = Math.max(0, remainingBudget - committedInOffers);
+        const pct = initialBudget > 0 ? Math.min(100, Math.max(0, (liquidBudget / initialBudget) * 100)) : 0;
         const barColor = pct > 50 ? '#10b981' : pct > 20 ? '#eab308' : '#ef4444';
-        const pctTextColor = pct > 50 ? 'text-emerald-400' : pct > 20 ? 'text-yellow-400' : 'text-red-400';
-        const availableColor = remainingBudget > 0 ? '#00C8FF' : '#ef4444';
+        const pctTextColor = pct > 50 ? 'text-emerald-400' : pct > 20 ? 'text-amber-400' : 'text-rose-400';
+        const availableColor = liquidBudget > 0 ? '#00b4d8' : '#ef4444';
 
         const fmtM = (val) => {
           const v = Math.abs(val || 0);
@@ -687,58 +717,50 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         };
 
         return (
-          <div className="px-3 sm:px-6 py-3 sm:py-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <div
-              className="rounded-xl sm:rounded-2xl p-4 sm:p-5"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-              }}
-            >
+          <div className="relative z-10 px-3 sm:px-6 py-3 sm:py-4 shrink-0 border-b border-white/[0.08]">
+            <div className="rounded-xl sm:rounded-2xl p-4 sm:p-5 bg-[#0c1017] border border-white/[0.08] shadow-xl relative overflow-hidden">
+              {/* Subtle top accent highlight */}
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#00b4d8]/40 to-transparent pointer-events-none" />
+
               {/* Top row: team name + title */}
-              <div className="flex items-center justify-between mb-5">
-                <span className="text-xs font-black text-white/40 uppercase tracking-widest">
+              <div className="flex items-center justify-between mb-3.5">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
                   {userProfile?.teamName || 'Mi Equipo'}
                 </span>
-                <span className="text-[10px] font-bold text-white/25 uppercase tracking-wider flex items-center gap-1.5">
-                  💰 Gestión Financiera
+                <span className="text-[11px] font-black text-[#00b4d8] uppercase tracking-wider flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-[#00b4d8]" /> Balance Financiero
                 </span>
               </div>
 
-              {/* Secondary stats row */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-5">
-                <div>
-                  <p className="text-sm sm:text-lg font-black text-white/45 leading-none">{fmtM(initialBudget)}</p>
-                  <p className="text-[9px] text-white/25 uppercase font-bold tracking-wider mt-1">Presupuesto inicial</p>
+              {/* 4-KPI breakdown row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-4">
+                <div className="bg-[#111722] p-3 rounded-xl border border-white/[0.08] shadow-sm">
+                  <p className="text-sm sm:text-base font-black text-white leading-none">{fmtM(initialBudget)}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5">Presupuesto Inicial</p>
                 </div>
-                <div>
-                  <p className={`text-sm sm:text-lg font-black leading-none ${totalCartCost > 0 ? 'text-white/45' : 'text-white/20'}`}>{fmtM(totalCartCost)}</p>
-                  <p className="text-[9px] text-white/25 uppercase font-bold tracking-wider mt-1">Gastado en fichajes</p>
+                <div className="bg-[#111722] p-3 rounded-xl border border-white/[0.08] shadow-sm">
+                  <p className={`text-sm sm:text-base font-black leading-none ${totalCartCost > 0 ? 'text-white' : 'text-slate-500'}`}>{fmtM(totalCartCost)}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5">Gastado en Plantilla</p>
                 </div>
-                <div>
-                  <p className={`text-sm sm:text-lg font-black leading-none ${totalCartCost > 0 ? 'text-white/45' : 'text-white/20'}`}>{fmtM(totalCartCost)}</p>
-                  <p className="text-[9px] text-white/25 uppercase font-bold tracking-wider mt-1">Valor de plantilla</p>
+                <div className="bg-[#111722] p-3 rounded-xl border border-white/[0.08] shadow-sm">
+                  <p className={`text-sm sm:text-base font-black leading-none ${committedInOffers > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmtM(committedInOffers)}</p>
+                  <p className="text-[10px] text-amber-400/80 uppercase font-bold tracking-wider mt-1.5">Comprometido Ofertas</p>
+                </div>
+                <div className="bg-[#111722] p-3 rounded-xl border border-[#00b4d8]/30 shadow-sm">
+                  <p className="text-sm sm:text-base font-black leading-none" style={{ color: availableColor }}>{fmtM(liquidBudget)}</p>
+                  <p className="text-[10px] text-[#00b4d8] uppercase font-bold tracking-wider mt-1.5">Disponible Líquido</p>
                 </div>
               </div>
 
-              {/* Hero: DISPONIBLE */}
-              <div className="flex items-end justify-between mb-2">
-                <div>
-                  <p className="text-[10px] text-white/25 uppercase font-black tracking-widest mb-1">Disponible</p>
-                  <p className="text-2xl sm:text-3xl font-black leading-none" style={{ color: availableColor }}>
-                    {fmtM(remainingBudget)}
-                  </p>
-                </div>
-                <span className={`text-sm font-black ${pctTextColor}`}>
-                  {pct.toFixed(0)}%
-                </span>
+              {/* Hero: DISPONIBLE & bar */}
+              <div className="flex items-center justify-between text-xs mb-1.5 font-bold">
+                <span className="text-slate-400 text-[10px] uppercase tracking-wider">Margen Operativo Disponible</span>
+                <span className={pctTextColor}>{pct.toFixed(0)}% restante</span>
               </div>
-
-              {/* Progress bar */}
-              <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden mt-3">
+              <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/[0.08]">
                 <div
                   className="h-full rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${pct}%`, background: barColor }}
+                  style={{ width: `${pct}%`, background: barColor, boxShadow: `0 0 8px ${barColor}50` }}
                 />
               </div>
             </div>
@@ -746,41 +768,56 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         );
       })()}
 
-      {/* ── Tabs ── */}
-      <div className="flex px-3 sm:px-6 gap-0 shrink-0 overflow-x-auto custom-scrollbar" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        {[['players', `Plantilla (${cart.length})`], ['offers', `Recibidas (${incomingOffers?.length || 0})`], ['sent', `Enviadas (${sentOffers?.length || 0})`], ['stats', 'Gráficos']].map(([id, label]) => (
-          <button key={id} onClick={() => setActiveTab(id)}
-            className={`shrink-0 px-3 sm:px-5 py-3 text-xs sm:text-sm font-bold transition-all border-b-2 -mb-px ${
-              activeTab === id
-                ? 'border-cyan-500 text-cyan-400'
-                : 'border-transparent text-gray-600 hover:text-gray-300'
-            }`}>
-            {label}
-          </button>
-        ))}
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`shrink-0 px-3 sm:px-5 py-3 text-xs sm:text-sm font-bold transition-all border-b-2 -mb-px ${
-            activeTab === 'history'
-              ? 'border-cyan-500 text-cyan-400'
-              : 'border-transparent text-gray-600 hover:text-gray-300'
-          }`}
-        >
-          Historial ({offerHistory?.length || 0})
-        </button>
+      {/* ── Tabs (Segmented Control) ── */}
+      <div className="relative z-10 px-3 sm:px-6 py-2.5 shrink-0 bg-[#0c1017]/90 border-b border-white/[0.08]">
+        <div className="flex items-center gap-1.5 p-1 bg-[#111722] rounded-xl border border-white/[0.08] overflow-x-auto custom-scrollbar">
+          {[
+            { id: 'players', label: 'Plantilla', count: cart.length },
+            { id: 'offers', label: 'Recibidas', count: incomingOffers?.length || 0 },
+            { id: 'sent', label: 'Enviadas', count: sentOffers?.length || 0 },
+            { id: 'history', label: 'Historial', count: offerHistory?.length || 0 },
+            { id: 'stats', label: 'Gráficos', count: null }
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-[#00b4d8] text-[#030712] shadow-sm font-black'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <span>{tab.label}</span>
+                {tab.count !== null && (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isActive
+                      ? 'bg-black/20 text-[#030712]'
+                      : 'bg-white/[0.06] text-slate-400'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Content ── */}
-      <div className="flex-grow min-h-0 overflow-y-auto px-3 sm:px-6 py-4 sm:py-5 custom-scrollbar">
+      <div className="relative z-10 flex-grow min-h-0 overflow-y-auto px-3 sm:px-6 py-4 sm:py-5 custom-scrollbar">
         {activeTab === 'players' && (
           cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-600">
-              <ShoppingCart className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-sm font-medium">Tu equipo está vacío</p>
-              <p className="text-xs mt-1 opacity-60">Vé al mercado para fichar jugadores</p>
+            <div className="flex flex-col items-center justify-center h-64 rounded-2xl bg-[#0c1017]/60 border border-dashed border-white/[0.08] text-center p-8">
+              <div className="w-12 h-12 rounded-full bg-[#111722] border border-white/[0.08] flex items-center justify-center mb-3">
+                <ShoppingCart className="w-6 h-6 text-[#00b4d8]/60" />
+              </div>
+              <p className="text-sm font-bold text-white">Tu equipo está vacío</p>
+              <p className="text-xs text-slate-400 mt-1">Explora el mercado principal para fichar jugadores para tu plantilla</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
               {sortedCart.map(player => (
                 <CartMiniPlayerCard
                   key={player.Id}
@@ -797,9 +834,12 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
         {activeTab === 'offers' && (
           incomingOffers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-600">
-              <DollarSign className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-sm font-medium">No tenés ofertas pendientes</p>
+            <div className="flex flex-col items-center justify-center h-64 rounded-2xl bg-[#0c1017]/60 border border-dashed border-white/[0.08] text-center p-8">
+              <div className="w-12 h-12 rounded-full bg-[#111722] border border-white/[0.08] flex items-center justify-center mb-3">
+                <DollarSign className="w-6 h-6 text-[#00b4d8]/60" />
+              </div>
+              <p className="text-sm font-bold text-white">No tienes ofertas pendientes</p>
+              <p className="text-xs text-slate-400 mt-1">Cuando otros clubes envíen propuestas por tus jugadores aparecerán aquí</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -828,94 +868,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           )
         )}
 
-        {false && activeTab === 'offers' && (
-          incomingOffers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-600">
-              <DollarSign className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-sm font-medium">No tienes ofertas pendientes</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {incomingOffers.map(offer => (
-                <div key={offer.id} className="bg-white/[0.02] border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <img src={offer.senderTeamLogo || DEFAULT_LOGO} alt={offer.senderTeamName || 'Equipo'} className="w-9 h-9 rounded-lg object-contain bg-black/40 border border-white/10 p-1" onError={(e) => { e.target.src = DEFAULT_LOGO; }} />
-                      <img src={`/fotos_jugadores/${offer.playerId}.webp`} alt={offer.playerName} className="w-10 h-10 rounded-lg object-cover bg-black/40 border border-white/10" onError={(e) => { e.target.style.display = 'none'; }} />
-                      <div className="min-w-0">
-                        <h4 className="text-white font-bold truncate">{offer.playerName}</h4>
-                        <p className="text-xs text-gray-400">Oferta de: <span className="text-cyan-400 font-bold">{offer.senderTeamName}</span></p>
-                      </div>
-                    </div>
-                    <p className="text-lg font-black text-green-500">{formatPriceShort((offer.status === 'countered' ? offer.counterAmount : offer.offerAmount) / 1000000)}</p>
-                    {offer.message && <p className="text-xs text-gray-500 italic mt-1">"{offer.message}"</p>}
-                  </div>
-                  <div className="flex w-full sm:w-auto">
-                    {counteringOfferId === offer.id ? (
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">$</span>
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={counterAmount} 
-                            onChange={(e) => setCounterAmount(e.target.value)} 
-                            placeholder="Monto" 
-                            className="pl-6 pr-6 py-2 bg-black/40 border border-gray-600 rounded-lg text-white text-xs outline-none focus:border-cyan-500 w-28"
-                          />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">M</span>
-                        </div>
-                        <button 
-                          onClick={() => handleCounterOffer(offer)}
-                          disabled={isProcessing || !counterAmount}
-                          className="px-3 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-xs rounded-lg transition-colors"
-                        >
-                          Enviar
-                        </button>
-                        <button 
-                          onClick={() => { setCounteringOfferId(null); setCounterAmount(''); }}
-                          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition-colors"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <button 
-                          onClick={() => handleRejectOffer(offer)}
-                          disabled={isProcessing}
-                          className="flex-1 sm:flex-none px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold text-xs rounded-lg transition-colors border border-red-500/20"
-                        >
-                          Rechazar
-                        </button>
-                        <button 
-                          onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }}
-                          disabled={isProcessing}
-                          className="flex-1 sm:flex-none px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 font-bold text-xs rounded-lg transition-colors border border-yellow-500/20"
-                        >
-                          Contraoferta
-                        </button>
-                        <button 
-                          onClick={() => handleAcceptOffer(offer)}
-                          disabled={isProcessing}
-                          className="flex-1 sm:flex-none px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-lg transition-colors"
-                        >
-                          Aceptar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        )}
-
         {activeTab === 'sent' && (
           sentOffers?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-600">
-              <DollarSign className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-sm font-medium">No enviaste ofertas</p>
+            <div className="flex flex-col items-center justify-center h-64 rounded-2xl bg-[#0c1017]/60 border border-dashed border-white/[0.08] text-center p-8">
+              <div className="w-12 h-12 rounded-full bg-[#111722] border border-white/[0.08] flex items-center justify-center mb-3">
+                <DollarSign className="w-6 h-6 text-[#00b4d8]/60" />
+              </div>
+              <p className="text-sm font-bold text-white">No has enviado ofertas</p>
+              <p className="text-xs text-slate-400 mt-1">Inicia negociaciones con jugadores de otros equipos desde Otros Equipos o Mercado</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -944,42 +904,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           )
         )}
 
-        {false && activeTab === 'sent' && (
-          sentOffers?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-600">
-              <DollarSign className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-sm font-medium">No has enviado ofertas</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {sentOffers?.map(offer => (
-                <div key={offer.id} className="bg-white/[0.02] border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <h4 className="text-white font-bold">{offer.playerName}</h4>
-                    <p className="text-xs text-gray-400">Oferta enviada a: <span className="text-cyan-400 font-bold">{offer.targetTeamId === userProfile?.uid ? offer.senderTeamName : 'Otro equipo'}</span></p>
-                    <p className="text-lg font-black text-blue-500">{formatPriceShort((offer.status === 'countered' ? offer.counterAmount : offer.offerAmount) / 1000000)}</p>
-                    {offer.status === 'countered' && <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded font-bold">Es Contraoferta</span>}
-                  </div>
-                  <div className="flex w-full sm:w-auto gap-2">
-                    <button 
-                      onClick={() => handleWithdrawOffer(offer)}
-                      disabled={isProcessing}
-                      className="w-full sm:w-auto px-4 py-2 bg-red-900/50 hover:bg-red-800 text-white font-bold text-xs rounded-lg transition-colors border border-red-700/50"
-                    >
-                      Retirar Oferta
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        )}
-
         {activeTab === 'history' && (
           offerHistory?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-600">
-              <History className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-sm font-medium">Todavía no hay negociaciones cerradas</p>
+            <div className="flex flex-col items-center justify-center h-64 rounded-2xl bg-[#0c1017]/60 border border-dashed border-white/[0.08] text-center p-8">
+              <div className="w-12 h-12 rounded-full bg-[#111722] border border-white/[0.08] flex items-center justify-center mb-3">
+                <History className="w-6 h-6 text-[#00b4d8]/60" />
+              </div>
+              <p className="text-sm font-bold text-white">Todavía no hay negociaciones cerradas</p>
+              <p className="text-xs text-slate-400 mt-1">El historial de ofertas aceptadas, rechazadas o retiradas se guardará aquí</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -1012,24 +944,24 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         {activeTab === 'stats' && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <KpiCard title="OVR Media" value={statsData.avgOvr} icon={Activity} colorClass="text-cyan-400" />
-              <KpiCard title="Edad Promedio" value={<>{statsData.avgAge}<span className="text-xs text-gray-600 font-normal"> años</span></>} icon={Calendar} colorClass="text-purple-400" />
+              <KpiCard title="OVR Media" value={statsData.avgOvr} icon={Activity} colorClass="text-[#00b4d8]" />
+              <KpiCard title="Edad Promedio" value={<>{statsData.avgAge}<span className="text-xs text-slate-400 font-normal"> años</span></>} icon={Calendar} colorClass="text-purple-400" />
               <KpiCard title="Jugadores" value={statsData.totalPlayers} icon={Users} colorClass="text-emerald-400" />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="rounded-xl p-5 flex flex-col" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Shield className="w-3.5 h-3.5 text-cyan-500" /> Distribución Táctica
+              <div className="rounded-2xl p-5 bg-[#0c1017] border border-white/[0.08] shadow-lg flex flex-col">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-[#00b4d8]" /> Distribución Táctica
                 </h3>
-                <div className="flex-grow relative min-h-[200px]">
+                <div className="flex-grow relative min-h-[220px]">
                   <Doughnut data={statsData.positionChartData} options={doughnutOptions} />
                 </div>
               </div>
-              <div className="rounded-xl p-5 flex flex-col" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-indigo-400" /> Nacionalidades
+              <div className="rounded-2xl p-5 bg-[#0c1017] border border-white/[0.08] shadow-lg flex flex-col">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#00b4d8]" /> Nacionalidades
                 </h3>
-                <div className="flex-grow relative min-h-[200px]">
+                <div className="flex-grow relative min-h-[220px]">
                   <Bar data={statsData.countryChartData} options={chartOptions} />
                 </div>
               </div>
@@ -1043,10 +975,9 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   if (isPage) return inner;
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4"
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in duration-300"
       onClick={onClose}>
-      <div className="bg-[#0f0f0f] sm:rounded-2xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:h-[85vh] flex flex-col overflow-hidden"
-        style={{ border: '1px solid rgba(255,255,255,0.05)' }}
+      <div className="bg-[#0c1017] sm:rounded-2xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:h-[88vh] flex flex-col overflow-hidden border-0 sm:border border-white/[0.08] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
         onClick={e => e.stopPropagation()}>
         {inner}
       </div>

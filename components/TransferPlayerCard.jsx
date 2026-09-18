@@ -1,30 +1,19 @@
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useState } from 'react';
 import { ArrowRight, BadgeDollarSign } from 'lucide-react';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { formatPriceShort, getFlagUrl } from '../utils/helpers.js';
 
-function getTier(ovr) {
+function getOvrBadgeClass(ovr) {
   const value = Number(ovr) || 0;
-  if (value >= 90) return {
-    frame: 'linear-gradient(145deg, #f9d56e, #f59e0b 42%, #7c3aed 100%)',
-    glow: 'rgba(245, 158, 11, 0.28)',
-    text: '#fde68a',
-  };
-  if (value >= 85) return {
-    frame: 'linear-gradient(145deg, #22d3ee, #8b5cf6 48%, #f59e0b 100%)',
-    glow: 'rgba(34, 211, 238, 0.24)',
-    text: '#67e8f9',
-  };
-  return {
-    frame: 'linear-gradient(145deg, #64748b, #22c55e 52%, #38bdf8 100%)',
-    glow: 'rgba(56, 189, 248, 0.2)',
-    text: '#bae6fd',
-  };
+  if (value >= 90) return 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30';
+  if (value >= 85) return 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30';
+  if (value >= 80) return 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30';
+  return 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30';
 }
 
 const TeamLogo = memo(function TeamLogo({ logo, name }) {
   return (
-    <span className="h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-black/30 p-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]">
+    <span className="h-6 w-6 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700">
       <img
         src={logo || DEFAULT_LOGO}
         alt={name || 'Equipo'}
@@ -54,69 +43,78 @@ export const TransferPlayerCard = memo(function TransferPlayerCard({
   const toTeamName = transfer?.teamName || toTeam.teamName || 'Equipo comprador';
   const fromLogo = transfer?.fromTeamLogo || fromTeam.logoUrl;
   const toLogo = transfer?.teamLogo || toTeam.logoUrl;
-  const tier = useMemo(() => getTier(ovr), [ovr]);
+  const ovrBadgeStyle = getOvrBadgeClass(ovr);
   const photoSrc = imgError
     ? `https://placehold.co/220x260/101318/4b5563?text=${encodeURIComponent(playerName.slice(0, 2))}`
     : `/fotos_jugadores/${playerId}.webp`;
 
   return (
     <article
-      className={`relative isolate overflow-hidden rounded-[18px] p-[2px] ${compact ? 'max-w-none' : 'mx-auto max-w-[340px]'}`}
-      style={{ background: tier.frame, boxShadow: `0 18px 44px ${tier.glow}` }}
+      className={`relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f141f] shadow-sm transition-all hover:shadow-md ${
+        compact ? 'max-w-none' : 'mx-auto max-w-[340px]'
+      }`}
     >
-      <div className="relative overflow-hidden rounded-[16px] bg-[#090a0d]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(255,255,255,0.16),transparent_34%),linear-gradient(160deg,rgba(15,23,42,0.2),rgba(2,6,23,0.92))]" />
-        <div className="relative z-10 grid grid-cols-[76px_1fr] gap-3 p-3">
-          <div className="pt-1">
-            <p className="text-4xl font-black leading-none text-white">{ovr || '--'}</p>
-            <p className="mt-1 text-lg font-black leading-none" style={{ color: tier.text }}>{position}</p>
-            {country && (
-              <img
-                src={getFlagUrl(country)}
-                alt=""
-                className="mt-2 h-[18px] w-6 rounded-[3px] object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.35)]"
-                onError={(event) => { event.currentTarget.style.display = 'none'; }}
-              />
-            )}
-          </div>
+      {/* Top Banner Status */}
+      <div className="flex items-center justify-between px-3.5 py-2 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-100 dark:border-slate-800/80">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+            Traspaso Oficial
+          </span>
+        </div>
+        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+          {formatPriceShort(Number(transfer?.price) || 0)}
+        </span>
+      </div>
 
-          <div className="relative min-h-[150px]">
+      <div className="p-3">
+        {/* Player Header Info */}
+        <div className="flex items-start gap-3">
+          <div className="relative w-12 h-14 rounded-lg bg-slate-100 dark:bg-slate-800/60 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700/60">
             <img
               src={photoSrc}
               alt={playerName}
               loading="lazy"
               decoding="async"
-              className="absolute inset-x-0 bottom-0 mx-auto h-[168px] w-full object-contain object-bottom drop-shadow-[0_20px_22px_rgba(0,0,0,0.72)]"
+              className="w-full h-full object-cover object-top"
               onError={() => setImgError(true)}
             />
           </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border tabular-nums ${ovrBadgeStyle}`}>
+                {ovr || '--'}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">
+                {position}
+              </span>
+              {country && (
+                <img
+                  src={getFlagUrl(country)}
+                  alt=""
+                  className="h-3 w-4 rounded-sm object-cover ml-auto"
+                  onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                />
+              )}
+            </div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+              {playerName}
+            </h3>
+          </div>
         </div>
 
-        <div className="relative z-10 px-3 pb-3">
-          <div className="rounded-xl bg-black/42 px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="min-w-0 truncate text-lg font-black uppercase italic tracking-wide text-white">
-                {playerName}
-              </h3>
-              <span className="shrink-0 rounded-lg bg-purple-500/16 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-purple-200 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.16)]">
-                Traspaso
-              </span>
-            </div>
-
-            <div className="mt-3 flex items-center gap-2 min-w-0">
+        {/* Club Movement */}
+        <div className="mt-3 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/60">
+          <div className="flex items-center justify-between gap-2 min-w-0 text-xs">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
               <TeamLogo logo={fromLogo} name={fromTeamName} />
-              <span className="min-w-0 truncate text-[10px] font-black uppercase text-gray-500">{fromTeamName}</span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-purple-200" />
-              <TeamLogo logo={toLogo} name={toTeamName} />
-              <span className="min-w-0 truncate text-[10px] font-black uppercase text-gray-100">{toTeamName}</span>
+              <span className="truncate font-medium text-slate-600 dark:text-slate-400">{fromTeamName}</span>
             </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                <BadgeDollarSign className="h-3.5 w-3.5 text-emerald-300" />
-                Monto
-              </span>
-              <span className="text-sm font-black text-emerald-300">{formatPriceShort(Number(transfer?.price) || 0)}</span>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end text-right">
+              <span className="truncate font-semibold text-slate-900 dark:text-white">{toTeamName}</span>
+              <TeamLogo logo={toLogo} name={toTeamName} />
             </div>
           </div>
         </div>

@@ -354,8 +354,30 @@ export const FiltrosModal = memo(function FiltrosModal({
                 <label>
                   <span className="filter-label">Nacionalidad</span>
                   <span className="relative block">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                    <input type="text" placeholder="Buscar país..." value={filters.country} onChange={e => setFilters(p => ({ ...p, country: e.target.value }))} className="input-filter pl-9" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+                    <input
+                      type="text"
+                      list="countries-datalist"
+                      placeholder="Buscar o elegir país..."
+                      value={filters.country}
+                      onChange={e => setFilters(p => ({ ...p, country: e.target.value }))}
+                      className="input-filter pl-9 pr-8"
+                    />
+                    {filters.country && (
+                      <button
+                        type="button"
+                        onClick={() => setFilters(p => ({ ...p, country: '' }))}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 rounded transition cursor-pointer"
+                        title="Borrar país"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                    <datalist id="countries-datalist">
+                      {sortedCountries?.map(([id, name]) => (
+                        <option key={id} value={name} />
+                      ))}
+                    </datalist>
                   </span>
                 </label>
                 <label>

@@ -1,7 +1,8 @@
-import React, { memo, useState } from 'react';
-import { ChevronDown, DollarSign, Sparkles, Target } from 'lucide-react';
+import React, { memo, useState, useRef, useCallback } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, DollarSign, Sparkles, Target, Zap, TrendingUp, Eye } from 'lucide-react';
 import { formatPriceShort, getFlagUrl } from '../utils/helpers.js';
 
+/* ── Standardized Position accent colors ── */
 const POS_COLOR = {
   DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444',
   MC: '#22c55e', MCD: '#22c55e', MO: '#22c55e', MI: '#22c55e', MD: '#22c55e',
@@ -9,164 +10,271 @@ const POS_COLOR = {
   PT: '#eab308',
 };
 
+/* ── Standardized OVR color tiers matching PlayerCard ── */
+const OVR_COLOR_THRESHOLDS = [
+  [90, '#1ec9a4'],
+  [85, '#a0dd00'],
+  [75, '#ffc400'],
+  [65, '#ec7d22'],
+];
+const OVR_COLOR_DEFAULT = '#9ca3af';
+
 function getOvrColor(ovr) {
-  if (ovr >= 90) return '#facc15';
-  if (ovr >= 85) return '#4ade80';
-  if (ovr >= 75) return '#a3e635';
-  if (ovr >= 65) return '#38bdf8';
-  return '#9ca3af';
+  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
+    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
+  }
+  return OVR_COLOR_DEFAULT;
 }
 
-export const RecommendationsAccordion = memo(function RecommendationsAccordion({ recommendations, remainingBudget, onSelectPlayer }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+const FIT_CONFIG = {
+  NECESIDAD: { label: 'Puesto clave', icon: Target, badgeClass: 'bg-rose-500/15 text-rose-300 border-rose-500/30' },
+  VALOR: { label: 'Ganga', icon: DollarSign, badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+  OVR: { label: 'Salto OVR', icon: TrendingUp, badgeClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
+  FIT: { label: 'Encaje', icon: Zap, badgeClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' },
+};
+
+export const RecommendationsAccordion = memo(function RecommendationsAccordion({
+  recommendations,
+  remainingBudget,
+  onSelectPlayer
+}) {
+  const [isExpanded, setIsExpanded] = useState(() => {
+    try {
+      return localStorage.getItem('recommendations_expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  const scrollContainerRef = useRef(null);
+
+  const toggleExpanded = () => {
+    setIsExpanded(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('recommendations_expanded', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleScroll = useCallback((direction) => {
+    if (!scrollContainerRef.current) return;
+    const distance = 360;
+    scrollContainerRef.current.scrollBy({
+      left: direction === 'left' ? -distance : distance,
+      behavior: 'smooth'
+    });
+  }, []);
 
   if (!recommendations || recommendations.length === 0) return null;
 
   const budgetM = remainingBudget ? remainingBudget / 1000000 : 0;
-  const bestReason = recommendations[0]?._reason || 'Opciones útiles para tu plantel';
+  const bestReason = recommendations[0]?._reason || 'Opciones estratégicas para tu plantel';
 
   return (
-    <section className="mb-6 rounded-xl bg-[#0d1114] overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.22)]">
-      <button
-        type="button"
-        onClick={() => setIsExpanded(prev => !prev)}
-        className="w-full min-h-14 flex items-center justify-between gap-3 px-4 py-3 bg-[#101417] hover:bg-white/[0.045] transition-colors"
-      >
-        <div className="min-w-0 flex items-center gap-3 text-left">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]">
-            <Sparkles className="w-4 h-4 text-emerald-300" />
+    <section className="mb-6 rounded-2xl bg-[#0c1017] border border-white/[0.08] shadow-xl overflow-hidden relative transition-all duration-300">
+      {/* Subtle top cyan ambient glow */}
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#00b4d8]/40 to-transparent pointer-events-none" />
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-[#0c1017] border-b border-white/[0.06] select-none">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-[#00b4d8]/10 border border-[#00b4d8]/25 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <Sparkles className="w-5 h-5 text-[#00b4d8]" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-black text-gray-300 tracking-[0.14em] uppercase">Recomendados para vos</span>
-              <span className="text-[10px] font-black text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]">
-                {recommendations.length}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
+                Recomendados para vos
+              </h3>
+              <span className="text-[10px] font-black text-[#00b4d8] bg-[#00b4d8]/10 border border-[#00b4d8]/25 px-2 py-0.5 rounded-full">
+                {recommendations.length} disponibles
               </span>
             </div>
-            <p className="text-xs text-gray-500 truncate mt-0.5">{bestReason} · Presupuesto ${budgetM.toFixed(1)}M</p>
+            <p className="text-xs text-slate-400 truncate mt-0.5">
+              {bestReason} <span className="text-slate-600">·</span> Margen disp: <span className="text-emerald-400 font-bold">${budgetM.toFixed(1)}M</span>
+            </p>
           </div>
         </div>
-        <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform duration-300 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
-      </button>
 
-      <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[430px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-        <div className="px-3 sm:px-4 py-3 bg-black/10">
-          <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar" style={{ scrollbarWidth: 'thin' }}>
+        {/* Action controls: carousel arrows + collapse toggle */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isExpanded && recommendations.length > 3 && (
+            <div className="hidden sm:flex items-center gap-1 mr-1">
+              <button
+                type="button"
+                onClick={() => handleScroll('left')}
+                className="w-8 h-8 rounded-lg bg-[#111722] border border-white/[0.08] text-slate-400 hover:text-white hover:border-[#00b4d8]/40 flex items-center justify-center transition active:scale-95"
+                title="Desplazar a la izquierda"
+                aria-label="Ver anteriores"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleScroll('right')}
+                className="w-8 h-8 rounded-lg bg-[#111722] border border-white/[0.08] text-slate-400 hover:text-white hover:border-[#00b4d8]/40 flex items-center justify-center transition active:scale-95"
+                title="Desplazar a la derecha"
+                aria-label="Ver siguientes"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={toggleExpanded}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111722] border border-white/[0.08] text-slate-300 hover:text-white hover:border-[#00b4d8]/40 text-xs font-bold transition active:scale-95"
+            aria-expanded={isExpanded}
+          >
+            <span>{isExpanded ? 'Ocultar' : 'Mostrar'}</span>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-[#00b4d8]' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Content Shelf ── */}
+      {isExpanded && (
+        <div className="p-3 sm:p-5 bg-[#06080d]/80">
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory custom-scrollbar"
+            style={{ scrollbarWidth: 'thin' }}
+          >
             {recommendations.map(player => {
               const ovr = player.OVR_CALCULADO || 0;
               const ovrColor = getOvrColor(ovr);
-              const posColor = POS_COLOR[player.POS_NOMBRE] || '#9ca3af';
+              const posColor = POS_COLOR[player.POS_NOMBRE] || '#94a3af';
               const flagUrl = getFlagUrl(player.Country1);
+              const fit = FIT_CONFIG[player._fit] || FIT_CONFIG.FIT;
+              const FitIcon = fit.icon;
 
               return (
-                <button
+                <div
                   key={`rec-${player.Id}`}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectPlayer(player.Id)}
-                  className="group flex-shrink-0 w-[148px] sm:w-[158px] rounded-xl bg-black/25 overflow-hidden text-left shadow-[inset_0_0_0_1px_rgba(16,185,129,0.08)] transition hover:-translate-y-0.5 hover:bg-white/[0.045] hover:shadow-[inset_0_0_0_1px_rgba(52,211,153,0.22)] active:scale-[0.98]"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectPlayer(player.Id); } }}
+                  className="group flex-shrink-0 w-[164px] sm:w-[178px] snap-start rounded-xl bg-[#111722] border border-white/[0.08] overflow-hidden text-left cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-[#00b4d8]/60 hover:shadow-[0_12px_24px_rgba(0,180,216,0.15)] active:scale-[0.98] flex flex-col"
                 >
-                  <div
-                    className="flex items-center justify-between gap-1 px-2.5 py-2"
-                    style={{
-                      background: 'linear-gradient(180deg, rgba(16,185,129,0.11) 0%, rgba(0,0,0,0.12) 100%)',
-                      borderBottom: '1px solid rgba(16,185,129,0.12)',
-                    }}
-                  >
-                    <span className="inline-flex items-center gap-1 min-w-0">
-                      <DollarSign className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                      <span className="text-sm font-black text-emerald-300 truncate">{formatPriceShort(player.Precio)}</span>
-                    </span>
-                    {player._fit && (
-                      <span className="text-[9px] font-black text-cyan-200 bg-cyan-500/10 px-1.5 py-0.5 rounded shadow-[inset_0_0_0_1px_rgba(34,211,238,0.12)]">
-                        {player._fit}
+                  {/* Top bar: Price & Fit Badge */}
+                  <div className="flex items-center justify-between gap-1 px-3 py-2 bg-[#0c1017] border-b border-white/[0.06]">
+                    <span className="inline-flex items-center gap-1 min-w-0 font-mono">
+                      <DollarSign className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-black text-emerald-400 truncate">
+                        {formatPriceShort(player.Precio)}
                       </span>
-                    )}
+                    </span>
+
+                    <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${fit.badgeClass}`}>
+                      <FitIcon className="w-2.5 h-2.5" />
+                      <span>{fit.label}</span>
+                    </span>
                   </div>
 
-                  <div
-                    className="relative overflow-hidden"
-                    style={{
-                      aspectRatio: '3 / 2.85',
-                      background: 'linear-gradient(168deg, #1a1a1f 0%, #0c0c0e 100%)',
-                    }}
-                  >
+                  {/* Player Image & Overlay Banner */}
+                  <div className="relative overflow-hidden aspect-[3/2.8] bg-gradient-to-b from-[#151c2a] to-[#0a0e14]">
+                    {/* Position radial aura */}
                     <div
-                      className="absolute inset-0 opacity-35 pointer-events-none z-[1]"
-                      style={{ background: `radial-gradient(ellipse at 50% 70%, ${posColor}30 0%, transparent 65%)` }}
+                      className="absolute inset-0 opacity-25 pointer-events-none z-[1]"
+                      style={{ background: `radial-gradient(ellipse at 50% 60%, ${posColor}40 0%, transparent 70%)` }}
                     />
 
                     <img
                       src={`/fotos_jugadores/${player.Id}.webp`}
                       alt={player.Name}
                       loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover z-[2] transition-transform duration-300 ease group-hover:scale-[1.035]"
+                      className="absolute inset-0 w-full h-full object-cover z-[2] transition-transform duration-500 ease-out group-hover:scale-105"
                       style={{
-                        filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.6))',
                         objectPosition: 'top center',
+                        filter: 'drop-shadow(0 6px 10px rgba(0,0,0,0.5))'
                       }}
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = `https://placehold.co/160x150/111/333?text=${player.Name?.substring(0, 2) || '?'}`;
+                        e.target.src = `https://placehold.co/180x170/111722/e2e8f0?text=${player.Name?.substring(0, 2) || '?'}`;
                       }}
                     />
 
+                    {/* Dark gradient fade */}
                     <div
                       className="absolute bottom-0 left-0 right-0 z-[3] pointer-events-none"
-                      style={{ height: '35%', background: 'linear-gradient(to top, rgba(12, 12, 14, 0.7) 0%, transparent 100%)' }}
+                      style={{ height: '40%', background: 'linear-gradient(to top, #111722 0%, transparent 100%)' }}
                     />
 
-                    <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-1.5 px-2 py-1.5 pointer-events-none">
-                      <div
-                        className="flex items-center justify-center rounded-md px-1.5 py-0.5 flex-shrink-0"
-                        style={{ background: `${ovrColor}22`, border: `1.5px solid ${ovrColor}60`, backdropFilter: 'blur(6px)' }}
-                      >
-                        <span
-                          className="text-xl font-black leading-none"
-                          style={{ color: ovrColor, textShadow: '0 2px 8px rgba(0,0,0,0.8)', letterSpacing: 0 }}
+                    {/* Quick View Button on Hover */}
+                    <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 pointer-events-none">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00b4d8] text-[#030712] font-black text-xs shadow-lg transform translate-y-1 group-hover:translate-y-0 transition-transform">
+                        <Eye className="w-3.5 h-3.5" /> Ver Ficha
+                      </span>
+                    </div>
+
+                    {/* OVR + Flag + Position overlay strip */}
+                    <div className="absolute bottom-1.5 left-2 right-2 z-10 flex items-center justify-between pointer-events-none">
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className="flex items-center justify-center rounded-md px-1.5 py-0.5 border"
+                          style={{
+                            background: `${ovrColor}20`,
+                            borderColor: `${ovrColor}60`,
+                            boxShadow: `0 2px 6px ${ovrColor}30`
+                          }}
                         >
-                          {ovr}
-                        </span>
+                          <span
+                            className="text-base sm:text-lg font-black leading-none"
+                            style={{ color: ovrColor }}
+                          >
+                            {ovr}
+                          </span>
+                        </div>
+
+                        {flagUrl && (
+                          <img
+                            src={flagUrl}
+                            alt=""
+                            className="w-4 h-3 object-cover rounded-[2px] border border-white/20 shadow"
+                            onError={e => { e.target.style.display = 'none'; }}
+                          />
+                        )}
                       </div>
 
-                      <img
-                        src={flagUrl}
-                        alt=""
-                        className="w-[18px] h-[13px] object-cover rounded-[2px] flex-shrink-0"
-                        style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.6)' }}
-                        onError={e => { e.target.style.display = 'none'; }}
-                      />
-
                       <span
-                        className="text-[8px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-[5px] flex-shrink-0 ml-auto text-white"
-                        style={{ background: posColor, boxShadow: `0 2px 8px ${posColor}50` }}
+                        className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-white shadow-sm"
+                        style={{ background: posColor }}
                       >
                         {player.POS_NOMBRE}
                       </span>
                     </div>
                   </div>
 
-                  <div className="px-2.5 py-2 bg-black/35">
-                    <p className="text-[11px] font-black text-white uppercase tracking-wide truncate leading-tight">
-                      {player.Name}
-                    </p>
-                    {player._reason && (
-                      <span className="mt-1 inline-flex items-center gap-1 max-w-full text-[9px] font-bold text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded shadow-[inset_0_0_0_1px_rgba(59,130,246,0.10)]">
-                        <Target className="w-2.5 h-2.5 flex-shrink-0" />
-                        <span className="truncate">{player._reason}</span>
-                      </span>
-                    )}
-                    {player._valueNote && (
-                      <span className="block mt-1 text-[9px] font-bold text-gray-500 truncate">
-                        {player._valueNote}
-                      </span>
-                    )}
+                  {/* Player Meta Details */}
+                  <div className="p-2.5 flex-1 flex flex-col justify-between bg-[#111722]">
+                    <div>
+                      <p className="text-xs font-black text-white uppercase tracking-wide truncate group-hover:text-[#00b4d8] transition-colors">
+                        {player.Name}
+                      </p>
+
+                      {player._reason && (
+                        <div className="mt-1.5 inline-flex items-center gap-1 text-[9px] font-bold text-slate-300 bg-white/[0.05] border border-white/[0.08] px-1.5 py-0.5 rounded max-w-full">
+                          <Target className="w-2.5 h-2.5 text-[#00b4d8] shrink-0" />
+                          <span className="truncate">{player._reason}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-2 pt-1.5 border-t border-white/[0.05] flex items-center justify-between text-[9px] text-slate-400 font-semibold">
+                      <span>Impacto</span>
+                      <span className="text-slate-300 font-bold">{player._valueNote || '< 5%'}</span>
+                    </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 });

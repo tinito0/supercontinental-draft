@@ -32,6 +32,32 @@ MAPEO_POS_ID = {
     6: 'MI', 7: 'MD', 8: 'MO', 9: 'EI', 10: 'ED', 11: 'SD', 12: 'DC'
 }
 
+# Mapeo del ID numérico de la columna 'PlayingStyle' a un nombre legible.
+MAPEO_PLAYING_STYLE = {
+    0: 'Ninguno',
+    1: 'Cazagoles',
+    2: 'Señuelo',
+    3: 'Hombre de Área',
+    4: 'Extremo Prolífico',
+    5: 'El Diez Clásico',
+    6: 'Jugador de Huecos',
+    7: 'Omnipresente',
+    8: 'El Protector',
+    9: 'El Destructor',
+    10: 'Atacante Extra',
+    11: 'Lateral Ofensivo',
+    12: 'Lateral Defensivo',
+    13: 'Referente',
+    14: 'Creador de Jugadas',
+    15: 'Creación',
+    16: 'Portero Ofensivo',
+    17: 'Portero Defensivo',
+    18: 'Extremo Móvil',
+    19: 'Especialista en Centros',
+    20: 'Organizador',
+    21: 'Lateral Finalizador',
+}
+
 # Mapeo de Posición a Grupo General
 MAPEO_GRUPOS = {
     'PT': 'Arqueros',
@@ -370,6 +396,7 @@ def procesar_datos_para_json(lista_exclusion_txt):
     # -------------------------------------------------------------------------
     df['OVR_CALCULADO'] = pd.to_numeric(df['OverallStats'], errors='coerce').fillna(0).astype(int)
     df['POS_NOMBRE']    = df['POS'].map(MAPEO_POS_ID).fillna('Desconocido')
+    df['PlayingStyle']  = pd.to_numeric(df['PlayingStyle'], errors='coerce').fillna(0).astype(int).map(MAPEO_PLAYING_STYLE).fillna('Ninguno')
     df['Grupo']         = df['POS_NOMBRE'].map(MAPEO_GRUPOS).fillna('Otro')
     df['Foot']          = df['Foot'].apply(lambda x: 'Izquierdo' if x else 'Derecho')
     df['WeakFootUsage'] = pd.to_numeric(df['WeakFootUsage'], errors='coerce').fillna(1).astype(int)
@@ -491,6 +518,13 @@ def main():
             with open(SALIDA_JUGADORES_JSON, 'w', encoding='utf-8') as f:
                 json.dump(datos_jugadores, f, ensure_ascii=False)
             print(f"\n¡Éxito! '{SALIDA_JUGADORES_JSON}' generado con {len(datos_jugadores)} jugadores.")
+
+            # Copiar o guardar también directamente en public/
+            ruta_public = os.path.join(os.path.dirname(__file__), '..', 'public', SALIDA_JUGADORES_JSON)
+            if os.path.exists(os.path.dirname(ruta_public)):
+                with open(ruta_public, 'w', encoding='utf-8') as f_pub:
+                    json.dump(datos_jugadores, f_pub, ensure_ascii=False)
+                print(f"¡Éxito! Guardado en '{ruta_public}'.")
         except Exception as e:
             print(f"\nError al guardar '{SALIDA_JUGADORES_JSON}': {e}")
 
