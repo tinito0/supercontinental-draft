@@ -6,7 +6,7 @@ export const StatusAlert = memo(function StatusAlert({ type, message, onClose })
   const Icon = type === 'success' ? CheckCircle : AlertTriangle;
 
   return (
-    <div className={`fixed bottom-4 right-4 p-4 rounded-lg text-white font-semibold shadow-2xl transition-opacity duration-300 flex items-center z-50 ${bgColor}`}>
+    <div className={`fixed bottom-4 right-4 p-4 rounded-lg text-white font-semibold shadow-2xl transition-opacity duration-300 flex items-center z-[120] ${bgColor}`}>
       <Icon className="w-5 h-5 mr-2" />
       {message}
       <button onClick={onClose} className="ml-4 p-1 rounded-full hover:bg-white/20">

@@ -14,8 +14,8 @@ export const TOURNAMENT_THEME = {
   slateConnector: 'rgba(71,85,105,0.5)',
 };
 
-export const tournamentShellClass = 'bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white overflow-hidden font-sans relative transition-colors';
-export const tournamentBackdropClass = 'absolute inset-0 bg-slate-100/50 dark:bg-[#020617] pointer-events-none';
+export const tournamentShellClass = 'bg-[#06080d] text-white overflow-hidden font-sans relative transition-colors';
+export const tournamentBackdropClass = 'absolute inset-0 bg-[#06080d] pointer-events-none';
 
 export const TournamentSectionTitle = memo(function TournamentSectionTitle({ title, subtitle, compact = false }) {
   return (
@@ -32,20 +32,29 @@ export const TournamentSectionTitle = memo(function TournamentSectionTitle({ tit
   );
 });
 
-export const TournamentTabButton = memo(function TournamentTabButton({ id, tabId, label, icon: Icon, activeTab, onClick }) {
+export const TournamentTabButton = memo(function TournamentTabButton({ id, tabId, label, icon: Icon, badge, activeTab, onClick, endIcon: EndIcon }) {
   const targetId = id || tabId;
   const isActive = activeTab === targetId;
   return (
     <button
       type="button"
       onClick={() => onClick(targetId)}
-      className={`flex items-center px-3 sm:px-4 py-2 font-semibold text-xs sm:text-sm transition-all rounded-lg whitespace-nowrap cursor-pointer
+      className={`relative flex items-center px-3 sm:px-4 py-2 font-semibold text-xs sm:text-sm transition-all rounded-lg whitespace-nowrap cursor-pointer
         ${isActive
-          ? 'bg-sky-600 dark:bg-sky-600 text-white shadow-sm'
-          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+          ? 'bg-[#00b4d8] text-slate-950 font-bold shadow-md'
+          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
         }`}
     >
-      {Icon && <Icon className="w-4 h-4 mr-1.5" />}{label}
+      {Icon && <Icon className={`w-4 h-4 mr-1.5 shrink-0 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />}
+      <span>{label}</span>
+      {EndIcon && <EndIcon className={`w-3.5 h-3.5 ml-1.5 shrink-0 ${isActive ? 'text-slate-950' : 'text-amber-400'}`} />}
+      {typeof badge === 'number' && badge > 0 && (
+        <span className={`ml-2 px-1.5 py-0.2 rounded-full text-[10px] font-black tabular-nums shrink-0 ${
+          isActive ? 'bg-slate-950 text-[#00b4d8]' : 'bg-[#00b4d8] text-slate-950'
+        }`}>
+          {badge}
+        </span>
+      )}
     </button>
   );
 });

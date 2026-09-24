@@ -234,7 +234,7 @@ export const SearchBar = memo(function SearchBar({
 
       <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white dark:bg-[#0c1017] p-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
         <div data-app-tour="sort" className="relative w-full lg:w-auto">
-          <select value={currentSortValue} onChange={handleSortChange} className={`appearance-none w-full lg:w-64 min-h-10 px-4 py-2 pl-10 rounded-lg transition outline-none focus:border-sky-500 dark:focus:border-[#00b4d8] text-sm font-semibold cursor-pointer ${softControl}`}>
+          <select value={currentSortValue} onChange={handleSortChange} className={`appearance-none w-full lg:w-64 min-h-10 px-4 py-2 pl-10 rounded-lg transition outline-none focus:border-sky-500 dark:focus:border-[#00b4d8] text-base sm:text-sm font-semibold cursor-pointer ${softControl}`}>
             <option value="ovr-desc">Media (Mayor a Menor)</option>
             <option value="ovr-asc">Media (Menor a Mayor)</option>
             <option value="precio-desc">Precio (Mayor a Menor)</option>

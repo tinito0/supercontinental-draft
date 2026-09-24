@@ -1,30 +1,19 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="dark">
 
 <head>
   <!-- html2canvas loaded dynamically via npm import in FormationModal.jsx -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#1e293b">
+  <meta name="theme-color" content="#06080d">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="/android-chrome-512x512.png" />
 
   <meta name="description" content="SCL Draft 2026 - Plataforma de gestión de fichajes y transferencias del Supercontinental Draft. Control de plantillas, presupuesto y torneo en tiempo real.">
   <title>SCL DRAFT 2026 - v2.5.0</title>
   <script>
-    (function () {
-      try {
-        var theme = localStorage.getItem('scl_theme');
-        if (theme === 'light') {
-          document.documentElement.classList.remove('dark');
-        } else {
-          document.documentElement.classList.add('dark');
-        }
-      } catch (e) {
-        document.documentElement.classList.add('dark');
-      }
-    })();
+    document.documentElement.classList.add('dark');
   </script>
 </head>
 

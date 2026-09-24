@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo, useRef, Suspense } from 'react';
-import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID } from './utils/constants.js';
+import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID, FRANCHISE_MIN_AGE, FRANCHISE_MIN_OVR, FRANCHISE_MAX_OVR } from './utils/constants.js';
 import { formatPriceShort, normalizarString, processPlayersData, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
 import { PlayerCard } from './components/PlayerCard.jsx';
 import { RecommendationsAccordion } from './components/RecommendationsAccordion.jsx';
@@ -19,6 +19,7 @@ import { BroadcastOverlay, DEFAULT_BROADCAST_OVERLAY } from './components/Broadc
 import { normalizeTournamentView } from './utils/tournamentViews.js';
 import { getMentionedTeamIds, hasTransferIntent } from './utils/managerChatUtils.js';
 import { makePrefetchable, schedulePrefetchOnIdle } from './utils/prefetch.js';
+import { OverviewTab } from './components/OverviewTab.jsx';
 
 // Lazy loading modals and heavy screens
 const LoginScreen = React.lazy(() => import('./screens/LoginScreen.jsx').then(m => ({ default: m.LoginScreen })));
@@ -281,22 +282,23 @@ const MiniPlayerCard = memo(function MiniPlayerCard({ player, countryMap, onRemo
 
 // ── Route mapping constants (module scope, never recreated) ──
 const pathToTab = {
+  '/': 'Overview',
+  '/overview': 'Overview',
   '/marketplace': 'Marketplace',
   '/my-team': 'My Team',
   '/scouting': 'Scouting',
   '/other-teams': 'Other Teams',
   '/financials': 'Financials',
-  '/torneo': 'Torneo',
   '/admin': 'Admin',
   '/tactics': 'My Team',
 };
 const tabToPath = {
+  'Overview': '/overview',
   'Marketplace': '/marketplace',
   'My Team': '/my-team',
   'Scouting': '/scouting',
   'Other Teams': '/other-teams',
   'Financials': '/financials',
-  'Torneo': '/torneo',
   'Admin': '/admin',
 };
 
@@ -310,11 +312,11 @@ function App() {
   const currentTabPath = location.pathname.startsWith('/modal/')
     ? (location.state?.from || (modalRoute === 'formation' ? '/my-team' : '/marketplace'))
     : location.pathname;
-  const activeTab = pathToTab[currentTabPath] ?? 'Marketplace';
+  const activeTab = pathToTab[currentTabPath] ?? 'Overview';
 
   // setActiveTab is a drop-in replacement that navigates to route
   // tabToPath at module scope — see above App()
-  const setActiveTab = (tab) => navigate(tabToPath[tab] ?? '/marketplace');
+  const setActiveTab = (tab) => navigate(tabToPath[tab] ?? '/overview');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     // Default closed on mobile, respect localStorage on desktop
@@ -1064,7 +1066,7 @@ function App() {
 
     players = players.filter(p => {
       if (marketStatus.status === 'FranchiseMarket') {
-        const isFranchiseEligible = p.Age >= 31 && p.OVR_CALCULADO >= 83 && p.OVR_CALCULADO <= 89;
+        const isFranchiseEligible = p.Age >= FRANCHISE_MIN_AGE && p.OVR_CALCULADO >= FRANCHISE_MIN_OVR && p.OVR_CALCULADO <= FRANCHISE_MAX_OVR;
         if (!isFranchiseEligible) return false;
       }
 
@@ -1122,8 +1124,8 @@ function App() {
     return sorted;
   }, [allPlayers, filters, sortConfig, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName]);
 
-  const pageSize = isMobileViewport ? 24 : 64;
-  const [displayCount, setDisplayCount] = useState(64);
+  const pageSize = isMobileViewport ? 16 : 64;
+  const [displayCount, setDisplayCount] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 768 ? 16 : 48));
 
   // Reset displayCount on filter, search or sort change
   useEffect(() => {
@@ -1137,7 +1139,7 @@ function App() {
   const handleLoadMore = useCallback(() => {
     setDisplayCount(prev => {
       if (prev >= filteredPlayers.length) return prev;
-      return Math.min(prev + (isMobileViewport ? 24 : 64), filteredPlayers.length);
+      return Math.min(prev + (isMobileViewport ? 16 : 64), filteredPlayers.length);
     });
   }, [isMobileViewport, filteredPlayers.length]);
 
@@ -1147,13 +1149,13 @@ function App() {
     if (!isMobileViewport || visiblePlayers.length >= filteredPlayers.length) return;
     const sentinel = mobileSentinelRef.current;
 
-    // Usar IntersectionObserver nativo de alta eficiencia
+    // Usar IntersectionObserver nativo de alta eficiencia con umbral suave
     if (sentinel && typeof IntersectionObserver !== 'undefined') {
       const observer = new IntersectionObserver((entries) => {
         if (entries[0]?.isIntersecting) {
           handleLoadMore();
         }
-      }, { rootMargin: '400px' });
+      }, { rootMargin: '120px' });
       observer.observe(sentinel);
       return () => observer.disconnect();
     }
@@ -1616,6 +1618,17 @@ function App() {
       showStatusMessage('error', 'Solo se permiten fichajes de Jugadores Franquicia en este momento.');
       return false;
     }
+    if (isFranchise) {
+      if (userProfile.franchisePlayerUsed) {
+        showStatusMessage('error', 'Ya has utilizado tu ficha de Jugador Franquicia esta temporada.');
+        return false;
+      }
+      const isFranchiseEligible = player.Age >= FRANCHISE_MIN_AGE && player.OVR_CALCULADO >= FRANCHISE_MIN_OVR && player.OVR_CALCULADO <= FRANCHISE_MAX_OVR;
+      if (!isFranchiseEligible) {
+        showStatusMessage('error', `El jugador no cumple los requisitos de Jugador Franquicia (Edad ≥ ${FRANCHISE_MIN_AGE} y OVR ${FRANCHISE_MIN_OVR}-${FRANCHISE_MAX_OVR}).`);
+        return false;
+      }
+    }
 
     const playerCost = isFranchise ? 0 : player.Precio * 1000000;
 
@@ -1923,7 +1936,7 @@ function App() {
         return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando...</div>;
       const scorers = tournamentData.topScorers || [];
       return (
-        <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-[#0a0a0a]'} p-8 font-sans`}>
+        <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-[#06080d]'} p-8 font-sans`}>
           <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase mb-8 text-center drop-shadow-2xl">MÁXIMOS GOLEADORES</h2>
           <div className="max-w-[800px] mx-auto space-y-4">
             {scorers.map((p, idx) => (
@@ -1951,7 +1964,7 @@ function App() {
       return <div className="min-h-screen bg-black flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando SCL Data...</div>;
 
     return (
-      <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-[#0a0a0a]'}`}>
+      <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-[#06080d]'}`}>
         <Suspense fallback={null}>
           <TournamentModal
             isVisible={true}
@@ -1960,6 +1973,7 @@ function App() {
             isAdmin={false}
             onUpdateTournament={() => { }}
             allTeams={allTeams}
+            allPlayers={allPlayers}
             initialTab={effectiveTab}
             userTeamName={userProfile?.teamName}
           />
@@ -1979,7 +1993,7 @@ function App() {
         return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
 
       return (
-        <div className="min-h-screen bg-[#0a0a0a] text-gray-200">
+        <div className="min-h-screen bg-[#06080d] text-gray-200">
           <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
             <TournamentModal
               isVisible={true}
@@ -1988,6 +2002,7 @@ function App() {
               isAdmin={false}
               onUpdateTournament={handleUpdateTournament}
               allTeams={allTeams}
+              allPlayers={allPlayers}
               initialTab={initialTab}
               isPage={true}
               userTeamName={userProfile?.teamName}
@@ -2002,10 +2017,10 @@ function App() {
     }
 
     if (!tournamentData)
-      return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
+      return <div className="min-h-screen bg-[#06080d] flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
 
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-gray-200">
+      <div className="min-h-screen bg-[#06080d] text-gray-200">
         <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
           <TournamentModal
             isVisible={true}
@@ -2020,6 +2035,7 @@ function App() {
             isAdmin={isAdmin}
             onUpdateTournament={handleUpdateTournament}
             allTeams={allTeams}
+            allPlayers={allPlayers}
             initialTab={initialTab}
             isPage={true}
             userTeamName={userProfile?.teamName}
@@ -2074,6 +2090,7 @@ function App() {
               isAdmin={false}
               onUpdateTournament={() => { }}
               allTeams={allTeams}
+              allPlayers={allPlayers}
               initialTab={tournamentOverlayTab}
               userTeamName={userProfile?.teamName}
             />
@@ -2168,7 +2185,7 @@ function App() {
 
   return (
     <>
-      <div className="flex h-[100dvh] w-full bg-[#0a0a0a] text-gray-200 overflow-hidden font-sans">
+      <div className="flex h-[100dvh] w-full bg-[#06080d] text-gray-200 overflow-hidden font-sans">
 
         {/* SIDEBAR — ancho 0 cuando cerrada, 224px cuando abierta */}
         <LeftSidebar
@@ -2184,7 +2201,7 @@ function App() {
           initialBudget={userProfile?.budget}
         />
 
-        <div className="flex-1 flex flex-col overflow-hidden relative bg-slate-50 dark:bg-[#06080d] transition-colors">
+        <div className="flex-1 flex flex-col overflow-hidden relative bg-[#06080d] transition-colors">
           {/* TOP HEADER con hamburger */}
           <TopHeader
             userProfile={userProfile}
@@ -2212,7 +2229,21 @@ function App() {
           <div className="flex-1 overflow-hidden w-full flex relative">
 
             {/* CENTER VIEW - MARKETPLACE MULTIPLEXING */}
-            <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8 flex flex-col bg-slate-50 dark:bg-[#06080d] transition-colors" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
+            <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8 flex flex-col bg-[#06080d] transition-colors" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
+              {/* VISTA RESUMEN / INICIO (SOFASCORE STYLE) */}
+              {activeTab === 'Overview' && (
+                <OverviewTab
+                  userProfile={userProfile}
+                  remainingBudget={remainingBudget}
+                  ownedCart={ownedCart}
+                  tournamentData={tournamentData}
+                  allTeams={allTeams}
+                  setActiveTab={setActiveTab}
+                  onPlayerClick={(playerId) => setSelectedPlayerId(playerId)}
+                  signingToasts={signingToasts}
+                />
+              )}
+
               {/* Render content based on active tab, for now Marketplace is the main functional view */}
               <div data-app-tour="marketplace" className={activeTab === 'Marketplace' ? (isMobileViewport ? 'flex flex-col' : 'flex-1 min-h-0 flex flex-col') : 'hidden'}>
 
@@ -2326,20 +2357,21 @@ function App() {
                         const lockedTeam = isLocked && allTeams ? allTeams[playerLocks[player.Id]?.lockedBy] : null;
 
                         return viewMode === 'list' ? (
-                          <PlayerListItem
-                            key={player.Id}
-                            player={player}
-                            countryMap={countryMap}
-                            onSelectPlayer={setSelectedPlayerId}
-                            isInMyCart={isInMyCart}
-                            isLockedByOther={isLocked}
-                            lockedTeamName={isLocked ? playerLocks[player.Id]?.teamName : null}
-                            lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
-                            isWishlisted={wishlistSet.has(player.Id)}
-                            onToggleWishlist={toggleWishlist}
-                            onCompare={handleToggleCompare}
-                            isComparing={comparingIdsSet.has(player.Id)}
-                          />
+                          <div key={player.Id} className="player-list-item-shell">
+                            <PlayerListItem
+                              player={player}
+                              countryMap={countryMap}
+                              onSelectPlayer={setSelectedPlayerId}
+                              isInMyCart={isInMyCart}
+                              isLockedByOther={isLocked}
+                              lockedTeamName={isLocked ? playerLocks[player.Id]?.teamName : null}
+                              lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
+                              isWishlisted={wishlistSet.has(player.Id)}
+                              onToggleWishlist={toggleWishlist}
+                              onCompare={handleToggleCompare}
+                              isComparing={comparingIdsSet.has(player.Id)}
+                            />
+                          </div>
                         ) : (
                           <div key={player.Id} className="market-player-card-shell">
                             <PlayerCard
@@ -2412,18 +2444,6 @@ function App() {
 
               {/* VISTAS MODULARES EN LUGAR DE PLACEHOLDERS */}
               <Suspense fallback={null}>
-                {activeTab === 'Torneo' && isAdmin && (
-                  <TournamentModal
-                    isVisible={true}
-                    onClose={() => setActiveTab('Marketplace')}
-                    tournamentData={tournamentData}
-                    isAdmin={isAdmin}
-                    onUpdateTournament={handleUpdateTournament}
-                    allTeams={allTeams}
-                    isPage={true}
-                    userTeamName={userProfile?.teamName}
-                  />
-                )}
                 {activeTab === 'My Team' && (
                   <FormationModal
                     isVisible={true}
@@ -2733,6 +2753,7 @@ function App() {
           isAdmin={isAdmin}
           onUpdateTournament={handleUpdateTournament}
           allTeams={allTeams}
+          allPlayers={allPlayers}
           userTeamName={userProfile?.teamName}
         />
       )}
@@ -2842,7 +2863,7 @@ function App() {
       )}
 
       {/* SIGNING TOASTS — live transfer activity */}
-      <div className="fixed bottom-6 right-6 z-[80] flex flex-col gap-3 pointer-events-none" style={{ maxWidth: '380px' }}>
+      <div className="fixed bottom-6 right-6 z-[120] flex flex-col gap-3 pointer-events-none" style={{ maxWidth: '380px' }}>
         {signingToasts.map(toast => (
           <div
             key={toast.toastId}

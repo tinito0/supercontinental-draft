@@ -87,30 +87,84 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
     const colorClassA = getStatAndOvrColorClass(numA);
     const colorClassB = getStatAndOvrColorClass(numB);
 
+    let pctA = 50;
+    let pctB = 50;
+    if (isWeakFoot) {
+      pctA = Math.min(100, Math.max(12, (numA / 4) * 100));
+      pctB = Math.min(100, Math.max(12, (numB / 4) * 100));
+    } else if (label === 'Edad') {
+      pctA = Math.min(100, Math.max(15, ((numA - 15) / 25) * 100));
+      pctB = Math.min(100, Math.max(15, ((numB - 15) / 25) * 100));
+    } else if (label === 'Altura') {
+      pctA = Math.min(100, Math.max(15, ((numA - 150) / 60) * 100));
+      pctB = Math.min(100, Math.max(15, ((numB - 150) / 60) * 100));
+    } else if (label === 'Peso') {
+      pctA = Math.min(100, Math.max(15, ((numA - 50) / 55) * 100));
+      pctB = Math.min(100, Math.max(15, ((numB - 50) / 55) * 100));
+    } else {
+      pctA = Math.min(100, Math.max(6, numA));
+      pctB = Math.min(100, Math.max(6, numB));
+    }
+
     return (
-      <div className="flex items-center justify-between py-1.5 border-b border-white/[0.03] last:border-0">
-        {/* Pill Jugador A */}
-        <span
-          className={`stat-value ${colorClassA} px-2.5 py-0.5 rounded-md font-mono font-bold text-sm min-w-[2.5rem] text-center tabular-nums shrink-0 inline-flex items-center justify-center ${
-            isAWin ? 'ring-1 ring-cyan-400/60' : 'opacity-75'
-          }`}
-        >
-          {numA}
-        </span>
+      <div className="py-2 px-1 border-b border-white/[0.04] last:border-0 flex flex-col gap-1.5 transition-colors hover:bg-white/[0.02] rounded-lg">
+        {/* Fila superior: Valores numéricos y nombre */}
+        <div className="flex items-center justify-between text-xs sm:text-sm">
+          {/* Valor A */}
+          <div className="flex items-center gap-1.5 min-w-[3.2rem]">
+            <span
+              className={`stat-value ${colorClassA} px-2 py-0.5 rounded-md font-mono font-bold text-xs sm:text-sm tabular-nums min-w-[2.2rem] text-center inline-flex items-center justify-center transition-all ${
+                isAWin ? 'ring-2 ring-cyan-400/80 shadow-[0_0_8px_rgba(0,180,216,0.35)] scale-105' : 'opacity-70'
+              }`}
+            >
+              {numA}
+            </span>
+            {isAWin && <span className="text-[10px] text-cyan-400 font-black hidden sm:inline">▲</span>}
+          </div>
 
-        {/* Nombre de la estadística */}
-        <span className="flex-1 text-center text-sm text-slate-300 truncate px-2">
-          {label}
-        </span>
+          {/* Nombre de la estadística */}
+          <span className="flex-1 text-center font-semibold text-slate-300 truncate px-2 text-xs sm:text-sm">
+            {label}
+          </span>
 
-        {/* Pill Jugador B */}
-        <span
-          className={`stat-value ${colorClassB} px-2.5 py-0.5 rounded-md font-mono font-bold text-sm min-w-[2.5rem] text-center tabular-nums shrink-0 inline-flex items-center justify-center ${
-            isBWin ? 'ring-1 ring-orange-400/60' : 'opacity-75'
-          }`}
-        >
-          {numB}
-        </span>
+          {/* Valor B */}
+          <div className="flex items-center justify-end gap-1.5 min-w-[3.2rem]">
+            {isBWin && <span className="text-[10px] text-orange-400 font-black hidden sm:inline">▲</span>}
+            <span
+              className={`stat-value ${colorClassB} px-2 py-0.5 rounded-md font-mono font-bold text-xs sm:text-sm tabular-nums min-w-[2.2rem] text-center inline-flex items-center justify-center transition-all ${
+                isBWin ? 'ring-2 ring-orange-400/80 shadow-[0_0_8px_rgba(251,146,60,0.35)] scale-105' : 'opacity-70'
+              }`}
+            >
+              {numB}
+            </span>
+          </div>
+        </div>
+
+        {/* Barras de magnitud horizontales estilo SofaScore */}
+        <div className="flex items-center gap-1.5 h-1.5 sm:h-2 w-full px-1">
+          {/* Barra Jugador A (crece de derecha a izquierda hacia el centro) */}
+          <div className="flex-1 bg-white/[0.07] rounded-full h-full overflow-hidden flex justify-end">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${colorClassA} ${
+                isAWin ? 'opacity-100 shadow-[0_0_6px_rgba(0,180,216,0.3)]' : 'opacity-40'
+              }`}
+              style={{ width: `${pctA}%` }}
+            />
+          </div>
+
+          {/* Ancla central */}
+          <div className="w-1 h-2 bg-white/20 rounded-full shrink-0" />
+
+          {/* Barra Jugador B (crece de izquierda a derecha desde el centro) */}
+          <div className="flex-1 bg-white/[0.07] rounded-full h-full overflow-hidden flex justify-start">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${colorClassB} ${
+                isBWin ? 'opacity-100 shadow-[0_0_6px_rgba(251,146,60,0.3)]' : 'opacity-40'
+              }`}
+              style={{ width: `${pctB}%` }}
+            />
+          </div>
+        </div>
       </div>
     );
   };
@@ -118,11 +172,11 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
   const ovrDiff = (playerA.OVR_CALCULADO || 0) - (playerB.OVR_CALCULADO || 0);
 
   return (
-    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-[60] p-0 sm:p-4" onClick={onClose}>
-      <div className="bg-slate-900 sm:rounded-xl shadow-xl w-full max-w-6xl h-[100dvh] sm:max-h-[92vh] flex flex-col border-0 sm:border border-slate-800 overflow-hidden relative" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-[#0c1017] sm:rounded-xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:max-h-[92vh] flex flex-col border-0 sm:border border-white/[0.08] overflow-hidden relative" onClick={e => e.stopPropagation()}>
 
         {/* HEADER DUELO STICKY */}
-        <div className="sticky top-0 z-30 bg-slate-900 p-3 sm:p-4 pr-12 sm:pr-4 border-b border-slate-800 flex justify-between items-center shrink-0">
+        <div className="sticky top-0 z-30 bg-[#0c1017] p-3 sm:p-4 pr-12 sm:pr-4 border-b border-white/[0.08] flex justify-between items-center shrink-0">
 
           {/* JUGADOR A */}
           <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">

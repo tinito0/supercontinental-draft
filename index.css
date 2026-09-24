@@ -23,19 +23,7 @@ textarea,
   touch-action: manipulation;
 }
 
-:root {
-  --app-bg: #f8fafc;
-  --app-surface: #ffffff;
-  --app-surface-elevated: #f1f5f9;
-  --app-border: #e2e8f0;
-  --app-border-hover: #cbd5e1;
-  --app-accent: #0284c7;
-  --app-accent-hover: #0369a1;
-  --app-text-primary: #0f172a;
-  --app-text-secondary: #475569;
-  --app-text-muted: #64748b;
-}
-
+:root,
 .dark {
   --app-bg: #06080d;
   --app-surface: #0c1017;
@@ -47,6 +35,7 @@ textarea,
   --app-text-primary: #f8fafc;
   --app-text-secondary: #94a3b8;
   --app-text-muted: #64748b;
+  color-scheme: dark;
 }
 
 body {

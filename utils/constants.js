@@ -389,5 +389,23 @@ export const DEFAULT_TACTICS = {
   pressuring: 0,         // 0: Conservador, 1: Agresivo
   defensiveLine: 8,      // Slider 1-10
   compactness: 2,        // Slider 1-10
-  numbersInDefense: 0    // 0: Pocos, 1: Medio, 2: Muchos
+  numbersInDefense: 0    // Pocos, 1: Medio, 2: Muchos
 };
+
+export const Z_INDEX = {
+  DROPDOWN: 20,
+  STICKY: 30,
+  DRAWER: 40,
+  MODAL: 50,
+  MODAL_NESTED: 60,
+  ALERT: 90,
+  CONFIRM: 100,
+  TOAST: 120,
+  LIGHTBOX: 200,
+};
+
+export const FRANCHISE_MIN_AGE = 30;
+export const FRANCHISE_MIN_OVR = 82;
+export const FRANCHISE_MAX_OVR = 89;
+
+

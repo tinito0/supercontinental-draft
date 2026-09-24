@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
-import { Bell, Menu, MessageSquareText, TrendingUp, Sun, Moon } from 'lucide-react';
+import { Bell, Menu, MessageSquareText, TrendingUp } from 'lucide-react';
 import { DEFAULT_LOGO } from '../utils/constants.js';
-import { useTheme } from '../hooks/useTheme.js';
 import { formatPriceShort } from '../utils/helpers.js';
 
 export const TopHeader = memo(function TopHeader({
@@ -19,8 +18,6 @@ export const TopHeader = memo(function TopHeader({
   isSidebarOpen,
   onToggleSidebar,
 }) {
-  const { isDark, toggleTheme } = useTheme();
-
   const prefetchHandlers = (handler) => ({
     onPointerEnter: handler,
     onFocus: handler,
@@ -28,14 +25,13 @@ export const TopHeader = memo(function TopHeader({
   });
 
   return (
-    <header data-app-tour="topbar" className="flex items-center py-2.5 sm:py-3 px-3 sm:px-4 bg-white dark:bg-[#06080d] border-b border-slate-200 dark:border-white/[0.07] z-40 shrink-0 gap-2 sm:gap-4 transition-colors"
-    >
+    <header data-app-tour="topbar" className="flex items-center py-2.5 sm:py-3 px-3 sm:px-4 bg-[#06080d] border-b border-white/[0.07] z-40 shrink-0 gap-2 sm:gap-4 transition-colors">
       {/* ─── Hamburger toggle ─── */}
       <button
         data-app-tour="menu"
         onClick={onToggleSidebar}
-        className="flex items-center justify-center min-w-10 min-h-10 sm:min-w-12 sm:min-h-12 rounded-lg text-slate-600 dark:text-slate-400
-          hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all flex-shrink-0 cursor-pointer"
+        className="flex items-center justify-center min-w-10 min-h-10 sm:min-w-12 sm:min-h-12 rounded-lg text-slate-400
+          hover:text-white hover:bg-white/[0.06] transition-all flex-shrink-0 cursor-pointer"
         title={isSidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
       >
         <Menu className="w-5 h-5" />
@@ -43,7 +39,7 @@ export const TopHeader = memo(function TopHeader({
 
       {/* ─── Club identity ─── */}
       <div data-app-tour="team" className="flex items-center gap-2.5 sm:gap-3 group cursor-default flex-1 min-w-0">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 flex-shrink-0 shadow-sm">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 flex-shrink-0 shadow-sm">
           <img
             src={userProfile?.logoUrl || DEFAULT_LOGO}
             alt="Logo"
@@ -52,11 +48,11 @@ export const TopHeader = memo(function TopHeader({
           />
         </div>
         <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate
-            group-hover:text-sky-600 dark:group-hover:text-[#00b4d8] transition-colors">
+          <h1 className="text-sm sm:text-base font-bold text-white truncate
+            group-hover:text-[#00b4d8] transition-colors">
             {userProfile?.teamName || 'USUARIO ANÓNIMO'}
           </h1>
-          <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 dark:bg-cyan-500/10 border border-sky-500/20 dark:border-cyan-500/20 text-sky-600 dark:text-cyan-400">
+          <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
             v2.5.0
           </span>
         </div>
@@ -64,9 +60,9 @@ export const TopHeader = memo(function TopHeader({
 
       {/* ─── Budget pill (Desktop) ─── */}
       {typeof remainingBudget === 'number' && (
-        <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] text-xs">
-          <span className="text-slate-500 dark:text-slate-400 font-medium">Presupuesto:</span>
-          <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+        <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs">
+          <span className="text-slate-400 font-medium">Presupuesto:</span>
+          <span className="font-bold text-emerald-400 tabular-nums">
             {formatPriceShort(remainingBudget / 1000000)}
           </span>
         </div>
@@ -74,27 +70,12 @@ export const TopHeader = memo(function TopHeader({
 
       {/* ─── Right actions ─── */}
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-        {/* Theme switcher toggle */}
-        <button
-          onClick={toggleTheme}
-          className="flex items-center justify-center min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 rounded-lg text-slate-600 dark:text-slate-400
-            hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer"
-          title={isDark ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
-          aria-label={isDark ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
-        >
-          {isDark ? (
-            <Sun className="w-5 h-5 text-amber-400 hover:rotate-45 transition-transform" />
-          ) : (
-            <Moon className="w-5 h-5 text-slate-700 hover:-rotate-12 transition-transform" />
-          )}
-        </button>
-
         <button
           data-app-tour="chat"
           onClick={onChatClick}
           {...prefetchHandlers(onChatPrefetch)}
-          className="relative flex items-center justify-center min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 rounded-lg text-slate-600 dark:text-slate-400
-            hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer"
+          className="relative flex items-center justify-center min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 rounded-lg text-slate-400
+            hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
           title="Chat de Managers"
         >
           <MessageSquareText className="w-5 h-5" />
@@ -109,8 +90,8 @@ export const TopHeader = memo(function TopHeader({
           data-app-tour="transfers"
           onClick={onTransferFeedClick}
           {...prefetchHandlers(onTransferFeedPrefetch)}
-          className="flex items-center justify-center min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 rounded-lg text-slate-600 dark:text-slate-400
-            hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer"
+          className="flex items-center justify-center min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 rounded-lg text-slate-400
+            hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
           title="Centro de Traspasos y Mercado"
         >
           <TrendingUp className="w-5 h-5" />
@@ -120,8 +101,8 @@ export const TopHeader = memo(function TopHeader({
           data-app-tour="notifications"
           onClick={onNotificationClick}
           {...prefetchHandlers(onNotificationPrefetch)}
-          className="relative flex items-center justify-center min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 rounded-lg text-slate-600 dark:text-slate-400
-            hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer"
+          className="relative flex items-center justify-center min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 rounded-lg text-slate-400
+            hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
           title="Notificaciones"
         >
           <Bell className="w-5 h-5" />

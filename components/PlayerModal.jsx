@@ -8,7 +8,7 @@ import {
   formatPriceShort,
   getFlagUrl
 } from '../utils/helpers.js';
-import { STATS_JUGADOR_CAMPO, STATS_PORTERO, DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MAP } from '../utils/constants.js';
+import { STATS_JUGADOR_CAMPO, STATS_PORTERO, DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MAP, FRANCHISE_MIN_AGE, FRANCHISE_MIN_OVR, FRANCHISE_MAX_OVR } from '../utils/constants.js';
 import { TransferProposalModal } from './TransferProposalModal.jsx';
 
 const POSITIONS_LAYOUT = [
@@ -386,7 +386,7 @@ export const PlayerModal = memo(function PlayerModal({
     setShowProposalModal(false);
   }, [player?.Id]);
 
-  const meetsFranchiseCriteria = player && player.Age >= 31 && player.OVR_CALCULADO >= 83 && player.OVR_CALCULADO <= 89;
+  const meetsFranchiseCriteria = player && player.Age >= FRANCHISE_MIN_AGE && player.OVR_CALCULADO >= FRANCHISE_MIN_OVR && player.OVR_CALCULADO <= FRANCHISE_MAX_OVR;
   const isEligibleForFranchise = meetsFranchiseCriteria && !userProfile?.franchisePlayerUsed;
 
   const similarPlayers = useMemo(() => {
@@ -560,7 +560,7 @@ export const PlayerModal = memo(function PlayerModal({
               Mercado Restringido
             </button>
             <span className="text-xs text-slate-500 text-center max-w-[200px]">
-              El jugador no cumple los requisitos (Edad ≥ 31 y OVR 83-89)
+              El jugador no cumple los requisitos (Edad ≥ {FRANCHISE_MIN_AGE} y OVR {FRANCHISE_MIN_OVR}-{FRANCHISE_MAX_OVR})
             </span>
           </div>
         );
@@ -633,14 +633,14 @@ export const PlayerModal = memo(function PlayerModal({
           onClick={() => handleSign(false)}
           disabled={isSigning}
           className={`${commonClasses} ${isSigning ? 'bg-slate-700 text-slate-300 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
-          title={`Fichar por ${formatPriceShort(priceMillions)}`}
+          title={`FICHAR por ${formatPriceShort(priceMillions)}`}
         >
           {isSigning ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
           ) : (
             <DollarSign className="w-4 h-4 mr-1" />
           )}
-          <span>{isSigning ? 'Procesando...' : <>Fichar <span className="ml-1 font-semibold opacity-90 tabular-nums">{formatPriceShort(priceMillions)}</span></>}</span>
+          <span>{isSigning ? 'Procesando...' : <>FICHAR <span className="ml-1 font-semibold opacity-90 tabular-nums">{formatPriceShort(priceMillions)}</span></>}</span>
         </button>
       </div>
     );

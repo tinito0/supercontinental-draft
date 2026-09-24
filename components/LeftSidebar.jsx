@@ -1,12 +1,10 @@
-import React, { memo, useEffect } from 'react';
+import React, { memo } from 'react';
 import {
-  Trophy, ShoppingCart, ClipboardList, Search, Settings,
-  Crown, HelpCircle, MessageSquarePlus, LogOut, X, DollarSign, AlertTriangle, Users,
-  Sun, Moon
+  LayoutDashboard, Trophy, ShoppingCart, ClipboardList, Search,
+  Crown, HelpCircle, MessageSquarePlus, LogOut, X, DollarSign, AlertTriangle, Users
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { formatBudget } from '../utils/helpers.js';
-import { useTheme } from '../hooks/useTheme.js';
 
 export const LeftSidebar = memo(function LeftSidebar({
   activeTab,
@@ -22,9 +20,9 @@ export const LeftSidebar = memo(function LeftSidebar({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isDark, toggleTheme } = useTheme();
 
   const navItems = [
+    { id: 'Overview', label: 'Inicio', icon: LayoutDashboard },
     { id: 'Marketplace', label: 'Mercado', icon: ShoppingCart },
     { id: 'My Team', label: 'Plantilla', icon: ClipboardList },
     { id: 'Financials', label: 'Finanzas', icon: DollarSign },
@@ -64,13 +62,13 @@ export const LeftSidebar = memo(function LeftSidebar({
         style={{ '--sidebar-w': '224px' }}
       >
         {/* Inner wrapper — fixed width so content doesn't reflow during animation */}
-        <div style={{ width: 224 }} className="flex flex-col h-full bg-white dark:bg-[#080b11] text-slate-800 dark:text-white transition-colors">
+        <div style={{ width: 224 }} className="flex flex-col h-full bg-[#0c1017] border-r border-white/[0.07] text-white transition-colors">
 
           {/* ─── Branding ─── */}
           <div className="px-6 pt-6 pb-5 flex items-center justify-between">
             <div className="flex flex-col items-start">
               <img src="/logo.webp" alt="SCL Draft Logo" className="w-auto h-10 object-contain drop-shadow" />
-              <span className="text-[10px] text-sky-600 dark:text-[#00b4d8] font-bold uppercase tracking-[0.2em] mt-1">
+              <span className="text-[10px] text-[#00b4d8] font-bold uppercase tracking-[0.2em] mt-1">
                 SUPERCONTINENTAL
               </span>
             </div>
@@ -87,10 +85,17 @@ export const LeftSidebar = memo(function LeftSidebar({
           {/* ─── Nav ─── */}
           <nav className="flex-1 px-3 mt-2 space-y-0.5 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
             {navItems.map(({ id, label, icon: Icon }) => {
-              const pathMap = { 'Marketplace': '/marketplace', 'Torneo': '/torneo', 'My Team': '/my-team', 'Scouting': '/scouting', 'Other Teams': '/other-teams', 'Financials': '/financials' };
-              const isActive = id === 'Torneo'
-                ? location.pathname.startsWith('/torneo')
-                : location.pathname === (pathMap[id] || '/');
+              const pathMap = {
+                'Overview': '/overview',
+                'Marketplace': '/marketplace',
+                'My Team': '/my-team',
+                'Financials': '/financials',
+                'Scouting': '/scouting',
+                'Other Teams': '/other-teams',
+              };
+              const isActive = id === 'Overview'
+                ? (location.pathname === '/' || location.pathname === '/overview')
+                : location.pathname === pathMap[id];
               return (
                 <button
                   data-app-tour={`nav-${id.toLowerCase().replace(/\s+/g, '-')}`}
@@ -99,13 +104,13 @@ export const LeftSidebar = memo(function LeftSidebar({
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold
                     transition-all duration-150 group text-left cursor-pointer
                     ${isActive
-                      ? 'text-sky-600 dark:text-[#00b4d8]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.05]'
+                      ? 'text-[#00b4d8]'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
                     }`}
-                  style={isActive ? { background: isDark ? 'rgba(0,180,216,0.12)' : 'rgba(2,132,199,0.1)', borderLeft: `3px solid ${isDark ? '#00b4d8' : '#0284c7'}` } : { borderLeft: '3px solid transparent' }}
+                  style={isActive ? { background: 'rgba(0,180,216,0.12)', borderLeft: '3px solid #00b4d8' } : { borderLeft: '3px solid transparent' }}
                 >
                   <Icon className={`w-4 h-4 flex-shrink-0 transition-colors
-                    ${isActive ? (isDark ? 'text-[#00b4d8]' : 'text-sky-600') : 'text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white'}`} />
+                    ${isActive ? 'text-[#00b4d8]' : 'text-slate-500 group-hover:text-white'}`} />
                   <span className="text-sm tracking-wide whitespace-nowrap">{label}</span>
                 </button>
               );
@@ -167,23 +172,6 @@ export const LeftSidebar = memo(function LeftSidebar({
                 <span className="text-xs font-bold uppercase tracking-wider">Panel Admin</span>
               </button>
             )}
-
-            {/* Switch Theme Item */}
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition group cursor-pointer hover:bg-slate-100 dark:hover:bg-white/[0.04]"
-              title={isDark ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
-            >
-              <span className="w-0.5 h-3 rounded-full bg-transparent flex-shrink-0" />
-              {isDark ? (
-                <Sun className="w-4 h-4 flex-shrink-0 text-amber-400 transition-colors" />
-              ) : (
-                <Moon className="w-4 h-4 flex-shrink-0 text-slate-700 transition-colors" />
-              )}
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 whitespace-nowrap transition-colors">
-                {isDark ? 'Tema Claro' : 'Tema Oscuro'}
-              </span>
-            </button>
 
             {[
               { label: 'Sugerencias', icon: MessageSquarePlus, onClick: onSuggestionsClick, color: 'text-cyan-600 dark:text-cyan-400/80 group-hover:text-cyan-700 dark:group-hover:text-cyan-300' },

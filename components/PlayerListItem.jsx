@@ -36,6 +36,7 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
       onClick={() => onSelectPlayer?.(player.Id)}
       className={`
         group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer relative overflow-hidden bg-[#0c1017]
+        active:scale-[0.98] active:bg-[#111722]
         ${isLockedByOther ? 'opacity-50 grayscale-[0.5]' : isInMyCart ? 'bg-emerald-950/20 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]' : 'border border-white/[0.08] hover:border-white/[0.18] hover:bg-[#111722] hover:-translate-y-px'}`}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -44,7 +45,7 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
       <div className="flex items-center space-x-3 flex-1 min-w-0 relative z-10">
         <button
           onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(player.Id); }}
-          className={`p-1.5 rounded-full transition-all duration-200 shrink-0
+          className={`min-w-[42px] min-h-[42px] p-2 flex items-center justify-center rounded-full transition-all duration-200 shrink-0
             ${isWishlisted ? 'text-yellow-400 hover:text-yellow-300' : 'text-slate-400 hover:text-white'}`}
           title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}
         >
@@ -121,10 +122,10 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
 
         <button
           onClick={(e) => { e.stopPropagation(); onCompare && onCompare(player); }}
-          className={`p-2.5 rounded-xl transition-all duration-200 ${isComparing ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] scale-110 border border-blue-500' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700 hover:border-gray-500'}`}
+          className={`min-w-[42px] min-h-[42px] p-2 flex items-center justify-center rounded-xl transition-all duration-200 ${isComparing ? 'bg-[#00b4d8] text-slate-950 shadow-[0_0_15px_rgba(0,180,216,0.5)] scale-105 border border-[#00b4d8]' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700 hover:border-gray-500'}`}
           title="Comparar"
         >
-          <ArrowLeftRight size={16} strokeWidth={2.5} />
+          <ArrowLeftRight size={17} strokeWidth={2.5} />
         </button>
       </div>
     </div>
