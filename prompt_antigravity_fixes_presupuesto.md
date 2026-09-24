@@ -1,7 +1,7 @@
 # Prompt para Antigravity — 3 fixes de presupuesto (supercontinental-draft)
 
 ## Contexto
-Repo: `tinito0/supercontinental-draft`. Se detectaron 2 bugs de integridad de presupuesto y 1 recalibración de datos, encontrados diagnosticando un sobregasto real (SV Falke Düsseldorf: $485.18M gastado vs $472.17M asignado).
+Repo: `tinito0/supercontinental-draft`. Se detectaron 2 bugs de integridad de presupuesto.
 
 ---
 
@@ -33,7 +33,7 @@ Repo: `tinito0/supercontinental-draft`. Se detectaron 2 bugs de integridad de pr
 ---
 
 ## Verificación pedida
-Después de aplicar los 3 fixes, confirmar:
+Después de aplicar los 2 fixes, confirmar:
 - Un intento de fast-buy que exceda presupuesto líquido (incluyendo ofertas comprometidas) es rechazado por `firestore.rules`, no solo por el cliente.
 - Un segundo intento de fichaje franquicia es bloqueado, cliente y servidor.
 - Los 12 equipos tienen el `budget` de la tabla de arriba.
