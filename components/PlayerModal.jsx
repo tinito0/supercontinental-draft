@@ -857,6 +857,7 @@ export const PlayerModal = memo(function PlayerModal({
           senderId={userId}
           senderTeamName={userProfile?.teamName}
           senderTeamLogo={userProfile?.logoUrl}
+          remainingBudget={remainingBudget}
         />
       )}
     </div>

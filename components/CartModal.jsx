@@ -3,7 +3,7 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import { X, ShoppingCart, DollarSign, Shield, Users, Activity, Calendar, MapPin, ArrowRight, History } from 'lucide-react';
 import { formatPriceShort } from '../utils/helpers.js';
 import { DEFAULT_BUDGET, APP_ID, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
-import { doc, runTransaction, updateDoc, collection, serverTimestamp, getDocs } from 'firebase/firestore';
+import { doc, runTransaction, updateDoc, collection, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { ProposalChat } from './ProposalChat.jsx';
@@ -285,7 +285,7 @@ const NegotiationCard = memo(function NegotiationCard({
   );
 });
 
-export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, onRemoveFromCart, userProfile, userId, totalCartCost, remainingBudget, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players' }) {
+export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, onRemoveFromCart, userProfile, userId, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingOfferRef = useRef(null);
@@ -344,6 +344,20 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         }
       });
 
+      // Calcular otras ofertas pendientes del comprador que comprometen su presupuesto líquido
+      const offersSnap = await getDocs(query(
+        collection(db, `artifacts/${APP_ID}/public/data/offers`),
+        where('senderId', '==', offer.senderId),
+        where('status', '==', 'pending')
+      ));
+      let buyerOtherCommittedOffers = 0;
+      offersSnap.forEach(docSnap => {
+        if (docSnap.id !== offer.id) {
+          const oData = docSnap.data();
+          buyerOtherCommittedOffers += Number(oData.offerAmount) || 0;
+        }
+      });
+
       await runTransaction(db, async (transaction) => {
         const buyerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.senderId);
         const sellerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.targetTeamId);
@@ -380,9 +394,9 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         }
         activeAmount = Number(getOfferAmount(liveOffer));
 
-        const buyerRemainingBudget = buyerBudget - buyerCartTotal;
+        const buyerRemainingBudget = buyerBudget - buyerCartTotal - buyerOtherCommittedOffers;
         if (!Number.isFinite(activeAmount) || buyerRemainingBudget < activeAmount) {
-          throw new Error("El comprador no tiene fondos suficientes.");
+          throw new Error("El comprador no tiene fondos líquidos suficientes (incluyendo ofertas comprometidas).");
         }
 
         // Verificar propiedad del vendedor
@@ -700,10 +714,12 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       {/* ── Budget Breakdown — Cohesive 4-KPI Card ── */}
       {(() => {
         const initialBudget = userProfile?.budget || DEFAULT_BUDGET || 0;
-        const committedInOffers = (sentOffers || [])
-          .filter(o => o.status === 'pending' || o.status === 'countered')
-          .reduce((sum, o) => sum + (Number(getOfferAmount(o)) || 0), 0);
-        const liquidBudget = Math.max(0, remainingBudget - committedInOffers);
+        const activeCommitted = committedInOffers !== undefined
+          ? committedInOffers
+          : (sentOffers || [])
+              .filter(o => o.senderId === userId && o.status === 'pending')
+              .reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
+        const liquidBudget = remainingBudget;
         const pct = initialBudget > 0 ? Math.min(100, Math.max(0, (liquidBudget / initialBudget) * 100)) : 0;
         const barColor = pct > 50 ? '#10b981' : pct > 20 ? '#eab308' : '#ef4444';
         const pctTextColor = pct > 50 ? 'text-emerald-400' : pct > 20 ? 'text-amber-400' : 'text-rose-400';
@@ -743,7 +759,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5">Gastado en Plantilla</p>
                 </div>
                 <div className="bg-[#111722] p-3 rounded-xl border border-white/[0.08] shadow-sm">
-                  <p className={`text-sm sm:text-base font-black leading-none ${committedInOffers > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmtM(committedInOffers)}</p>
+                  <p className={`text-sm sm:text-base font-black leading-none ${activeCommitted > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmtM(activeCommitted)}</p>
                   <p className="text-[10px] text-amber-400/80 uppercase font-bold tracking-wider mt-1.5">Comprometido Ofertas</p>
                 </div>
                 <div className="bg-[#111722] p-3 rounded-xl border border-[#00b4d8]/30 shadow-sm">

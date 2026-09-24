@@ -16,37 +16,103 @@ service cloud.firestore {
     // ── ARTIFACTS ─────────────────────────────────────────────
     match /artifacts/{appId} {
 
-      // Datos públicos: lectura libre, escritura autenticada
+      // Lectura pública libre para todo lo que esté bajo /public/
       match /public/{document=**} {
         allow read: if true;
-        allow write: if isAuth();
       }
 
-      // Manager chat: visible para todos, mensajes para cualquier usuario autenticado
+      // Player locks: control de fichajes y validación de Jugador Franquicia
+      match /public/data/player_locks/{playerId} {
+        allow read: if true;
+        allow create, update: if isAuth() && (
+          isAdmin() || (
+            request.resource.data.lockedBy == request.auth.uid &&
+            (
+              request.resource.data.isFranchise != true ||
+              get(/databases/$(database)/documents/artifacts/$(appId)/users/$(request.auth.uid)/profile/data).data.franchisePlayerUsed != true
+            )
+          )
+        );
+        allow delete: if isAuth() && (resource.data.lockedBy == request.auth.uid || isAdmin());
+      }
+
+      // Equipos públicos: validación de presupuesto no negativo (traspasos)
+      match /public/data/teams/{teamId} {
+        allow read: if true;
+        allow create: if isAuth() && (request.auth.uid == teamId || isAdmin());
+        allow update: if isAuth() && (
+          isAdmin() || (
+            !('budget' in request.resource.data) || request.resource.data.budget >= 0
+          )
+        );
+        allow delete: if isAdmin();
+      }
+
+      // Feed de transferencias
+      match /public/data/transfers/{transferId} {
+        allow read: if true;
+        allow create: if isAuth();
+        allow update, delete: if isAdmin();
+      }
+
+      // Ofertas de traspaso
+      match /public/data/offers/{offerId} {
+        allow read: if isAuth();
+        allow create: if isAuth() && (request.resource.data.senderId == request.auth.uid || isAdmin());
+        allow update: if isAuth() && (request.resource.data.senderId == request.auth.uid || request.resource.data.targetTeamId == request.auth.uid || isAdmin());
+        allow delete: if isAdmin();
+
+        match /messages/{messageId} {
+          allow read: if isAuth();
+          allow create: if isAuth() && (request.resource.data.senderId == request.auth.uid || isAdmin());
+          allow update, delete: if isAdmin();
+        }
+      }
+
+      // Manager chat
       match /public/data/manager_chat/{messageId} {
         allow read: if true;
         allow create: if isAuth();
         allow update, delete: if isAdmin();
       }
 
-      // Negotiation chat inside transfer offers
-      match /public/data/offers/{offerId}/messages/{messageId} {
-        allow read: if isAuth();
-        allow create: if isAuth() && (request.resource.data.senderId == request.auth.uid || isAdmin());
-        allow update, delete: if isAdmin();
+      // Otras colecciones públicas (shared_formations, news, tournament, suggestions, etc.)
+      match /public/data/{collectionId}/{docId} {
+        allow write: if isAuth() && !(collectionId in ['player_locks', 'teams', 'transfers', 'offers', 'manager_chat']);
       }
 
-      // Player locks: allow authenticated users to update during transfers
-      match /public/data/player_locks/{playerId} {
-        allow read, write: if isAuth();
+      // ── USUARIOS ──────────────────────────────────────────────
+      // Carrito privado de usuario: validación de requisitos de Jugador Franquicia
+      match /users/{userId}/cart/{playerId} {
+        allow read, delete: if isAuth() && (request.auth.uid == userId || isAdmin());
+        allow create, update: if isAuth() && (request.auth.uid == userId || isAdmin()) && (
+          request.resource.data.isFranchise != true || (
+            request.resource.data.Age >= 30 &&
+            request.resource.data.OVR_CALCULADO >= 82 &&
+            request.resource.data.OVR_CALCULADO <= 89 &&
+            get(/databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/profile/data).data.franchisePlayerUsed != true
+          )
+        );
       }
 
-      // Datos de usuario: solo el propietario o administradores pueden leer/escribir sus datos
-      match /users/{userId}/{document=**} {
-        allow read, write: if isAuth() && (request.auth.uid == userId || isAdmin());
+      // Perfil privado: control de flag de jugador franquicia y presupuesto no negativo
+      match /users/{userId}/profile/data {
+        allow read, create: if isAuth() && (request.auth.uid == userId || isAdmin());
+        allow update: if isAuth() && (
+          isAdmin() || (
+            request.auth.uid == userId &&
+            (!('budget' in request.resource.data) || request.resource.data.budget >= 0) &&
+            (!('franchisePlayerUsed' in resource.data) || resource.data.franchisePlayerUsed != true || request.resource.data.franchisePlayerUsed == true)
+          )
+        );
+        allow delete: if isAdmin();
+      }
+
+      // Resto de colecciones del usuario (notifications, tactics, notes, ratings)
+      match /users/{userId}/{collectionId}/{docId} {
+        allow read, write: if isAuth() && (request.auth.uid == userId || isAdmin()) && !(collectionId in ['cart', 'profile']);
       }
     }
-
 
     // ── CATCH-ALL: deny everything not explicitly matched ──
     match /{document=**} {

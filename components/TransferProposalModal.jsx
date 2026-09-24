@@ -4,7 +4,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { APP_ID, DEFAULT_LOGO, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
 
-export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamName, targetTeamId, senderId, senderTeamName, senderTeamLogo }) => {
+export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamName, targetTeamId, senderId, senderTeamName, senderTeamLogo, remainingBudget }) => {
   const [offerAmount, setOfferAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,6 +37,12 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
       setError(`La oferta no puede superar el límite máximo de $${maxOfferAmount.toFixed(2)}M (115% del valor base).`);
       return;
     }
+
+    const numericOffer = Math.round(Number(offerAmount) * 1000000);
+    if (remainingBudget !== undefined && numericOffer > remainingBudget) {
+      setError(`No tienes presupuesto líquido disponible suficiente ($${((remainingBudget || 0) / 1000000).toFixed(2)}M) para enviar esta oferta.`);
+      return;
+    }
     
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -45,7 +51,6 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
     try {
       const proposalRef = collection(db, `artifacts/${APP_ID}/public/data/offers`);
       const nowIso = new Date().toISOString();
-      const numericOffer = Math.round(Number(offerAmount) * 1000000);
       await addDoc(proposalRef, {
         playerId: player.Id,
         playerName: player.Name,
@@ -161,8 +166,16 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">M</span>
               </div>
-              <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                Máximo: ${(Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100).toFixed(2)}M. El vendedor recibe el {Math.round((1 - TRANSFER_FEE_RATE) * 100)}%; comisión {Math.round(TRANSFER_FEE_RATE * 100)}%.
+              <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                <span>Máximo: ${(Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100).toFixed(2)}M</span>
+                {remainingBudget !== undefined && (
+                  <span className="font-semibold text-sky-600 dark:text-sky-400">
+                    Disponible: ${((remainingBudget || 0) / 1000000).toFixed(2)}M
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+                El vendedor recibe el {Math.round((1 - TRANSFER_FEE_RATE) * 100)}%; comisión {Math.round(TRANSFER_FEE_RATE * 100)}%.
               </p>
             </div>
 

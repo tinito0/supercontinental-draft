@@ -1214,10 +1214,17 @@ function App() {
     }, 0);
   }, [ownedCart, userProfile]);
 
+  const committedInOffers = useMemo(() => {
+    if (!userId || !sentOffers) return 0;
+    return sentOffers
+      .filter(o => o.senderId === userId && o.status === 'pending')
+      .reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
+  }, [userId, sentOffers]);
+
   const remainingBudget = useMemo(() => {
     if (!userProfile) return 0;
-    return userProfile.budget - totalCartCost;
-  }, [userProfile, totalCartCost]);
+    return userProfile.budget - totalCartCost - committedInOffers;
+  }, [userProfile, totalCartCost, committedInOffers]);
 
   const playerById = useMemo(() => {
     const map = new Map();
@@ -1633,7 +1640,7 @@ function App() {
     const playerCost = isFranchise ? 0 : player.Precio * 1000000;
 
     if (!isFranchise && remainingBudget < playerCost) {
-      showStatusMessage('error', 'No tienes presupuesto suficiente.');
+      showStatusMessage('error', 'No tienes presupuesto suficiente (incluyendo ofertas comprometidas).');
       return false;
     }
     if (playerLocks[player.Id]) {
@@ -1659,6 +1666,14 @@ function App() {
             }
           }
 
+          const profileRef = isFranchise ? getPrivateProfileRef(userId) : null;
+          if (isFranchise) {
+            const profileSnap = await transaction.get(profileRef);
+            if (profileSnap.exists() && profileSnap.data().franchisePlayerUsed) {
+              throw new Error('Ya has utilizado tu ficha de Jugador Franquicia esta temporada.');
+            }
+          }
+
           transaction.set(lockRef, {
             lockedBy: userId,
             teamName: userProfile.teamName,
@@ -1669,7 +1684,6 @@ function App() {
           transaction.set(cartRef, { ...player, isFranchise: isFranchise || false });
 
           if (isFranchise) {
-            const profileRef = getPrivateProfileRef(userId);
             transaction.update(profileRef, {
               franchisePlayerUsed: true,
               franchisePlayerId: player.Id
@@ -2503,6 +2517,7 @@ function App() {
                     userId={userId}
                     totalCartCost={totalCartCost}
                     remainingBudget={remainingBudget}
+                    committedInOffers={committedInOffers}
                     incomingOffers={incomingOffers}
                     sentOffers={sentOffers}
                     offerHistory={offerHistory}
@@ -2696,6 +2711,7 @@ function App() {
           userId={userId}
           totalCartCost={totalCartCost}
           remainingBudget={remainingBudget}
+          committedInOffers={committedInOffers}
           incomingOffers={incomingOffers}
           sentOffers={sentOffers}
           offerHistory={offerHistory}
