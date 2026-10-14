@@ -22,15 +22,53 @@ let masterCsvHeaders = '';
 let masterPlayersMap = null; // Map<playerId, rawCsvLine>
 
 /**
- * Carga e indexa jugadores_exportados.csv una sola vez en memoria
+ * Carga e indexa jugadores_exportados.csv una sola vez en memoria de forma perezosa (lazy)
+ * @param {Function} [onProgress] Callback opcional ({ loaded, total, percent }) para reportar progreso de descarga
  */
-export async function loadMasterPesCsv() {
-  if (masterPlayersMap) return masterPlayersMap;
+export async function loadMasterPesCsv(onProgress) {
+  if (masterPlayersMap) {
+    if (typeof onProgress === 'function') {
+      onProgress({ loaded: 100, total: 100, percent: 100 });
+    }
+    return masterPlayersMap;
+  }
 
   try {
     const res = await fetch('/jugadores_exportados.csv');
     if (!res.ok) throw new Error(`HTTP ${res.status} al cargar jugadores_exportados.csv`);
-    const text = await res.text();
+
+    let text = '';
+    const contentLength = res.headers.get('content-length');
+    const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+    if (res.body && typeof res.body.getReader === 'function' && typeof onProgress === 'function') {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let loadedBytes = 0;
+      const chunks = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loadedBytes += value.length;
+        const percent = totalBytes > 0 ? Math.min(100, Math.round((loadedBytes / totalBytes) * 100)) : null;
+        onProgress({ loaded: loadedBytes, total: totalBytes, percent });
+      }
+
+      const fullBuffer = new Uint8Array(loadedBytes);
+      let offset = 0;
+      for (const chunk of chunks) {
+        fullBuffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+      text = decoder.decode(fullBuffer);
+    } else {
+      text = await res.text();
+      if (typeof onProgress === 'function') {
+        onProgress({ loaded: text.length, total: text.length, percent: 100 });
+      }
+    }
     cachedMasterCsv = text;
 
     const lines = text.split(/\r?\n/);
@@ -113,8 +151,8 @@ export function generateRosterCsv(teamId, starters, subs, dorsalsMap = {}) {
 /**
  * Genera Players.csv uniendo las filas originales de jugadores_exportados.csv
  */
-export async function generatePlayersCsv(allTeamPlayers) {
-  const map = await loadMasterPesCsv();
+export async function generatePlayersCsv(allTeamPlayers, onProgress) {
+  const map = await loadMasterPesCsv(onProgress);
   const rows = [masterCsvHeaders];
   const missingPlayers = [];
 
@@ -238,7 +276,7 @@ export function generateAppearancesCsv(allTeamPlayers) {
 /**
  * Empaqueta y descarga el ZIP completo de Option File para PES
  */
-export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachName = 'Director Técnico', customTeamName = null, coachNationality = 204, teamNationality = 204) {
+export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachName = 'Director Técnico', customTeamName = null, coachNationality = 204, teamNationality = 204, onProgress = null) {
   const zip = new JSZip();
 
   const finalTeamName = (customTeamName && typeof customTeamName === 'string' && customTeamName.trim()) ? customTeamName.trim() : (teamData.name || 'Equipo');
@@ -267,7 +305,7 @@ export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachN
 
   // 3. Generar CSVs
   const rosterCsv = generateRosterCsv(targetPesTeamId, starters, subs, teamData.dorsals || {});
-  const { csvContent: playersCsv, missingPlayers } = await generatePlayersCsv(allSquad);
+  const { csvContent: playersCsv, missingPlayers } = await generatePlayersCsv(allSquad, onProgress);
   const teamCsv = generateTeamCsv(targetPesTeamId, finalTeamName, teamNationality);
   const coachCsv = generateCoachCsv(targetPesTeamId, coachName, coachNationality);
   const formationCsv = generateFormationCsv(targetPesTeamId, teamData.formation, starters, teamData.setPieces || {}, allSquad, teamData.tactics || {});

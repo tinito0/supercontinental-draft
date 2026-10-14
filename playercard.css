@@ -53,7 +53,6 @@
   color: #4ade80;
   font-size: 1rem;
   letter-spacing: 0.5px;
-  text-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -172,7 +171,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
@@ -195,14 +193,26 @@
   transition: all 0.2s ease;
 }
 
-.player-card:hover .player-card__compare-btn {
+.player-card:hover .player-card__compare-btn,
+.player-card:focus-within .player-card__compare-btn,
+.player-card__compare-btn:focus-visible {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
 
-.player-card__compare-btn:hover {
+.player-card__compare-btn:hover,
+.player-card__compare-btn:focus-visible {
   background: rgba(99,102,241,0.8);
   transform: translate(-50%, -50%) scale(1.1);
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+@media (hover: none) {
+  .player-card__compare-btn {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
 }
 
 .player-card__compare-btn--active {
@@ -236,7 +246,7 @@
   contain-intrinsic-size: 76px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .player-card__price-header,
   .player-card__ovr-badge,
   .player-card__compare-btn {
@@ -251,3 +261,30 @@
   }
 }
 
+.player-card__stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.player-card__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.player-card__stat-value {
+  font-weight: 900;
+  font-size: 0.8rem;
+}
+
+.player-card__stat-label {
+  font-size: 0.55rem;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

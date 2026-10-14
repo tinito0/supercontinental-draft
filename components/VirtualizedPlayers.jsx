@@ -79,7 +79,7 @@ function buildLockInfo(player, playerLocks, userId, allTeams) {
   };
 }
 
-function ListRow({ index, style, players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore }) {
+function ListRow({ index, style, players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, onPlayerMouseEnter, onPlayerMouseLeave }) {
   if (onLoadMore && index >= players.length - 6) {
     onLoadMore();
   }
@@ -88,7 +88,11 @@ function ListRow({ index, style, players, playerLocks, userId, allTeams, country
   const { isInMyCart, isLockedByOther, lockedTeamName, lockedTeamLogo } = buildLockInfo(player, playerLocks, userId, allTeams);
 
   return (
-    <div style={{ ...style, paddingBottom: LIST_ROW_GAP, boxSizing: 'border-box' }}>
+    <div 
+      style={{ ...style, paddingBottom: LIST_ROW_GAP, boxSizing: 'border-box' }}
+      onMouseEnter={(e) => onPlayerMouseEnter && onPlayerMouseEnter(e, player)}
+      onMouseLeave={onPlayerMouseLeave}
+    >
       <PlayerListItem
         player={player}
         countryMap={countryMap}
@@ -106,12 +110,12 @@ function ListRow({ index, style, players, playerLocks, userId, allTeams, country
   );
 }
 
-export function VirtualizedPlayerList({ players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, overscanCount = 6 }) {
+export function VirtualizedPlayerList({ players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, overscanCount = 6, onPlayerMouseEnter, onPlayerMouseLeave }) {
   const [containerRef, { width, height }] = useElementSize();
 
   const rowProps = useMemo(() => ({
-    players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore,
-  }), [players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore]);
+    players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, onPlayerMouseEnter, onPlayerMouseLeave
+  }), [players, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, onPlayerMouseEnter, onPlayerMouseLeave]);
 
   return (
     <div ref={containerRef} style={{ height: '100%', width: '100%' }}>
@@ -143,7 +147,7 @@ function getRowHeight(cardMaxHeight) {
   return cardMaxHeight + GRID_ROW_GAP;
 }
 
-function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore }) {
+function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, onPlayerMouseEnter, onPlayerMouseLeave }) {
   const index = rowIndex * columnCount + columnIndex;
   if (onLoadMore && index >= players.length - (columnCount * 2)) {
     onLoadMore();
@@ -160,6 +164,8 @@ function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLo
         paddingBottom: GRID_ROW_GAP,
         boxSizing: 'border-box',
       }}
+      onMouseEnter={(e) => onPlayerMouseEnter && onPlayerMouseEnter(e, player)}
+      onMouseLeave={onPlayerMouseLeave}
     >
       <div className="market-player-card-shell">
         <PlayerCard
@@ -180,14 +186,14 @@ function GridCell({ columnIndex, rowIndex, style, players, columnCount, playerLo
   );
 }
 
-export function VirtualizedPlayerGrid({ players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, overscanCount = 2, cardMaxHeight = 238 }) {
+export function VirtualizedPlayerGrid({ players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, overscanCount = 2, cardMaxHeight = 238, onPlayerMouseEnter, onPlayerMouseLeave }) {
   const [containerRef, { width, height }] = useElementSize();
   const rowCount = Math.ceil(players.length / Math.max(1, columnCount));
   const rowHeight = getRowHeight(cardMaxHeight);
 
   const cellProps = useMemo(() => ({
-    players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore,
-  }), [players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore]);
+    players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, onPlayerMouseEnter, onPlayerMouseLeave
+  }), [players, columnCount, playerLocks, userId, allTeams, countryMap, wishlistSet, comparingIdsSet, onSelectPlayer, onToggleWishlist, onCompare, onLoadMore, onPlayerMouseEnter, onPlayerMouseLeave]);
 
   return (
     <div ref={containerRef} style={{ height: '100%', width: '100%' }}>

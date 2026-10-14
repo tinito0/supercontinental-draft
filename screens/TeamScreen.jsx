@@ -322,6 +322,8 @@ export default function TeamScreen() {
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-slate-800 border border-slate-700 p-2.5 flex items-center justify-center shadow-md">
                 <img 
                   src={teamData?.logoUrl || DEFAULT_LOGO} 
+                  width={96}
+                  height={96}
                   className="w-full h-full object-contain" 
                   alt={`Escudo de ${teamData?.teamName || 'Equipo'}`}
                   onError={(e) => { e.target.src = DEFAULT_LOGO; }}

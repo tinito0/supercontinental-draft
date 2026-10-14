@@ -23,6 +23,12 @@ textarea,
   touch-action: manipulation;
 }
 
+/* El indicador de teclado debe permanecer visible incluso donde Tailwind use outline-none. */
+:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 2px solid var(--app-focus) !important;
+  outline-offset: var(--app-focus-offset);
+}
+
 :root,
 .dark {
   --app-bg: #06080d;
@@ -32,9 +38,40 @@ textarea,
   --app-border-hover: rgba(255, 255, 255, 0.18);
   --app-accent: #00b4d8;
   --app-accent-hover: #38bdf8;
+  --app-focus: #67e8f9;
+  --app-focus-offset: 3px;
   --app-text-primary: #f8fafc;
   --app-text-secondary: #94a3b8;
   --app-text-muted: #64748b;
+  --app-success: #10b981;
+  --app-success-muted: rgba(16, 185, 129, 0.15);
+  --app-warning: #f59e0b;
+  --app-warning-muted: rgba(245, 158, 11, 0.15);
+  --app-danger: #ef4444;
+  --app-danger-muted: rgba(239, 68, 68, 0.15);
+  --app-info: #00b4d8;
+  --app-info-muted: rgba(0, 180, 216, 0.15);
+  --app-radius-sm: 6px;
+  --app-radius-md: 10px;
+  --app-radius-lg: 16px;
+  --app-radius-xl: 24px;
+  --app-shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --app-shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+  --app-shadow-lg: 0 8px 24px rgba(0,0,0,0.6);
+  --app-z-dropdown: 50;
+  --app-z-sticky: 60;
+  --app-z-modal: 100;
+  --app-z-toast: 110;
+  --app-z-tooltip: 120;
+  --app-header-h: 56px;
+  --app-sidebar-w: 240px;
+  --app-space-xs: 4px;
+  --app-space-sm: 8px;
+  --app-space-md: 12px;
+  --app-space-lg: 16px;
+  --app-space-xl: 24px;
+  --app-space-2xl: 32px;
+  --app-space-3xl: 48px;
   color-scheme: dark;
 }
 

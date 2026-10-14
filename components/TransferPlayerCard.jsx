@@ -18,6 +18,8 @@ const TeamLogo = memo(function TeamLogo({ logo, name }) {
         src={logo || DEFAULT_LOGO}
         alt={name || 'Equipo'}
         loading="lazy"
+        width={24}
+        height={24}
         className="h-full w-full object-contain"
         onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }}
       />

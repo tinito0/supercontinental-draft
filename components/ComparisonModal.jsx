@@ -3,6 +3,7 @@ import { Radar } from 'react-chartjs-2';
 import { X, Target } from 'lucide-react';
 import { STAT_NAMES_MAP, STATS_JUGADOR_CAMPO, STATS_PORTERO, PLAYER_SKILLS_MAP } from '../utils/constants.js';
 import { getPosColorClass, getStatAndOvrColorClass, formatPriceShort } from '../utils/helpers.js';
+import { BaseModal } from './ui/BaseModal.jsx';
 
 export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClose, playerA, playerB }) {
   if (!isVisible || !playerA || !playerB) return null;
@@ -172,8 +173,15 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
   const ovrDiff = (playerA.OVR_CALCULADO || 0) - (playerB.OVR_CALCULADO || 0);
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4" onClick={onClose}>
-      <div className="bg-[#0c1017] sm:rounded-xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:max-h-[92vh] flex flex-col border-0 sm:border border-white/[0.08] overflow-hidden relative" onClick={e => e.stopPropagation()}>
+    <BaseModal
+      isOpen={isVisible}
+      onClose={onClose}
+      size="2xl"
+      showClose={false}
+      className="!p-0 h-[92vh] sm:h-[90vh]"
+      contentClassName="!p-0 !overflow-hidden flex flex-col h-full min-h-0"
+    >
+      <div className="flex flex-col h-full min-h-0 relative">
 
         {/* HEADER DUELO STICKY */}
         <div className="sticky top-0 z-30 bg-[#0c1017] p-3 sm:p-4 pr-12 sm:pr-4 border-b border-white/[0.08] flex justify-between items-center shrink-0">
@@ -393,6 +401,6 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
           </div>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 });

@@ -23,5 +23,10 @@ export default defineConfig({
   },
   esbuild: {
     target: 'esnext',
+  },
+  test: {
+    globals: true,
+    environment: 'node',
+    exclude: ['**/node_modules/**', '**/dist/**', 'vendor/**', 'tests/rules/**'],
   }
 })

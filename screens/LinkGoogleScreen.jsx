@@ -198,13 +198,13 @@ export function LinkGoogleScreen({ auth, db, user, onLinked }) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#040a18] items-center justify-center p-6 text-gray-200">
-      <div className="absolute inset-0 bg-[#050d1e] z-0">
-         <div className="absolute top-[10%] left-[20%] w-[50%] h-[50%] bg-blue-900/20 rounded-full blur-[120px] mix-blend-screen" />
+    <div className="flex flex-col min-h-screen bg-[#06080d] items-center justify-center p-6 text-gray-200">
+      <div className="absolute inset-0 bg-[#06080d] z-0">
+         <div className="absolute top-[10%] left-[20%] w-[50%] h-[50%] bg-[#00b4d8]/10 rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md bg-[#0a1628] rounded-3xl p-8 border border-blue-900/30 shadow-2xl text-center">
-        <img src="/logo.webp" alt="SCL Logo" className="w-24 h-24 object-contain mx-auto mb-6 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
+      <div className="relative z-10 w-full max-w-md bg-[#0c1017] rounded-3xl p-8 border border-white/[0.08] shadow-2xl text-center">
+        <img src="/logo.webp" alt="SCL Logo" className="w-24 h-24 object-contain mx-auto mb-6 drop-shadow-[0_0_15px_rgba(0,180,216,0.3)]" />
 
         <h2 className="text-3xl font-black text-white mb-4 tracking-tight">Migración de Cuenta</h2>
         

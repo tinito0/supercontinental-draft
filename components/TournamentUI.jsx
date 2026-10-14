@@ -73,7 +73,7 @@ export const TournamentPanel = memo(function TournamentPanel({ title, icon: Icon
   );
 });
 
-export const TournamentActionButton = memo(function TournamentActionButton({ children, onClick, disabled, tone = 'blue', className = '' }) {
+export const TournamentActionButton = memo(function TournamentActionButton({ children, onClick, disabled, title, tone = 'blue', className = '' }) {
   const toneClasses = {
     blue: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 hover:bg-sky-500/25 border-sky-500/30',
     yellow: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border-amber-500/30',
@@ -85,6 +85,7 @@ export const TournamentActionButton = memo(function TournamentActionButton({ chi
     <button
       onClick={onClick}
       disabled={disabled}
+      title={title || (disabled ? 'Acción no disponible en este momento' : undefined)}
       className={`flex items-center justify-center px-4 py-2 rounded-xl font-bold text-xs transition border disabled:opacity-50 disabled:cursor-not-allowed ${toneClasses[tone] || toneClasses.blue} ${className}`}
     >
       {children}

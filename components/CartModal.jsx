@@ -1,12 +1,20 @@
 import React, { useRef, useState, useEffect, useMemo, memo } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { X, ShoppingCart, DollarSign, Shield, Users, Activity, Calendar, MapPin, ArrowRight, History } from 'lucide-react';
+import { X, ShoppingCart, DollarSign, Shield, Users, Activity, Calendar, MapPin, ArrowRight, History, ClipboardList } from 'lucide-react';
 import { formatPriceShort } from '../utils/helpers.js';
-import { DEFAULT_BUDGET, APP_ID, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
-import { doc, runTransaction, updateDoc, collection, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { DEFAULT_BUDGET } from '../utils/constants.js';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { ProposalChat } from './ProposalChat.jsx';
+import { BaseModal } from './ui/BaseModal.jsx';
+import {
+  acceptTransferOffer,
+  rejectTransferOffer,
+  counterTransferOffer,
+  withdrawTransferOffer,
+  getOfferAmount,
+  appendHistory,
+} from '../services/transferService.js';
 
 /* ── Posiciones con paleta unificada del mercado ── */
 const POS_COLOR = {
@@ -111,10 +119,6 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
 
 const CLOSED_STATUSES = new Set(['accepted', 'rejected', 'withdrawn']);
 
-function getOfferAmount(offer) {
-  return offer.status === 'countered' ? offer.counterAmount : offer.offerAmount;
-}
-
 function getOfferStatusLabel(status) {
   if (status === 'pending') return 'Pendiente';
   if (status === 'countered') return 'Contraoferta';
@@ -130,13 +134,6 @@ function getOfferTargetName(offer, allTeams) {
 
 function getOfferSenderName(offer, allTeams) {
   return offer.senderTeamName || allTeams?.[offer.senderId]?.teamName || 'Equipo comprador';
-}
-
-function appendHistory(offer, event) {
-  const cleanEvent = Object.fromEntries(
-    Object.entries(event).filter(([, value]) => value !== undefined)
-  );
-  return [...(Array.isArray(offer.history) ? offer.history : []), cleanEvent];
 }
 
 const OfferTimeline = memo(function OfferTimeline({ offer }) {
@@ -248,7 +245,7 @@ const NegotiationCard = memo(function NegotiationCard({
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">M</span>
                 </div>
-                <button onClick={() => onCounter(offer)} disabled={isProcessing || !counterAmount} className="min-h-11 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-4 text-xs font-black uppercase text-amber-300 transition disabled:opacity-50 cursor-pointer">
+                <button onClick={() => onCounter(offer)} disabled={isProcessing || !counterAmount} title={isProcessing ? 'Hay una operación en curso' : !counterAmount ? 'Completa los datos requeridos primero' : undefined} className="min-h-11 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-4 text-xs font-black uppercase text-amber-300 transition disabled:opacity-50 cursor-pointer">
                   Enviar
                 </button>
                 <button onClick={() => { setCounteringOfferId(null); setCounterAmount(''); }} className="min-h-11 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] px-4 text-xs font-black uppercase text-slate-300 transition cursor-pointer">
@@ -259,12 +256,12 @@ const NegotiationCard = memo(function NegotiationCard({
               <div className="flex w-full flex-wrap gap-2">
                 {isIncoming ? (
                   <>
-                    <button onClick={() => onReject(offer)} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 px-4 text-xs font-black uppercase text-red-300 transition disabled:opacity-50 cursor-pointer">Rechazar</button>
-                    <button onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-4 text-xs font-black uppercase text-amber-300 transition disabled:opacity-50 cursor-pointer">Contraoferta</button>
-                    <button onClick={() => onAccept(offer)} disabled={isProcessing} className="min-h-11 flex-1 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] px-4 text-xs font-black uppercase text-[#030712] transition shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer">Aceptar</button>
+                    <button onClick={() => onReject(offer)} disabled={isProcessing} title={isProcessing ? 'Hay una operación en curso' : undefined} className="min-h-11 flex-1 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 px-4 text-xs font-black uppercase text-red-300 transition disabled:opacity-50 cursor-pointer">Rechazar</button>
+                    <button onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing} title={isProcessing ? 'Hay una operación en curso' : undefined} className="min-h-11 flex-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-4 text-xs font-black uppercase text-amber-300 transition disabled:opacity-50 cursor-pointer">Contraoferta</button>
+                    <button onClick={() => onAccept(offer)} disabled={isProcessing} title={isProcessing ? 'Hay una operación en curso' : undefined} className="min-h-11 flex-1 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] px-4 text-xs font-black uppercase text-[#030712] transition shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer">Aceptar</button>
                   </>
                 ) : (
-                  <button onClick={() => onWithdraw(offer)} disabled={isProcessing} className="min-h-11 w-full rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 px-4 text-xs font-black uppercase text-red-300 transition disabled:opacity-50 cursor-pointer">
+                  <button onClick={() => onWithdraw(offer)} disabled={isProcessing} title={isProcessing ? 'Hay una operación en curso' : undefined} className="min-h-11 w-full rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 px-4 text-xs font-black uppercase text-red-300 transition disabled:opacity-50 cursor-pointer">
                     Retirar Oferta
                   </button>
                 )}
@@ -285,7 +282,7 @@ const NegotiationCard = memo(function NegotiationCard({
   );
 });
 
-export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, onRemoveFromCart, userProfile, userId, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players' }) {
+export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, onRemoveFromCart, userProfile, userId, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingOfferRef = useRef(null);
@@ -314,204 +311,21 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     if (isProcessing || processingOfferRef.current) return;
     processingOfferRef.current = offer?.id || 'unknown';
     setIsProcessing(true);
+    showStatusMessage?.('loading', `Aceptando la oferta por ${offer.playerName}...`);
     try {
-      if (!userId) {
-        throw new Error("Debes iniciar sesión para aceptar una oferta.");
-      }
-      if (!offer?.senderId || !offer?.targetTeamId || offer.senderId === offer.targetTeamId) {
-        throw new Error("Oferta invalida: comprador y vendedor no pueden ser el mismo equipo.");
-      }
-
-      const livePlayer = playerMap ? playerMap.get(String(offer.playerId)) : allPlayers?.find(p => String(p.Id) === String(offer.playerId));
-      if (!livePlayer) throw new Error("Jugador no encontrado en la base de datos.");
-
-      let activeAmount = Number(getOfferAmount(offer));
-      if (!Number.isFinite(activeAmount) || activeAmount <= 0) {
-        throw new Error("Monto de oferta invalido.");
-      }
-
-      // Calcular gasto del comprador sumando sus bloqueos activos en public/data/player_locks
-      // (evita leer la colección privada users/{buyerId}/cart, respetando Firestore Rules)
-      const locksSnap = await getDocs(collection(db, `artifacts/${APP_ID}/public/data/player_locks`));
-      let buyerCartTotal = 0;
-      locksSnap.forEach(docSnap => {
-        const lock = docSnap.data();
-        if (lock.lockedBy === offer.senderId && !lock.isFranchise) {
-          const p = playerMap ? playerMap.get(docSnap.id) : allPlayers?.find(pl => String(pl.Id) === docSnap.id);
-          if (p) {
-            buyerCartTotal += Math.round((Number(p.Precio) || 0) * 1000000);
-          }
-        }
+      await acceptTransferOffer({
+        db,
+        offer,
+        userId,
+        allPlayers,
+        playerMap,
+        allTeams,
       });
+      showStatusMessage?.('success', `Traspaso confirmado: ${offer.playerName} ahora pertenece a ${getOfferSenderName(offer, allTeams)}.`);
 
-      // Calcular otras ofertas pendientes del comprador que comprometen su presupuesto líquido
-      const offersSnap = await getDocs(query(
-        collection(db, `artifacts/${APP_ID}/public/data/offers`),
-        where('senderId', '==', offer.senderId),
-        where('status', '==', 'pending')
-      ));
-      let buyerOtherCommittedOffers = 0;
-      offersSnap.forEach(docSnap => {
-        if (docSnap.id !== offer.id) {
-          const oData = docSnap.data();
-          buyerOtherCommittedOffers += Number(oData.offerAmount) || 0;
-        }
-      });
-
-      await runTransaction(db, async (transaction) => {
-        const buyerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.senderId);
-        const sellerTeamPublicRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, offer.targetTeamId);
-        const lockRef = doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(offer.playerId));
-        const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
-        const buyerCartPrivateRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/cart`, String(offer.playerId));
-        const buyerProfilePrivateRef = doc(db, `artifacts/${APP_ID}/users/${offer.senderId}/profile`, 'data');
-        const sellerCartPrivateRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/cart`, String(offer.playerId));
-        const sellerProfilePrivateRef = doc(db, `artifacts/${APP_ID}/users/${offer.targetTeamId}/profile`, 'data');
-
-        const buyerTeamDoc = await transaction.get(buyerTeamPublicRef);
-        const sellerTeamDoc = await transaction.get(sellerTeamPublicRef);
-        const offerDoc = await transaction.get(offerRef);
-        const lockDoc = await transaction.get(lockRef);
-
-        if (!sellerTeamDoc.exists()) throw new Error("Equipo vendedor no encontrado.");
-        if (!buyerTeamDoc.exists()) throw new Error("Equipo comprador no encontrado.");
-
-        const buyerBudget = Number(buyerTeamDoc.data().budget) || 0;
-        const sellerBudget = Number(sellerTeamDoc.data().budget) || 0;
-        const buyerTeamName = offer.senderTeamName || buyerTeamDoc.data()?.teamName || allTeams?.[offer.senderId]?.teamName || 'Equipo comprador';
-        const sellerTeamName = offer.targetTeamName || sellerTeamDoc.data()?.teamName || allTeams?.[offer.targetTeamId]?.teamName || 'Equipo vendedor';
-        const buyerTeamLogo = offer.senderTeamLogo || buyerTeamDoc.data()?.logoUrl || allTeams?.[offer.senderId]?.logoUrl || '';
-        const sellerTeamLogo = offer.targetTeamLogo || sellerTeamDoc.data()?.logoUrl || allTeams?.[offer.targetTeamId]?.logoUrl || '';
-
-        // Verificar validez de oferta
-        if (!offerDoc.exists() || (offerDoc.data().status !== 'pending' && offerDoc.data().status !== 'countered')) {
-          throw new Error("La oferta ya no es válida o ya fue procesada.");
-        }
-        const liveOffer = offerDoc.data();
-        const expectedAccepterId = liveOffer.status === 'countered' ? liveOffer.senderId : liveOffer.targetTeamId;
-        if (userId !== expectedAccepterId) {
-          throw new Error("Solo el equipo que recibió la oferta actual puede aceptarla.");
-        }
-        activeAmount = Number(getOfferAmount(liveOffer));
-
-        const buyerRemainingBudget = buyerBudget - buyerCartTotal - buyerOtherCommittedOffers;
-        if (!Number.isFinite(activeAmount) || buyerRemainingBudget < activeAmount) {
-          throw new Error("El comprador no tiene fondos líquidos suficientes (incluyendo ofertas comprometidas).");
-        }
-
-        // Verificar propiedad del vendedor
-        if (!lockDoc.exists() || lockDoc.data().lockedBy !== offer.targetTeamId) {
-          throw new Error("El jugador ya no pertenece al equipo vendedor.");
-        }
-        if (lockDoc.data().isFranchise) {
-          throw new Error('Los jugadores franquicia no son transferibles.');
-        }
-
-        const playerBaseCost = Math.round((Number(livePlayer.Precio) || 0) * 1000000);
-        // El formulario opera con dos decimales de millones, por eso el tope se
-        // redondea a esa misma precisión antes de compararlo con la oferta.
-        const maxTransferAmount = Math.round((playerBaseCost / 1000000) * MAX_TRANSFER_MULTIPLIER * 100) * 10000;
-        if (!Number.isSafeInteger(activeAmount) || !playerBaseCost || activeAmount < playerBaseCost || activeAmount > maxTransferAmount) {
-          throw new Error('El monto ya no cumple los límites del jugador.');
-        }
-
-        const acceptedAt = new Date().toISOString();
-
-        // 1. Transferir lock al comprador
-        transaction.update(lockRef, {
-          lockedBy: offer.senderId,
-          teamName: buyerTeamName,
-          lockedAt: acceptedAt
-        });
-
-        // 2. Calcular presupuestos resultantes
-        const buyerBudgetAfter = buyerBudget + playerBaseCost - activeAmount;
-        const sellerNetAmount = Math.round(activeAmount * (1 - TRANSFER_FEE_RATE));
-        const transferFee = activeAmount - sellerNetAmount;
-        const sellerBudgetAfter = sellerBudget + sellerNetAmount - playerBaseCost;
-
-        // 3. Sincronizar rosters y presupuestos públicos en transacción atómica
-        const buyerCurrentRoster = Array.isArray(buyerTeamDoc.data().roster) ? buyerTeamDoc.data().roster : [];
-        const sellerCurrentRoster = Array.isArray(sellerTeamDoc.data().roster) ? sellerTeamDoc.data().roster : [];
-        const newBuyerRoster = [
-          ...buyerCurrentRoster.filter(p => String(p.Id) !== String(offer.playerId)),
-          {
-            Id: String(livePlayer.Id),
-            Name: livePlayer.Name || 'Jugador',
-            POS_NOMBRE: livePlayer.POS_NOMBRE || '',
-            OVR_CALCULADO: Number(livePlayer.OVR_CALCULADO) || 0,
-            available: true,
-          }
-        ];
-        const newSellerRoster = sellerCurrentRoster.filter(p => String(p.Id) !== String(offer.playerId));
-
-        transaction.set(buyerTeamPublicRef, {
-          budget: buyerBudgetAfter,
-          roster: newBuyerRoster,
-          rosterUpdatedAt: acceptedAt,
-        }, { merge: true });
-
-        transaction.set(sellerTeamPublicRef, {
-          budget: sellerBudgetAfter,
-          roster: newSellerRoster,
-          rosterUpdatedAt: acceptedAt,
-        }, { merge: true });
-
-        // El usuario que acepta puede actualizar sus documentos privados dentro de
-        // esta misma transacción. Así, una contraoferta aceptada por el comprador
-        // no depende de que otro snapshot agregue el jugador más tarde.
-        if (userId === offer.senderId) {
-          transaction.set(buyerCartPrivateRef, { ...livePlayer, isFranchise: false });
-          transaction.set(buyerProfilePrivateRef, { budget: buyerBudgetAfter }, { merge: true });
-        } else {
-          transaction.delete(sellerCartPrivateRef);
-          transaction.set(sellerProfilePrivateRef, { budget: sellerBudgetAfter }, { merge: true });
-        }
-
-        // 4. Actualizar estado de la oferta
-        transaction.update(offerRef, {
-          status: 'accepted',
-          acceptedAt,
-          targetTeamName: sellerTeamName,
-          targetTeamLogo: sellerTeamLogo,
-          senderTeamName: buyerTeamName,
-          senderTeamLogo: buyerTeamLogo,
-          history: appendHistory(offerDoc.data(), {
-            type: 'accepted',
-            title: 'Traspaso aceptado',
-            teamId: offer.targetTeamId,
-            teamName: sellerTeamName,
-            amount: activeAmount,
-            at: acceptedAt,
-          })
-        });
-
-        // 5. Registrar en el feed de transferencias
-        const transferRef = doc(collection(db, `artifacts/${APP_ID}/public/data/transfers`));
-        transaction.set(transferRef, {
-          playerId: offer.playerId,
-          playerName: offer.playerName || livePlayer.Name,
-          playerOvr: offer.playerOvr || livePlayer.OVR_CALCULADO || 0,
-          playerPosition: offer.playerPosition || livePlayer.POS_NOMBRE || '',
-          playerCountry: offer.playerCountry || livePlayer.Country1 || '',
-          fromTeamId: offer.targetTeamId,
-          fromTeamName: sellerTeamName,
-          fromTeamLogo: sellerTeamLogo,
-          teamId: offer.senderId,
-          teamName: buyerTeamName,
-          teamLogo: buyerTeamLogo,
-          price: activeAmount / 1000000,
-          sellerReceives: sellerNetAmount / 1000000,
-          transferFee: transferFee / 1000000,
-          type: 'transfer',
-          isFranchise: false,
-          timestamp: serverTimestamp()
-        });
-      });
-      alert(`¡Traspaso completado! ${offer.playerName} ahora pertenece a ${getOfferSenderName(offer, allTeams)}.`);
     } catch (err) {
       console.error(err);
-      alert("Error al aceptar la oferta: " + (err?.message || err));
+      showStatusMessage?.('error', `No se pudo aceptar la oferta: ${err?.message || 'reintentá en unos instantes.'}`);
     } finally {
       processingOfferRef.current = null;
       setIsProcessing(false);
@@ -522,25 +336,17 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     if (isProcessing) return;
     if (!window.confirm(`¿Seguro que quieres rechazar la oferta por ${offer.playerName}?`)) return;
     setIsProcessing(true);
+    showStatusMessage?.('loading', `Rechazando la oferta por ${offer.playerName}...`);
     try {
-      const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
-      const rejectedAt = new Date().toISOString();
-      await updateDoc(offerRef, {
-        status: 'rejected',
-        rejectedAt,
-        rejectedBy: userProfile?.teamName || 'Equipo',
-        history: appendHistory(offer, {
-          type: 'rejected',
-          title: 'Oferta rechazada',
-          teamId: offer.targetTeamId || offer.senderId,
-          teamName: userProfile?.teamName || 'Equipo',
-          amount: getOfferAmount(offer),
-          at: rejectedAt,
-        })
+      await rejectTransferOffer({
+        db,
+        offer,
+        teamName: userProfile?.teamName || 'Equipo',
       });
+      showStatusMessage?.('success', `Oferta por ${offer.playerName} rechazada.`);
     } catch (err) {
       console.error(err);
-      alert("Error al rechazar la oferta.");
+      showStatusMessage?.('error', `No se pudo rechazar la oferta: ${err?.message || 'reintentá en unos instantes.'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -549,38 +355,22 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const handleCounterOffer = async (offer) => {
     if (isProcessing || !counterAmount || isNaN(counterAmount)) return;
     const livePlayer = allPlayers?.find(p => p.Id === offer.playerId);
-    const valueInMillions = Number(counterAmount);
-    const maxCounterAmount = livePlayer
-      ? Math.round(Number(livePlayer.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100
-      : 0;
-    if (!Number.isFinite(valueInMillions) || valueInMillions <= 0 || !livePlayer || valueInMillions < Number(livePlayer.Precio) || valueInMillions > maxCounterAmount) {
-      alert(`La contraoferta debe estar entre el valor base y $${maxCounterAmount.toFixed(2)}M (115% del valor base).`);
-      return;
-    }
     setIsProcessing(true);
+    showStatusMessage?.('loading', `Enviando contraoferta por ${offer.playerName}...`);
     try {
-      const proposalRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
-      const counterAt = new Date().toISOString();
-      const counterValue = Math.round(valueInMillions * 1000000);
-      await updateDoc(proposalRef, {
-        status: "countered",
-        counterAmount: counterValue,
-        counterAt,
-        counterBy: userProfile?.teamName || 'Equipo',
-        history: appendHistory(offer, {
-          type: 'countered',
-          title: 'Contraoferta enviada',
-          teamId: offer.targetTeamId || offer.senderId,
-          teamName: userProfile?.teamName || 'Equipo',
-          amount: counterValue,
-          at: counterAt,
-        })
+      await counterTransferOffer({
+        db,
+        offer,
+        counterAmountMillions: counterAmount,
+        livePlayer,
+        teamName: userProfile?.teamName || 'Equipo',
       });
       setCounteringOfferId(null);
       setCounterAmount('');
+      showStatusMessage?.('success', `Contraoferta enviada por ${offer.playerName}.`);
     } catch (e) {
       console.error(e);
-      alert('Error enviando contraoferta');
+      showStatusMessage?.('error', e?.message || 'No se pudo enviar la contraoferta. Reintentá en unos instantes.');
     } finally {
       setIsProcessing(false);
     }
@@ -590,24 +380,17 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     if (isProcessing) return;
     if (!window.confirm(`¿Seguro que quieres retirar la oferta por ${offer.playerName}?`)) return;
     setIsProcessing(true);
+    showStatusMessage?.('loading', `Retirando la oferta por ${offer.playerName}...`);
     try {
-      const offerRef = doc(db, `artifacts/${APP_ID}/public/data/offers`, offer.id);
-      const withdrawnAt = new Date().toISOString();
-      await updateDoc(offerRef, {
-        status: 'withdrawn',
-        withdrawnAt,
-        history: appendHistory(offer, {
-          type: 'withdrawn',
-          title: 'Oferta retirada',
-          teamId: offer.senderId || offer.targetTeamId,
-          teamName: userProfile?.teamName || 'Equipo',
-          amount: getOfferAmount(offer),
-          at: withdrawnAt,
-        })
+      await withdrawTransferOffer({
+        db,
+        offer,
+        teamName: userProfile?.teamName || 'Equipo',
       });
+      showStatusMessage?.('success', `Oferta por ${offer.playerName} retirada.`);
     } catch (e) {
       console.error(e);
-      alert('Error retirando oferta');
+      showStatusMessage?.('error', e?.message || 'No se pudo retirar la oferta. Reintentá en unos instantes.');
     } finally {
       setIsProcessing(false);
     }
@@ -703,12 +486,25 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
             {userProfile?.teamName || 'Mi Equipo'}
           </p>
         </div>
-        {!isPage && (
-          <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition">
-            <X className="w-5 h-5" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isPage && onOpenTactics && (
+            <button
+              type="button"
+              onClick={onOpenTactics}
+              className="min-h-11 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 text-xs font-black uppercase tracking-wide text-cyan-300 transition hover:bg-cyan-500/20"
+            >
+              <ClipboardList className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              Pizarra táctica
+            </button>
+          )}
+          {!isPage && (
+            <button onClick={onClose}
+              aria-label="Cerrar finanzas y plantilla"
+              className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition">
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Budget Breakdown — Cohesive 4-KPI Card ── */}
@@ -749,22 +545,22 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
               </div>
 
               {/* 4-KPI breakdown row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-4">
-                <div className="bg-[#111722] p-3 rounded-xl border border-white/[0.08] shadow-sm">
-                  <p className="text-sm sm:text-base font-black text-white leading-none">{fmtM(initialBudget)}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5">Presupuesto Inicial</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+                <div className="bg-[#111722] p-2.5 sm:p-3 rounded-xl border border-white/[0.08] shadow-sm">
+                  <p className="text-xs sm:text-base font-black text-white leading-none tabular-nums">{fmtM(initialBudget)}</p>
+                  <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5 truncate">Presupuesto Inicial</p>
                 </div>
-                <div className="bg-[#111722] p-3 rounded-xl border border-white/[0.08] shadow-sm">
-                  <p className={`text-sm sm:text-base font-black leading-none ${totalCartCost > 0 ? 'text-white' : 'text-slate-500'}`}>{fmtM(totalCartCost)}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5">Gastado en Plantilla</p>
+                <div className="bg-[#111722] p-2.5 sm:p-3 rounded-xl border border-white/[0.08] shadow-sm">
+                  <p className={`text-xs sm:text-base font-black leading-none tabular-nums ${totalCartCost > 0 ? 'text-white' : 'text-slate-500'}`}>{fmtM(totalCartCost)}</p>
+                  <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5 truncate">Gastado en Plantilla</p>
                 </div>
-                <div className="bg-[#111722] p-3 rounded-xl border border-white/[0.08] shadow-sm">
-                  <p className={`text-sm sm:text-base font-black leading-none ${activeCommitted > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmtM(activeCommitted)}</p>
-                  <p className="text-[10px] text-amber-400/80 uppercase font-bold tracking-wider mt-1.5">Comprometido Ofertas</p>
+                <div className="bg-[#111722] p-2.5 sm:p-3 rounded-xl border border-white/[0.08] shadow-sm">
+                  <p className={`text-xs sm:text-base font-black leading-none tabular-nums ${activeCommitted > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmtM(activeCommitted)}</p>
+                  <p className="text-[9px] sm:text-[10px] text-amber-400/80 uppercase font-bold tracking-wider mt-1.5 truncate">Comprometido</p>
                 </div>
-                <div className="bg-[#111722] p-3 rounded-xl border border-[#00b4d8]/30 shadow-sm">
-                  <p className="text-sm sm:text-base font-black leading-none" style={{ color: availableColor }}>{fmtM(liquidBudget)}</p>
-                  <p className="text-[10px] text-[#00b4d8] uppercase font-bold tracking-wider mt-1.5">Disponible Líquido</p>
+                <div className="bg-[#111722] p-2.5 sm:p-3 rounded-xl border border-[#00b4d8]/30 shadow-sm">
+                  <p className="text-xs sm:text-base font-black leading-none tabular-nums" style={{ color: availableColor }}>{fmtM(liquidBudget)}</p>
+                  <p className="text-[9px] sm:text-[10px] text-[#00b4d8] uppercase font-bold tracking-wider mt-1.5 truncate">Disponible Líquido</p>
                 </div>
               </div>
 
@@ -833,17 +629,22 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
               <p className="text-xs text-slate-400 mt-1">Explora el mercado principal para fichar jugadores para tu plantilla</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-              {sortedCart.map(player => (
-                <CartMiniPlayerCard
-                  key={player.Id}
-                  player={player}
-                  playerMap={playerMap}
-                  allPlayers={allPlayers}
-                  onRemove={() => onRemoveFromCart(player)}
-                  onCardClick={() => onPlayerClick(player)}
-                />
-              ))}
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center bg-[#111722] p-3 rounded-xl border border-white/[0.08]">
+                <h3 className="text-sm font-bold text-white">Tu Plantilla ({cart.length})</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+                {sortedCart.map(player => (
+                  <CartMiniPlayerCard
+                    key={player.Id}
+                    player={player}
+                    playerMap={playerMap}
+                    allPlayers={allPlayers}
+                    onRemove={() => onRemoveFromCart(player)}
+                    onCardClick={() => onPlayerClick(player)}
+                  />
+                ))}
+              </div>
             </div>
           )
         )}
@@ -991,12 +792,16 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   if (isPage) return inner;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in duration-300"
-      onClick={onClose}>
-      <div className="bg-[#0c1017] sm:rounded-2xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:h-[88vh] flex flex-col overflow-hidden border-0 sm:border border-white/[0.08] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-        onClick={e => e.stopPropagation()}>
-        {inner}
-      </div>
-    </div>
+    <BaseModal
+      isOpen={isVisible}
+      onClose={onClose}
+      ariaLabel="Finanzas y plantilla"
+      showClose={false}
+      size="2xl"
+      className="h-[100dvh] sm:h-[88vh] max-w-6xl rounded-none border-0 sm:rounded-2xl sm:border"
+      contentClassName="p-0 overflow-hidden"
+    >
+      {inner}
+    </BaseModal>
   );
 });

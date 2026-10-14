@@ -68,7 +68,11 @@ self.addEventListener('fetch', (event) => {
           if (response.ok) cache.put(event.request, response.clone());
           return response;
         } catch (err) {
-          return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
+          // A cache miss must never look like a genuinely empty market.
+          return new Response(JSON.stringify({ error: 'offline-cache-miss' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          });
         }
       })
     );

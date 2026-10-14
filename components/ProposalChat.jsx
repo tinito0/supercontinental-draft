@@ -142,6 +142,8 @@ export const ProposalChat = memo(function ProposalChat({
                         <img
                           src={msg.senderTeamLogo || DEFAULT_LOGO}
                           alt=""
+                          width={14}
+                          height={14}
                           className="w-3.5 h-3.5 rounded object-contain bg-slate-100 dark:bg-slate-800"
                           onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                         />
@@ -186,6 +188,7 @@ export const ProposalChat = memo(function ProposalChat({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Escribí un mensaje..."
+                aria-label="Escribir mensaje de negociación"
                 maxLength={400}
                 disabled={isSending}
                 className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500 transition placeholder:text-slate-400"
@@ -194,7 +197,8 @@ export const ProposalChat = memo(function ProposalChat({
                 type="submit"
                 disabled={!text.trim() || isSending}
                 className="w-7 h-7 rounded-lg bg-sky-600 hover:bg-sky-500 text-white flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                title="Enviar mensaje"
+                title={isSending ? 'Hay una operación en curso' : !text.trim() ? 'Completa los datos requeridos primero' : 'Enviar mensaje'}
+                aria-label="Enviar mensaje"
               >
                 <Send className="w-3 h-3" />
               </button>

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, memo } from 'react';
 import { X, Search, Users, ExternalLink, ArrowUpDown, DollarSign, Award, Shield, ChevronDown, ChevronsUpDown, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { BaseModal } from './ui/BaseModal.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { formatPriceShort, getFlagUrl, getStatAndOvrColorClass } from '../utils/helpers.js';
 
@@ -341,14 +342,26 @@ export const TeamsModal = memo(function TeamsModal({
               >
                 {/* Team header bar (clickable para acordeón) */}
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={!isCollapsed}
+                  aria-label={`${isCollapsed ? 'Desplegar' : 'Plegar'} plantilla de ${team.teamName}`}
                   onClick={() => toggleTeamCollapse(team.userId)}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 sm:px-6 py-4 bg-[#111722]/90 hover:bg-[#131b28] border-b border-white/[0.06] cursor-pointer select-none transition"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleTeamCollapse(team.userId);
+                    }
+                  }}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 sm:px-6 py-4 bg-[#111722]/90 hover:bg-[#131b28] border-b border-white/[0.06] cursor-pointer select-none transition focus:outline-none focus:ring-1 focus:ring-sky-500"
                 >
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     <div className="w-12 h-12 rounded-xl bg-[#090d16] border border-white/10 p-1.5 flex items-center justify-center shrink-0">
                       <img
                         src={team.logoUrl || DEFAULT_LOGO}
                         alt={`Escudo de ${team.teamName}`}
+                        width={36}
+                        height={36}
                         className="w-full h-full object-contain"
                         onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                       />
@@ -545,11 +558,15 @@ export const TeamsModal = memo(function TeamsModal({
   if (isPage) return inner;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4"
-      onClick={onClose}
+    <BaseModal
+      isOpen={isVisible}
+      onClose={onClose}
+      size="2xl"
+      showClose={false}
+      className="!p-0 !max-w-7xl !bg-transparent !border-0 !shadow-none"
+      contentClassName="!p-0 !overflow-hidden flex flex-col"
     >
       {inner}
-    </div>
+    </BaseModal>
   );
 });

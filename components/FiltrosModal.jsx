@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { addDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
+import { BaseModal } from './ui/BaseModal.jsx';
 
 const filterColors = [
   { id: 'blue', bg: 'bg-blue-500/15', text: 'text-blue-300', border: 'shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]', dot: 'bg-blue-400' },
@@ -195,11 +196,15 @@ export const FiltrosModal = memo(function FiltrosModal({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300" onClick={onClose}>
-      <div
-        className="bg-[#08111c] sm:rounded-2xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-        onClick={e => e.stopPropagation()}
-      >
+    <BaseModal
+      isOpen={isVisible}
+      onClose={onClose}
+      size="2xl"
+      showClose={false}
+      className="!p-0 !bg-[#08111c] h-[92vh] sm:h-[90vh]"
+      contentClassName="!p-0 !overflow-hidden flex flex-col h-full min-h-0"
+    >
+      <div className="flex flex-col h-full min-h-0 relative">
         <div className="shrink-0 bg-[#09131f]/96 px-4 py-4 sm:px-6 sm:py-5 shadow-[0_1px_0_rgba(34,211,238,0.08)]">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -300,6 +305,7 @@ export const FiltrosModal = memo(function FiltrosModal({
                 type="button"
                 onClick={handleSaveFilter}
                 disabled={!newFilterName.trim()}
+                title={!newFilterName.trim() ? 'Completa los datos requeridos primero' : undefined}
                 className="min-h-11 rounded-xl px-5 bg-cyan-500/16 text-cyan-200 font-black hover:bg-cyan-500/24 disabled:bg-white/[0.04] disabled:text-white/30 transition shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]"
               >
                 <Save className="w-4 h-4 inline mr-2" /> Guardar
@@ -501,6 +507,6 @@ export const FiltrosModal = memo(function FiltrosModal({
           .select-filter { font-size: 14px; }
         }
       `}</style>
-    </div>
+    </BaseModal>
   );
 });

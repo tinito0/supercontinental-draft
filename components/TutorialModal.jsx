@@ -227,6 +227,7 @@ export const TutorialModal = memo(function TutorialModal({ isVisible, onClose, b
             type="button"
             onClick={() => setStep(index => Math.max(0, index - 1))}
             disabled={step === 0}
+            title={step === 0 ? 'Este es el primer paso' : undefined}
             className="flex-1 min-h-11 rounded-xl bg-white/[0.06] disabled:opacity-40 text-sm font-black text-white flex items-center justify-center gap-2"
           >
             <ChevronLeft className="w-4 h-4" /> Anterior

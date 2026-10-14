@@ -32,22 +32,29 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
   const isGK = player.POS_NOMBRE === 'PT' || player.Grupo === 'Arqueros';
 
   return (
-    <div
+    <button
+      type="button"
       onClick={() => onSelectPlayer?.(player.Id)}
+      aria-label={`Ver detalles de ${player.Name}, posición ${player.POS_NOMBRE}, valoración ${player.OVR_CALCULADO}`}
+      title={isLockedByOther ? 'Este jugador ya fue fichado por otro manager' : undefined}
+      aria-disabled={isLockedByOther ? "true" : undefined}
       className={`
+        w-full text-left
         group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer relative overflow-hidden bg-[#0c1017]
-        active:scale-[0.98] active:bg-[#111722]
-        ${isLockedByOther ? 'opacity-50 grayscale-[0.5]' : isInMyCart ? 'bg-emerald-950/20 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]' : 'border border-white/[0.08] hover:border-white/[0.18] hover:bg-[#111722] hover:-translate-y-px'}`}
+        active:scale-[0.98] active:bg-[#111722] focus:outline-none focus:ring-1 focus:ring-[#00b4d8]
+        ${isLockedByOther ? 'opacity-50 grayscale-[0.5] pointer-events-none' : isInMyCart ? 'bg-emerald-950/20 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]' : 'border border-white/[0.08] hover:border-white/[0.18] hover:bg-[#111722] hover:-translate-y-px'}`}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
       {/* SECCIÓN IZQUIERDA: FOTO E INFO */}
       <div className="flex items-center space-x-3 flex-1 min-w-0 relative z-10">
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(player.Id); }}
           className={`min-w-[42px] min-h-[42px] p-2 flex items-center justify-center rounded-full transition-all duration-200 shrink-0
             ${isWishlisted ? 'text-yellow-400 hover:text-yellow-300' : 'text-slate-400 hover:text-white'}`}
           title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}
+          aria-label={isWishlisted ? `Quitar a ${player.Name} de Favoritos` : `Añadir a ${player.Name} a Favoritos`}
         >
           <Star className="w-5 h-5" fill={isWishlisted ? "currentColor" : "none"} />
         </button>
@@ -111,7 +118,7 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
           {isLockedByOther && (
             <div className="flex items-center justify-end text-[9px] text-red-300 bg-red-900/40 px-1.5 py-0.5 rounded mt-0.5 border border-red-900/50 backdrop-blur-sm -mr-1">
               {lockedTeamLogo ? (
-                <img src={lockedTeamLogo} alt={lockedTeamName} className="w-3 h-3 object-contain mr-1 opacity-80" />
+                <img src={lockedTeamLogo} alt={lockedTeamName} width={12} height={12} className="w-3 h-3 object-contain mr-1 opacity-80" />
               ) : (
                 <Lock size={8} className="mr-1" />
               )}
@@ -121,13 +128,15 @@ export const PlayerListItem = memo(function PlayerListItem({ player, countryMap,
         </div>
 
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onCompare && onCompare(player); }}
-          className={`min-w-[42px] min-h-[42px] p-2 flex items-center justify-center rounded-xl transition-all duration-200 ${isComparing ? 'bg-[#00b4d8] text-slate-950 shadow-[0_0_15px_rgba(0,180,216,0.5)] scale-105 border border-[#00b4d8]' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700 hover:border-gray-500'}`}
+          className={`min-w-[42px] min-h-[42px] p-2 flex items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${isComparing ? 'bg-[#00b4d8] text-slate-950 shadow-[0_0_15px_rgba(0,180,216,0.5)] scale-105 border border-[#00b4d8]' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700 hover:border-gray-500'}`}
           title="Comparar"
+          aria-label={`Comparar estadísticas de ${player.Name}`}
         >
           <ArrowLeftRight size={17} strokeWidth={2.5} />
         </button>
       </div>
-    </div>
+    </button>
   );
 });

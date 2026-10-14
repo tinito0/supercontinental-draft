@@ -16,11 +16,6 @@ service cloud.firestore {
     // ── ARTIFACTS ─────────────────────────────────────────────
     match /artifacts/{appId} {
 
-      // Lectura pública libre para todo lo que esté bajo /public/
-      match /public/{document=**} {
-        allow read: if true;
-      }
-
       // Player locks: control de fichajes y validación de Jugador Franquicia
       match /public/data/player_locks/{playerId} {
         allow read: if true;
@@ -72,13 +67,71 @@ service cloud.firestore {
       // Manager chat
       match /public/data/manager_chat/{messageId} {
         allow read: if true;
-        allow create: if isAuth();
+        allow create: if isAuth()
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000;
         allow update, delete: if isAdmin();
       }
 
-      // Otras colecciones públicas (shared_formations, news, tournament, suggestions, etc.)
-      match /public/data/{collectionId}/{docId} {
-        allow write: if isAuth() && !(collectionId in ['player_locks', 'teams', 'transfers', 'offers', 'manager_chat']);
+      // Formaciones compartidas: cualquier persona puede verlas, pero sólo su autor
+      // (o un admin) puede crear, editar o eliminar su propio snapshot.
+      match /public/data/shared_formations/{formationId} {
+        allow read: if true;
+        allow create: if isAuth()
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if isAdmin() || (
+          resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdBy == resource.data.createdBy
+        );
+        allow delete: if isAdmin() || resource.data.createdBy == request.auth.uid;
+      }
+
+      // Buzón privado para administración. El cliente sólo puede enviar un mensaje
+      // identificado con su propia cuenta; no puede leer ni modificar mensajes ajenos.
+      match /public/data/suggestions/{suggestionId} {
+        allow read: if isAdmin();
+        allow create: if isAuth()
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 10
+          && request.resource.data.text.size() <= 4000;
+        allow update, delete: if isAdmin();
+      }
+
+      // Datos de visualización pública.
+      match /public/data/news/{newsId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      match /public/data/tournament/{tournamentId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      match /public/data/broadcast/{overlayId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      // La configuración de mercado cambia permisos funcionales y debe ser admin-only.
+      match /public/data/config/{configId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      // Colección legacy usada exclusivamente por operaciones de mantenimiento.
+      match /public/data/locks/{lockId} {
+        allow read, write: if isAdmin();
+      }
+
+      // Presencia online de managers
+      match /presence/{userId} {
+        allow read: if true;
+        allow create, update: if isAuth() && (request.auth.uid == userId || isAdmin());
+        allow delete: if isAuth();
       }
 
       // ── USUARIOS ──────────────────────────────────────────────
@@ -111,6 +164,100 @@ service cloud.firestore {
       // Resto de colecciones del usuario (notifications, tactics, notes, ratings)
       match /users/{userId}/{collectionId}/{docId} {
         allow read, write: if isAuth() && (request.auth.uid == userId || isAdmin()) && !(collectionId in ['cart', 'profile']);
+      }
+
+      // ── EDITOR PES 2021 ───────────────────────────────────────
+      // Roles: super_admin (todo), draft_admin (solo lectura), kit_manager (kits, colores de
+      // equipo y UniColors). Sin rol = sin acceso. Las listas de campos deben coincidir con
+      // pes/kits/kitConfig.js, pes/kits/kitFonts.js y pes/permissions.js (tests/pes/rulesSync.test.js).
+      function pesRoleIs(roles) {
+        return isAuth()
+          && exists(/databases/$(database)/documents/artifacts/$(appId)/pes_roles/$(request.auth.uid))
+          && get(/databases/$(database)/documents/artifacts/$(appId)/pes_roles/$(request.auth.uid)).data.role in roles;
+      }
+      function isPesSuper() {
+        return isAdmin() || pesRoleIs(['super_admin']);
+      }
+      function isKitManager() {
+        return pesRoleIs(['kit_manager']);
+      }
+      function hasPesRole() {
+        return isPesSuper() || pesRoleIs(['draft_admin', 'kit_manager']);
+      }
+      function pesKitKeys() {
+        return ['ShortSleevesModel', 'ShirtModel', 'Collar', 'TightKit', 'ShirtPattern', 'WinterCollar', 'LongSleevesType',
+          'Name', 'NameShape', 'NameY', 'NameSize', 'NameStretch', 'BackNumberY', 'BackNumberSize', 'BackNumberSpacing', 'BackNumberType',
+          'ChestNumberX', 'ChestNumberY', 'ChestNumberSize',
+          'ShortsModel', 'ShortsNumberSide', 'ShortsNumberX', 'ShortsNumberY', 'ShortsNumberSize',
+          'KitFile', 'BackNumbersFile', 'ChestNumbersFile', 'LegNumbersFile', 'NameFontFile',
+          'ShirtColor1', 'ShirtColor2', 'UndershirtColor', 'ShortsColor', 'SocksColor', 'UniColor_Color1', 'UniColor_Color2',
+          'RightShortX', 'RightShortY', 'RightLongX', 'RightLongY', 'LeftShortX', 'LeftShortY', 'LeftLongX', 'LeftLongY',
+          'CaptainArmband'];
+      }
+      function pesTextureSlots() {
+        return ['kit', 'nrm', 'srm', 'name', 'back', 'chest', 'leg'];
+      }
+      function pesTeamColorFields() {
+        return ['c1r', 'c1g', 'c1b', 'c2r', 'c2g', 'c2b'];
+      }
+      function pesOpTypes() {
+        return ['bin.team.set', 'bin.player.set', 'bin.coach.set', 'bin.assignment.set', 'bin.assignment.add', 'bin.assignment.remove',
+          'edit.team.set', 'edit.player.set', 'edit.coach.set', 'edit.roster.number', 'edit.roster.player', 'edit.team.squad', 'edit.roster.remove',
+          'kit.set', 'kit.texture.set', 'kit.add'];
+      }
+      function pesInLeague(wsId, op) {
+        let league = get(/databases/$(database)/documents/artifacts/$(appId)/pes_workspaces/$(wsId)).data.get('leagueTeamIds', []);
+        return league.size() == 0 || op.target.teamId in league;
+      }
+      function pesKitOpAllowed(wsId, op) {
+        return isKitManager() && pesInLeague(wsId, op) && (
+          (op.type == 'kit.set' && op.key in pesKitKeys()) ||
+          op.type == 'kit.add' ||
+          (op.type == 'kit.texture.set' && op.slot in pesTextureSlots() && op.ext in ['.ftex', '.dds']) ||
+          (op.type == 'edit.team.set' && op.field in pesTeamColorFields())
+        );
+      }
+
+      match /pes_roles/{uid} {
+        allow read: if isAuth() && (request.auth.uid == uid || isPesSuper());
+        allow write: if isPesSuper()
+          && (request.method == 'delete' || request.resource.data.role in ['super_admin', 'draft_admin', 'kit_manager']);
+      }
+
+      match /pes_workspaces/{wsId} {
+        allow read: if hasPesRole();
+        allow write: if isPesSuper();
+
+        // Historial de modificaciones: inmutable salvo el descarte.
+        match /ops/{opId} {
+          allow read: if hasPesRole();
+          allow create: if isAuth()
+            && request.resource.data.actorUid == request.auth.uid
+            && request.resource.data.state == 'saved'
+            && request.resource.data.type in pesOpTypes()
+            && (isPesSuper() || pesKitOpAllowed(wsId, request.resource.data));
+          allow update: if isAuth()
+            && (isPesSuper() || resource.data.actorUid == request.auth.uid)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'discardedBy', 'discardedAt'])
+            && request.resource.data.state == 'discarded'
+            && request.resource.data.discardedBy == request.auth.uid;
+          allow delete: if isPesSuper();
+        }
+
+        // Las texturas (kits y fuentes) viven en Supabase Storage; ver supabase/storage-policies.sql.
+
+        // Historial de exportaciones.
+        match /exports/{exportId} {
+          allow read: if hasPesRole();
+          allow create: if isPesSuper() && request.resource.data.exportedBy == request.auth.uid;
+          allow update, delete: if false;
+        }
+
+        // Última validación (cualquier rol la puede refrescar).
+        match /meta/{docId} {
+          allow read: if hasPesRole();
+          allow write: if hasPesRole();
+        }
       }
     }
 

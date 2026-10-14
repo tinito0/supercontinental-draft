@@ -465,7 +465,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
         <>
           <div className="broadcast-top-score">
             <div className="broadcast-team">
-              <img className="broadcast-team-logo" src={home.logoUrl} alt="" onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }} />
+              <img className="broadcast-team-logo" src={home.logoUrl} alt="" width={72} height={72} onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }} />
               <div className="broadcast-team-name">{home.name}</div>
             </div>
             <div className="broadcast-score-core">
@@ -474,7 +474,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
             </div>
             <div className="broadcast-team away">
               <div className="broadcast-team-name">{away.name}</div>
-              <img className="broadcast-team-logo" src={away.logoUrl} alt="" onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }} />
+              <img className="broadcast-team-logo" src={away.logoUrl} alt="" width={72} height={72} onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }} />
             </div>
           </div>
           <div className="broadcast-meta">
@@ -503,12 +503,12 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
             <>
               <div className="broadcast-versus">
                 <div className="broadcast-versus-team">
-                  <img src={home.logoUrl} alt="" onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }} />
+                  <img src={home.logoUrl} alt="" width={96} height={96} onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }} />
                   <strong>{home.name}</strong>
                 </div>
                 <div className="broadcast-vs">VS</div>
                 <div className="broadcast-versus-team away">
-                  <img src={away.logoUrl} alt="" onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }} />
+                  <img src={away.logoUrl} alt="" width={96} height={96} onError={(event) => { event.currentTarget.src = DEFAULT_LOGO; }} />
                   <strong>{away.name}</strong>
                 </div>
               </div>
@@ -521,7 +521,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
       {data.showLowerThird && (
         <div className="broadcast-lower">
           <div className="broadcast-brand">
-            <img className="broadcast-brand-logo" src={DEFAULT_LOGO} alt="SCL" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+            <img className="broadcast-brand-logo" src={DEFAULT_LOGO} alt="SCL" width={92} height={70} onError={(event) => { event.currentTarget.style.display = 'none'; }} />
             <span>Directo</span>
           </div>
           <div className="broadcast-headline">

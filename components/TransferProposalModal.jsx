@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { X, Send, AlertTriangle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { BaseModal } from './ui/BaseModal.jsx';
 import { db } from '../config/firebase.js';
 import { APP_ID, DEFAULT_LOGO, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
 
@@ -92,9 +93,16 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <BaseModal
+      isOpen={isVisible}
+      onClose={onClose}
+      size="md"
+      showClose={false}
+      className="!p-0"
+      contentClassName="!p-0 !overflow-hidden flex flex-col"
+    >
       <div 
-        className="w-full max-w-md h-[100dvh] sm:h-auto sm:max-h-[90vh] bg-white dark:bg-[#0c1017] border-0 sm:border border-slate-200 dark:border-slate-800 sm:rounded-2xl shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200 flex flex-col"
+        className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] bg-white dark:bg-[#0c1017] flex flex-col relative"
         onClick={e => e.stopPropagation()}
       >
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60">
@@ -122,6 +130,8 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                 <img
                   src={senderTeamLogo || DEFAULT_LOGO}
                   alt={senderTeamName || 'Equipo'}
+                  width={44}
+                  height={44}
                   className="w-11 h-11 rounded-lg object-contain bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1"
                   onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                 />
@@ -152,10 +162,11 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
             )}
             
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Monto Ofrecido (En Millones)</label>
+              <label htmlFor="offer-amount-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Monto Ofrecido (En Millones)</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
                 <input
+                  id="offer-amount-input"
                   type="number"
                   step="0.1"
                   value={offerAmount}
@@ -180,8 +191,9 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Mensaje (Opcional)</label>
+              <label htmlFor="offer-message-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Mensaje (Opcional)</label>
               <textarea
+                id="offer-message-input"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all resize-none"
@@ -194,6 +206,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
               <button
                 type="submit"
                 disabled={isSubmitting}
+                title={isSubmitting ? 'Hay una operación en curso' : undefined}
                 className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
@@ -208,6 +221,6 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
           </form>
         )}
       </div>
-    </div>
+    </BaseModal>
   );
 };

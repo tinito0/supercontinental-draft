@@ -15,6 +15,7 @@ export const OverviewTab = memo(function OverviewTab({
   setActiveTab,
   onPlayerClick,
   signingToasts = [],
+  isLoading = false,
 }) {
   const teamName = userProfile?.teamName || 'Mi Equipo';
   const logoUrl = userProfile?.logoUrl || DEFAULT_LOGO;
@@ -70,12 +71,26 @@ export const OverviewTab = memo(function OverviewTab({
     return finished.length > 0 ? finished[finished.length - 1] : null;
   }, [userMatches]);
 
+  // Forma reciente (últimos 5 partidos: V, E, D)
+  const recentForm = useMemo(() => {
+    const finished = userMatches.filter(m => m.status === 'completed');
+    const tLower = teamName.trim().toLowerCase();
+    return finished.slice(-5).map(m => {
+      const isHome = m.homeTeam?.trim().toLowerCase() === tLower;
+      const myScore = isHome ? Number(m.homeScore ?? 0) : Number(m.awayScore ?? 0);
+      const oppScore = isHome ? Number(m.awayScore ?? 0) : Number(m.homeScore ?? 0);
+      if (myScore > oppScore) return { res: 'V', color: 'bg-emerald-500 text-black', label: 'Victoria' };
+      if (myScore === oppScore) return { res: 'E', color: 'bg-amber-400 text-black', label: 'Empate' };
+      return { res: 'D', color: 'bg-rose-500 text-white', label: 'Derrota' };
+    });
+  }, [userMatches, teamName]);
+
   // ── 3. Squad stats & star players ──
   const topPlayers = useMemo(() => {
     if (!ownedCart || ownedCart.length === 0) return [];
     return [...ownedCart]
       .sort((a, b) => (b.OVR_CALCULADO || 0) - (a.OVR_CALCULADO || 0))
-      .slice(0, 4);
+      .slice(0, 5);
   }, [ownedCart]);
 
   const averageOvr = useMemo(() => {
@@ -103,6 +118,8 @@ export const OverviewTab = memo(function OverviewTab({
               <img
                 src={logoUrl}
                 alt={teamName}
+                width={80}
+                height={80}
                 className="w-full h-full object-contain drop-shadow"
                 onError={(e) => { e.target.src = DEFAULT_LOGO; }}
               />
@@ -119,9 +136,35 @@ export const OverviewTab = memo(function OverviewTab({
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 {teamName}
               </h1>
-              <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                Panel central de control y rendimiento de la franquicia
-              </p>
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                <p className="text-xs sm:text-sm text-slate-400">
+                  {ownedCart.length} jugadores · OVR promedio {averageOvr || '---'} · Presupuesto {formatPriceShort(currentBudget / 1000000)}
+                </p>
+                {recentForm.length > 0 && (
+                  <div className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-lg border border-white/5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Forma:</span>
+                    <div className="flex items-center gap-1">
+                      {recentForm.map((f, i) => (
+                        <span
+                          key={i}
+                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${f.color} shadow-xs`}
+                          title={`${f.label}`}
+                        >
+                          {f.res}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {signingToasts.length > 0 && (
+                  <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Último fichaje:</span>
+                    <span className="text-[11px] font-bold text-emerald-300 truncate max-w-[120px]">
+                      {signingToasts[signingToasts.length - 1]?.playerName || 'Nuevo jugador'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -129,10 +172,10 @@ export const OverviewTab = memo(function OverviewTab({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-black/30 p-2 sm:p-2.5 rounded-xl border border-white/5">
             {/* Presupuesto */}
             <div className="p-3 rounded-lg bg-white/[0.02]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
+              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
                 Presupuesto
               </span>
-              <div className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums">
+              <div className="text-xl sm:text-2xl font-black text-emerald-400 tabular-nums">
                 {formatPriceShort(currentBudget / 1000000)}
               </div>
               <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
@@ -145,10 +188,10 @@ export const OverviewTab = memo(function OverviewTab({
 
             {/* Plantilla */}
             <div className="p-3 rounded-lg bg-white/[0.02]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
+              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
                 Fichajes
               </span>
-              <div className="text-lg sm:text-xl font-black text-white tabular-nums">
+              <div className="text-xl sm:text-2xl font-black text-white tabular-nums">
                 {ownedCart.length}{' '}
                 <span className="text-xs text-slate-400 font-normal">jugadores</span>
               </div>
@@ -159,10 +202,10 @@ export const OverviewTab = memo(function OverviewTab({
 
             {/* Media Equipo */}
             <div className="p-3 rounded-lg bg-white/[0.02]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
+              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
                 Media Plantel
               </span>
-              <div className="text-lg sm:text-xl font-black text-[#00b4d8] tabular-nums">
+              <div className="text-xl sm:text-2xl font-black text-[#00b4d8] tabular-nums">
                 {averageOvr > 0 ? averageOvr : '---'}
               </div>
               <div className="text-[10px] text-slate-400 mt-2">
@@ -172,10 +215,10 @@ export const OverviewTab = memo(function OverviewTab({
 
             {/* Posición Tabla */}
             <div className="p-3 rounded-lg bg-white/[0.02]">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
+              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
                 Posición Liga
               </span>
-              <div className="text-lg sm:text-xl font-black text-amber-400 tabular-nums">
+              <div className="text-xl sm:text-2xl font-black text-amber-400 tabular-nums">
                 {userRankIndex >= 0 ? `#${userRankIndex + 1}` : '---'}
               </div>
               <div className="text-[10px] text-slate-400 mt-2 tabular-nums">
@@ -185,6 +228,31 @@ export const OverviewTab = memo(function OverviewTab({
           </div>
         </div>
       </div>
+
+      {/* ─── ONBOARDING BANNER (SI NO TIENE JUGADORES) ─── */}
+      {ownedCart.length === 0 && !isLoading && (
+        <div className="rounded-2xl bg-gradient-to-r from-sky-950/40 via-[#111722] to-sky-950/20 border border-[#00b4d8]/30 p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-[#00b4d8]/15 border border-[#00b4d8]/30 flex items-center justify-center text-[#00b4d8] shrink-0">
+              <Zap className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">¡Comienza a armar tu plantilla!</h3>
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                Tu club aún no tiene futbolistas fichados. Visita el Mercado para explorar jugadores, definir tu Jugador Franquicia y completar tu alineación.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('Marketplace')}
+            className="px-5 py-2.5 bg-[#00b4d8] hover:bg-[#38bdf8] text-[#030712] font-black text-xs rounded-xl shadow-lg transition active:scale-95 shrink-0 cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>Ir al Mercado</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* ─── MAIN GRID ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -206,7 +274,22 @@ export const OverviewTab = memo(function OverviewTab({
               </span>
             </div>
 
-            {nextMatch || lastMatch ? (
+            {isLoading || tournamentData === null ? (
+              <div className="bg-[#111722] rounded-xl p-5 border border-white/[0.06] animate-pulse">
+                <div className="h-4 w-28 bg-white/10 rounded mx-auto mb-5" />
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 flex flex-col items-center gap-2">
+                    <div className="w-14 h-14 rounded-2xl bg-white/10" />
+                    <div className="h-3 w-20 bg-white/10 rounded" />
+                  </div>
+                  <div className="px-4 py-2 rounded-lg bg-white/10 w-16 h-8" />
+                  <div className="flex-1 flex flex-col items-center gap-2">
+                    <div className="w-14 h-14 rounded-2xl bg-white/10" />
+                    <div className="h-3 w-20 bg-white/10 rounded" />
+                  </div>
+                </div>
+              </div>
+            ) : nextMatch || lastMatch ? (
               (() => {
                 const match = nextMatch || lastMatch;
                 const isCompleted = match.status === 'completed';
@@ -238,6 +321,8 @@ export const OverviewTab = memo(function OverviewTab({
                           <img
                             src={getLogo(match.homeTeam)}
                             alt={match.homeTeam}
+                            width={40}
+                            height={40}
                             className="w-full h-full object-contain"
                             onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                           />
@@ -275,6 +360,8 @@ export const OverviewTab = memo(function OverviewTab({
                           <img
                             src={getLogo(match.awayTeam)}
                             alt={match.awayTeam}
+                            width={40}
+                            height={40}
                             className="w-full h-full object-contain"
                             onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                           />
@@ -313,16 +400,34 @@ export const OverviewTab = memo(function OverviewTab({
               </span>
             </div>
 
-            {leagueTable.length > 0 ? (
+            {isLoading || tournamentData === null ? (
+              <div className="space-y-2.5 animate-pulse py-2">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 rounded bg-white/10" />
+                      <div className="w-5 h-5 rounded-full bg-white/10" />
+                      <div className="w-28 h-3 rounded bg-white/10" />
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-6 h-3 rounded bg-white/10" />
+                      <div className="w-6 h-3 rounded bg-white/10" />
+                      <div className="w-8 h-3 rounded bg-white/15" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : leagueTable.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[340px]">
+                <table className="w-full text-left border-collapse min-w-[340px]" aria-label="Tabla de posiciones de la liga">
+                  <caption className="sr-only">Clasificación resumida del torneo - Primeros 6 clubes</caption>
                   <thead>
                     <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.06] pb-2">
-                      <th className="py-2 px-2 text-center w-8">#</th>
-                      <th className="py-2 px-3">Club</th>
-                      <th className="py-2 px-2 text-center w-10">PJ</th>
-                      <th className="py-2 px-2 text-center w-10">DG</th>
-                      <th className="py-2 px-3 text-right w-12 text-white font-extrabold">PTS</th>
+                      <th scope="col" className="py-2 px-2 text-center w-8">#</th>
+                      <th scope="col" className="py-2 px-3">Club</th>
+                      <th scope="col" className="py-2 px-2 text-center w-10">PJ</th>
+                      <th scope="col" className="py-2 px-2 text-center w-10">DG</th>
+                      <th scope="col" className="py-2 px-3 text-right w-12 text-white font-extrabold">PTS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.03] text-xs">
@@ -341,6 +446,8 @@ export const OverviewTab = memo(function OverviewTab({
                             <img
                               src={getLogo(team.name)}
                               alt=""
+                              width={20}
+                              height={20}
                               className="w-5 h-5 object-contain shrink-0"
                               onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                             />
@@ -363,6 +470,24 @@ export const OverviewTab = memo(function OverviewTab({
                         </tr>
                       );
                     })}
+                    {userRankIndex >= 6 && userLeagueStats && (
+                      <>
+                        <tr className="h-6">
+                          <td colSpan={5} className="text-center text-[10px] text-slate-500">···</td>
+                        </tr>
+                        <tr className="bg-[#00b4d8]/10 border-l-[3px] border-[#00b4d8] transition-colors h-10">
+                          <td className="text-center font-mono font-bold tabular-nums text-slate-400">{userRankIndex + 1}</td>
+                          <td className="px-3 py-1.5 flex items-center gap-2.5">
+                            <img src={getLogo(userLeagueStats.name)} alt="" className="w-5 h-5 object-contain shrink-0" onError={(e) => { e.target.src = DEFAULT_LOGO; }} />
+                            <span className="font-bold text-[#00b4d8] truncate max-w-[180px]">{userLeagueStats.name}</span>
+                            <span className="text-[9px] font-extrabold px-1 py-0.2 rounded bg-[#00b4d8]/20 text-[#00b4d8]">TÚ</span>
+                          </td>
+                          <td className="px-2 text-center text-slate-400 tabular-nums">{userLeagueStats.pj}</td>
+                          <td className="px-2 text-center text-slate-400 tabular-nums">{(Number(userLeagueStats.gf) || 0) - (Number(userLeagueStats.gc) || 0)}</td>
+                          <td className="px-3 text-right font-black text-white tabular-nums">{userLeagueStats.pts}</td>
+                        </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -395,16 +520,33 @@ export const OverviewTab = memo(function OverviewTab({
               </button>
             </div>
 
-            {topPlayers.length > 0 ? (
+            {isLoading ? (
+              <div className="space-y-2.5 animate-pulse">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-[#111722] border border-white/[0.05]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-white/10" />
+                      <div className="space-y-1.5">
+                        <div className="w-24 h-3.5 rounded bg-white/10" />
+                        <div className="w-16 h-2.5 rounded bg-white/10" />
+                      </div>
+                    </div>
+                    <div className="w-12 h-3.5 rounded bg-white/10" />
+                  </div>
+                ))}
+              </div>
+            ) : topPlayers.length > 0 ? (
               <div className="space-y-2.5">
                 {topPlayers.map((player) => {
                   const ovrColor = getStatAndOvrColorClass(player.OVR_CALCULADO);
 
                   return (
-                    <div
+                    <button
                       key={player.Id}
+                      type="button"
                       onClick={() => onPlayerClick?.(player.Id)}
-                      className="group flex items-center justify-between p-2.5 rounded-xl bg-[#111722] border border-white/[0.05] hover:border-white/[0.15] cursor-pointer transition-all active:scale-[0.98]"
+                      aria-label={`Ver perfil de ${player.Name}, ${player.POS_NOMBRE}, OVR ${player.OVR_CALCULADO}`}
+                      className="w-full text-left group flex items-center justify-between p-2.5 rounded-xl bg-[#111722] border border-white/[0.05] hover:border-white/[0.15] cursor-pointer transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4d8]"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative shrink-0">
@@ -436,7 +578,7 @@ export const OverviewTab = memo(function OverviewTab({
                       <div className="text-right shrink-0 font-bold text-emerald-400 text-xs tabular-nums">
                         {formatPriceShort(player.Precio)}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

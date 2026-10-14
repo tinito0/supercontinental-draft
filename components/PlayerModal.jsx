@@ -1,6 +1,7 @@
 import React, { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { X, Eye, MinusCircle, DollarSign, Sparkles, Lock, CheckCircle, ChevronRight, PieChart, Shield, Target, Zap, Activity, Trash2, AlertTriangle, Handshake, Crown } from 'lucide-react';
 import { Radar, Bar, Doughnut } from 'react-chartjs-2';
+import { BaseModal } from './ui/BaseModal.jsx';
 import {
   getPosColorClass,
   getStatAndOvrColorClass,
@@ -152,8 +153,15 @@ const RadarChart = memo(function RadarChart({ player, isGK }) {
         <h3 className="text-xs font-semibold text-slate-300">Perfil de atributos</h3>
         <span className="text-xs text-slate-500 font-medium">Hexágono</span>
       </div>
-      <div className="relative w-full h-[245px] flex items-center justify-center">
+      <div
+        className="relative w-full h-[245px] flex items-center justify-center"
+        role="img"
+        aria-label={`Gráfico de radar de atributos para ${player?.Name || 'jugador'}`}
+      >
         <Radar data={data} options={options} />
+        <span className="sr-only">
+          Atributos principales: Disparo {player.STAT_SHO ?? 0}, Pase {player.STAT_PAS ?? 0}, Físico {player.STAT_STR ?? 0}, {isGK ? `Portero ${player.STAT_GK ?? 0}` : `Defensa ${player.STAT_DEF ?? 0}`}, Velocidad {player.STAT_SPD ?? 0}, Regate {player.STAT_DRI ?? 0}.
+        </span>
       </div>
     </div>
   );
@@ -196,38 +204,41 @@ export const getSimilarPlayers = (targetPlayer, allPlayers, limit = 4) => {
     ];
   }
 
-  // Helper para crear el vector numérico
-  const getVector = (p) => statVectorKeys.map(k => Number(p[k] || 0));
-
-  // Helper matemático: Similitud Coseno
-  const cosineSim = (vecA, vecB) => {
-    let dotProduct = 0;
-    let magA = 0;
-    let magB = 0;
-    for (let i = 0; i < vecA.length; i++) {
-      dotProduct += vecA[i] * vecB[i];
-      magA += vecA[i] * vecA[i];
-      magB += vecB[i] * vecB[i];
-    }
-    magA = Math.sqrt(magA);
-    magB = Math.sqrt(magB);
-    return (magA && magB) ? (dotProduct / (magA * magB)) : 0;
-  };
+  const numKeys = statVectorKeys.length;
+  const targetVec = new Float32Array(numKeys);
+  let targetMagSq = 0;
+  for (let k = 0; k < numKeys; k++) {
+    const val = Number(targetPlayer[statVectorKeys[k]] || 0);
+    targetVec[k] = val;
+    targetMagSq += val * val;
+  }
+  const targetMag = Math.sqrt(targetMagSq);
+  if (!targetMag) return [];
 
   const targetOvr = Number(targetPlayer.OVR_CALCULADO) || 0;
   const targetPrice = Number(targetPlayer.Precio) || 0;
   const maxPriceDiff = targetPrice * 0.6 + 15;
   const targetPos = targetPlayer.POS_NOMBRE;
   const targetId = targetPlayer.Id;
-  const targetVec = getVector(targetPlayer);
   const candidates = [];
 
   for (let i = 0; i < allPlayers.length; i++) {
     const p = allPlayers[i];
     if (p.Id === targetId || p.POS_NOMBRE !== targetPos) continue;
-    if (Math.abs((Number(p.OVR_CALCULADO) || 0) - targetOvr) > 6) continue;
-    if (Math.abs((Number(p.Precio) || 0) - targetPrice) >= maxPriceDiff) continue;
-    const similarity = cosineSim(targetVec, getVector(p));
+    const pOvr = Number(p.OVR_CALCULADO) || 0;
+    if (Math.abs(pOvr - targetOvr) > 6) continue;
+    const pPrice = Number(p.Precio) || 0;
+    if (Math.abs(pPrice - targetPrice) >= maxPriceDiff) continue;
+
+    let dotProduct = 0;
+    let magBSq = 0;
+    for (let k = 0; k < numKeys; k++) {
+      const valB = Number(p[statVectorKeys[k]] || 0);
+      dotProduct += targetVec[k] * valB;
+      magBSq += valB * valB;
+    }
+    const magB = Math.sqrt(magBSq);
+    const similarity = (magB > 0) ? (dotProduct / (targetMag * magB)) : 0;
     candidates.push({ ...p, similarityScore: similarity * 100 });
   }
 
@@ -389,9 +400,17 @@ export const PlayerModal = memo(function PlayerModal({
   const meetsFranchiseCriteria = player && player.Age >= FRANCHISE_MIN_AGE && player.OVR_CALCULADO >= FRANCHISE_MIN_OVR && player.OVR_CALCULADO <= FRANCHISE_MAX_OVR;
   const isEligibleForFranchise = meetsFranchiseCriteria && !userProfile?.franchisePlayerUsed;
 
-  const similarPlayers = useMemo(() => {
-    if (!player) return [];
-    return getSimilarPlayers(player, allPlayers);
+  const [similarPlayers, setSimilarPlayers] = useState([]);
+
+  useEffect(() => {
+    if (!player || !allPlayers?.length) {
+      setSimilarPlayers([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setSimilarPlayers(getSimilarPlayers(player, allPlayers));
+    }, 16);
+    return () => clearTimeout(timer);
   }, [player?.Id, allPlayers]);
 
   const handleDismissCelebration = useCallback(() => {
@@ -432,7 +451,7 @@ export const PlayerModal = memo(function PlayerModal({
   const renderActionButton = () => {
     if (isVisitor) {
       return (
-        <div className="flex items-center justify-center px-6 py-3 font-bold rounded-xl bg-gray-800 text-gray-400 border border-gray-700 w-full sm:w-auto cursor-not-allowed opacity-70">
+        <div className="flex items-center justify-center px-6 py-3 font-bold rounded-xl bg-gray-800 text-gray-400 border border-gray-700 w-full sm:w-auto cursor-not-allowed opacity-70" aria-disabled="true" title="Modo Visitante (Solo Lectura)">
           <Eye className="w-5 h-5 mr-2" /> Modo Visitante (Solo Lectura)
         </div>
       );
@@ -470,14 +489,14 @@ export const PlayerModal = memo(function PlayerModal({
       if (isFranchisePlayer) {
         return (
           <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
-            <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-[#111722] text-slate-400 border border-white/[0.08] cursor-not-allowed w-full sm:w-auto">
+            <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-[#111722] text-slate-400 border border-white/[0.08] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro manager">
               <div className="flex items-center text-[10px] text-red-400 uppercase tracking-wider mb-0.5 font-semibold">
                 <Lock className="w-3 h-3 mr-1" />
                 <span>Fichado por</span>
               </div>
               <span className="text-white text-sm font-bold">{lockedTeamName || 'Otro equipo'}</span>
             </div>
-            <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-purple-950/30 text-purple-400 border border-purple-500/30 w-full sm:w-auto cursor-not-allowed">
+            <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-purple-950/30 text-purple-400 border border-purple-500/30 w-full sm:w-auto cursor-not-allowed" aria-disabled="true" title="Jugador Franquicia">
               <div className="flex items-center text-[10px] text-purple-400 uppercase tracking-wider mb-0.5 font-semibold">
                 <Crown className="w-3 h-3 mr-1" />
                 <span>Jugador Franquicia</span>
@@ -489,7 +508,7 @@ export const PlayerModal = memo(function PlayerModal({
       }
       return (
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
-          <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-[#111722] text-slate-400 border border-white/[0.08] cursor-not-allowed w-full sm:w-auto">
+          <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-[#111722] text-slate-400 border border-white/[0.08] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro manager">
             <div className="flex items-center text-[10px] text-red-400 uppercase tracking-wider mb-0.5 font-semibold">
               <Lock className="w-3 h-3 mr-1" />
               <span>Fichado por</span>
@@ -529,7 +548,7 @@ export const PlayerModal = memo(function PlayerModal({
               onClick={() => handleSign(true)}
               disabled={isSigning}
               className={`${commonClasses} ${isSigning ? 'bg-slate-700 text-slate-300 cursor-wait' : 'bg-amber-600 hover:bg-amber-500 text-white'}`}
-              title="Fichar gratis como jugador franquicia"
+              title={isSigning ? 'Hay una operación en curso' : "Fichar gratis como jugador franquicia"}
             >
               {isSigning ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
@@ -543,7 +562,7 @@ export const PlayerModal = memo(function PlayerModal({
       } else if (meetsFranchiseCriteria && userProfile?.franchisePlayerUsed) {
         return (
           <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
-            <button disabled className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
+            <button disabled title="Ya has fichado a tu Jugador Franquicia esta temporada" className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
               <Lock className="w-4 h-4 mr-2 text-slate-500" />
               Cupo Utilizado
             </button>
@@ -555,7 +574,7 @@ export const PlayerModal = memo(function PlayerModal({
       } else {
         return (
           <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
-            <button disabled className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
+            <button disabled title="El jugador no cumple los requisitos de franquicia" className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
               <DollarSign className="w-4 h-4 mr-2 text-slate-500" />
               Mercado Restringido
             </button>
@@ -618,7 +637,7 @@ export const PlayerModal = memo(function PlayerModal({
       return (
         <div className="flex flex-col items-center gap-0 w-full sm:w-auto">
           <BudgetImpact />
-          <button disabled className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
+          <button disabled title="No tienes presupuesto suficiente para esta acción" className={`${commonClasses} bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700`}>
             <DollarSign className="w-4 h-4 mr-1.5 text-slate-500" />
             Presupuesto Insuficiente
           </button>
@@ -633,7 +652,7 @@ export const PlayerModal = memo(function PlayerModal({
           onClick={() => handleSign(false)}
           disabled={isSigning}
           className={`${commonClasses} ${isSigning ? 'bg-slate-700 text-slate-300 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
-          title={`FICHAR por ${formatPriceShort(priceMillions)}`}
+          title={isSigning ? 'Hay una operación en curso' : `FICHAR por ${formatPriceShort(priceMillions)}`}
         >
           {isSigning ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
@@ -661,7 +680,7 @@ export const PlayerModal = memo(function PlayerModal({
           <p className="text-sm text-slate-300 mb-5">¿Seguro que querés liberar a <span className="font-bold text-white">{player.Name}</span>?</p>
           <div className="flex gap-2.5">
             <button onClick={() => setShowReleaseConfirm(false)} className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-300 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] transition">Cancelar</button>
-            <button onClick={handleRelease} disabled={isReleasing} className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-500 border border-red-400/30 transition disabled:opacity-50">
+            <button onClick={handleRelease} disabled={isReleasing} title={isReleasing ? 'Hay una operación en curso' : undefined} className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-500 border border-red-400/30 transition disabled:opacity-50">
               {isReleasing ? 'Liberando...' : 'Confirmar'}
             </button>
           </div>
@@ -669,11 +688,15 @@ export const PlayerModal = memo(function PlayerModal({
       </div>
     )}
 
-    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-[60] p-0 sm:p-4" onClick={onClose}>
-      <div
-        className="bg-slate-900 sm:rounded-xl shadow-xl w-full max-w-6xl h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col border-0 sm:border border-slate-800 relative overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
+    <BaseModal
+      isOpen={true}
+      onClose={onClose}
+      size="2xl"
+      showClose={false}
+      className="!p-0 !bg-slate-900 !max-w-6xl"
+      contentClassName="!p-0 !overflow-hidden flex flex-col"
+    >
+      <div className="flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] relative">
         {/* Botón Cerrar */}
         <button
           onClick={onClose}
@@ -790,63 +813,79 @@ export const PlayerModal = memo(function PlayerModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              {similarPlayers.map(simPlayer => {
-                const ovrDiff = (simPlayer.OVR_CALCULADO || 0) - (player.OVR_CALCULADO || 0);
-
-                return (
-                  <div
-                    key={simPlayer.Id}
-                    onClick={() => { onClose(); onPlayerSwitch(simPlayer); }}
-                    className="group bg-[#111722] hover:bg-[#151d2c] rounded-xl p-3 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer shadow-sm flex flex-col justify-between"
-                  >
-                    <div className="flex items-center gap-2.5 mb-2.5">
-                      <div className="relative shrink-0">
-                        <img
-                          src={`/fotos_jugadores/${simPlayer.Id}.webp`}
-                          alt={simPlayer.Name}
-                          className="w-10 h-10 rounded-lg object-cover bg-[#0a0e16] border border-slate-800 transition-colors"
-                          onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/48x48/111/555?text=${simPlayer.Name.substring(0, 1)}`; }}
-                        />
-                        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold tabular-nums !text-black ${getStatAndOvrColorClass(simPlayer.OVR_CALCULADO)}`}>
-                          {simPlayer.OVR_CALCULADO}
-                        </div>
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-semibold text-slate-200 truncate group-hover:text-white transition-colors">
-                          {simPlayer.Name}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold !text-black ${getPosColorClass(simPlayer.POS_NOMBRE)}`}>
-                            {simPlayer.POS_NOMBRE}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            {simPlayer.Age} años
-                          </span>
-                        </div>
+              {similarPlayers.length === 0 ? (
+                [...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-[#111722] rounded-xl p-3 border border-slate-800/80 animate-pulse h-[106px] flex flex-col justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-lg bg-slate-800" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-3 w-20 rounded bg-slate-800" />
+                        <div className="h-2.5 w-12 rounded bg-slate-800" />
                       </div>
                     </div>
-
-                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                      <div className="text-emerald-400 font-semibold tabular-nums">
-                        {formatPriceShort(simPlayer.Precio)}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-[10px] font-medium px-1 rounded ${ovrDiff > 0 ? 'text-emerald-400 bg-emerald-500/10' : ovrDiff < 0 ? 'text-slate-400 bg-white/[0.04]' : 'text-slate-400'}`}>
-                          {ovrDiff > 0 ? `+${ovrDiff}` : ovrDiff === 0 ? '=' : ovrDiff} OVR
-                        </span>
-                        <span className="text-xs text-slate-400 font-medium tabular-nums">
-                          {Math.round(simPlayer.similarityScore)}%
-                        </span>
-                      </div>
-                    </div>
+                    <div className="h-3 w-16 rounded bg-slate-800" />
                   </div>
-                );
-              })}
+                ))
+              ) : (
+                similarPlayers.map(simPlayer => {
+                  const ovrDiff = (simPlayer.OVR_CALCULADO || 0) - (player.OVR_CALCULADO || 0);
+
+                  return (
+                    <div
+                      key={simPlayer.Id}
+                      onClick={() => { onClose(); onPlayerSwitch(simPlayer); }}
+                      className="group bg-[#111722] hover:bg-[#151d2c] rounded-xl p-3 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer shadow-sm flex flex-col justify-between"
+                    >
+                      <div className="flex items-center gap-2.5 mb-2.5">
+                        <div className="relative shrink-0">
+                          <img
+                            src={`/fotos_jugadores/${simPlayer.Id}.webp`}
+                            alt={simPlayer.Name}
+                            className="w-10 h-10 rounded-lg object-cover bg-[#0a0e16] border border-slate-800 transition-colors"
+                            onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/48x48/111/555?text=${simPlayer.Name.substring(0, 1)}`; }}
+                          />
+                          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold tabular-nums !text-black ${getStatAndOvrColorClass(simPlayer.OVR_CALCULADO)}`}>
+                            {simPlayer.OVR_CALCULADO}
+                          </div>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold text-slate-200 truncate group-hover:text-white transition-colors">
+                            {simPlayer.Name}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold !text-black ${getPosColorClass(simPlayer.POS_NOMBRE)}`}>
+                              {simPlayer.POS_NOMBRE}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {simPlayer.Age} años
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                        <div className="text-emerald-400 font-semibold tabular-nums">
+                          {formatPriceShort(simPlayer.Precio)}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[10px] font-medium px-1 rounded ${ovrDiff > 0 ? 'text-emerald-400 bg-emerald-500/10' : ovrDiff < 0 ? 'text-slate-400 bg-white/[0.04]' : 'text-slate-400'}`}>
+                            {ovrDiff > 0 ? `+${ovrDiff}` : ovrDiff === 0 ? '=' : ovrDiff} OVR
+                          </span>
+                          <span className="text-xs text-slate-400 font-medium tabular-nums">
+                            {Math.round(simPlayer.similarityScore)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
       </div>
+    </BaseModal>
       {showProposalModal && (
         <TransferProposalModal
           isVisible={showProposalModal}
@@ -860,7 +899,6 @@ export const PlayerModal = memo(function PlayerModal({
           remainingBudget={remainingBudget}
         />
       )}
-    </div>
     </>
   );
 });

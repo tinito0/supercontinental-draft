@@ -15,7 +15,19 @@ export const SearchBar = memo(function SearchBar({
     setInputValue(filters.name || '');
   }, [filters.name]);
 
-  // Solo ejecuta la búsqueda cuando el usuario presiona Enter o hace clic en "Buscar"
+  // Debounce automático a los 300ms de inactividad de tipeo
+  useEffect(() => {
+    const trimmed = inputValue.trim();
+    if ((filters.name || '') === trimmed) return;
+
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, name: trimmed }));
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [inputValue, filters.name, setFilters]);
+
+  // Ejecución inmediata si el usuario presiona Enter o hace clic en "Buscar"
   const triggerSearch = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if ((filters.name || '') !== inputValue.trim()) {
@@ -142,6 +154,7 @@ export const SearchBar = memo(function SearchBar({
             type="text"
             enterKeyHint="search"
             placeholder="Buscar por nombre..."
+            aria-label="Buscar jugadores por nombre"
             value={inputValue}
             onChange={event => setInputValue(event.target.value)}
             className="w-full min-h-12 pl-10 pr-10 py-2.5 bg-white dark:bg-[#0c1017] text-slate-900 dark:text-white rounded-xl text-base outline-none border border-slate-200 dark:border-white/[0.08] focus:border-sky-500 dark:focus:border-[#00b4d8] placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors shadow-sm"
@@ -151,6 +164,7 @@ export const SearchBar = memo(function SearchBar({
             <button
               type="button"
               onClick={handleClearSearch}
+              aria-label="Borrar texto de búsqueda"
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition cursor-pointer"
               title="Borrar texto de búsqueda"
             >
@@ -234,7 +248,12 @@ export const SearchBar = memo(function SearchBar({
 
       <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white dark:bg-[#0c1017] p-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
         <div data-app-tour="sort" className="relative w-full lg:w-auto">
-          <select value={currentSortValue} onChange={handleSortChange} className={`appearance-none w-full lg:w-64 min-h-10 px-4 py-2 pl-10 rounded-lg transition outline-none focus:border-sky-500 dark:focus:border-[#00b4d8] text-base sm:text-sm font-semibold cursor-pointer ${softControl}`}>
+          <select
+            value={currentSortValue}
+            onChange={handleSortChange}
+            aria-label="Ordenar jugadores por"
+            className={`appearance-none w-full lg:w-64 min-h-10 px-4 py-2 pl-10 rounded-lg transition outline-none focus:border-sky-500 dark:focus:border-[#00b4d8] text-base sm:text-sm font-semibold cursor-pointer ${softControl}`}
+          >
             <option value="ovr-desc">Media (Mayor a Menor)</option>
             <option value="ovr-asc">Media (Menor a Mayor)</option>
             <option value="precio-desc">Precio (Mayor a Menor)</option>
@@ -258,19 +277,36 @@ export const SearchBar = memo(function SearchBar({
         </div>
 
         <div data-app-tour="view" className={`flex items-center space-x-1.5 rounded-lg p-1 ${softControl}`}>
-          <button onClick={() => setViewMode('list')} className={`min-w-9 min-h-9 p-2 rounded-md transition cursor-pointer ${viewMode === 'list' ? activeControl : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`} title="Vista de Lista">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            aria-label="Vista de lista"
+            aria-pressed={viewMode === 'list'}
+            className={`min-w-9 min-h-9 p-2 rounded-md transition cursor-pointer ${viewMode === 'list' ? activeControl : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}
+            title="Vista de Lista"
+          >
             <ListIcon size={18} />
           </button>
-          <button onClick={() => setViewMode('grid')} className={`min-w-9 min-h-9 p-2 rounded-md transition cursor-pointer ${viewMode === 'grid' ? activeControl : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`} title="Vista de Cuadrícula">
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            aria-label="Vista de cuadrícula"
+            aria-pressed={viewMode === 'grid'}
+            className={`min-w-9 min-h-9 p-2 rounded-md transition cursor-pointer ${viewMode === 'grid' ? activeControl : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}
+            title="Vista de Cuadrícula"
+          >
             <LayoutGrid size={18} />
           </button>
 
           {viewMode === 'grid' && (
-            <div className="flex items-center pl-2 space-x-1 border-l border-slate-200 dark:border-white/10">
+            <div className="flex items-center pl-2 space-x-1 border-l border-slate-200 dark:border-white/10" role="group" aria-label="Cantidad de columnas">
               {[2, 3, 4, 6].map(cols => (
                 <button
                   key={cols}
+                  type="button"
                   onClick={() => setGridColumns(cols)}
+                  aria-label={`Mostrar ${cols} columnas`}
+                  aria-pressed={gridColumns === cols}
                   className={`${cols === 2 ? '' : cols === 3 ? 'hidden sm:block' : cols === 4 ? 'hidden md:block' : 'hidden xl:block'} min-w-8 min-h-8 px-2 py-1 text-xs font-bold rounded transition cursor-pointer ${
                     gridColumns === cols ? 'bg-sky-600 dark:bg-[#00b4d8] text-white dark:text-[#030712]' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.04]'
                   }`}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, memo, useRef, useMemo, useReducer } from 'react';
-import { X, Save, Image as ImageIcon, ClipboardList, Move, Share2, Check, Copy, Loader2, Crown, Target, Zap, Shield, Users, Activity, Sliders, Settings } from 'lucide-react';
+import { X, Save, ClipboardList, Move, Share2, Check, Copy, Loader2, Crown, Target, Zap, Shield, Users, Activity, Sliders, Settings, ArrowLeft } from 'lucide-react';
 import { writeBatch, addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { Pitch } from './Pitch.jsx';
-import html2canvas from 'html2canvas';
+import { BaseModal } from './ui/BaseModal.jsx';
 import { FORMATIONS, APP_ID, DEFAULT_LOGO, DEFAULT_TACTICS } from '../utils/constants.js';
 import { getPosColorClass, formatPriceShort } from '../utils/helpers.js';
 
@@ -479,9 +479,10 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const [availability, setAvailability] = useState({});
   const [matchBench, setMatchBench] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveIndicator, setSaveIndicator] = useState(null); // 'saving' | 'saved' | 'error' | null
+  const saveIndicatorTimerRef = useRef(null);
   const pendingAutoSaveRef = useRef(false);
   const hasLoadedRef = useRef(false);
-  const [isCapturing, setIsCapturing] = useState(false);
   const [mobileTab, setMobileTab] = useState('pitch'); // 'pitch' | 'squad' | 'tactics'
   const [mobileTacticsSubTab, setMobileTacticsSubTab] = useState('tactics'); // 'tactics' | 'roles'
   const [showSharePopover, setShowSharePopover] = useState(false);
@@ -494,10 +495,11 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const [tactics, setTactics] = useState(() => userProfile?.tactics ? { ...DEFAULT_TACTICS, ...userProfile.tactics } : DEFAULT_TACTICS);
   const [sidebarTab, setSidebarTab] = useState('players'); // 'players' | 'roles' | 'tactics'
 
-  // Cleanup share timeout on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+      if (saveIndicatorTimerRef.current) clearTimeout(saveIndicatorTimerRef.current);
     };
   }, []);
 
@@ -610,6 +612,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     const tacticsToSave = (overrideTactics && typeof overrideTactics === 'object') ? overrideTactics : (tactics || DEFAULT_TACTICS);
     
     setIsSaving(true);
+    setSaveIndicator('saving');
     try {
       const targetUserId = userId || userProfile?.userId;
       if (!targetUserId) throw new Error('No se pudo identificar el usuario');
@@ -638,6 +641,12 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
       await batch.commit();
       
+      setSaveIndicator('saved');
+      if (saveIndicatorTimerRef.current) clearTimeout(saveIndicatorTimerRef.current);
+      saveIndicatorTimerRef.current = setTimeout(() => {
+        setSaveIndicator(null);
+      }, 2500);
+
       // Notificar solo si fue guardado manual (clic en botón)
       if (!isLineupObject) {
         showStatusMessage?.('success', 'Plantilla guardada.');
@@ -645,6 +654,11 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       }
     } catch (e) {
       console.error('Error saving lineup:', e);
+      setSaveIndicator('error');
+      if (saveIndicatorTimerRef.current) clearTimeout(saveIndicatorTimerRef.current);
+      saveIndicatorTimerRef.current = setTimeout(() => {
+        setSaveIndicator(null);
+      }, 6000);
       showStatusMessage?.('error', 'Error al guardar plantilla: ' + (e?.message || ''));
     } finally {
       setIsSaving(false);
@@ -659,44 +673,6 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const handleAvailabilityChange = useCallback((playerId, isAvailable) => {
     setAvailability(prev => ({ ...prev, [playerId]: isAvailable }));
   }, []);
-
-  const handleDownloadImage = async () => {
-    if (!pitchRef.current || isCapturing) return;
-    setIsCapturing(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const canvas = await html2canvas(pitchRef.current, {
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#1a3a2a',
-        scale: 2,
-        ignoreElements: (el) => el.classList && el.classList.contains("no-export")
-      });
-      const fileName = `formacion-${userProfile?.teamName || 'equipo'}`;
-
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          console.error("Canvas blob is null after CORS fix - canvas is tainted");
-          showStatusMessage('error', 'Error al generar la imagen. Intenta de nuevo.');
-          setIsCapturing(false);
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${fileName}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        showStatusMessage('success', 'Imagen descargada.');
-        setIsCapturing(false);
-      }, "image/png");
-    } catch (error) {
-      console.error('Error al exportar imagen con html2canvas:', error);
-      showStatusMessage('error', 'Error al exportar la imagen.');
-      setIsCapturing(false);
-    }
-  };
 
   const currentFormation = FORMATIONS[selectedFormation];
   // Derive available players from assigned slots — enforce uniqueness
@@ -866,22 +842,15 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
         {Object.keys(FORMATIONS).map(key => <option key={key} value={key}>{FORMATIONS[key].name}</option>)}
       </select>
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={() => handleSaveLineup()} disabled={isSaving}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg py-2 flex items-center justify-center gap-1.5 transition">
-          <Save className="w-3.5 h-3.5" />Guardar
-        </button>
-        <button onClick={handleDownloadImage} disabled={isCapturing}
-          className="bg-white/[0.05] hover:bg-white/[0.1] text-white text-sm font-bold rounded-lg py-2 flex items-center justify-center gap-1.5 transition"
-          style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-          <ImageIcon className="w-3.5 h-3.5" />Exportar
-        </button>
-      </div>
+      <button onClick={() => handleSaveLineup()} disabled={isSaving} title={isSaving ? 'Hay una operación en curso' : undefined}
+        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg py-2.5 flex items-center justify-center gap-1.5 transition">
+        {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}{isSaving ? 'Guardando...' : 'Guardar Alineación'}
+      </button>
       <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-center text-[10px] font-bold text-slate-400">
         Suplentes ({availablePlayers.length}) · Integran el banco automáticamente
       </div>
       <div className="relative" ref={sharePopoverRef}>
-        <button onClick={handleShareURL} disabled={isSharing}
+        <button onClick={handleShareURL} disabled={isSharing} title={isSharing ? 'Hay una operación en curso' : undefined}
           className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-sm font-bold rounded-lg py-2.5 flex items-center justify-center gap-2 transition border border-cyan-500/30 disabled:opacity-50">
           {isSharing ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Generando...</>
@@ -960,18 +929,57 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     </div>
   );
 
-  return (
-    <div className={isPage ? "w-full h-full flex flex-col animate-in fade-in duration-300" : "fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300"} onClick={!isPage ? onClose : undefined}>
-      <div className={isPage ? "w-full h-full flex flex-col relative overflow-hidden" : "bg-[#0c1017] sm:rounded-2xl shadow-2xl w-full max-w-7xl h-full sm:h-[90vh] flex flex-col border-0 sm:border border-white/[0.08] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"} onClick={!isPage ? (e => e.stopPropagation()) : undefined}>
+  const content = (
+    <div className="flex flex-col h-full relative">
 
         {/* ── HEADER ── */}
         <div className="flex justify-between items-center px-4 lg:px-5 py-3 shrink-0"
           style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.05)' }}>
-          <div className="flex items-center gap-2.5">
-            <ClipboardList className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-base font-black text-white tracking-wide">Pizarra Táctica</h2>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              <ClipboardList className="w-5 h-5 text-cyan-400" />
+              <h2 className="text-base font-black text-white tracking-wide">Pizarra Táctica</h2>
+            </div>
+            {saveIndicator && (
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all ${
+              saveIndicator === 'saving'
+                ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 animate-pulse'
+                : saveIndicator === 'error'
+                  ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                  : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+              }`}>
+                {saveIndicator === 'saving' ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Guardando...</span>
+                  </>
+                ) : saveIndicator === 'error' ? (
+                  <>
+                    <X className="w-3 h-3" />
+                    <span>No se pudo guardar</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3 h-3" />
+                    <span>Guardado automático</span>
+                  </>
+                )}
+              </span>
+            )}
           </div>
-          {!isPage && <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition"><X size={18} /></button>}
+          {isPage ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-11 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 text-xs font-black uppercase tracking-wide text-slate-200 transition hover:bg-white/[0.08] hover:text-white"
+              aria-label="Volver a Mi Club"
+            >
+              <ArrowLeft className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              Mi Club
+            </button>
+          ) : (
+            <button onClick={onClose} className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition cursor-pointer" aria-label="Cerrar pizarra táctica"><X size={18} /></button>
+          )}
         </div>
 
         {/* ── MOBILE TAB SWITCHER (visible only on < lg) ── */}
@@ -1129,6 +1137,26 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
         </div>
       </div>
-    </div>
+  );
+
+  if (isPage) {
+    return (
+      <div className="w-full h-full flex flex-col animate-in fade-in duration-300 relative overflow-hidden">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <BaseModal
+      isOpen={true}
+      onClose={onClose}
+      size="2xl"
+      showClose={false}
+      className="!max-w-7xl !p-0 !bg-[#0c1017] !h-[100dvh] sm:!h-[90vh]"
+      contentClassName="!p-0 !overflow-hidden flex flex-col"
+    >
+      {content}
+    </BaseModal>
   );
 });

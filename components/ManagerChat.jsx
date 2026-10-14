@@ -1,5 +1,6 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Send, X, MessageSquareText, Handshake, HelpCircle, Image, Search, ShieldAlert } from 'lucide-react';
+import { BaseModal } from './ui/BaseModal.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { getTeamMentionOptions, hasTransferIntent, normalizeChatText } from '../utils/managerChatUtils.js';
 
@@ -255,8 +256,15 @@ export const ManagerChat = memo(function ManagerChat({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200" onClick={handleClose}>
-      <div className="w-full sm:max-w-3xl h-[100dvh] sm:h-[78vh] bg-white dark:bg-[#0c1017] border border-slate-200 dark:border-slate-800 sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-200" onClick={e => e.stopPropagation()}>
+    <BaseModal
+      isOpen={isVisible}
+      onClose={handleClose}
+      size="xl"
+      showClose={false}
+      className="!p-0 sm:!max-w-3xl h-[85vh] sm:h-[80vh]"
+      contentClassName="!p-0 !overflow-hidden flex flex-col h-full min-h-0"
+    >
+      <div className="flex flex-col h-full min-h-0 bg-white dark:bg-[#0c1017]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400">
@@ -298,7 +306,7 @@ export const ManagerChat = memo(function ManagerChat({
                     <div key={message.id} className={`manager-chat-message ${mine ? 'manager-chat-message--mine' : 'manager-chat-message--received'}`}>
                       <div className={`manager-chat-bubble rounded-xl px-3 py-2 border ${mine ? 'bg-sky-600 text-white border-sky-500' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white'}`}>
                         <div className="flex items-center gap-1.5 mb-1">
-                          <img src={message.senderLogoUrl || DEFAULT_LOGO} alt="" className="w-4 h-4 rounded object-contain bg-slate-100 dark:bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
+                          <img src={message.senderLogoUrl || DEFAULT_LOGO} alt="" width={16} height={16} className="w-4 h-4 rounded object-contain bg-slate-100 dark:bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
                           <span className={`text-[11px] font-bold truncate ${mine ? 'text-sky-100' : 'text-slate-900 dark:text-white'}`}>{message.senderTeamName || 'Manager'}</span>
                           {isTransfer && (
                             <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.2 rounded ${mine ? 'bg-white/20 text-white' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'}`}>
@@ -406,7 +414,7 @@ export const ManagerChat = memo(function ManagerChat({
                           onClick={() => insertMention(team)}
                           className={`w-full px-3 py-2 flex items-center gap-2 text-left transition ${idx === activeMentionIndex ? 'bg-cyan-500/10' : 'hover:bg-white/[0.06]'}`}
                         >
-                          <img src={team.logoUrl || DEFAULT_LOGO} alt="" className="w-6 h-6 rounded object-contain bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
+                          <img src={team.logoUrl || DEFAULT_LOGO} alt="" width={24} height={24} className="w-6 h-6 rounded object-contain bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
                           <span className="text-xs font-black italic text-cyan-100">@{team.handle}</span>
                           <span className="text-xs text-gray-500 font-bold truncate">{team.teamName}</span>
                         </button>
@@ -418,6 +426,7 @@ export const ManagerChat = memo(function ManagerChat({
                     onChange={e => setText(e.target.value)}
                     onKeyDown={handleComposerKeyDown}
                     placeholder={`Escribe un mensaje como ${userProfile?.teamName || 'manager'}...`}
+                    aria-label="Escribir mensaje para los managers"
                     className="w-full max-h-28 min-h-[44px] resize-none bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500 placeholder:text-slate-400"
                     maxLength={500}
                   />
@@ -427,6 +436,7 @@ export const ManagerChat = memo(function ManagerChat({
                   onClick={() => setShowGifPicker(prev => !prev)}
                   className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${showGifPicker || selectedGifUrl ? 'bg-purple-600 text-white' : 'bg-slate-100 dark:bg-white/[0.05] text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'}`}
                   title="Mandar GIF"
+                  aria-label="Seleccionar o buscar GIF"
                 >
                   <Image className="w-4 h-4" />
                 </button>
@@ -434,7 +444,8 @@ export const ManagerChat = memo(function ManagerChat({
                   type="submit"
                   disabled={(!text.trim() && !selectedGifUrl) || isSending}
                   className="w-9 h-9 rounded-lg bg-sky-600 text-white flex items-center justify-center hover:bg-sky-500 disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
-                  title="Enviar"
+                  title={isSending ? 'Hay una operación en curso' : (!text.trim() && !selectedGifUrl) ? 'Completa los datos requeridos primero' : 'Enviar'}
+                  aria-label="Enviar mensaje al chat"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -483,6 +494,6 @@ export const ManagerChat = memo(function ManagerChat({
           </div>
         )}
       </div>
-    </div>
+    </BaseModal>
   );
 });

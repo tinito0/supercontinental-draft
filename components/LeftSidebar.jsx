@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
 import {
   LayoutDashboard, Trophy, ShoppingCart, ClipboardList, Search,
-  Crown, HelpCircle, MessageSquarePlus, LogOut, X, DollarSign, AlertTriangle, Users
+  Crown, HelpCircle, MessageSquarePlus, LogOut, X, AlertTriangle, Users,
+  Keyboard, Shield, Database
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { formatBudget } from '../utils/helpers.js';
@@ -10,10 +11,12 @@ export const LeftSidebar = memo(function LeftSidebar({
   activeTab,
   setActiveTab,
   isAdmin,
+  hasPesAccess,  // rol en el editor PES (Super Admin / Admin del Draft / Kit Manager)
   isOpen,        // true = visible
   onClose,       // close callback for mobile backdrop tap
   onSuggestionsClick,
   onHelpClick,
+  onShortcutsClick,
   onLogout,
   remainingBudget,
   initialBudget,
@@ -24,8 +27,8 @@ export const LeftSidebar = memo(function LeftSidebar({
   const navItems = [
     { id: 'Overview', label: 'Inicio', icon: LayoutDashboard },
     { id: 'Marketplace', label: 'Mercado', icon: ShoppingCart },
-    { id: 'My Team', label: 'Plantilla', icon: ClipboardList },
-    { id: 'Financials', label: 'Finanzas', icon: DollarSign },
+    { id: 'My Team', label: 'Mi Club', icon: ClipboardList },
+    { id: 'Tactics', label: 'Pizarra Táctica', icon: Shield },
     { id: 'Scouting', label: 'Scouting', icon: Search },
     { id: 'Other Teams', label: 'Otros Equipos', icon: Users },
   ];
@@ -34,6 +37,8 @@ export const LeftSidebar = memo(function LeftSidebar({
   const handleNavClick = (id) => {
     if (id === 'Admin') {
       navigate('/admin');
+    } else if (id === 'PES') {
+      navigate('/pes');
     } else {
       setActiveTab(id);
     }
@@ -58,6 +63,7 @@ export const LeftSidebar = memo(function LeftSidebar({
 
       <aside
         data-app-tour="sidebar"
+        aria-label="Barra lateral de navegación"
         className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}
         style={{ '--sidebar-w': '224px' }}
       >
@@ -67,7 +73,7 @@ export const LeftSidebar = memo(function LeftSidebar({
           {/* ─── Branding ─── */}
           <div className="px-6 pt-6 pb-5 flex items-center justify-between">
             <div className="flex flex-col items-start">
-              <img src="/logo.webp" alt="SCL Draft Logo" className="w-auto h-10 object-contain drop-shadow" />
+              <img src="/logo.webp" alt="SCL Draft Logo" width={40} height={40} className="w-auto h-10 object-contain drop-shadow" />
               <span className="text-[10px] text-[#00b4d8] font-bold uppercase tracking-[0.2em] mt-1">
                 SUPERCONTINENTAL
               </span>
@@ -83,24 +89,29 @@ export const LeftSidebar = memo(function LeftSidebar({
           </div>
 
           {/* ─── Nav ─── */}
-          <nav className="flex-1 px-3 mt-2 space-y-0.5 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+          <nav className="flex-1 px-3 mt-2 space-y-0.5 overflow-y-auto" style={{ scrollbarWidth: 'none' }} aria-label="Navegación principal">
             {navItems.map(({ id, label, icon: Icon }) => {
               const pathMap = {
                 'Overview': '/overview',
                 'Marketplace': '/marketplace',
                 'My Team': '/my-team',
-                'Financials': '/financials',
+                'Tactics': '/tactics',
                 'Scouting': '/scouting',
                 'Other Teams': '/other-teams',
               };
               const isActive = id === 'Overview'
                 ? (location.pathname === '/' || location.pathname === '/overview')
-                : location.pathname === pathMap[id];
+                : id === 'My Team'
+                  ? location.pathname === '/my-team'
+                  : id === 'Tactics'
+                    ? location.pathname === '/tactics'
+                    : location.pathname === pathMap[id];
               return (
                 <button
                   data-app-tour={`nav-${id.toLowerCase().replace(/\s+/g, '-')}`}
                   key={id}
                   onClick={() => handleNavClick(id)}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold
                     transition-all duration-150 group text-left cursor-pointer
                     ${isActive
@@ -158,6 +169,21 @@ export const LeftSidebar = memo(function LeftSidebar({
 
           {/* ─── Footer ─── */}
           <div className="px-3 pb-5 pt-3 mt-auto space-y-0.5 border-t border-slate-200 dark:border-white/[0.06]">
+            {hasPesAccess && (
+              <button
+                onClick={() => handleNavClick('PES')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition group cursor-pointer
+                  ${location.pathname === '/pes'
+                    ? 'text-cyan-600 dark:text-cyan-300 bg-cyan-500/15'
+                    : 'text-cyan-700 dark:text-cyan-400/80 hover:text-cyan-800 dark:hover:text-cyan-200 hover:bg-cyan-500/10 dark:hover:bg-white/[0.05]'
+                  }`}
+                style={location.pathname === '/pes' ? { borderLeft: '3px solid #06b6d4' } : { borderLeft: '3px solid transparent' }}
+              >
+                <Database className="w-4 h-4 flex-shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider">Editor PES</span>
+              </button>
+            )}
+
             {isAdmin && (
               <button
                 onClick={() => handleNavClick('Admin')}
@@ -176,26 +202,44 @@ export const LeftSidebar = memo(function LeftSidebar({
             {[
               { label: 'Sugerencias', icon: MessageSquarePlus, onClick: onSuggestionsClick, color: 'text-cyan-600 dark:text-cyan-400/80 group-hover:text-cyan-700 dark:group-hover:text-cyan-300' },
               { label: 'Ayuda / Reglas', icon: HelpCircle, onClick: onHelpClick, color: 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200' },
+              { label: 'Atajos de teclado', icon: Keyboard, onClick: onShortcutsClick, color: 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200', shortcutKey: '?' },
               { label: 'Cerrar Sesión', icon: LogOut, onClick: onLogout, color: 'text-slate-500 group-hover:text-red-500', hoverBg: 'hover:bg-red-500/10' },
-            ].map(({ label, icon: Icon, onClick, color, hoverBg = 'hover:bg-slate-100 dark:hover:bg-white/[0.04]' }) => (
+            ].map(({ label, icon: Icon, onClick, color, hoverBg = 'hover:bg-slate-100 dark:hover:bg-white/[0.04]', shortcutKey }) => (
               <button
                 key={label}
                 data-app-tour={label === 'Ayuda / Reglas' ? 'help' : undefined}
                 onClick={() => handleFooterAction(onClick)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition group cursor-pointer ${hoverBg}`}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition group cursor-pointer ${hoverBg}`}
               >
-                <span className="w-0.5 h-3 rounded-full bg-transparent flex-shrink-0" />
-                <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${color}`} />
-                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 whitespace-nowrap transition-colors">{label}</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-0.5 h-3 rounded-full bg-transparent flex-shrink-0" />
+                  <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${color}`} />
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 whitespace-nowrap transition-colors">{label}</span>
+                </div>
+                {shortcutKey && (
+                  <kbd className="bg-white/10 text-slate-400 group-hover:text-white font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/10 shrink-0">
+                    {shortcutKey}
+                  </kbd>
+                )}
               </button>
             ))}
 
-            {/* Version Badge */}
+            {/* Version Badge & Shortcuts hint */}
             <div className="px-3 pt-3 pb-1 flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-slate-500 border-t border-slate-200 dark:border-white/[0.04] mt-2">
               <span>SCL Draft</span>
               <span className="text-sky-600 dark:text-[#00b4d8] bg-sky-500/10 dark:bg-[#00b4d8]/10 px-1.5 py-0.5 rounded border border-sky-500/20 dark:border-[#00b4d8]/20 font-bold">
-                v2.5.0
+                v2.6.0
               </span>
+            </div>
+            <div className="px-3 pt-1 text-center">
+              <button
+                type="button"
+                onClick={() => handleFooterAction(onShortcutsClick)}
+                className="text-[10px] text-slate-500 hover:text-slate-400 transition-colors inline-flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <span>Atajos:</span>
+                <kbd className="px-1 py-0.2 bg-white/5 border border-white/10 rounded font-mono text-[9px] text-slate-400">?</kbd>
+              </button>
             </div>
           </div>
         </div>

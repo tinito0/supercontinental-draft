@@ -20,6 +20,17 @@ import { normalizeTournamentView } from './utils/tournamentViews.js';
 import { getMentionedTeamIds, hasTransferIntent } from './utils/managerChatUtils.js';
 import { makePrefetchable, schedulePrefetchOnIdle } from './utils/prefetch.js';
 import { OverviewTab } from './components/OverviewTab.jsx';
+import { useFirebaseData } from './hooks/useFirebaseData.js';
+import { useAuth } from './hooks/useAuth.js';
+import { usePesAccess } from './hooks/usePesAccess.js';
+import { useBudget } from './hooks/useBudget.js';
+import { useHoverPreview } from './hooks/useHoverPreview.js';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
+import { useScrollRestore } from './hooks/useScrollRestore.js';
+import { calculateSmartRecommendations } from './utils/recommendations.js';
+import { handleListenerError } from './utils/listenerErrorHandler.js';
+import { PlayerPreview } from './components/ui/PlayerPreview.jsx';
+import { KeyboardShortcutsHelp } from './components/ui/KeyboardShortcutsHelp.jsx';
 
 // Lazy loading modals and heavy screens
 const LoginScreen = React.lazy(() => import('./screens/LoginScreen.jsx').then(m => ({ default: m.LoginScreen })));
@@ -69,6 +80,10 @@ const prefetchManagerChat = makePrefetchable('ManagerChat', importManagerChat);
 const ScoutAssignmentsPanel = React.lazy(() => import('./components/ScoutAssignmentsPanel.jsx').then(m => ({ default: m.ScoutAssignmentsPanel })));
 const TeamScreen = React.lazy(() => import('./screens/TeamScreen.jsx'));
 const FormationViewScreen = React.lazy(() => import('./screens/FormationViewScreen.jsx'));
+// Editor PES 2021: chunk separado, solo lo descargan usuarios con rol PES.
+const PesWorkspaceScreen = React.lazy(() => import('./screens/PesWorkspaceScreen.jsx'));
+const importCommandPalette = () => import('./components/CommandPalette.jsx');
+const CommandPalette = React.lazy(() => importCommandPalette().then(m => ({ default: m.CommandPalette })));
 
 import {
   X,
@@ -102,76 +117,6 @@ import {
   orderBy,
   limit
 } from "firebase/firestore";
-
-
-// 2. Hook para manejar datos de Firebase limpiamente (Optimización 5)
-function useFirebaseData(userId, isAuthReady, getPrivateCartCollectionRef, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, getPrivateProfileRef, setError, setIsLoading) {
-  const [cart, setCart] = useState([]);
-  const [playerLocks, setPlayerLocks] = useState({});
-  const [isLocksLoaded, setIsLocksLoaded] = useState(false);
-  const [allTeams, setAllTeams] = useState({});
-  const [userProfile, setUserProfile] = useState(null);
-
-  const handleError = useCallback((context, err) => {
-    console.error(`Snapshot error in ${context}:`, err.code, err.message);
-    if (err.code === "permission-denied") {
-      setIsLoading?.(false);
-      setError?.("Sin permisos para cargar los datos: " + context);
-    }
-  }, [setError, setIsLoading]);
-
-  // NOTE: Transfer proposals listener moved to App component where addNotification is available
-
-  // 4. Carga inicial: Usuarios, Equipos (Públicos), Plantillas, Torneo
-  useEffect(() => {
-    if (!isAuthReady || !userId) {
-      setCart([]);
-      setUserProfile(null);
-      return;
-    }
-
-    const unsubCart = onSnapshot(getPrivateCartCollectionRef(userId),
-      (snap) => setCart(snap.docs.map(d => d.data())),
-      (err) => handleError("Private Cart", err)
-    );
-
-    const unsubProfile = onSnapshot(getPrivateProfileRef(userId),
-      (doc) => { if (doc.exists()) setUserProfile(doc.data()); },
-      (err) => handleError("Private Profile", err)
-    );
-    return () => { unsubCart(); unsubProfile(); };
-  }, [userId, isAuthReady, getPrivateCartCollectionRef, getPrivateProfileRef, handleError]);
-
-  // Cargar datos públicos (Bloqueos y Equipos)
-  useEffect(() => {
-    if (!isAuthReady) {
-      setIsLocksLoaded(false);
-      return;
-    }
-
-    const unsubLocks = onSnapshot(getPublicLocksCollectionRef(),
-      (snap) => {
-        const data = {};
-        snap.docs.forEach(d => data[d.id] = d.data());
-        setPlayerLocks(data);
-        setIsLocksLoaded(true);
-      },
-      (err) => handleError("Public Locks", err)
-    );
-
-    const unsubTeams = onSnapshot(getPublicTeamsCollectionRef(),
-      (snap) => {
-        const data = {};
-        snap.docs.forEach(d => data[d.id] = d.data());
-        setAllTeams(data);
-      },
-      (err) => handleError("Public Teams", err)
-    );
-    return () => { unsubLocks(); unsubTeams(); };
-  }, [isAuthReady, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, handleError]);
-
-  return { cart, playerLocks, isLocksLoaded, allTeams, userProfile };
-}
 
 const initialDetailedStats = Object.values(DETAILED_STAT_KEYS).flat().reduce((acc, stat) => {
   acc[`${stat}Min`] = '';
@@ -288,18 +233,20 @@ const pathToTab = {
   '/my-team': 'My Team',
   '/scouting': 'Scouting',
   '/other-teams': 'Other Teams',
-  '/financials': 'Financials',
+  '/financials': 'My Team',
   '/admin': 'Admin',
-  '/tactics': 'My Team',
+  '/tactics': 'Tactics',
+  '/pes': 'PES',
 };
 const tabToPath = {
   'Overview': '/overview',
   'Marketplace': '/marketplace',
   'My Team': '/my-team',
+  'Tactics': '/tactics',
   'Scouting': '/scouting',
   'Other Teams': '/other-teams',
-  'Financials': '/financials',
   'Admin': '/admin',
+  'PES': '/pes',
 };
 
 const ALL_DETAILED_STAT_KEYS = Object.values(DETAILED_STAT_KEYS).flat();
@@ -310,13 +257,15 @@ function App() {
   // pathToTab and tabToPath moved to module scope — see above App()
   const modalRoute = location.pathname.startsWith('/modal/') ? location.pathname.replace('/modal/', '') : '';
   const currentTabPath = location.pathname.startsWith('/modal/')
-    ? (location.state?.from || (modalRoute === 'formation' ? '/my-team' : '/marketplace'))
+    ? (location.state?.from || (modalRoute === 'formation' ? '/my-team' : '/overview'))
     : location.pathname;
   const activeTab = pathToTab[currentTabPath] ?? 'Overview';
 
   // setActiveTab is a drop-in replacement that navigates to route
   // tabToPath at module scope — see above App()
   const setActiveTab = (tab) => navigate(tabToPath[tab] ?? '/overview');
+
+  const hoverPreview = useHoverPreview(400);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     // Default closed on mobile, respect localStorage on desktop
@@ -332,14 +281,14 @@ function App() {
   }, [isSidebarOpen]);
 
   const openModalRoute = useCallback((modalName) => {
-    const from = location.pathname.startsWith('/modal/') ? (location.state?.from || '/marketplace') : location.pathname;
+    const from = location.pathname.startsWith('/modal/') ? (location.state?.from || '/overview') : location.pathname;
     navigate(`/modal/${modalName}`, { state: { from } });
   }, [location.pathname, location.state, navigate]);
 
   const closeModalRoute = useCallback((setter) => {
     setter?.(false);
     if (location.pathname.startsWith('/modal/')) {
-      const fallback = modalRoute === 'formation' ? '/my-team' : '/marketplace';
+      const fallback = modalRoute === 'formation' ? '/my-team' : '/overview';
       navigate(location.state?.from || fallback, { replace: true });
     }
   }, [location.pathname, location.state, modalRoute, navigate]);
@@ -347,6 +296,7 @@ function App() {
   const [allPlayers, setAllPlayers] = useState([]);
   const [countryMap, setCountryMap] = useState({});
   const [hasLoadedPlayerDatabase, setHasLoadedPlayerDatabase] = useState(false);
+  const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [playersLoadError, setPlayersLoadError] = useState('');
   const [countriesLoadError, setCountriesLoadError] = useState('');
   const [contadorMsg, setContadorMsg] = useState("Cargando jugadores...");
@@ -386,6 +336,9 @@ function App() {
   const isSpecialMode = isObsMode || isPublicView;
   const targetView = normalizeTournamentView(viewParam || (rawMode === 'table' ? 'groups' : rawMode === 'bracket' ? 'bracket' : 'groups'));
   const initialTab = normalizeTournamentView(searchParams.get('tab') || 'groups');
+  const clubTab = ['players', 'offers', 'sent', 'history', 'stats'].includes(searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'players';
   const [signingToasts, setSigningToasts] = useState([]);
   const [isTutorialVisible, setIsTutorialVisible] = useState(false);
   const [isFiltrosModalVisible, setIsFiltrosModalVisible] = useState(false);
@@ -396,7 +349,39 @@ function App() {
   const [isSuggestionsModalVisible, setIsSuggestionsModalVisible] = useState(false);
   const [isFormationModalVisible, setIsFormationModalVisible] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+  const { saveScroll: saveMarketplaceScroll, restoreScroll: restoreMarketplaceScroll } = useScrollRestore('#main-content');
+
+  const handleOpenPlayerModal = useCallback((playerOrId) => {
+    saveMarketplaceScroll();
+    const id = typeof playerOrId === 'object' && playerOrId !== null ? playerOrId.Id : playerOrId;
+    setSelectedPlayerId(id ? String(id) : null);
+  }, [saveMarketplaceScroll]);
+
+  const handleClosePlayerModal = useCallback(() => {
+    setSelectedPlayerId(null);
+    restoreMarketplaceScroll();
+  }, [restoreMarketplaceScroll]);
+
+  // Restaura automáticamente el scroll del marketplace si el modal de jugador se cierra
+  const prevSelectedPlayerIdRef = useRef(selectedPlayerId);
+  useEffect(() => {
+    if (prevSelectedPlayerIdRef.current && !selectedPlayerId) {
+      restoreMarketplaceScroll();
+    }
+    prevSelectedPlayerIdRef.current = selectedPlayerId;
+  }, [selectedPlayerId, restoreMarketplaceScroll]);
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+  const statusMessageTimeoutRef = useRef(null);
+  const showStatusMessage = useCallback((type, text) => {
+    if (statusMessageTimeoutRef.current) clearTimeout(statusMessageTimeoutRef.current);
+    setStatusMessage({ type, text });
+    if (type !== 'loading') {
+      statusMessageTimeoutRef.current = setTimeout(() => setStatusMessage({ type: '', text: '' }), 3000);
+    }
+  }, []);
+  useEffect(() => () => {
+    if (statusMessageTimeoutRef.current) clearTimeout(statusMessageTimeoutRef.current);
+  }, []);
   const [compareList, setCompareList] = useState([]);
   const [isComparisonModalVisible, setIsComparisonModalVisible] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -413,6 +398,43 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   const [isManagerChatVisible, setIsManagerChatVisible] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  const toggleCart = useCallback(() => {
+    if (modalRoute === 'cart' || isCartVisible) {
+      setCartInitialTab('players');
+      closeModalRoute(setIsCartVisible);
+    } else {
+      openModalRoute('cart');
+    }
+  }, [modalRoute, isCartVisible, closeModalRoute, openModalRoute]);
+
+  const openFilters = useCallback(() => {
+    if (modalRoute === 'filters' || isFiltrosModalVisible) {
+      closeModalRoute(setIsFiltrosModalVisible);
+    } else {
+      openModalRoute('filters');
+    }
+  }, [modalRoute, isFiltrosModalVisible, closeModalRoute, openModalRoute]);
+
+  const { isHelpOpen: isShortcutsHelpOpen, setIsHelpOpen: setIsShortcutsHelpOpen } = useKeyboardShortcuts({
+    setActiveTab,
+    openModalRoute,
+    toggleCart,
+    openFilters,
+  });
+
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [shouldPrefetchTransfers, setShouldPrefetchTransfers] = useState(false);
   const [areNotificationsWarmed, setAreNotificationsWarmed] = useState(false);
@@ -421,20 +443,68 @@ function App() {
   const [sentOffers, setSentOffers] = useState([]);
   const [offerHistory, setOfferHistory] = useState([]);
   const prevLocksRef = useRef(null);
-  const chatInitializedRef = useRef(false);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [isTransferFeedVisible, setIsTransferFeedVisible] = useState(false);
-  const [needsGoogleLinking, setNeedsGoogleLinking] = useState(false);
-  const [authError, setAuthError] = useState(null);
+  const getPrivateProfileRef = useCallback((uid) => doc(db, `artifacts/${APP_ID}/users/${uid}/profile`, "data"), []);
+  const getSavedFiltersCollectionRef = useCallback((uid) => collection(db, `artifacts/${APP_ID}/users/${uid}/saved_filters`), []);
+  const getPublicTeamRef = useCallback((uid) => doc(db, `artifacts/${APP_ID}/public/data/teams`, uid), []);
+  const getPrivateCartCollectionRef = useCallback((uid) => collection(db, `artifacts/${APP_ID}/users/${uid}/cart`), []);
+  const getPrivateCartDocRef = useCallback((uid, playerId) => doc(db, `artifacts/${APP_ID}/users/${uid}/cart`, String(playerId)), []);
+  const getPublicLocksCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/player_locks`), []);
+  const getPublicLockDocRef = useCallback((playerId) => doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(playerId)), []);
+  const getPublicTeamsCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/teams`), []);
+  const getMarketStatusDocRef = useCallback(() => doc(db, `artifacts/${APP_ID}/public/data/config`, 'market'), []);
+  const getBroadcastOverlayDocRef = useCallback(() => doc(db, `artifacts/${APP_ID}/public/data/broadcast`, 'overlay'), []);
+  const getSuggestionsCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/suggestions`), []);
+  const getManagerChatCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/manager_chat`), []);
+
   const [appError, setAppError] = useState(null);
-  const [user, setUser] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [marketStatus, setMarketStatus] = useState({ status: 'loading', openTime: null });
+
+  // Hook desacoplado de Autenticación, Roles y Mercado (Fase 2)
+  const {
+    user,
+    userId,
+    isAdmin,
+    isAuthReady,
+    needsGoogleLinking,
+    authError,
+    setAuthError,
+    marketStatus,
+    setMarketStatus,
+    handleLogout: authLogout,
+  } = useAuth({
+    auth,
+    db,
+    getPrivateProfileRef,
+    getPublicTeamRef,
+    getMarketStatusDocRef,
+    firebaseInitializationError,
+    setAppError,
+    setIsLoading,
+    showNotification: showStatusMessage,
+  });
+
+  // Rol en el editor PES (null = sin acceso: el usuario solo usa el mercado y el resto de la app).
+  const hasPesAccess = usePesAccess(userId, isAdmin);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await authLogout();
+    } finally {
+      navigate('/', { replace: true });
+    }
+  }, [authLogout, navigate]);
+
+  const chatInitializedRef = useRef(false);
+  const [isTransferFeedVisible, setIsTransferFeedVisible] = useState(false);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   // Router-level redirects: keep public routes clean and return logged-out users to landing.
   useEffect(() => {
     if (!isAuthReady) return;
+
+    if (location.pathname === '/financials') {
+      navigate('/my-team?tab=stats', { replace: true });
+      return;
+    }
 
     const isPublicAuthRoute = location.pathname === '/' || location.pathname === '/login';
     const isPublicStandaloneRoute =
@@ -446,7 +516,7 @@ function App() {
       location.pathname.startsWith('/torneo');
 
     if (user && isPublicAuthRoute) {
-      navigate('/marketplace', { replace: true });
+      navigate('/overview', { replace: true });
       return;
     }
 
@@ -482,6 +552,47 @@ function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Escape key global listener for accessible modal closing
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (isShortcutsHelpOpen) {
+          setIsShortcutsHelpOpen(false);
+        } else if (isNotificationPanelOpen) {
+          setIsNotificationPanelOpen(false);
+        } else if (selectedPlayerId) {
+          handleClosePlayerModal();
+        } else if (isComparisonModalVisible) {
+          setIsComparisonModalVisible(false);
+        } else if (location.pathname.startsWith('/modal/')) {
+          closeModalRoute();
+        } else if (isSidebarOpen && isMobileViewport) {
+          setIsSidebarOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isShortcutsHelpOpen, isNotificationPanelOpen, selectedPlayerId, handleClosePlayerModal, isComparisonModalVisible, location.pathname, closeModalRoute, isSidebarOpen, isMobileViewport]);
+
+  // Network connection status detection (Audit section 12, 13, 20)
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      showStatusMessage('success', 'Conexión restablecida con el servidor.');
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [showStatusMessage]);
 
   useEffect(() => {
     setDebouncedName(filters.name);
@@ -534,39 +645,28 @@ function App() {
       // CAMBIO IMPORTANTE:
       // Si llegamos a 2, solo avisamos, NO abrimos el modal automáticamente.
       if (newList.length === 2) {
+        openModalRoute('compare');
         showStatusMessage('success', 'Listo para comparar. Pulsa el botón "Comparar" abajo.');
         // setIsComparisonModalVisible(true); <--- LÍNEA ELIMINADA
       }
 
       return newList;
     });
-  }, []);
+  }, [openModalRoute, showStatusMessage]);
 
   const handleRemoveCompareItem = useCallback((playerId) => {
     setCompareList(prev => prev.filter(p => p.Id !== playerId));
   }, []);
 
 
-  const getPrivateProfileRef = useCallback((uid) => doc(db, `artifacts/${APP_ID}/users/${uid}/profile`, "data"), []);
-  const getSavedFiltersCollectionRef = useCallback((uid) => collection(db, `artifacts/${APP_ID}/users/${uid}/saved_filters`), []);
-  const getPublicTeamRef = useCallback((uid) => doc(db, `artifacts/${APP_ID}/public/data/teams`, uid), []);
-  const getPrivateCartCollectionRef = useCallback((uid) => collection(db, `artifacts/${APP_ID}/users/${uid}/cart`), []);
-  const getPrivateCartDocRef = useCallback((uid, playerId) => doc(db, `artifacts/${APP_ID}/users/${uid}/cart`, String(playerId)), []);
-  const getPublicLocksCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/player_locks`), []);
-  const getPublicLockDocRef = useCallback((playerId) => doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(playerId)), []);
-  const getPublicTeamsCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/teams`), []);
-  const getMarketStatusDocRef = useCallback(() => doc(db, `artifacts/${APP_ID}/public/data/config`, 'market'), []);
-  const getBroadcastOverlayDocRef = useCallback(() => doc(db, `artifacts/${APP_ID}/public/data/broadcast`, 'overlay'), []);
-  const getSuggestionsCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/suggestions`), []);
-  const getManagerChatCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/manager_chat`), []);
   const { cart, playerLocks, isLocksLoaded, allTeams, userProfile } = useFirebaseData(
-    userId, isAuthReady, getPrivateCartCollectionRef, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, getPrivateProfileRef, setAppError, setIsLoading);
+    userId, isAuthReady, getPrivateCartCollectionRef, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, getPrivateProfileRef, setAppError, setIsLoading, showStatusMessage);
   const shouldLoadPlayerDatabase = useMemo(() => {
     if (isSpecialMode || location.pathname.startsWith('/overlay') || location.pathname.startsWith('/team/') || location.pathname.startsWith('/tactics/view/')) {
       return false;
     }
     if (location.pathname === '/' || location.pathname === '/login') return false;
-    const tabsThatNeedPlayers = new Set(['Marketplace', 'Scouting', 'Other Teams', 'Financials']);
+    const tabsThatNeedPlayers = new Set(['Marketplace', 'My Team', 'Tactics', 'Scouting', 'Other Teams']);
     const modalsThatNeedPlayers = new Set(['filters', 'cart', 'teams', 'compare']);
     return tabsThatNeedPlayers.has(activeTab) || modalsThatNeedPlayers.has(modalRoute) || Boolean(selectedPlayerId) || compareList.length > 0;
   }, [activeTab, compareList.length, isSpecialMode, location.pathname, modalRoute, selectedPlayerId]);
@@ -599,15 +699,14 @@ function App() {
 
     // 2. Jugador específico
     if (notification.playerId) {
-      setSelectedPlayerId(String(notification.playerId));
+      handleOpenPlayerModal(notification.playerId);
       return;
     }
 
     // 3. Pestaña específica de Gestión de Equipo (CartModal)
     if (notification.targetTab) {
       if (['offers', 'sent', 'history', 'players'].includes(notification.targetTab)) {
-        setCartInitialTab(notification.targetTab);
-        openModalRoute('cart');
+        navigate(`/my-team?tab=${notification.targetTab}`);
         return;
       }
     }
@@ -615,15 +714,13 @@ function App() {
     // 4. Ofertas y traspasos
     if (['offer', 'proposal'].includes(notification.type) || notification.category === 'offer' || notification.category === 'proposal') {
       const isSent = notification.isSent || notification.status === 'countered';
-      setCartInitialTab(isSent ? 'sent' : 'offers');
-      openModalRoute('cart');
+      navigate(`/my-team?tab=${isSent ? 'sent' : 'offers'}`);
       return;
     }
 
     if (notification.type === 'transfer' || notification.category === 'transfer') {
       if (notification.targetModal === 'cart' || notification.action === 'cart') {
-        setCartInitialTab('history');
-        openModalRoute('cart');
+        navigate('/my-team?tab=history');
       } else {
         openModalRoute('transfers');
       }
@@ -650,8 +747,7 @@ function App() {
 
     // 8. Alertas del sistema
     if (notification.id === 'system-low-budget' || notification.category === 'finance') {
-      setCartInitialTab('players');
-      openModalRoute('cart');
+      navigate('/my-team?tab=stats');
       return;
     }
 
@@ -668,8 +764,7 @@ function App() {
 
     // 10. Fallback contextual
     if (notification.time === 'Traspaso' || String(notification.time || '').includes('Oferta') || String(notification.text || '').includes('TRASPASO')) {
-      setCartInitialTab('offers');
-      openModalRoute('cart');
+      navigate('/my-team?tab=offers');
       return;
     }
   }, [navigate, openModalRoute]);
@@ -677,21 +772,37 @@ function App() {
   const handleToastClick = useCallback((toast) => {
     if (!toast) return;
     if (toast.playerId) {
-      setSelectedPlayerId(String(toast.playerId));
+      handleOpenPlayerModal(toast.playerId);
     } else {
       openModalRoute('transfers');
     }
-  }, [openModalRoute]);
+  }, [handleOpenPlayerModal, openModalRoute]);
 
   // 3. CARGA DE DATOS OPTIMIZADA (CORREGIDO)
+  const retryPlayerCatalog = useCallback(() => {
+    setPlayersLoadError('');
+    setCountriesLoadError('');
+    setAllPlayers([]);
+    setCountryMap({});
+    setHasLoadedPlayerDatabase(false);
+    setContadorMsg('Reintentando cargar jugadores...');
+    setCatalogReloadKey(previous => previous + 1);
+  }, []);
+
   useEffect(() => {
     if (!shouldLoadPlayerDatabase || hasLoadedPlayerDatabase) return;
     let isCancelled = false;
 
     fetch('/jugadores.json')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Catálogo no disponible (${res.status})`);
+        return res.json();
+      })
       .then((data) => {
         if (isCancelled) return;
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error('El catálogo no contiene jugadores.');
+        }
         setPlayersLoadError('');
         // PASO 1: Primero limpiamos los jugadores con bugs (stats imposibles) usando la data cruda
         const cleanPlayers = data.filter(p => {
@@ -723,7 +834,10 @@ function App() {
       });
 
     fetch('/paises.json')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Países no disponibles (${res.status})`);
+        return res.json();
+      })
       .then((data) => {
         if (isCancelled) return;
         setCountriesLoadError('');
@@ -737,207 +851,9 @@ function App() {
       });
 
     return () => { isCancelled = true; };
-  }, [hasLoadedPlayerDatabase, shouldLoadPlayerDatabase]);
+  }, [catalogReloadKey, hasLoadedPlayerDatabase, shouldLoadPlayerDatabase]);
 
-  useEffect(() => {
-    if (firebaseInitializationError) {
-      setIsLoading(false);
-      return;
-    }
 
-    const statusRef = getMarketStatusDocRef();
-
-    const unsubscribeMarket = onSnapshot(statusRef,
-      (doc) => {
-        if (doc.exists()) {
-          setMarketStatus(doc.data());
-        } else {
-          setMarketStatus({ status: 'closed', openTime: null });
-        }
-      },
-      (error) => {
-        console.error("Snapshot error in Market Status:", error.code);
-        if (error.code === "permission-denied") {
-          setIsLoading(false);
-          setAppError("Sin permisos para cargar Market Status");
-        }
-      }
-    );
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      // Block all processing during active migration
-      if (sessionStorage.getItem('isMigrating') === 'true') {
-        return;
-      }
-
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        const uid = firebaseUser.uid;
-        setUserId(uid);
-
-        const idTokenResult = await firebaseUser.getIdTokenResult();
-        const isGoogleSignIn = idTokenResult.signInProvider === 'google.com';
-
-        const adminUidList = Array.isArray(ADMIN_USER_IDS) ? ADMIN_USER_IDS : [ADMIN_USER_ID];
-        const isUserAdmin = (
-          uid === ADMIN_USER_ID ||
-          adminUidList.includes(uid) ||
-          idTokenResult.claims?.admin === true
-        );
-        setIsAdmin(isUserAdmin);
-
-        const profileRef = getPrivateProfileRef(uid);
-        const publicTeamRef = getPublicTeamRef(uid);
-        // Ambos documentos son necesarios, pero son independientes: leerlos en
-        // paralelo evita una ida y vuelta extra al iniciar sesión.
-        const [profileSnap, publicTeamSnap] = await Promise.all([
-          getDoc(profileRef),
-          getDoc(publicTeamRef),
-        ]);
-
-        let profileData;
-
-        if (!profileSnap.exists()) {
-          if (isGoogleSignIn) {
-            // Rechazamos inicio de sesión con Google si no hay perfil (cuenta no asociada/migrada)
-            await signOut(auth);
-            setAuthError("Esta cuenta de Google no tiene un equipo asociado. Si tenés una cuenta antigua, hacé click en 'Migrar cuenta antigua' para vincularla.");
-            setIsAuthReady(true);
-            setIsLoading(false);
-            return;
-          }
-
-          profileData = {
-            teamName: `Equipo ${uid.substring(0, 5)}`,
-            budget: DEFAULT_BUDGET,
-            userId: uid,
-            logoUrl: DEFAULT_LOGO,
-            formation: '4-3-3',
-            lineup: {},
-            wishlist: [],
-            providers: [idTokenResult.signInProvider]
-          };
-
-          const batch = writeBatch(db);
-          batch.set(profileRef, profileData);
-          batch.set(publicTeamRef, {
-            teamName: profileData.teamName,
-            userId: uid,
-            logoUrl: profileData.logoUrl,
-            budget: profileData.budget,
-            inWhitelist: false
-          });
-          await batch.commit();
-
-        } else {
-          profileData = profileSnap.data();
-          if (profileData.isAdmin === true || profileData.role === 'admin') {
-            setIsAdmin(true);
-          }
-
-          if (!isGoogleSignIn) {
-            // Logueado con email/password u otro
-            if (profileData.providers?.includes('google.com')) {
-              // ESTE USUARIO YA MIGRÓ! 
-              await signOut(auth);
-              setAuthError("Esta cuenta ya ha sido migrada. Por favor, ingresa directamente con el botón 'Ingresar con Google'.");
-              setIsAuthReady(true);
-              setIsLoading(false);
-              return;
-            } else {
-              setNeedsGoogleLinking(true);
-              setAuthError(null);
-            }
-          } else {
-            // Logueado con Google
-            if (!profileData.providers?.includes('google.com')) {
-              // El usuario tiene perfil pero nunca hizo el flujo de migración.
-              // Rechazamos el acceso para forzar la migración guiada.
-              await signOut(auth);
-              setAuthError("Para ingresar con Google, primero debés migrar tu cuenta. Hacé clic en 'Migrar cuenta antigua'.");
-              setIsAuthReady(true);
-              setIsLoading(false);
-              return;
-            }
-            setNeedsGoogleLinking(false);
-            setAuthError(null);
-          }
-
-          if (!publicTeamSnap.exists()) {
-            await setDoc(publicTeamRef, {
-              teamName: profileData.teamName,
-              userId: uid,
-              logoUrl: profileData.logoUrl || DEFAULT_LOGO,
-              budget: profileData.budget,
-              inWhitelist: false
-            }, { merge: true });
-          } else {
-            // El presupuesto público se modifica en las transacciones de mercado.
-            // Nunca lo restaures con una copia privada vieja al iniciar sesión.
-            const publicBudget = Number(publicTeamSnap.data().budget);
-            const publicTeam = publicTeamSnap.data();
-            const syncBatch = writeBatch(db);
-            let needsSync = false;
-            if (Number.isFinite(publicBudget) && publicBudget !== Number(profileData.budget)) {
-              syncBatch.set(profileRef, { budget: publicBudget }, { merge: true });
-              needsSync = true;
-              profileData = { ...profileData, budget: publicBudget };
-            }
-
-            // No escribimos el equipo público en cada login: sólo si alguno de
-            // los campos visibles cambió. Si también cambió el presupuesto, ambas
-            // correcciones se confirman juntas en el mismo batch.
-            const visualTeamData = {
-              teamName: profileData.teamName,
-              userId: uid,
-              logoUrl: profileData.logoUrl || DEFAULT_LOGO,
-            };
-            if (
-              publicTeam.teamName !== visualTeamData.teamName ||
-              publicTeam.userId !== visualTeamData.userId ||
-              publicTeam.logoUrl !== visualTeamData.logoUrl
-            ) {
-              syncBatch.set(publicTeamRef, visualTeamData, { merge: true });
-              needsSync = true;
-            }
-            if (needsSync) await syncBatch.commit();
-          }
-        }
-
-        setIsAuthReady(true);
-        setIsLoading(false);
-
-      } else {
-        setUser(null);
-        setUserId(null);
-        setIsAdmin(false);
-        setIsAuthReady(true);
-        setIsLoading(false);
-        // NO reseteamos authError aquí porque queremos que se vea al volver al LoginScreen
-      }
-    });
-
-    const initialSignIn = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          if (!auth.currentUser) {
-          }
-        }
-      } catch (error) {
-        console.warn("Error al intentar auto-login con token.", error);
-      }
-    };
-    if (!auth.currentUser) {
-      initialSignIn();
-    }
-
-    return () => {
-      unsubscribeAuth();
-      unsubscribeMarket();
-    };
-  }, [firebaseInitializationError, getMarketStatusDocRef, getPrivateProfileRef, getPublicTeamRef]);
 
   useEffect(() => {
 
@@ -948,15 +864,16 @@ function App() {
         }
       },
       (error) => {
-        console.error("Snapshot error in Tournament Data:", error.code);
-        if (error.code === "permission-denied") {
-          setIsLoading(false);
-          setAppError("Sin permisos para cargar Tournament Data");
-        }
+        handleListenerError(error, "Tournament Data", showStatusMessage, {
+          onPermissionDenied: () => {
+            setIsLoading(false);
+            setAppError("Sin permisos para cargar Tournament Data");
+          }
+        });
       }
     );
     return () => unsubTournament();
-  }, [getTournamentDocRef]);
+  }, [getTournamentDocRef, showStatusMessage]);
 
   useEffect(() => {
     const unsubscribeBroadcast = onSnapshot(getBroadcastOverlayDocRef(),
@@ -968,21 +885,14 @@ function App() {
         }
       },
       (error) => {
-        console.error("Snapshot error in Broadcast Overlay:", error.code);
+        handleListenerError(error, "Broadcast Overlay", showStatusMessage);
       }
     );
     return () => unsubscribeBroadcast();
-  }, [getBroadcastOverlayDocRef]);
+  }, [getBroadcastOverlayDocRef, showStatusMessage]);
 
-  const showStatusMessage = useCallback((type, text) => {
-    setStatusMessage({ type, text });
-    setTimeout(() => setStatusMessage({ type: '', text: '' }), 3000);
-  }, []);
 
-  const handleLogout = useCallback(async () => {
-    await signOut(auth);
-    navigate('/', { replace: true });
-  }, [navigate]);
+
 
   const handleUpdateTournament = async (newData) => {
     if (!isAdmin) return;
@@ -1207,24 +1117,20 @@ function App() {
     });
   }, [cart, playerLocks, userId]);
 
-  const totalCartCost = useMemo(() => {
-    return ownedCart.reduce((total, player) => {
-      const isFranchise = player.isFranchise || (userProfile?.franchisePlayerId === player.Id);
-      return total + (isFranchise ? 0 : player.Precio * 1000000);
-    }, 0);
-  }, [ownedCart, userProfile]);
-
-  const committedInOffers = useMemo(() => {
-    if (!userId || !sentOffers) return 0;
-    return sentOffers
-      .filter(o => o.senderId === userId && o.status === 'pending')
-      .reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
-  }, [userId, sentOffers]);
-
-  const remainingBudget = useMemo(() => {
-    if (!userProfile) return 0;
-    return userProfile.budget - totalCartCost - committedInOffers;
-  }, [userProfile, totalCartCost, committedInOffers]);
+  // Hook desacoplado de Finanzas y Presupuesto (Fase 2)
+  const {
+    totalCartCost,
+    committedInOffers,
+    remainingBudget,
+    budgetPercent,
+    showBudgetAlert,
+    setShowBudgetAlert,
+  } = useBudget({
+    userProfile,
+    ownedCart,
+    userId,
+    sentOffers,
+  });
 
   const playerById = useMemo(() => {
     const map = new Map();
@@ -1480,11 +1386,11 @@ function App() {
         });
       },
       (error) => {
-        console.error("Snapshot error in Offers:", error.code);
+        handleListenerError(error, "Offers", showStatusMessage);
       }
     );
     return () => unsub();
-  }, [userId, addNotification]);
+  }, [userId, addNotification, showStatusMessage]);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -1566,12 +1472,12 @@ function App() {
         });
       },
       (error) => {
-        console.error("Snapshot error in Manager Chat:", error.code);
+        handleListenerError(error, "Manager Chat", showStatusMessage);
       }
     );
 
     return () => unsub();
-  }, [isAuthReady, userId, getManagerChatCollectionRef, addNotification]);
+  }, [isAuthReady, userId, getManagerChatCollectionRef, addNotification, showStatusMessage]);
 
   useEffect(() => {
     if (isManagerChatVisible || modalRoute === 'chat') setUnreadChatCount(0);
@@ -1654,6 +1560,7 @@ function App() {
     let attempts = 0;
     const maxAttempts = 3;
     let lastError;
+    showStatusMessage('loading', `Fichando a ${player.Name}...`);
 
     while (attempts < maxAttempts) {
       try {
@@ -1727,12 +1634,16 @@ function App() {
   }, [userId, userProfile, remainingBudget, playerLocks, getPublicLockDocRef, getPrivateCartDocRef, db, showStatusMessage]);
 
   const handleRemoveFromCart = useCallback(async (player) => {
-    if (!userId) return;
+    if (!userId || !player) return;
+
+    const confirmed = window.confirm(`¿Estás seguro de que deseas liberar a ${player.Name || 'este jugador'} de tu equipo? Su bloqueo quedará disponible para otros managers.`);
+    if (!confirmed) return;
 
     const lockRef = getPublicLockDocRef(player.Id);
     const cartRef = getPrivateCartDocRef(userId, player.Id);
 
     try {
+      showStatusMessage('loading', `Liberando a ${player.Name}...`);
       const batch = writeBatch(db);
       batch.delete(lockRef);
       batch.delete(cartRef);
@@ -1756,17 +1667,17 @@ function App() {
       console.error("Error al eliminar del carrito: ", e);
       showStatusMessage('error', 'No se pudo eliminar al jugador.');
     }
-  }, [userId, getPublicLockDocRef, getPrivateCartDocRef]);
+  }, [userId, getPublicLockDocRef, getPrivateCartDocRef, showStatusMessage]);
 
   const handleOpenPlayerFromCart = (player) => {
-    setSelectedPlayerId(player.Id);
+    handleOpenPlayerModal(player.Id);
     setIsCartVisible(false);
   };
 
 
   const selectedPlayer = useMemo(() => {
     if (!selectedPlayerId) return null;
-    return allPlayers.find(p => p.Id === selectedPlayerId);
+    return allPlayers.find(p => String(p.Id) === String(selectedPlayerId));
   }, [selectedPlayerId, allPlayers]);
 
   const uniquePositions = useMemo(() => {
@@ -1786,162 +1697,39 @@ function App() {
     return Array.from(styleSet).sort();
   }, [allPlayers]);
 
-  // ── BUDGET ALERT STATE ──
-  const [showBudgetAlert, setShowBudgetAlert] = useState(false);
-  const budgetPercent = useMemo(() => {
-    if (!userProfile?.budget) return 100;
-    return (remainingBudget / userProfile.budget) * 100;
-  }, [remainingBudget, userProfile?.budget]);
-
-  // Show budget alert modal when signing pushes below 20%
-  const prevBudgetPercentRef = useRef(null);
-  useEffect(() => {
-    if (prevBudgetPercentRef.current === null) {
-      prevBudgetPercentRef.current = budgetPercent;
-      return;
-    }
-    const hasShownAlert = sessionStorage.getItem('budget_alert_shown') === 'true';
-    if (!hasShownAlert && prevBudgetPercentRef.current > 20 && budgetPercent <= 20 && budgetPercent > 0) {
-      setShowBudgetAlert(true);
-      try { sessionStorage.setItem('budget_alert_shown', 'true'); } catch {}
-    }
-    prevBudgetPercentRef.current = budgetPercent;
-  }, [budgetPercent]);
 
   // ── SMART RECOMMENDATION ENGINE ──
   // NOTE: `recommendations` removed — was dead code (never used in JSX).
   // Only `smartRecommendations` below is used.
 
-  const smartRecommendations = useMemo(() => {
-    if (activeTab !== 'Marketplace' || !allPlayers.length || !userProfile) return [];
+  const [smartRecommendations, setSmartRecommendations] = useState([]);
 
-    const posGroups = {
-      PT: ['PT'],
-      DEF: ['DFC', 'LD', 'LI'],
-      MED: ['MC', 'MCD', 'MO', 'MD', 'MI'],
-      DEL: ['DC', 'SD', 'ED', 'EI'],
-    };
-    const groupLabels = { PT: 'arco', DEF: 'defensa', MED: 'mediocampo', DEL: 'ataque' };
-    const groupTargets = { PT: 2, DEF: 7, MED: 7, DEL: 5 };
-    const targetSquadSize = 21;
-    const remainingBudgetM = Math.max(0, Number(remainingBudget || 0) / 1000000);
-    if (remainingBudgetM <= 0) return [];
-
-    const getPlayerGroup = (pos) => {
-      for (const [group, positions] of Object.entries(posGroups)) {
-        if (positions.includes(pos)) return group;
-      }
-      return null;
-    };
-
-    const groupCounts = { PT: 0, DEF: 0, MED: 0, DEL: 0 };
-    const groupOvrTotals = { PT: 0, DEF: 0, MED: 0, DEL: 0 };
-    const positionCounts = {};
-    const cartIds = new Set(cart.map(player => String(player.Id)));
-    const lockedIds = new Set(Object.keys(playerLocks || {}));
-
-    cart.forEach(player => {
-      const pos = player.POS_NOMBRE;
-      positionCounts[pos] = (positionCounts[pos] || 0) + 1;
-      const group = getPlayerGroup(pos);
-      if (group) {
-        groupCounts[group]++;
-        groupOvrTotals[group] += Number(player.OVR_CALCULADO || 0);
-      }
-    });
-
-    const groupAvgOvr = {};
-    Object.keys(groupCounts).forEach(group => {
-      groupAvgOvr[group] = groupCounts[group] > 0
-        ? Math.round(groupOvrTotals[group] / groupCounts[group])
-        : 0;
-    });
-
-    const overallAvg = cart.length > 0
-      ? Math.round(cart.reduce((sum, player) => sum + Number(player.OVR_CALCULADO || 0), 0) / cart.length)
-      : 0;
-    const openSlots = Math.max(1, targetSquadSize - cart.length);
-    const budgetPerSlot = remainingBudgetM / openSlots;
-    const strictCap = Math.max(1.5, Math.min(remainingBudgetM, Math.max(budgetPerSlot * 2.4, remainingBudgetM * 0.16)));
-    const emergencyCap = Math.max(strictCap, Math.min(remainingBudgetM, Math.max(budgetPerSlot * 3.3, remainingBudgetM * 0.28)));
-
-    const scored = allPlayers
-      .filter(player => {
-        const price = Number(player.Precio || 0);
-        const group = getPlayerGroup(player.POS_NOMBRE);
-        const groupNeed = group ? Math.max(0, (groupTargets[group] - groupCounts[group]) / groupTargets[group]) : 0;
-        if (!group) return false;
-        if (cartIds.has(String(player.Id))) return false;
-        if (lockedIds.has(String(player.Id))) return false;
-        if (price <= 0 || price > remainingBudgetM) return false;
-        if (price > strictCap && groupNeed < 0.55 && price > emergencyCap) return false;
-        return true;
-      })
-      .map(player => {
-        const pos = player.POS_NOMBRE;
-        const group = getPlayerGroup(pos);
-        const price = Number(player.Precio || 0);
-        const ovr = Number(player.OVR_CALCULADO || 0);
-        const groupNeed = group ? Math.max(0, groupTargets[group] - groupCounts[group]) : 0;
-        const groupNeedRatio = group ? groupNeed / groupTargets[group] : 0;
-        const groupWeakness = group && groupAvgOvr[group] > 0 && overallAvg > 0
-          ? Math.max(0, overallAvg - groupAvgOvr[group])
-          : 0;
-        const posCount = positionCounts[pos] || 0;
-        const priceShare = price / Math.max(remainingBudgetM, 1);
-        const slotShare = price / Math.max(budgetPerSlot, 1);
-        const valueScore = price > 0 ? Math.min(24, Math.max(0, (ovr - 68) / Math.sqrt(price))) : 0;
-
-        let score = 0;
-        score += groupNeedRatio * 48;
-        score += Math.min(24, groupWeakness * 4);
-        score += Math.max(0, ovr - Math.max(72, overallAvg - 4)) * 1.8;
-        score += valueScore;
-        if (posCount === 0) score += 18;
-        else if (posCount === 1) score += 7;
-        else if (posCount >= 3) score -= 24;
-        if (slotShare <= 1.05) score += 16;
-        else if (slotShare <= 1.6) score += 8;
-        else if (priceShare > 0.28 && groupNeedRatio < 0.55) score -= 18;
-        if (cart.length < 11 && priceShare > 0.22) score -= 14;
-        if (ovr >= 85 && priceShare <= 0.22) score += 10;
-
-        let reason = 'Buen encaje';
-        if (groupNeed > 0 && posCount === 0) reason = `Necesitás un ${pos}`;
-        else if (groupNeedRatio >= 0.45) reason = `Completa ${groupLabels[group]}`;
-        else if (groupWeakness >= 5) reason = `Sube ${groupLabels[group]}`;
-        else if (slotShare <= 1.05) reason = 'Cuida presupuesto';
-        else if (ovr >= overallAvg + 5) reason = 'Salto de calidad';
-
-        const fit = slotShare <= 1.05 ? 'VALOR' : groupNeedRatio >= 0.45 ? 'NECESIDAD' : ovr >= overallAvg + 5 ? 'OVR' : 'FIT';
-        const _valueNote = `${priceShare <= 0.01 ? '<1' : Math.round(priceShare * 100)}% del presupuesto`;
-        return { ...player, _score: score, _reason: reason, _fit: fit, _group: group, _valueNote };
-      })
-      .sort((a, b) => b._score - a._score || Number(b.OVR_CALCULADO || 0) - Number(a.OVR_CALCULADO || 0));
-
-    const selected = [];
-    const selectedGroups = {};
-    const selectedPositions = {};
-    for (const player of scored) {
-      const groupCount = selectedGroups[player._group] || 0;
-      const selectedPosCount = selectedPositions[player.POS_NOMBRE] || 0;
-      if (groupCount >= 2) continue;
-      if (selectedPosCount >= 1 && selected.length < 4) continue;
-      selected.push(player);
-      selectedGroups[player._group] = groupCount + 1;
-      selectedPositions[player.POS_NOMBRE] = selectedPosCount + 1;
-      if (selected.length >= 6) break;
-    }
-    if (selected.length < 6) {
-      for (const player of scored) {
-        if (selected.some(item => String(item.Id) === String(player.Id))) continue;
-        selected.push(player);
-        if (selected.length >= 6) break;
-      }
+  useEffect(() => {
+    if (activeTab !== 'Marketplace' || !allPlayers.length || !userProfile) {
+      setSmartRecommendations([]);
+      return;
     }
 
-    return selected;
-  }, [allPlayers, cart, playerLocks, remainingBudget, userProfile]);
+    // Schedule calculation in idle time so main render thread is not blocked
+    const calculate = () => {
+      const recs = calculateSmartRecommendations({
+        allPlayers,
+        cart,
+        playerLocks,
+        remainingBudget,
+        userProfile,
+      });
+      setSmartRecommendations(recs);
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(calculate, { timeout: 400 });
+      return () => window.cancelIdleCallback(idleId);
+    } else {
+      const timerId = setTimeout(calculate, 50);
+      return () => clearTimeout(timerId);
+    }
+  }, [activeTab, allPlayers, cart, playerLocks, remainingBudget, userProfile]);
 
   if (isSpecialMode) {
     // OBS Goleadores view
@@ -2199,6 +1987,33 @@ function App() {
 
   return (
     <>
+      {/* ── OFFLINE STATUS BANNER ── */}
+      {!isOnline && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="fixed top-0 left-0 right-0 z-[999] bg-rose-600 text-white px-4 py-2 text-xs sm:text-sm font-bold flex items-center justify-between shadow-lg animate-in slide-in-from-top duration-300"
+        >
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-white animate-pulse" />
+            <span>Sin conexión a internet. Los cambios no se sincronizarán hasta restablecer la red.</span>
+          </div>
+          <button
+            onClick={() => {
+              if (typeof navigator !== 'undefined' && navigator.onLine) {
+                setIsOnline(true);
+                showStatusMessage('success', 'Conexión verificada.');
+              } else {
+                showStatusMessage('error', 'Aún sin conexión a internet.');
+              }
+            }}
+            className="ml-3 px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-black uppercase tracking-wider transition shrink-0 cursor-pointer"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
       <div className="flex h-[100dvh] w-full bg-[#06080d] text-gray-200 overflow-hidden font-sans">
 
         {/* SIDEBAR — ancho 0 cuando cerrada, 224px cuando abierta */}
@@ -2206,9 +2021,11 @@ function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           isAdmin={isAdmin}
+          hasPesAccess={hasPesAccess}
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
           onHelpClick={() => openModalRoute('tutorial')}
+          onShortcutsClick={() => setIsShortcutsHelpOpen(true)}
           onSuggestionsClick={() => openModalRoute('suggestions')}
           onLogout={handleLogout}
           remainingBudget={remainingBudget}
@@ -2218,6 +2035,7 @@ function App() {
         <div className="flex-1 flex flex-col overflow-hidden relative bg-[#06080d] transition-colors">
           {/* TOP HEADER con hamburger */}
           <TopHeader
+            userId={userId}
             userProfile={userProfile}
             unreadCount={notifications.filter(notification => notification.read !== true).length}
             unreadChatCount={unreadChatCount}
@@ -2231,6 +2049,7 @@ function App() {
               setShouldPrefetchTransfers(true);
               openModalRoute('transfers');
             }}
+            onShortcutsClick={() => setIsShortcutsHelpOpen(true)}
             onNotificationPrefetch={() => setAreNotificationsWarmed(true)}
             onChatPrefetch={prefetchManagerChat}
             onTransferFeedPrefetch={() => { prefetchTransferFeed(); setShouldPrefetchTransfers(true); }}
@@ -2246,20 +2065,23 @@ function App() {
             <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8 flex flex-col bg-[#06080d] transition-colors" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
               {/* VISTA RESUMEN / INICIO (SOFASCORE STYLE) */}
               {activeTab === 'Overview' && (
-                <OverviewTab
-                  userProfile={userProfile}
-                  remainingBudget={remainingBudget}
-                  ownedCart={ownedCart}
-                  tournamentData={tournamentData}
-                  allTeams={allTeams}
-                  setActiveTab={setActiveTab}
-                  onPlayerClick={(playerId) => setSelectedPlayerId(playerId)}
-                  signingToasts={signingToasts}
-                />
+                <div className="animate-in fade-in duration-200">
+                  <OverviewTab
+                    userProfile={userProfile}
+                    remainingBudget={remainingBudget}
+                    ownedCart={ownedCart}
+                    tournamentData={tournamentData}
+                    allTeams={allTeams}
+                    setActiveTab={setActiveTab}
+                    onPlayerClick={handleOpenPlayerModal}
+                    signingToasts={signingToasts}
+                    isLoading={isLoading || tournamentData === null}
+                  />
+                </div>
               )}
 
               {/* Render content based on active tab, for now Marketplace is the main functional view */}
-              <div data-app-tour="marketplace" className={activeTab === 'Marketplace' ? (isMobileViewport ? 'flex flex-col' : 'flex-1 min-h-0 flex flex-col') : 'hidden'}>
+              <div data-app-tour="marketplace" className={`${activeTab === 'Marketplace' ? (isMobileViewport ? 'flex flex-col' : 'flex-1 min-h-0 flex flex-col') : 'hidden'} animate-in fade-in duration-200`}>
 
                 {/* Header superior */}
                 <div className="shrink-0">
@@ -2279,10 +2101,17 @@ function App() {
                 />
 
                 {(playersLoadError || countriesLoadError) && (
-                  <div className="mb-4 space-y-2">
+                  <div className="mb-4 space-y-2" role="alert" aria-live="assertive">
                     {playersLoadError && (
-                      <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-semibold">
-                        {playersLoadError}
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-sm font-semibold">
+                        <span>{playersLoadError}</span>
+                        <button
+                          type="button"
+                          onClick={retryPlayerCatalog}
+                          className="min-h-11 px-4 rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 transition"
+                        >
+                          Reintentar carga
+                        </button>
                       </div>
                     )}
                     {countriesLoadError && (
@@ -2310,7 +2139,7 @@ function App() {
                   <RecommendationsAccordion
                     recommendations={smartRecommendations}
                     remainingBudget={remainingBudget}
-                    onSelectPlayer={setSelectedPlayerId}
+                    onSelectPlayer={handleOpenPlayerModal}
                   />
                 )}
                 {remainingBudget > 0 && remainingBudget < 1000000 && allPlayers.length > 0 && smartRecommendations.length === 0 && (
@@ -2323,7 +2152,26 @@ function App() {
                 {/* Fin del header */}
 
                 <div className={isMobileViewport ? "mt-1 flex flex-col" : "flex-1 min-h-0 mt-1 flex flex-col"} data-app-tour="players" id="player-list">
-                  {filteredPlayers.length === 0 ? (
+                  {!hasLoadedPlayerDatabase && allPlayers.length === 0 ? (
+                    <div className="space-y-4 my-4 animate-pulse">
+                      <div className="flex items-center justify-between px-2 text-xs text-slate-400">
+                        <span>Cargando base de datos oficial PES 2021...</span>
+                        <div className="w-4 h-4 rounded-full border-2 border-sky-500/30 border-t-sky-500 animate-spin" />
+                      </div>
+                      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+                        {[...Array(12)].map((_, i) => (
+                          <div key={i} className="h-44 rounded-2xl bg-[#0c1017] border border-white/5 p-3 flex flex-col justify-between">
+                            <div className="w-16 h-4 bg-white/5 rounded" />
+                            <div className="w-20 h-20 bg-white/5 rounded-xl mx-auto my-2" />
+                            <div className="space-y-1.5">
+                              <div className="w-full h-3 bg-white/5 rounded" />
+                              <div className="w-1/2 h-2.5 bg-white/5 rounded" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : filteredPlayers.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-white/10 bg-[#0c1017] p-8 sm:p-14 text-center flex flex-col items-center justify-center my-6">
                       <div className="w-16 h-16 rounded-2xl bg-[#00b4d8]/10 border border-[#00b4d8]/20 flex items-center justify-center text-[#00b4d8] mb-4">
                         <Search className="w-8 h-8" />
@@ -2375,7 +2223,7 @@ function App() {
                             <PlayerListItem
                               player={player}
                               countryMap={countryMap}
-                              onSelectPlayer={setSelectedPlayerId}
+                              onSelectPlayer={handleOpenPlayerModal}
                               isInMyCart={isInMyCart}
                               isLockedByOther={isLocked}
                               lockedTeamName={isLocked ? playerLocks[player.Id]?.teamName : null}
@@ -2391,7 +2239,7 @@ function App() {
                             <PlayerCard
                               player={player}
                               countryMap={countryMap}
-                              onSelectPlayer={setSelectedPlayerId}
+                              onSelectPlayer={handleOpenPlayerModal}
                               isInMyCart={isInMyCart}
                               isLockedByOther={isLocked}
                               lockedTeamName={isLocked ? playerLocks[player.Id]?.teamName : null}
@@ -2428,10 +2276,12 @@ function App() {
                           countryMap={countryMap}
                           wishlistSet={wishlistSet}
                           comparingIdsSet={comparingIdsSet}
-                          onSelectPlayer={setSelectedPlayerId}
+                          onSelectPlayer={handleOpenPlayerModal}
                           onToggleWishlist={toggleWishlist}
                           onCompare={handleToggleCompare}
                           overscanCount={6}
+                          onPlayerMouseEnter={!isMobileViewport ? hoverPreview.show : undefined}
+                          onPlayerMouseLeave={!isMobileViewport ? hoverPreview.hide : undefined}
                         />
                       ) : (
                         <VirtualizedPlayerGrid
@@ -2443,113 +2293,143 @@ function App() {
                           countryMap={countryMap}
                           wishlistSet={wishlistSet}
                           comparingIdsSet={comparingIdsSet}
-                          onSelectPlayer={setSelectedPlayerId}
+                          onSelectPlayer={handleOpenPlayerModal}
                           onToggleWishlist={toggleWishlist}
                           onCompare={handleToggleCompare}
                           overscanCount={2}
                           cardMaxHeight={gridCardMaxHeight}
+                          onPlayerMouseEnter={!isMobileViewport ? hoverPreview.show : undefined}
+                          onPlayerMouseLeave={!isMobileViewport ? hoverPreview.hide : undefined}
                         />
                       )}
                     </div>
                   )}
                 </div>
+                {!isMobileViewport && (
+                  <PlayerPreview
+                    player={hoverPreview.player}
+                    isVisible={hoverPreview.isVisible}
+                    position={hoverPreview.position}
+                    onOpenProfile={handleOpenPlayerModal}
+                  />
+                )}
               </div> {/* End Marketplace Container*/}
 
 
               {/* VISTAS MODULARES EN LUGAR DE PLACEHOLDERS */}
               <Suspense fallback={null}>
                 {activeTab === 'My Team' && (
-                  <FormationModal
-                    isVisible={true}
-                    onClose={() => setActiveTab('Marketplace')}
-                    cart={ownedCart}
-                    userProfile={userProfile}
-                    userId={userId}
-                    getPrivateProfileRef={getPrivateProfileRef}
-                    getPublicTeamRef={getPublicTeamRef}
-                    showStatusMessage={showStatusMessage}
-                    db={db}
-                    isPage={true}
-                  />
+                  <div className="animate-in fade-in duration-200 h-full w-full">
+                    <CartModal
+                      isVisible={true}
+                      onClose={() => setActiveTab('Overview')}
+                      cart={ownedCart}
+                      initialTab={clubTab}
+                      onRemoveFromCart={handleRemoveFromCart}
+                      userProfile={userProfile}
+                      userId={userId}
+                      totalCartCost={totalCartCost}
+                      remainingBudget={remainingBudget}
+                      committedInOffers={committedInOffers}
+                      incomingOffers={incomingOffers}
+                      sentOffers={sentOffers}
+                      offerHistory={offerHistory}
+                      countryMap={countryMap}
+                      onPlayerClick={handleOpenPlayerFromCart}
+                      allPlayers={allPlayers}
+                      allTeams={allTeams}
+                      onOpenTactics={() => navigate('/tactics')}
+                      showStatusMessage={showStatusMessage}
+                      isPage={true}
+                    />
+                  </div>
+                )}
+                {activeTab === 'Tactics' && (
+                  <div className="animate-in fade-in duration-200 h-full w-full">
+                    <FormationModal
+                      isVisible={true}
+                      onClose={() => navigate('/my-team')}
+                      cart={ownedCart}
+                      userProfile={userProfile}
+                      userId={userId}
+                      getPrivateProfileRef={getPrivateProfileRef}
+                      getPublicTeamRef={getPublicTeamRef}
+                      showStatusMessage={showStatusMessage}
+                      db={db}
+                      isPage={true}
+                    />
+                  </div>
                 )}
                 {activeTab === 'Scouting' && (
-                  <ScoutAssignmentsPanel
-                    db={db}
-                    userId={userId}
-                    isAdmin={isAdmin}
-                    userProfile={userProfile}
-                    allPlayers={allPlayers}
-                    playerLocks={playerLocks}
-                    countryMap={countryMap}
-                    remainingBudget={remainingBudget}
-                    wishlistSet={wishlistSet}
-                    onAddToWatchlist={toggleWishlist}
-                    onPlayerClick={(player) => {
-                      setSelectedPlayerId(player.Id);
-                    }}
-                    addNotification={addNotification}
-                    showStatusMessage={showStatusMessage}
-                  />
+                  <div className="animate-in fade-in duration-200 h-full w-full">
+                    <ScoutAssignmentsPanel
+                      db={db}
+                      userId={userId}
+                      isAdmin={isAdmin}
+                      userProfile={userProfile}
+                      allPlayers={allPlayers}
+                      playerLocks={playerLocks}
+                      countryMap={countryMap}
+                      remainingBudget={remainingBudget}
+                      wishlistSet={wishlistSet}
+                      onAddToWatchlist={toggleWishlist}
+                      onPlayerClick={(player) => {
+                        handleOpenPlayerModal(player.Id);
+                      }}
+                      addNotification={addNotification}
+                      showStatusMessage={showStatusMessage}
+                    />
+                  </div>
                 )}
                 {activeTab === 'Other Teams' && (
-                  <TeamsModal
-                    isVisible={true}
-                    onClose={() => setActiveTab('Marketplace')}
-                    allTeams={allTeams}
-                    playerLocks={playerLocks}
-                    allPlayers={allPlayers}
-                    countryMap={countryMap}
-                    onPlayerClick={(player) => {
-                      setSelectedPlayerId(player.Id);
-                    }}
-                    isPage={true}
-                    title="Otros Equipos"
-                    subtitle="Monitor de planteles rivales"
-                  />
+                  <div className="animate-in fade-in duration-200 h-full w-full">
+                    <TeamsModal
+                      isVisible={true}
+                      onClose={() => setActiveTab('Marketplace')}
+                      allTeams={allTeams}
+                      playerLocks={playerLocks}
+                      allPlayers={allPlayers}
+                      countryMap={countryMap}
+                      onPlayerClick={(player) => {
+                        handleOpenPlayerModal(player.Id);
+                      }}
+                      isPage={true}
+                      title="Otros Equipos"
+                      subtitle="Monitor de planteles rivales"
+                    />
+                  </div>
                 )}
-                {activeTab === 'Financials' && (
-                  <CartModal
-                    isVisible={true}
-                    onClose={() => setActiveTab('Marketplace')}
-                    cart={ownedCart}
-                    onRemoveFromCart={handleRemoveFromCart}
-                    userProfile={userProfile}
-                    userId={userId}
-                    totalCartCost={totalCartCost}
-                    remainingBudget={remainingBudget}
-                    committedInOffers={committedInOffers}
-                    incomingOffers={incomingOffers}
-                    sentOffers={sentOffers}
-                    offerHistory={offerHistory}
-                    countryMap={countryMap}
-                    onPlayerClick={handleOpenPlayerFromCart}
-                    isPage={true}
-                    allPlayers={allPlayers}
-                    allTeams={allTeams}
-                  />
+                {activeTab === 'PES' && hasPesAccess && (
+                  <div className="animate-in fade-in duration-200 h-full w-full overflow-y-auto">
+                    <Suspense fallback={null}>
+                      <PesWorkspaceScreen userId={userId} isAdmin={isAdmin} allTeams={allTeams} />
+                    </Suspense>
+                  </div>
                 )}
                 {activeTab === 'Admin' && isAdmin && (
-                  <AdminModal
-                    isVisible={true}
-                    isPage={true}
-                    onClose={() => setActiveTab('Marketplace')}
-                    getPublicTeamsCollectionRef={getPublicTeamsCollectionRef}
-                    getPrivateProfileRef={getPrivateProfileRef}
-                    getPublicTeamRef={getPublicTeamRef}
-                    getMarketStatusDocRef={getMarketStatusDocRef}
-                    getBroadcastOverlayDocRef={getBroadcastOverlayDocRef}
-                    broadcastOverlayData={broadcastOverlayData}
-                    onUpdateBroadcastOverlay={handleUpdateBroadcastOverlay}
-                    getSuggestionsCollectionRef={getSuggestionsCollectionRef}
-                    getPublicLocksCollectionRef={getPublicLocksCollectionRef}
-                    allTeams={allTeams}
-                    playerLocks={playerLocks}
-                    allPlayers={allPlayers}
-                    storage={storage}
-                    db={db}
-                    showStatusMessage={showStatusMessage}
-                    onOpenTournamentModal={() => setIsTournamentModalVisible(true)}
-                  />
+                  <div className="animate-in fade-in duration-200 h-full w-full">
+                    <AdminModal
+                      isVisible={true}
+                      isPage={true}
+                      onClose={() => setActiveTab('Overview')}
+                      getPublicTeamsCollectionRef={getPublicTeamsCollectionRef}
+                      getPrivateProfileRef={getPrivateProfileRef}
+                      getPublicTeamRef={getPublicTeamRef}
+                      getMarketStatusDocRef={getMarketStatusDocRef}
+                      getBroadcastOverlayDocRef={getBroadcastOverlayDocRef}
+                      broadcastOverlayData={broadcastOverlayData}
+                      onUpdateBroadcastOverlay={handleUpdateBroadcastOverlay}
+                      getSuggestionsCollectionRef={getSuggestionsCollectionRef}
+                      getPublicLocksCollectionRef={getPublicLocksCollectionRef}
+                      allTeams={allTeams}
+                      playerLocks={playerLocks}
+                      allPlayers={allPlayers}
+                      storage={storage}
+                      db={db}
+                      showStatusMessage={showStatusMessage}
+                      onOpenTournamentModal={() => setIsTournamentModalVisible(true)}
+                    />
+                  </div>
                 )}
               </Suspense>
             </div> {/* End scrollable center pane */}
@@ -2559,10 +2439,10 @@ function App() {
         </div> {/* End flex-1 col */}
       </div> {/* End h-screen */}
       {compareList.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
+        <div className="fixed bottom-3 left-3 right-3 sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
 
           {/* CONTENEDOR PRINCIPAL CON ESTILO PREMIUM */}
-          <div className="flex items-center gap-6 bg-gray-900/90 backdrop-blur-xl border border-blue-500/40 p-4 pr-6 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+          <div className="flex items-center justify-between gap-2 sm:gap-6 bg-gray-900/90 backdrop-blur-xl border border-blue-500/40 p-3 sm:p-4 sm:pr-6 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)]">
 
             {/* ÁREA DE JUGADORES */}
             <div className="flex items-center gap-4">
@@ -2571,13 +2451,14 @@ function App() {
               <div className="relative group">
                 <img
                   src={`/fotos_jugadores/${compareList[0].Id}.webp`}
+                  alt=""
                   className="w-16 h-16 rounded-full border-2 border-blue-400 object-cover shadow-lg shadow-blue-500/20 bg-gray-800"
                   onError={(e) => e.target.src = `https://placehold.co/64x64/374151/e0e0e0?text=${compareList[0].Name.substring(0, 1)}`}
                 />
                 <button
                   onClick={() => handleRemoveCompareItem(compareList[0].Id)}
-                  className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full hover:scale-110 transition shadow-sm border-2 border-gray-900"
-                  title="Quitar"
+                  className="absolute -top-2 -right-2 min-w-8 min-h-8 bg-red-500 text-white p-1 rounded-full hover:scale-110 transition shadow-sm border-2 border-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  aria-label={`Quitar a ${compareList[0].Name} del comparador`}
                 >
                   <X size={12} />
                 </button>
@@ -2596,13 +2477,14 @@ function App() {
                 <div className="relative group animate-in zoom-in-50 duration-300">
                   <img
                     src={`/fotos_jugadores/${compareList[1].Id}.webp`}
+                    alt=""
                     className="w-16 h-16 rounded-full border-2 border-red-400 object-cover shadow-lg shadow-red-500/20 bg-gray-800"
                     onError={(e) => e.target.src = `https://placehold.co/64x64/374151/e0e0e0?text=${compareList[1].Name.substring(0, 1)}`}
                   />
                   <button
                     onClick={() => handleRemoveCompareItem(compareList[1].Id)}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full hover:scale-110 transition shadow-sm border-2 border-gray-900"
-                    title="Quitar"
+                    className="absolute -top-2 -right-2 min-w-8 min-h-8 bg-red-500 text-white p-1 rounded-full hover:scale-110 transition shadow-sm border-2 border-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    aria-label={`Quitar a ${compareList[1].Name} del comparador`}
                   >
                     <X size={12} />
                   </button>
@@ -2618,14 +2500,15 @@ function App() {
             </div>
 
             {/* DIVISOR VERTICAL */}
-            <div className="h-10 w-px bg-gray-700 mx-2"></div>
+            <div className="hidden sm:block h-10 w-px bg-gray-700 mx-2"></div>
 
             {/* BOTÓN DE ACCIÓN GRANDE */}
             <button
               disabled={compareList.length < 2}
+              title={compareList.length < 2 ? 'Completa los datos requeridos primero' : undefined}
               onClick={() => openModalRoute('compare')}
               className={`
-                        flex items-center px-6 py-3 rounded-xl font-bold text-white shadow-xl transition-all transform
+                        min-h-11 flex items-center px-4 sm:px-6 py-3 rounded-xl font-bold text-white shadow-xl transition-all transform text-sm sm:text-base
                         ${compareList.length < 2
                   ? 'bg-gray-700 cursor-not-allowed opacity-50 grayscale'
                   : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:scale-105 hover:shadow-blue-500/40'
@@ -2641,7 +2524,7 @@ function App() {
 
       <Suspense fallback={null}>
       <ComparisonModal
-        isVisible={isComparisonModalVisible || modalRoute === 'compare'}
+        isVisible={Boolean((isComparisonModalVisible || modalRoute === 'compare') && compareList[0] && compareList[1])}
         onClose={() => closeModalRoute(setIsComparisonModalVisible)}
         playerA={compareList[0]}
         playerB={compareList[1]}
@@ -2671,7 +2554,7 @@ function App() {
       <PlayerModal
         player={selectedPlayer}
         countryMap={countryMap}
-        onClose={() => setSelectedPlayerId(null)}
+        onClose={handleClosePlayerModal}
         onAddToCart={handleAddToCart}
         cartStatus={
           selectedPlayer ?
@@ -2719,6 +2602,7 @@ function App() {
           onPlayerClick={handleOpenPlayerFromCart}
           allPlayers={allPlayers}
           allTeams={allTeams}
+          showStatusMessage={showStatusMessage}
         />
       )}
       <TeamsModal
@@ -2729,7 +2613,7 @@ function App() {
         allPlayers={allPlayers}
         countryMap={countryMap}
         onPlayerClick={(player) => {
-          setSelectedPlayerId(player.Id); // 1. Abre el perfil del jugador
+          handleOpenPlayerModal(player); // 1. Abre el perfil del jugador
           closeModalRoute(setIsTeamsModalVisible);
         }}
       />
@@ -2815,6 +2699,23 @@ function App() {
         userProfile={userProfile}
         onSendMessage={handleSendChatMessage}
       />
+
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        allPlayers={allPlayers}
+        onSelectPlayer={(id) => {
+          handleOpenPlayerModal(id);
+          openModalRoute('player');
+        }}
+        setActiveTab={setActiveTab}
+        openModalRoute={openModalRoute}
+      />
+
+      <KeyboardShortcutsHelp
+        isOpen={isShortcutsHelpOpen}
+        onClose={() => setIsShortcutsHelpOpen(false)}
+      />
       </Suspense>
 
       <InstallPopup
@@ -2883,7 +2784,16 @@ function App() {
         {signingToasts.map(toast => (
           <div
             key={toast.toastId}
+            role="button"
+            tabIndex={0}
+            aria-label={`Ver fichaje: ${toast.teamName} fichó a ${toast.playerName}`}
             onClick={() => handleToastClick(toast)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToastClick(toast);
+              }
+            }}
             className="pointer-events-auto cursor-pointer bg-gray-900/95 backdrop-blur-xl border border-gray-700/60 hover:border-cyan-500/60 hover:bg-gray-800/95 transition-all rounded-xl p-3.5 shadow-2xl animate-in slide-in-from-right-10 fade-in duration-400 flex items-center gap-3 group active:scale-95"
             style={{ borderLeft: `4px solid ${toast.posColor}` }}
           >

@@ -6,10 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-scl \"vitest run --config vitest.rules.config.js\"",
+    "pes:claims": "node scripts/sync-pes-claims.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
     "chart.js": "^4.5.1",
+    "fflate": "0.8.2",
     "firebase": "^12.5.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
@@ -18,17 +24,20 @@
     "lucide-react": "^0.400.0",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.3.1",
-    "react-dom": "^18.2.0",
+    "react-dom": "^18.3.1",
     "react-router-dom": "^7.14.2",
-    "react-snowfall": "^2.4.0",
     "react-toastify": "^11.0.5",
     "react-window": "^2.2.7"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "@opentelemetry/api": "1.9.1",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.22",
+    "firebase-admin": "14.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.18",
-    "vite": "^7.2.2"
+    "vite": "^7.2.2",
+    "vitest": "^5.0.1"
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, memo } from 'react';
 import { X, Save, MessageSquarePlus } from 'lucide-react';
 import { addDoc } from 'firebase/firestore';
+import { BaseModal } from './ui/BaseModal.jsx';
 
 export const SuggestionsModal = memo(function SuggestionsModal({ isVisible, onClose, teamName, userId, getSuggestionsCollectionRef, showStatusMessage }) {
   const [suggestionText, setSuggestionText] = useState('');
@@ -33,9 +34,15 @@ export const SuggestionsModal = memo(function SuggestionsModal({ isVisible, onCl
   if (!isVisible) return null;
 
   return (
-    // MODIFICADO: p-0 en móvil
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4 animate-in fade-in duration-300" onClick={onClose}>
-      <div className="bg-gray-900/95 sm:rounded-2xl shadow-2xl w-full max-w-lg h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col border-0 sm:border border-gray-700/50 relative overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+    <BaseModal
+      isOpen={isVisible}
+      onClose={onClose}
+      size="md"
+      showClose={false}
+      className="!p-0 !bg-gray-900/95 !max-w-lg"
+      contentClassName="!p-0 !overflow-hidden flex flex-col"
+    >
+      <div className="flex flex-col h-full">
         <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-700 bg-gray-800/80 backdrop-blur-md sticky top-0 z-10">
           <div>
             <h2 className="text-xl font-bold text-white flex items-center">
@@ -71,13 +78,13 @@ export const SuggestionsModal = memo(function SuggestionsModal({ isVisible, onCl
 
             <div className="flex justify-end gap-3 pt-2 mt-auto">
               <button type="button" onClick={onClose} className="px-5 py-3 sm:py-2.5 text-gray-400 font-bold hover:text-white hover:bg-gray-700 rounded-xl transition w-full sm:w-auto">Cancelar</button>
-              <button type="submit" disabled={isSending || suggestionText.trim().length < 10} className="flex items-center justify-center px-6 py-3 sm:py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 w-full sm:w-auto">
+              <button type="submit" disabled={isSending || suggestionText.trim().length < 10} title={isSending ? 'Hay una operación en curso' : suggestionText.trim().length < 10 ? 'Completa los datos requeridos primero' : undefined} className="flex items-center justify-center px-6 py-3 sm:py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 w-full sm:w-auto">
                 {isSending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><Save className="w-4 h-4 mr-2" /> Enviar</>}
               </button>
             </div>
           </form>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 });

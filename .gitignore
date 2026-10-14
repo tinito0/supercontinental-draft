@@ -72,3 +72,6 @@ dist/
 
 # dataconnect generated files
 .dataconnect
+
+# PES 2021: game files, EDIT (contains Steam ID) and third-party tools; never commit
+vendor/

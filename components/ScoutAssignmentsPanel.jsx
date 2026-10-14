@@ -3,15 +3,14 @@ import { collection, deleteDoc, doc, onSnapshot, runTransaction, Timestamp } fro
 import { AlertCircle, Clock, HelpCircle, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import { APP_ID, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
 import { formatPriceShort, getFlagUrl, getRegionById } from '../utils/helpers.js';
+import { buildResultsAsync, positionGroups, RESULT_COUNT_MIN, RESULT_COUNT_MAX } from '../utils/scoutEngine.js';
 
-const RESULT_COUNT_MIN = 3;
-const RESULT_COUNT_MAX = 5;
 const MONTHLY_SEARCH_LIMIT = 5;
 
 const DEFAULT_SCOUTS = [
   { id: 'scout-rapido', name: 'Tomás Ibarra', quality: 58, durationHours: 1, specialty: 'Respuesta rápida', description: 'Vuelve rápido, pero puede traer jugadores con más variación respecto a lo pedido.' },
   { id: 'scout-equilibrado', name: 'Martín Sosa', quality: 74, durationHours: 2, specialty: 'Búsqueda confiable', description: 'Buen balance entre tiempo y precisión. Ideal para búsquedas normales.' },
-  { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 4, imageUrl: '/scouts/fefe-farfan.png', specialty: 'Elite total', description: 'El mejor ojeador de todos. Tarda mas porque filtra fino y prioriza coincidencias premium.' },
+  { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 4, imageUrl: '/scouts/fefe-farfan.webp', specialty: 'Elite total', description: 'El mejor ojeador de todos. Tarda mas porque filtra fino y prioriza coincidencias premium.' },
   { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantanea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para testear resultados.' },
 ];
 
@@ -82,12 +81,6 @@ const SCOUT_TUTORIAL_STEPS = [
   },
 ];
 
-const positionGroups = {
-  Delantero: ['DC', 'SD', 'EI', 'ED'],
-  Mediocampista: ['MC', 'MCD', 'MO', 'MI', 'MD'],
-  Defensor: ['DFC', 'LI', 'LD'],
-  Arquero: ['PT'],
-};
 
 const attentionOptions = [
   { id: 'overall', label: 'Valoracion general' },
@@ -152,91 +145,6 @@ function makeCriteriaFingerprint(scoutId, criteria) {
   return `${scoutId}:${JSON.stringify(criteria)}`;
 }
 
-function matchRange(value, min, max, variance = 0) {
-  const numberValue = Number(value) || 0;
-  const minValue = min === '' || min == null ? null : Number(min) - variance;
-  const maxValue = max === '' || max == null ? null : Number(max) + variance;
-  if (minValue != null && numberValue < minValue) return false;
-  if (maxValue != null && numberValue > maxValue) return false;
-  return true;
-}
-
-function buildResults({ allPlayers, criteria, scout, playerLocks }) {
-  const quality = Number(scout?.quality) || 65;
-  const variance = Math.max(0, Math.round((100 - quality) / 9));
-  const lockedIds = new Set(Object.keys(playerLocks || {}).map(String));
-  const wantedStats = criteria.stats || [];
-  const wantedTraits = criteria.traits || [];
-  const wantedPositions = criteria.positions || [];
-  const groupPositions = criteria.positionGroup ? positionGroups[criteria.positionGroup] || [] : [];
-  const considerBudget = criteria.considerBudget !== 'ignorar';
-  const budgetMax = criteria.budgetMax === '' || criteria.budgetMax == null ? null : Number(criteria.budgetMax);
-
-  const matchesPosition = (player) => {
-    if (wantedPositions.length > 0) {
-      return wantedPositions.some(pos => player.POS_NOMBRE === pos || Number(player[`Aptitude${pos}`] || 0) >= 2);
-    }
-    if (groupPositions.length > 0) {
-      return groupPositions.includes(player.POS_NOMBRE) || groupPositions.some(pos => Number(player[`Aptitude${pos}`] || 0) >= 2);
-    }
-    return true;
-  };
-
-  const strict = allPlayers.filter(player => {
-    if (lockedIds.has(String(player.Id))) return false;
-    if (!matchesPosition(player)) return false;
-    if (considerBudget && budgetMax != null && Number(player.Precio || 0) > budgetMax + variance) return false;
-    if (criteria.countryId && String(player.Country1) !== String(criteria.countryId) && String(player.Country2) !== String(criteria.countryId)) return false;
-    if (criteria.region && getRegionById(player.Country1) !== criteria.region) return false;
-    if (!matchRange(player.Age, criteria.minAge, criteria.maxAge, variance)) return false;
-    if (!matchRange(player.OVR_CALCULADO, criteria.minOvr, criteria.maxOvr, variance)) return false;
-    if (!wantedStats.every(item => Number(player[item.key] || 0) >= Number(item.min || 0) - variance)) return false;
-    if (!wantedTraits.every(key => Boolean(player[key]))) return false;
-    return true;
-  });
-
-  const pool = strict.length >= RESULT_COUNT_MIN
-    ? strict
-    : allPlayers.filter(player => !lockedIds.has(String(player.Id)));
-
-  const scored = pool.map(player => {
-    let score = 0;
-    if (wantedPositions.includes(player.POS_NOMBRE)) score += 34;
-    else if (matchesPosition(player)) score += 22;
-    if (criteria.countryId && (String(player.Country1) === String(criteria.countryId) || String(player.Country2) === String(criteria.countryId))) score += 15;
-    if (criteria.region && getRegionById(player.Country1) === criteria.region) score += 12;
-    if (considerBudget && budgetMax != null) score -= Math.max(0, Number(player.Precio || 0) - budgetMax) * 2;
-    if (criteria.minOvr !== '') score -= Math.abs(Number(player.OVR_CALCULADO) - Number(criteria.minOvr)) * 0.8;
-    if (criteria.maxOvr !== '') score -= Math.max(0, Number(player.OVR_CALCULADO) - Number(criteria.maxOvr));
-    if (criteria.minAge !== '') score -= Math.max(0, Number(criteria.minAge) - Number(player.Age)) * 0.5;
-    if (criteria.maxAge !== '') score -= Math.max(0, Number(player.Age) - Number(criteria.maxAge)) * 0.5;
-    wantedStats.forEach(item => {
-      score += Math.min(18, Math.max(-10, Number(player[item.key] || 0) - Number(item.min || 0)));
-    });
-    wantedTraits.forEach(key => {
-      if (player[key]) score += 8;
-    });
-    if (criteria.attention === 'overall') score += Number(player.OVR_CALCULADO || 0) * 0.35;
-    if (criteria.attention === 'skill') score += wantedStats.reduce((sum, item) => sum + Number(player[item.key] || 0), 0) * 0.08;
-    if (criteria.attention === 'potential') score += Math.max(0, 30 - Number(player.Age || 99));
-    score += Math.random() * (110 - quality);
-    return { player, score };
-  }).sort((a, b) => b.score - a.score);
-
-  const amount = Math.min(scored.length, RESULT_COUNT_MIN + Math.floor(Math.random() * (RESULT_COUNT_MAX - RESULT_COUNT_MIN + 1)));
-  return scored.slice(0, amount).map(({ player }) => ({
-    Id: player.Id,
-    Name: player.Name,
-    POS_NOMBRE: player.POS_NOMBRE,
-    Age: player.Age,
-    OVR_CALCULADO: player.OVR_CALCULADO,
-    Precio: player.Precio,
-    Country1: player.Country1,
-    Speed: player.Speed,
-    Finishing: player.Finishing,
-    BallControl: player.BallControl,
-  }));
-}
 
 function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
   const [stepIndex, setStepIndex] = useState(0);
@@ -344,6 +252,7 @@ function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
             type="button"
             onClick={() => setStepIndex(index => Math.max(0, index - 1))}
             disabled={stepIndex === 0}
+            title={stepIndex === 0 ? 'Este es el primer paso' : undefined}
             className="min-h-11 px-4 rounded-xl bg-[#111722] hover:bg-[#161f2e] border border-white/[0.08] disabled:opacity-40 text-sm font-bold text-slate-200 transition"
           >
             Anterior
@@ -466,7 +375,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       .forEach(async (search) => {
         resolvingRef.current.add(search.id);
         const scout = DEFAULT_SCOUTS.find(item => item.id === search.scoutId) || scouts[0] || DEFAULT_SCOUTS[0];
-        const results = buildResults({ allPlayers, criteria: search.criteria || {}, scout, playerLocks });
+        const results = await buildResultsAsync({ allPlayers, criteria: search.criteria || {}, scout, playerLocks });
         try {
           const searchRef = doc(db, `artifacts/${APP_ID}/users/${userId}/scout_searches`, search.id);
           const didResolve = await runTransaction(db, async (transaction) => {
@@ -681,6 +590,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                     key={scout.id}
                     type="button"
                     disabled={isQuotaFull}
+                    title={isQuotaFull ? 'Ya usaste los 5 scouts disponibles de este mes' : undefined}
                     onClick={() => setSelectedScoutId(scout.id)}
                     className={`min-h-[96px] rounded-xl border p-3.5 text-left transition flex gap-3 overflow-hidden cursor-pointer ${
                       isQuotaFull
@@ -692,7 +602,20 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                   >
                     <div className="w-14 h-14 rounded-xl overflow-hidden bg-black/60 border border-white/10 flex-shrink-0">
                       {scout.imageUrl ? (
-                        <img src={scout.imageUrl} alt={scout.name} className="w-full h-full object-cover object-top" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                        <img
+                          src={scout.imageUrl}
+                          alt={scout.name}
+                          width={56}
+                          height={56}
+                          className="w-full h-full object-cover object-top"
+                          onError={e => {
+                            if (e.currentTarget.src.endsWith('.webp')) {
+                              e.currentTarget.src = '/scouts/fefe-farfan.png';
+                            } else {
+                              e.currentTarget.style.display = 'none';
+                            }
+                          }}
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-sm font-black text-[#00b4d8]">{scout.name.slice(0, 2).toUpperCase()}</div>
                       )}
@@ -845,6 +768,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 value={criteria.budgetMax}
                 onChange={e => setCriteria(prev => ({ ...prev, budgetMax: e.target.value }))}
                 disabled={criteria.considerBudget === 'ignorar'}
+                title={criteria.considerBudget === 'ignorar' ? 'Has elegido ignorar el límite de presupuesto' : undefined}
                 className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors disabled:opacity-40"
               />
             </label>
@@ -894,6 +818,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 value={criteria.statMin2}
                 onChange={e => setCriteria(prev => ({ ...prev, statMin2: e.target.value }))}
                 disabled={!criteria.statKey2}
+                title={!criteria.statKey2 ? 'Primero debes seleccionar un atributo opcional' : undefined}
                 className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors disabled:opacity-40"
               />
             </label>
@@ -930,6 +855,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
             <button
               type="submit"
               disabled={isCreating || monthlyUsage >= MONTHLY_SEARCH_LIMIT}
+              title={isCreating ? 'Hay una operación en curso' : (monthlyUsage >= MONTHLY_SEARCH_LIMIT) ? 'Ya usaste los 5 scouts disponibles de este mes' : undefined}
               className="w-full min-h-12 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] disabled:opacity-50 disabled:cursor-not-allowed text-[#030712] text-sm font-black uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40 active:scale-[0.99] cursor-pointer"
             >
               {isCreating ? (
@@ -1054,6 +980,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                         <div className="grid grid-cols-2 gap-2 mt-4 pt-2">
                           <button
                             disabled={isWatchlisted}
+                            title={isWatchlisted ? 'Este jugador ya está en tu watchlist' : undefined}
                             onClick={() => onAddToWatchlist(player.Id)}
                             className="min-h-10 rounded-xl bg-[#0c1017] hover:bg-black/60 border border-white/[0.08] disabled:opacity-50 text-xs font-bold text-yellow-400 flex items-center justify-center gap-1.5 transition cursor-pointer"
                           >

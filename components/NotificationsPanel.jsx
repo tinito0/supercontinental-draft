@@ -46,9 +46,11 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
 
       {typeof onDismiss === 'function' && (
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onDismiss(notif); }}
-          className="absolute top-2 right-2 min-w-6 min-h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/10 transition"
+          className="absolute top-2 right-2 min-w-6 min-h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/10 transition cursor-pointer"
           title="Descartar"
+          aria-label="Descartar notificación"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -83,7 +85,11 @@ export const NotificationsPanel = memo(function NotificationsPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-white dark:bg-[#0c1017] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200">
+    <div
+      role="region"
+      aria-label="Panel de notificaciones"
+      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-white dark:bg-[#0c1017] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200"
+    >
       <div className="flex justify-between items-center p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
         <div className="flex items-center gap-2">
           <h4 className="font-bold text-slate-900 dark:text-white text-sm">Notificaciones</h4>
@@ -96,24 +102,36 @@ export const NotificationsPanel = memo(function NotificationsPanel({
         <div className="flex items-center gap-1">
           {unreadCount > 0 && typeof onMarkAllRead === 'function' && (
             <button
+              type="button"
               onClick={onMarkAllRead}
-              className="px-2 py-1 flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400 hover:underline font-medium"
+              className="px-2 py-1 flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400 hover:underline font-medium cursor-pointer"
               title="Marcar todas como leídas"
+              aria-label="Marcar todas las notificaciones como leídas"
             >
               <Check className="w-3.5 h-3.5" /> Marcar leídas
             </button>
           )}
           {notifications.length > 0 && (
-            <button onClick={onClear} className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium">Borrar todo</button>
+            <button
+              type="button"
+              onClick={onClear}
+              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium cursor-pointer"
+              aria-label="Borrar todas las notificaciones"
+            >
+              Borrar todo
+            </button>
           )}
         </div>
       </div>
-      <div className="flex gap-1.5 px-3 pt-2.5">
+      <div className="flex gap-1.5 px-3 pt-2.5" role="tablist" aria-label="Filtrar notificaciones">
         {[['all', 'Todas'], ['market', 'Mercado'], ['system', 'Sistema']].map(([id, label]) => (
           <button
             key={id}
+            type="button"
+            role="tab"
+            aria-selected={filter === id}
             onClick={() => setFilter(id)}
-            className={`min-h-7 rounded-lg px-2.5 text-xs font-semibold transition ${
+            className={`min-h-7 rounded-lg px-2.5 text-xs font-semibold transition cursor-pointer ${
               filter === id
                 ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -123,7 +141,12 @@ export const NotificationsPanel = memo(function NotificationsPanel({
           </button>
         ))}
       </div>
-      <div className="max-h-[28rem] overflow-y-auto p-3 space-y-2">
+      <div
+        role="feed"
+        aria-label="Lista de notificaciones"
+        aria-busy={isLoading}
+        className="max-h-[28rem] overflow-y-auto p-3 space-y-2"
+      >
         {isLoading ? (
           <div className="py-6 flex items-center justify-center gap-3 text-xs text-slate-400 font-medium">
             <div className="w-4 h-4 rounded-full border-2 border-sky-500/30 border-t-sky-500 animate-spin" />

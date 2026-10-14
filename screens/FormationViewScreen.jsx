@@ -105,7 +105,7 @@ export default function FormationViewScreen() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           {logoUrl && (
-            <img src={logoUrl} alt="" className="w-9 h-9 rounded-lg object-contain bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700" />
+            <img src={logoUrl} alt="" width={36} height={36} className="w-9 h-9 rounded-lg object-contain bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700" />
           )}
           <div>
             <h1 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">{teamName || 'Equipo'}</h1>

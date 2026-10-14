@@ -139,7 +139,7 @@ export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlaye
   return (
     <div 
       ref={pitchRef}
-      className="relative w-full aspect-[3/4] bg-[#183624] rounded-xl overflow-hidden border border-emerald-900/40 shadow-xl"
+      className="pitch-canvas-export-target relative w-full aspect-[3/4] bg-[#183624] rounded-xl overflow-hidden border border-emerald-900/40 shadow-xl"
       style={{
         backgroundImage: 'repeating-linear-gradient(0deg, #1b3d2b, #1b3d2b 32px, #163222 32px, #163222 64px)'
       }}

@@ -70,8 +70,17 @@ export const PlayerCard = memo(function PlayerCard({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelectPlayer?.(player.Id)}
-      className={`player-card ${isLockedByOther ? 'player-card--locked' : ''} ${isInMyCart ? 'player-card--owned' : ''} ${isComparing ? 'player-card--comparing' : ''}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelectPlayer?.(player.Id);
+        }
+      }}
+      aria-label={`Ver detalles de ${player.Name}, ${player.POS_NOMBRE}, OVR ${ovr}`}
+      className={`player-card w-full text-left cursor-pointer ${isLockedByOther ? 'player-card--locked' : ''} ${isInMyCart ? 'player-card--owned' : ''} ${isComparing ? 'player-card--comparing' : ''} focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4d8]`}
       style={{
         '--pos-accent': posColor,
         '--ovr-color': ovrColor,
@@ -96,7 +105,9 @@ export const PlayerCard = memo(function PlayerCard({
       <div className="player-card__photo-wrapper">
         <button
           onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(player.Id); }}
-          className={`absolute top-2 right-2 z-20 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full transition-all duration-200 backdrop-blur-sm cursor-pointer
+          aria-label={isWishlisted ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+          aria-pressed={isWishlisted}
+          className={`absolute top-2 right-2 z-20 min-w-11 min-h-11 flex items-center justify-center rounded-full transition-all duration-200 backdrop-blur-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300
             ${isWishlisted ? 'bg-yellow-500/25 text-yellow-400' : 'bg-black/40 text-white/60 hover:bg-black/60 hover:text-white'}`}
           title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}
         >
@@ -185,7 +196,7 @@ export const PlayerCard = memo(function PlayerCard({
         {isLockedByOther && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-red-900/50 backdrop-blur-[1px] rounded-none">
             {lockedTeamLogo ? (
-              <img src={lockedTeamLogo} alt="Vendido" className="w-16 h-16 object-contain drop-shadow-xl" />
+              <img src={lockedTeamLogo} alt="Vendido" width={64} height={64} className="w-16 h-16 object-contain drop-shadow-xl" />
             ) : (
               <div className="bg-red-600/90 text-white font-black text-xs uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg shadow-lg border border-red-400/30 rotate-[-8deg]">
                 VENDIDO

@@ -29,6 +29,8 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
           src={team.logoUrl}
           alt=""
           loading="lazy"
+          width={20}
+          height={20}
           className="w-full h-full object-contain"
           onError={event => { event.currentTarget.style.display = 'none'; }}
         />
@@ -255,13 +257,18 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Últimos movimientos del mercado</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar centro de traspasos"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+          >
             <X size={18} />
           </button>
         </div>
 
         {/* Filter Tabs */}
-        <div className="shrink-0 flex gap-1.5 px-4 py-2.5 sm:px-5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/20">
+        <div className="shrink-0 flex gap-1.5 px-4 py-2.5 sm:px-5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/20" role="tablist" aria-label="Filtrar movimientos">
           {[
             ['all', 'Todo'],
             ['transfers', 'Traspasos'],
@@ -270,8 +277,11 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
           ].map(([id, label]) => (
             <button
               key={id}
+              type="button"
+              role="tab"
+              aria-selected={filter === id}
               onClick={() => setFilter(id)}
-              className={`min-h-8 rounded-lg px-3 text-xs font-semibold transition ${
+              className={`min-h-8 rounded-lg px-3 text-xs font-semibold transition cursor-pointer ${
                 filter === id
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -283,7 +293,12 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
         </div>
 
         {/* List Content */}
-        <div className="flex-grow min-h-0 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-2.5">
+        <div
+          role="feed"
+          aria-label="Movimientos del mercado"
+          aria-live="polite"
+          className="flex-grow min-h-0 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-2.5"
+        >
           {loading ? (
             <>
               {[0, 1, 2, 3].map(item => <TransferSkeleton key={item} />)}

@@ -204,7 +204,7 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
             </button>
           ) : <div />}
 
-          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">v2.0.4</span>
+          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">v2.6.0</span>
         </div>
 
         {/* Central Auth Container */}
