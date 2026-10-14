@@ -251,7 +251,7 @@ export const ManagerChat = memo(function ManagerChat({
     return parts.map((part, idx) => {
       const match = mentionedTeams.find(team => part.toLowerCase() === `@${team.handle}`);
       if (!match) return <React.Fragment key={idx}>{part}</React.Fragment>;
-      return <strong key={idx} className="font-black italic text-cyan-200">{part}</strong>;
+      return <strong key={idx} className="font-bold italic text-accent-soft">{part}</strong>;
     });
   };
 
@@ -264,22 +264,22 @@ export const ManagerChat = memo(function ManagerChat({
       className="!p-0 sm:!max-w-3xl h-[85vh] sm:h-[80vh]"
       contentClassName="!p-0 !overflow-hidden flex flex-col h-full min-h-0"
     >
-      <div className="flex flex-col h-full min-h-0 bg-white dark:bg-[#0c1017]">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
+      <div className="flex flex-col h-full min-h-0 bg-surface">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-line/20 bg-surface/80">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
               <MessageSquareText className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Chat de Managers</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Negociaciones y traspasos directos entre equipos.</p>
+              <h2 className="text-sm font-bold text-ink">Chat de Managers</h2>
+              <p className="text-xs text-ink-3 truncate">Negociaciones y traspasos directos entre equipos.</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Ver tutorial y reglas">
+            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition" title="Ver tutorial y reglas">
               <HelpCircle className="w-4 h-4" />
             </button>
-            <button onClick={handleClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <button onClick={handleClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -292,11 +292,11 @@ export const ManagerChat = memo(function ManagerChat({
               onScroll={updateBottomState}
               onWheel={e => e.stopPropagation()}
               onTouchMove={e => e.stopPropagation()}
-              className="manager-chat-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5 sm:py-4 space-y-2 custom-scrollbar bg-slate-50/50 dark:bg-black/20"
+              className="manager-chat-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5 sm:py-4 space-y-2 custom-scrollbar bg-black/20"
             >
               {messages.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-center px-6">
-                  <p className="text-xs text-slate-400 font-medium">Todavía no hay mensajes en la sala. Empieza una conversación o menciona a otro mánager.</p>
+                  <p className="text-xs text-ink-3 font-medium">Todavía no hay mensajes en la sala. Empieza una conversación o menciona a otro mánager.</p>
                 </div>
               ) : (
                 messages.map(message => {
@@ -304,27 +304,27 @@ export const ManagerChat = memo(function ManagerChat({
                   const isTransfer = message.transferIntent;
                   return (
                     <div key={message.id} className={`manager-chat-message ${mine ? 'manager-chat-message--mine' : 'manager-chat-message--received'}`}>
-                      <div className={`manager-chat-bubble rounded-xl px-3 py-2 border ${mine ? 'bg-sky-600 text-white border-sky-500' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white'}`}>
+                      <div className={`manager-chat-bubble rounded-xl px-3 py-2 border ${mine ? 'bg-accent text-ink border-accent' : ' bg-surface border-line/20 text-ink'}`}>
                         <div className="flex items-center gap-1.5 mb-1">
-                          <img src={message.senderLogoUrl || DEFAULT_LOGO} alt="" width={16} height={16} className="w-4 h-4 rounded object-contain bg-slate-100 dark:bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
-                          <span className={`text-[11px] font-bold truncate ${mine ? 'text-sky-100' : 'text-slate-900 dark:text-white'}`}>{message.senderTeamName || 'Manager'}</span>
+                          <img src={message.senderLogoUrl || DEFAULT_LOGO} alt="" width={16} height={16} className="w-4 h-4 rounded object-contain bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
+                          <span className={`text-[11px] font-bold truncate ${mine ? 'text-accent-soft' : ' text-ink'}`}>{message.senderTeamName || 'Manager'}</span>
                           {isTransfer && (
-                            <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.2 rounded ${mine ? 'bg-white/20 text-white' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'}`}>
+                            <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.2 rounded ${mine ? 'bg-white/20 text-ink' : ' text-success-soft bg-success/10 border border-success/20'}`}>
                               <Handshake className="w-3 h-3" /> Traspaso
                             </span>
                           )}
                         </div>
-                        {message.text && <p className={`text-xs whitespace-pre-wrap break-words leading-relaxed ${mine ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{renderMessageText(message)}</p>}
+                        {message.text && <p className={`text-xs whitespace-pre-wrap break-words leading-relaxed ${mine ? 'text-ink' : ' text-ink-2'}`}>{renderMessageText(message)}</p>}
                         {message.gifUrl && (
                           <img
                             src={message.gifUrl}
                             alt="GIF enviado"
                             loading="lazy"
-                            className="manager-chat-gif mt-2 rounded-lg border border-slate-200 dark:border-white/10 object-contain bg-black/30"
+                            className="manager-chat-gif mt-2 rounded-lg border border-line/[0.12] object-contain bg-black/30"
                             onError={e => { e.target.style.display = 'none'; }}
                           />
                         )}
-                        <div className={`text-[10px] text-right mt-1 font-medium ${mine ? 'text-sky-200' : 'text-slate-400'}`}>{getMessageDate(message.createdAt)}</div>
+                        <div className={`text-[10px] text-right mt-1 font-medium ${mine ? 'text-accent-soft' : 'text-ink-3'}`}>{getMessageDate(message.createdAt)}</div>
                       </div>
                     </div>
                   );
@@ -333,41 +333,41 @@ export const ManagerChat = memo(function ManagerChat({
               <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSend} className="manager-chat-composer shrink-0 p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90">
+            <form onSubmit={handleSend} className="manager-chat-composer shrink-0 p-3 border-t border-line/20 bg-surface/90">
               {transferIntent && (
-                <div className="mb-2 inline-flex items-center gap-2 text-[11px] text-emerald-300 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">
+                <div className="mb-2 inline-flex items-center gap-2 text-[11px] text-success-soft font-bold bg-success/10 border border-success/20 px-2 py-1 rounded-lg">
                   <Handshake className="w-3.5 h-3.5" /> Se marcara como conversacion de traspaso.
                 </div>
               )}
               {spamWarning && (
-                <div className="mb-2 inline-flex items-center gap-2 text-[11px] text-amber-300 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg">
+                <div className="mb-2 inline-flex items-center gap-2 text-[11px] text-warning-soft font-bold bg-warning/10 border border-warning/20 px-2 py-1 rounded-lg">
                   <ShieldAlert className="w-3.5 h-3.5" /> {spamWarning}
                 </div>
               )}
               {showGifPicker && (
-                <div className="mb-3 rounded-xl border border-white/10 bg-black/30 p-3">
+                <div className="mb-3 rounded-xl border border-line/[0.12] bg-black/30 p-3">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3" />
                       <input
                         value={gifQuery}
                         onChange={e => setGifQuery(e.target.value)}
                         placeholder={`Buscar GIF en ${gifProvider === 'giphy' ? 'GIPHY' : 'KLIPY'}...`}
-                        className="w-full bg-gray-950 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white outline-none focus:border-cyan-500/60"
+                        className="w-full bg-slate-950 border border-line/[0.12] rounded-lg pl-9 pr-3 py-2 text-xs text-ink outline-none focus:border-accent/60"
                       />
                     </div>
-                    <button type="button" onClick={() => setShowGifPicker(false)} className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5">
+                    <button type="button" onClick={() => setShowGifPicker(false)} className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-white/5">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                   {(GIPHY_API_KEY || KLIPY_API_KEY) ? (
                     <>
                     <div className="flex gap-2 mb-3">
-                      {GIPHY_API_KEY && <button type="button" onClick={() => setGifProvider('giphy')} className={`px-3 py-1.5 rounded-lg text-[11px] font-black border ${gifProvider === 'giphy' ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200' : 'border-white/10 text-gray-500 hover:text-white'}`}>GIPHY</button>}
-                      {KLIPY_API_KEY && <button type="button" onClick={() => setGifProvider('klipy')} className={`px-3 py-1.5 rounded-lg text-[11px] font-black border ${gifProvider === 'klipy' ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200' : 'border-white/10 text-gray-500 hover:text-white'}`}>KLIPY</button>}
+                      {GIPHY_API_KEY && <button type="button" onClick={() => setGifProvider('giphy')} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border ${gifProvider === 'giphy' ? 'bg-accent/20 border-accent text-accent-soft' : 'border-line/[0.12] text-ink-3 hover:text-ink'}`}>GIPHY</button>}
+                      {KLIPY_API_KEY && <button type="button" onClick={() => setGifProvider('klipy')} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border ${gifProvider === 'klipy' ? 'bg-accent/20 border-accent text-accent-soft' : 'border-line/[0.12] text-ink-3 hover:text-ink'}`}>KLIPY</button>}
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                      {isLoadingGifs && <p className="col-span-full text-xs text-gray-500 font-bold">Buscando magia barata...</p>}
+                      {isLoadingGifs && <p className="col-span-full text-xs text-ink-3 font-bold">Buscando magia barata...</p>}
                       {!isLoadingGifs && gifResults.map(result => {
                         const selected = selectedGifUrl === result.gifUrl;
                         return (
@@ -375,7 +375,7 @@ export const ManagerChat = memo(function ManagerChat({
                             key={result.id}
                             type="button"
                             onClick={() => selectGif(result)}
-                            className={`aspect-video rounded-lg overflow-hidden border ${selected ? 'border-cyan-400 ring-2 ring-cyan-400/30' : 'border-white/10 hover:border-white/30'} bg-gray-900`}
+                            className={`aspect-video rounded-lg overflow-hidden border ${selected ? 'border-accent ring-2 ring-accent/30' : 'border-line/[0.12] hover:border-white/30'} bg-surface`}
                           >
                             <img src={result.previewUrl} alt={result.title || 'GIF'} className="w-full h-full object-cover" loading="lazy" />
                           </button>
@@ -385,19 +385,19 @@ export const ManagerChat = memo(function ManagerChat({
                     </>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-amber-300 font-bold">Falta configurar VITE_GIPHY_API_KEY o VITE_KLIPY_API_KEY. Mientras tanto, pega una URL de GIF directo y sale igual.</p>
+                      <p className="text-xs text-warning-soft font-bold">Falta configurar VITE_GIPHY_API_KEY o VITE_KLIPY_API_KEY. Mientras tanto, pega una URL de GIF directo y sale igual.</p>
                       <input
                         value={gifUrl}
                         onChange={e => setGifUrl(e.target.value)}
                         placeholder="https://media.giphy.com/... o https://media.klipy.com/..."
-                        className="w-full bg-gray-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-cyan-500/60"
+                        className="w-full bg-slate-950 border border-line/[0.12] rounded-lg px-3 py-2 text-xs text-ink outline-none focus:border-accent/60"
                       />
                     </div>
                   )}
                   {selectedGifUrl && (
                     <div className="mt-3 flex items-center gap-3">
-                      <img src={selectedGifUrl} alt="GIF seleccionado" className="h-14 rounded-lg border border-white/10 bg-black/30" />
-                      <button type="button" onClick={() => setGifUrl('')} className="text-xs text-red-300 hover:text-red-200 font-bold">Sacar GIF</button>
+                      <img src={selectedGifUrl} alt="GIF seleccionado" className="h-14 rounded-lg border border-line/[0.12] bg-black/30" />
+                      <button type="button" onClick={() => setGifUrl('')} className="text-xs text-danger-soft hover:text-danger-soft font-bold">Sacar GIF</button>
                     </div>
                   )}
                 </div>
@@ -405,18 +405,18 @@ export const ManagerChat = memo(function ManagerChat({
               <div className="flex items-end gap-2">
                 <div className="relative flex-1">
                   {mentionSuggestions.length > 0 && (
-                    <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-white/10 bg-gray-950 shadow-2xl overflow-hidden">
+                    <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-line/[0.12] bg-slate-950 shadow-2xl overflow-hidden">
                       {mentionSuggestions.map((team, idx) => (
                         <button
                           key={team.id}
                           type="button"
                           onMouseEnter={() => setActiveMentionIndex(idx)}
                           onClick={() => insertMention(team)}
-                          className={`w-full px-3 py-2 flex items-center gap-2 text-left transition ${idx === activeMentionIndex ? 'bg-cyan-500/10' : 'hover:bg-white/[0.06]'}`}
+                          className={`w-full px-3 py-2 flex items-center gap-2 text-left transition ${idx === activeMentionIndex ? 'bg-accent/10' : 'hover:bg-white/[0.06]'}`}
                         >
                           <img src={team.logoUrl || DEFAULT_LOGO} alt="" width={24} height={24} className="w-6 h-6 rounded object-contain bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
-                          <span className="text-xs font-black italic text-cyan-100">@{team.handle}</span>
-                          <span className="text-xs text-gray-500 font-bold truncate">{team.teamName}</span>
+                          <span className="text-xs font-bold italic text-accent-soft">@{team.handle}</span>
+                          <span className="text-xs text-ink-3 font-bold truncate">{team.teamName}</span>
                         </button>
                       ))}
                     </div>
@@ -427,14 +427,14 @@ export const ManagerChat = memo(function ManagerChat({
                     onKeyDown={handleComposerKeyDown}
                     placeholder={`Escribe un mensaje como ${userProfile?.teamName || 'manager'}...`}
                     aria-label="Escribir mensaje para los managers"
-                    className="w-full max-h-28 min-h-[44px] resize-none bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500 placeholder:text-slate-400"
+                    className="w-full max-h-28 min-h-[44px] resize-none bg-slate-950 border border-line/20 rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-accent placeholder:text-ink-3"
                     maxLength={500}
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowGifPicker(prev => !prev)}
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${showGifPicker || selectedGifUrl ? 'bg-purple-600 text-white' : 'bg-slate-100 dark:bg-white/[0.05] text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'}`}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${showGifPicker || selectedGifUrl ? 'bg-accent text-ink' : ' bg-white/[0.05] text-ink-3 hover:text-ink'}`}
                   title="Mandar GIF"
                   aria-label="Seleccionar o buscar GIF"
                 >
@@ -443,7 +443,7 @@ export const ManagerChat = memo(function ManagerChat({
                 <button
                   type="submit"
                   disabled={(!text.trim() && !selectedGifUrl) || isSending}
-                  className="w-9 h-9 rounded-lg bg-sky-600 text-white flex items-center justify-center hover:bg-sky-500 disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
+                  className="w-9 h-9 rounded-lg bg-accent text-ink flex items-center justify-center hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
                   title={isSending ? 'Hay una operación en curso' : (!text.trim() && !selectedGifUrl) ? 'Completa los datos requeridos primero' : 'Enviar'}
                   aria-label="Enviar mensaje al chat"
                 >
@@ -456,37 +456,37 @@ export const ManagerChat = memo(function ManagerChat({
 
         {showTutorial && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-cyan-500/20 bg-gray-950 shadow-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-white/10 bg-cyan-500/10">
+            <div className="w-full max-w-lg rounded-2xl border border-accent/20 bg-slate-950 shadow-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-line/[0.12] bg-accent/10">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Chat de Managers</h3>
-                    <p className="text-sm text-cyan-100/80 font-semibold mt-1">Para hablar de traspasos, tantear jugadores y dejar constancia antes de que alguno se haga el distraido.</p>
+                    <h3 className="text-lg font-bold text-ink uppercase tracking-tight">Chat de Managers</h3>
+                    <p className="text-sm text-accent-soft/80 font-semibold mt-1">Para hablar de traspasos, tantear jugadores y dejar constancia antes de que alguno se haga el distraido.</p>
                   </div>
-                  <button onClick={closeTutorial} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10">
+                  <button onClick={closeTutorial} className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-white/10">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-2">Como se usa</h4>
-                  <ul className="space-y-2 text-sm text-gray-300 font-medium">
-                    <li>Escribi <span className="text-white font-black">@aspra</span> o las primeras letras y elegi el autocomplete. Si engancha bien, queda en negrita e italica y llega notificacion.</li>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-accent-soft mb-2">Como se usa</h4>
+                  <ul className="space-y-2 text-sm text-ink-2 font-medium">
+                    <li>Escribi <span className="text-ink font-bold">@aspra</span> o las primeras letras y elegi el autocomplete. Si engancha bien, queda en negrita e italica y llega notificacion.</li>
                     <li>Si escribis palabras como oferta, traspaso, vender o negociar, el mensaje queda marcado como tema de traspaso.</li>
                     <li>El boton de GIF busca en GIPHY o KLIPY. Si no hay clave configurada, pega una URL de GIF y listo, modo potrero.</li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-widest text-amber-300 mb-2">Reglas anti-spam</h4>
-                  <ul className="space-y-2 text-sm text-gray-300 font-medium">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-warning-soft mb-2">Reglas anti-spam</h4>
+                  <ul className="space-y-2 text-sm text-ink-2 font-medium">
                     <li>Maximo 6 mensajes por minuto por navegador. Respira, Bielsa tampoco manda todo junto.</li>
                     <li>No repetir el mismo mensaje en loop. Si la oferta es mala, spamearla no la hace Champions.</li>
                     <li>GIFs si, catarata eterna no. Uno bueno pega mas que diez medio pelo.</li>
                     <li>Chicana futbolera vale; bardo personal, insultos pesados o romper las bolas porque si, afuera.</li>
                   </ul>
                 </div>
-                <button onClick={closeTutorial} className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black uppercase tracking-wide transition">
+                <button onClick={closeTutorial} className="w-full py-3 rounded-xl bg-accent hover:bg-accent text-ink font-bold uppercase tracking-wide transition">
                   Entendido, vamos a negociar
                 </button>
               </div>

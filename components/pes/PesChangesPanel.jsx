@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Save, Undo2, ShieldCheck, Download, Trash2 } from 'lucide-react';
-import { Card, Button, Pill, ErrorText, downloadBytes } from './PesUi.jsx';
+import { Card, Button, Pill, ErrorText, Issue, downloadBytes } from './PesUi.jsx';
 
 const TYPE_LABEL = {
   'bin.team.set': 'Equipo (BIN)', 'bin.player.set': 'Jugador (BIN)', 'bin.assignment.set': 'Asignación', 'bin.assignment.add': 'Alta en plantel',
   'bin.assignment.remove': 'Baja de plantel', 'edit.team.set': 'Equipo (EDIT)', 'edit.player.set': 'Jugador (EDIT)', 'edit.roster.number': 'Dorsal (EDIT)',
   'edit.roster.player': 'Plantel (EDIT)', 'edit.team.squad': 'Plantel y táctica (EDIT)', 'edit.roster.remove': 'Baja (EDIT)',
-  'bin.coach.set': 'Entrenador (BIN)', 'edit.coach.set': 'Entrenador (EDIT)', 'kit.set': 'Kit', 'kit.add': 'Kit nuevo', 'kit.texture.set': 'Textura de kit',
+  'bin.coach.set': 'Entrenador (BIN)', 'bin.team.tactics': 'Táctica (BIN)', 'edit.coach.set': 'Entrenador (EDIT)', 'kit.set': 'Kit', 'kit.add': 'Kit nuevo', 'kit.texture.set': 'Textura de kit',
 };
 
 const fmt = v => (v == null ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
@@ -18,29 +18,34 @@ function describe(op) {
   return `${where}${what ? ` · ${what}` : ''}`;
 }
 
+/** One operation: what changed (type, target, before → after) and its row actions. */
 function OpRow({ op, actions }) {
+  const discarded = op.state === 'discarded';
   return (
-    <li className="flex flex-wrap items-center gap-2 py-1.5 border-t border-white/[0.04] text-xs">
-      <Pill tone={op.state === 'discarded' ? 'slate' : 'cyan'}>{TYPE_LABEL[op.type] || op.type}</Pill>
-      <span className={op.state === 'discarded' ? 'line-through text-slate-500' : 'text-slate-200'}>{describe(op)}</span>
-      <span className="text-slate-500">{fmt(op.before)} → <b className="text-slate-300">{fmt(op.after ?? op.value)}</b></span>
-      {op.batch === 'team.replace' && <Pill tone="amber">reemplazo</Pill>}
-      <span className="ml-auto flex gap-1">{actions}</span>
+    <li className="flex items-start gap-3 py-2.5 border-t border-line/[0.07] first:border-t-0 text-sm">
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-3">
+          {TYPE_LABEL[op.type] || op.type}{op.batch === 'team.replace' && ' · reemplazo de plantel'}{discarded && ' · descartado'}
+        </p>
+        <p className={`mt-0.5 truncate ${discarded ? 'line-through text-ink-3' : 'text-ink'}`}>{describe(op)}</p>
+        <p className="text-xs text-ink-3 break-all">{fmt(op.before)} <span aria-hidden="true">→</span><span className="sr-only">pasa a</span> <span className="text-ink-2 font-semibold">{fmt(op.after ?? op.value)}</span></p>
+      </div>
+      {actions && <span className="flex gap-1 shrink-0">{actions}</span>}
     </li>
   );
 }
 
 function ValidationView({ v }) {
-  if (!v) return <p className="text-xs text-slate-400">Todavía no se validó esta versión de la copia de trabajo.</p>;
+  if (!v) return <p className="text-sm text-ink-3">Todavía no se validó esta versión de la copia de trabajo.</p>;
   return (
-    <div className="space-y-2 text-xs">
-      <p className={v.passed ? 'text-emerald-300' : 'text-red-300'}>{v.passed ? 'Validación aprobada.' : `${v.errors.length} error(es) nuevos: la exportación está bloqueada.`}</p>
-      {v.errors.map(i => <p key={i.key} className="text-red-300">✕ {i.message}</p>)}
-      {v.warnings.map(i => <p key={i.key} className="text-amber-300">⚠ {i.message}</p>)}
+    <div className="space-y-2 text-sm">
+      <Issue tone={v.passed ? 'ok' : 'error'}>{v.passed ? 'Validación aprobada.' : `${v.errors.length} error(es) nuevos: la exportación está bloqueada.`}</Issue>
+      {v.errors.map(i => <Issue key={i.key} tone="error">{i.message}</Issue>)}
+      {v.warnings.map(i => <Issue key={i.key} tone="warning">{i.message}</Issue>)}
       {v.preexisting.length > 0 && (
-        <details className="text-slate-400">
-          <summary className="cursor-pointer">{v.preexisting.length} problema(s) que ya venían en los archivos originales (no bloquean)</summary>
-          <ul className="mt-1 max-h-48 overflow-y-auto">{v.preexisting.map(i => <li key={i.key}>{i.message}</li>)}</ul>
+        <details className="text-ink-3">
+          <summary className="cursor-pointer min-h-10 flex items-center">{v.preexisting.length} problema(s) que ya venían en los archivos originales (no bloquean)</summary>
+          <ul className="mt-1 max-h-48 overflow-y-auto space-y-1 text-xs">{v.preexisting.map(i => <li key={i.key}>{i.message}</li>)}</ul>
         </details>
       )}
     </div>
@@ -60,63 +65,73 @@ export function PesChangesPanel({ pes }) {
     setLastExport(manifest);
   });
 
-  return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <Card title={`Sin guardar (${drafts.length})`} actions={<>
-        <Button variant="primary" disabled={!drafts.length || Boolean(pes.busy)} onClick={run(pes.saveDrafts)}><Save className="w-3.5 h-3.5" />Guardar</Button>
-        <Button variant="danger" disabled={!drafts.length} onClick={run(() => pes.discardDrafts())}><Undo2 className="w-3.5 h-3.5" />Descartar todo</Button>
-      </>}>
-        {drafts.length === 0 && <p className="text-xs text-slate-400">No hay cambios pendientes.</p>}
-        <ul>{drafts.map((op, i) => (
-          <OpRow key={op.clientId || i} op={op} actions={<Button onClick={run(() => pes.discardDrafts([i]))}><Undo2 className="w-3 h-3" /></Button>} />
-        ))}</ul>
-        <p className="mt-2 text-[11px] text-slate-500">Los cambios sin guardar viven en este navegador (sobreviven a recargar). «Guardar» los agrega al historial compartido.</p>
-      </Card>
+  const iconBtn = 'btn btn-ghost btn-icon btn-sm';
 
-      <Card title="Validación" actions={<Button onClick={run(pes.runValidation)}><ShieldCheck className="w-3.5 h-3.5" />Validar</Button>}>
-        <ValidationView v={validation} />
-        {failures.length > 0 && (
-          <div className="mt-3 text-xs text-red-300">
-            <p className="font-bold">{failures.length} cambio(s) del historial no se pudieron aplicar sobre las fuentes actuales:</p>
-            <ul>{failures.slice(0, 20).map((f, i) => <li key={i}>✕ {describe(f.op)}: {f.error.message}</li>)}</ul>
-          </div>
+  return (
+    <div className="grid gap-4 lg:gap-6 xl:grid-cols-2">
+      <ErrorText error={error} />
+      <Card title="Sin guardar" description="Viven en este navegador (sobreviven a recargar). «Guardar» los agrega al historial compartido."
+        actions={<>
+          <Button variant="danger" disabled={!drafts.length} onClick={run(() => pes.discardDrafts())}><Undo2 className="w-4 h-4" aria-hidden="true" />Descartar todo</Button>
+          <Button variant="primary" disabled={!drafts.length || Boolean(pes.busy)} onClick={run(pes.saveDrafts)}><Save className="w-4 h-4" aria-hidden="true" />Guardar {drafts.length > 0 && <span className="num">({drafts.length})</span>}</Button>
+        </>}
+        className="xl:order-first">
+        {drafts.length === 0 ? <p className="text-sm text-ink-3">No hay cambios pendientes.</p> : (
+          <ul>{drafts.map((op, i) => (
+            <OpRow key={op.clientId || i} op={op} actions={(
+              <button type="button" className={iconBtn} onClick={run(() => pes.discardDrafts([i]))} aria-label={`Descartar ${describe(op)}`} title="Descartar este cambio">
+                <Undo2 className="w-4 h-4" aria-hidden="true" />
+              </button>
+            )} />
+          ))}</ul>
         )}
       </Card>
 
-      <Card title={`Historial guardado (${savedOps.length})`}>
-        {savedOps.length === 0 && <p className="text-xs text-slate-400">Sin cambios guardados.</p>}
-        <ul className="max-h-[50vh] overflow-y-auto">{[...savedOps].reverse().map(op => (
-          <OpRow key={op.id} op={op} actions={op.state !== 'discarded' && canDiscard(op) && (
-            <Button title="Descartar este cambio" onClick={run(() => pes.discardSaved(op.id))}><Trash2 className="w-3 h-3" /></Button>
-          )} />
-        ))}</ul>
-      </Card>
-
-      <Card title="Exportar ZIP" actions={caps.has('export') && (
-        <Button variant="primary" disabled={!validation?.passed || drafts.length > 0 || Boolean(pes.busy)} onClick={doExport}><Download className="w-3.5 h-3.5" />Exportar</Button>
-      )}>
-        {!caps.has('export') && <p className="text-xs text-slate-400">Solo el Super Admin exporta.</p>}
-        {caps.has('export') && (
-          <ul className="text-xs text-slate-400 space-y-1">
-            <li>{drafts.length ? '✕ Guardá o descartá los cambios pendientes.' : '✓ No hay cambios pendientes.'}</li>
-            <li>{validation?.passed ? '✓ Validación aprobada.' : '✕ Validá la copia de trabajo (sin errores nuevos).'}</li>
-            <li>El ZIP trae solo los archivos generados (BIN modificados, EDIT, config.txt y texturas) más manifest.json. No se prueba dentro del juego.</li>
+      <Card title="Exportar ZIP" description="Trae solo los archivos generados (BIN modificados, EDIT, config.txt y texturas) más manifest.json. No se prueba dentro del juego."
+        actions={caps.has('export') && (
+          <Button variant="primary" disabled={!validation?.passed || drafts.length > 0 || Boolean(pes.busy)} onClick={doExport}><Download className="w-4 h-4" aria-hidden="true" />Exportar</Button>
+        )}>
+        {!caps.has('export') ? <p className="text-sm text-ink-3">Solo el Super Admin exporta.</p> : (
+          <ul className="space-y-1.5 text-sm">
+            <Issue as="li" tone={drafts.length ? 'error' : 'ok'}>{drafts.length ? 'Guardá o descartá los cambios pendientes.' : 'No hay cambios pendientes.'}</Issue>
+            <Issue as="li" tone={validation?.passed ? 'ok' : 'error'}>{validation?.passed ? 'Validación aprobada.' : 'Validá la copia de trabajo (sin errores nuevos).'}</Issue>
           </ul>
         )}
         {lastExport && (
-          <div className="mt-3 text-xs text-emerald-300">
-            <p>Exportado y verificado: {lastExport.files.length} archivo(s).</p>
-            <ul className="text-slate-400">{lastExport.verification.map(v => <li key={v.path}><code>{v.path}</code> — {v.check}</li>)}</ul>
+          <div className="mt-4 text-sm">
+            <Pill tone="green">Exportado y verificado: {lastExport.files.length} archivo(s)</Pill>
+            <ul className="mt-2 space-y-1 text-xs text-ink-3">{lastExport.verification.map(v => <li key={v.path}><code className="text-ink-2">{v.path}</code> — {v.check}</li>)}</ul>
           </div>
         )}
         {exportsList.length > 0 && (
-          <details className="mt-3 text-xs text-slate-400">
-            <summary className="cursor-pointer">Exportaciones anteriores ({exportsList.length})</summary>
-            <ul>{exportsList.map(e => <li key={e.id}>{e.exportedAt?.toDate?.().toLocaleString() || '—'} · {(e.files || []).map(f => f.path).join(', ')}</li>)}</ul>
+          <details className="mt-4 text-xs text-ink-3">
+            <summary className="cursor-pointer min-h-10 flex items-center">Exportaciones anteriores ({exportsList.length})</summary>
+            <ul className="space-y-1">{exportsList.map(e => <li key={e.id}>{e.exportedAt?.toDate?.().toLocaleString() || '—'} · {(e.files || []).map(f => f.path).join(', ')}</li>)}</ul>
           </details>
         )}
       </Card>
-      <div className="xl:col-span-2"><ErrorText error={error} /></div>
+
+      <Card title="Validación" actions={<Button onClick={run(pes.runValidation)}><ShieldCheck className="w-4 h-4" aria-hidden="true" />Validar</Button>}>
+        <ValidationView v={validation} />
+        {failures.length > 0 && (
+          <div className="mt-4 text-sm">
+            <p className="font-semibold text-danger-soft">{failures.length} cambio(s) del historial no se pudieron aplicar sobre las fuentes actuales:</p>
+            <ul className="mt-1 space-y-1">{failures.slice(0, 20).map((f, i) => <Issue as="li" key={i} tone="error">{describe(f.op)}: {f.error.message}</Issue>)}</ul>
+          </div>
+        )}
+      </Card>
+
+      <Card title="Historial guardado" description={`${savedOps.length} cambio(s) compartidos con el equipo.`}>
+        {savedOps.length === 0 ? <p className="text-sm text-ink-3">Sin cambios guardados.</p> : (
+          <ul className="max-h-[50vh] overflow-y-auto overscroll-contain">{[...savedOps].reverse().map(op => (
+            <OpRow key={op.id} op={op} actions={op.state !== 'discarded' && canDiscard(op) && (
+              <button type="button" className={iconBtn} onClick={run(() => pes.discardSaved(op.id))} aria-label={`Descartar ${describe(op)}`} title="Descartar este cambio">
+                <Trash2 className="w-4 h-4" aria-hidden="true" />
+              </button>
+            )} />
+          ))}</ul>
+        )}
+      </Card>
     </div>
   );
 }

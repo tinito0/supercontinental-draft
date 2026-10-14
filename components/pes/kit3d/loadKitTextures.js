@@ -18,6 +18,9 @@ function decode(slot, bytes, path) {
   return { canvas: pixelsToCanvas(t.pixels, t.width, t.height, { opaque: slot === 'nrm' || slot === 'srm', readBack: !['nrm', 'srm'].includes(slot) }), width: t.width, format: t.format };
 }
 
+/** Where a game texture came from: the kit's kit-server folder or a livecpk pack. */
+const origin = path => (path.startsWith('content/kit-server/') ? 'kit-server' : path.split('/').slice(0, 2).join('/'));
+
 async function findOne(slot, file, { kits, configPath, reader }) {
   if (!file) return null;
   const dir = configPath.replace(/config\.txt$/i, '');
@@ -29,13 +32,13 @@ async function findOne(slot, file, { kits, configPath, reader }) {
     return { ...wsCache.get(bytes), source: 'workspace', path };
   }
   if (!reader?.read) return null;
-  for (const path of textureCandidates(configPath, file, reader.roots || [])) {
+  for (const path of textureCandidates(configPath, file, [...(reader.roots || []), ...(reader.fallbackRoots || [])])) {
     const key = `game:${reader.name}|${path}`;
-    if (cache.has(key)) { const hit = cache.get(key); if (hit) return { ...hit, source: 'game', path }; continue; }
+    if (cache.has(key)) { const hit = cache.get(key); if (hit) return { ...hit, source: 'game', from: origin(path), path }; continue; }
     const bytes = await reader.read(path);
     if (!bytes) { cache.set(key, null); continue; }
     cache.set(key, decode(slot, bytes, path));
-    return { ...cache.get(key), source: 'game', path };
+    return { ...cache.get(key), source: 'game', from: origin(path), path };
   }
   return null;
 }

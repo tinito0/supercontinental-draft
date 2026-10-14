@@ -39,22 +39,22 @@ export const SuggestionsModal = memo(function SuggestionsModal({ isVisible, onCl
       onClose={onClose}
       size="md"
       showClose={false}
-      className="!p-0 !bg-gray-900/95 !max-w-lg"
+      className="!p-0 !bg-surface/95 !max-w-lg"
       contentClassName="!p-0 !overflow-hidden flex flex-col"
     >
       <div className="flex flex-col h-full">
-        <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-700 bg-gray-800/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="flex justify-between items-center p-4 sm:p-5 border-b border-line/20 bg-raised/80 backdrop-blur-md sticky top-0 z-10">
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center">
-              <MessageSquarePlus className="w-6 h-6 mr-3 text-green-400" /> Buzón de Sugerencias
+            <h2 className="text-xl font-bold text-ink flex items-center">
+              <MessageSquarePlus className="w-6 h-6 mr-3 text-success-soft" /> Buzón de Sugerencias
             </h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-full transition">
+          <button onClick={onClose} className="text-ink-3 hover:text-ink p-2 hover:bg-overlay rounded-full transition">
             <X size={24} />
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 bg-gradient-to-b from-gray-900 to-gray-800/50 flex-grow min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="p-4 sm:p-6 flex-grow min-h-0 overflow-y-auto custom-scrollbar">
           <form onSubmit={handleSubmit} className="space-y-5 h-full flex flex-col">
             <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/20">
               <p className="text-blue-200 text-sm leading-relaxed">
@@ -64,21 +64,21 @@ export const SuggestionsModal = memo(function SuggestionsModal({ isVisible, onCl
             </div>
 
             <div className="flex-grow">
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Tu Mensaje</label>
+              <label className="block text-xs font-bold text-ink-3 uppercase mb-2 ml-1">Tu Mensaje</label>
               <textarea
                 value={suggestionText}
                 onChange={(e) => setSuggestionText(e.target.value)}
                 rows="6"
-                className="w-full h-40 sm:h-auto p-4 bg-black/20 text-white border border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none placeholder-gray-600 text-base transition-all"
+                className="w-full h-40 sm:h-auto p-4 bg-black/20 text-ink border border-line/20 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none placeholder-slate-600 text-base transition-all"
                 placeholder="Escribe aquí tu reporte o sugerencia..."
                 autoFocus
               ></textarea>
-              <p className="text-right text-xs text-gray-500 mt-1">{suggestionText.length} caracteres</p>
+              <p className="text-right text-xs text-ink-3 mt-1">{suggestionText.length} caracteres</p>
             </div>
 
             <div className="flex justify-end gap-3 pt-2 mt-auto">
-              <button type="button" onClick={onClose} className="px-5 py-3 sm:py-2.5 text-gray-400 font-bold hover:text-white hover:bg-gray-700 rounded-xl transition w-full sm:w-auto">Cancelar</button>
-              <button type="submit" disabled={isSending || suggestionText.trim().length < 10} title={isSending ? 'Hay una operación en curso' : suggestionText.trim().length < 10 ? 'Completa los datos requeridos primero' : undefined} className="flex items-center justify-center px-6 py-3 sm:py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 w-full sm:w-auto">
+              <button type="button" onClick={onClose} className="px-5 py-3 sm:py-2.5 text-ink-3 font-bold hover:text-ink hover:bg-overlay rounded-xl transition w-full sm:w-auto">Cancelar</button>
+              <button type="submit" disabled={isSending || suggestionText.trim().length < 10} title={isSending ? 'Hay una operación en curso' : suggestionText.trim().length < 10 ? 'Completa los datos requeridos primero' : undefined} className="flex items-center justify-center px-6 py-3 sm:py-2.5 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 w-full sm:w-auto">
                 {isSending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><Save className="w-4 h-4 mr-2" /> Enviar</>}
               </button>
             </div>

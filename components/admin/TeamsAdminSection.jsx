@@ -206,8 +206,8 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
   if (isLoading) {
     return (
       <div className="text-center p-8">
-        <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-        <p className="text-slate-400 text-xs">Cargando equipos...</p>
+        <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+        <p className="text-ink-3 text-xs">Cargando equipos...</p>
       </div>
     );
   }
@@ -215,13 +215,13 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <p className="text-xs text-slate-400">Gestión de equipos registrados en la liga.</p>
+        <p className="text-xs text-ink-3">Gestión de equipos registrados en la liga.</p>
         <div className="flex items-center gap-2 self-end sm:self-auto">
-          <button onClick={fetchTeams} className="text-cyan-400 text-xs hover:underline flex items-center">
+          <button onClick={fetchTeams} className="text-accent text-xs hover:underline flex items-center">
             <RefreshCw size={12} className="mr-1" />
             Actualizar
           </button>
-          <button onClick={openNewTeamModal} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition shadow active:scale-95">
+          <button onClick={openNewTeamModal} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-ink text-xs font-bold uppercase tracking-wider rounded-xl transition shadow active:scale-95">
             <Plus size={14} /> Agregar Equipo
           </button>
         </div>
@@ -229,77 +229,77 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
 
       {/* SEARCH BAR */}
       <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar equipo por nombre, ID o email..."
-          className="w-full bg-[#080c14] border border-white/[0.08] rounded-xl pl-9 pr-8 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500/50"
+          className="w-full bg-canvas border border-line/[0.12] rounded-xl pl-9 pr-8 py-2.5 text-xs text-ink placeholder-slate-500 outline-none focus:border-accent/50"
         />
         {searchTerm && (
-          <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+          <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink">
             <X size={14} />
           </button>
         )}
       </div>
 
-      <div className="flex justify-between items-center text-[11px] text-slate-500 px-1">
+      <div className="flex justify-between items-center text-[11px] text-ink-3 px-1">
         <span>Mostrando {filteredTeams.length} de {teams.length} equipos</span>
       </div>
 
       {teams.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-white/[0.08] rounded-2xl">
-          <Users className="w-12 h-12 text-slate-600 mb-3" />
-          <p className="text-slate-400 font-medium mb-4 text-xs">No hay equipos registrados todavía.</p>
-          <button onClick={openNewTeamModal} className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition">
+        <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-line/[0.12] rounded-2xl">
+          <Users className="w-12 h-12 text-ink-3 mb-3" />
+          <p className="text-ink-3 font-medium mb-4 text-xs">No hay equipos registrados todavía.</p>
+          <button onClick={openNewTeamModal} className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-ink text-xs font-bold uppercase tracking-wider rounded-xl transition">
             Agregá tu primer equipo
           </button>
         </div>
       ) : (
         <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
           {filteredTeams.length === 0 ? (
-            <div className="text-center py-10 text-slate-500 text-xs border border-dashed border-white/[0.08] rounded-xl">
+            <div className="text-center py-10 text-ink-3 text-xs border border-dashed border-line/[0.12] rounded-xl">
               No se encontraron equipos que coincidan con "{searchTerm}".
             </div>
           ) : (
             filteredTeams.map(team => (
-              <div key={team.uid} className="flex items-center gap-4 p-3.5 bg-[#0c1017] rounded-xl border border-white/[0.08] hover:border-cyan-500/30 transition group">
+              <div key={team.uid} className="flex items-center gap-4 p-3.5 bg-surface rounded-xl border border-line/[0.12] hover:border-accent/30 transition group">
                 {/* Badge */}
                 <img
                   src={team.logoUrl || DEFAULT_LOGO}
                   alt="Escudo"
-                  className="w-11 h-11 rounded-xl object-contain bg-black/50 p-1 border border-white/10 flex-shrink-0"
+                  className="w-11 h-11 rounded-xl object-contain bg-black/50 p-1 border border-line/[0.12] flex-shrink-0"
                   onError={(e) => e.target.src = DEFAULT_LOGO}
                 />
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-black text-white uppercase tracking-wide truncate group-hover:text-cyan-400 transition-colors">{team.teamName}</h4>
+                  <h4 className="text-sm font-bold text-ink uppercase tracking-wide truncate group-hover:text-accent transition-colors">{team.teamName}</h4>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                    <span className="text-[10px] text-slate-400 font-mono">ID: {team.uid.substring(0, 8)}</span>
-                    {team.email && <span className="text-[10px] text-slate-400 truncate max-w-[150px]">{team.email}</span>}
+                    <span className="text-[10px] text-ink-3 font-mono">ID: {team.uid.substring(0, 8)}</span>
+                    {team.email && <span className="text-[10px] text-ink-3 truncate max-w-[150px]">{team.email}</span>}
                   </div>
                 </div>
                 {/* Stats */}
                 <div className="flex items-center gap-4 text-right flex-shrink-0">
                   <div>
-                    <p className="text-[9px] text-slate-400 uppercase font-bold">Jugadores</p>
-                    <p className="text-sm font-black text-white font-mono">{team.playerCount}</p>
+                    <p className="text-[9px] text-ink-3 uppercase font-bold">Jugadores</p>
+                    <p className="text-sm font-bold text-ink font-mono">{team.playerCount}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] text-slate-400 uppercase font-bold">Presupuesto</p>
-                    <p className="text-sm font-black text-emerald-400 font-mono">{formatBudget(team.budget)}</p>
+                    <p className="text-[9px] text-ink-3 uppercase font-bold">Presupuesto</p>
+                    <p className="text-sm font-bold text-success-soft font-mono">{formatBudget(team.budget)}</p>
                   </div>
                 </div>
                 {/* Actions */}
                 <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition flex-shrink-0">
-                  <button onClick={() => openEditTeamModal(team)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition" title="Editar equipo">
+                  <button onClick={() => openEditTeamModal(team)} className="p-2 rounded-lg hover:bg-white/10 text-ink-3 hover:text-ink transition" title="Editar equipo">
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => handleResetFranchise(team)} className="p-2 rounded-lg hover:bg-purple-500/10 text-slate-400 hover:text-purple-400 transition" title="Resetear Jugador Franquicia">
+                  <button onClick={() => handleResetFranchise(team)} className="p-2 rounded-lg hover:bg-accent/10 text-ink-3 hover:text-accent-soft transition" title="Resetear Jugador Franquicia">
                     <Crown size={14} />
                   </button>
-                  <button onClick={() => handleDeleteTeam(team)} className="p-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition" title="Eliminar equipo">
+                  <button onClick={() => handleDeleteTeam(team)} className="p-2 rounded-lg hover:bg-danger/10 text-ink-3 hover:text-danger-soft transition" title="Eliminar equipo">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -312,10 +312,10 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[70] p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-[#0c1017] rounded-2xl border border-white/[0.1] w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-5 border-b border-white/[0.08]">
-              <h3 className="text-base font-black text-white uppercase tracking-wider">{editingTeam ? 'Editar Equipo' : 'Agregar Equipo'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition">
+          <div className="bg-surface rounded-2xl border border-white/[0.1] w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-line/[0.12]">
+              <h3 className="text-base font-bold text-ink uppercase tracking-wider">{editingTeam ? 'Editar Equipo' : 'Agregar Equipo'}</h3>
+              <button onClick={() => setShowModal(false)} className="text-ink-3 hover:text-ink p-1 rounded-full hover:bg-white/10 transition">
                 <X size={18} />
               </button>
             </div>
@@ -325,12 +325,12 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                 <img
                   src={formData.logoUrl || DEFAULT_LOGO}
                   alt="Escudo"
-                  className="w-16 h-16 rounded-xl object-contain bg-black/50 p-1.5 border border-white/10"
+                  className="w-16 h-16 rounded-xl object-contain bg-black/50 p-1.5 border border-line/[0.12]"
                   onError={(e) => e.target.src = DEFAULT_LOGO}
                 />
                 <div className="flex-1">
-                  <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Escudo</label>
-                  <label className="flex items-center gap-2 px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-xs text-slate-300 cursor-pointer hover:bg-white/[0.05] transition">
+                  <label className="text-xs font-bold text-ink-3 uppercase block mb-1">Escudo</label>
+                  <label className="flex items-center gap-2 px-3 py-2 bg-black/40 border border-line/[0.12] rounded-lg text-xs text-ink-2 cursor-pointer hover:bg-white/[0.05] transition">
                     <Upload size={14} /> {isUploading ? 'Subiendo...' : 'Subir imagen'}
                     <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={isUploading} />
                   </label>
@@ -338,33 +338,33 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
               </div>
               {/* Team name */}
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Nombre del equipo</label>
+                <label className="text-xs font-bold text-ink-3 uppercase block mb-1">Nombre del equipo</label>
                 <input
                   type="text"
                   value={formData.teamName}
                   onChange={e => setFormData(prev => ({ ...prev, teamName: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-black/40 text-white border border-white/10 rounded-lg text-sm outline-none focus:border-cyan-400 transition"
+                  className="w-full px-4 py-2.5 bg-black/40 text-ink border border-line/[0.12] rounded-lg text-sm outline-none focus:border-accent transition"
                   placeholder="Ej: Club Atlético SuperCont"
                 />
               </div>
               {/* Budget */}
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Presupuesto ($)</label>
+                <label className="text-xs font-bold text-ink-3 uppercase block mb-1">Presupuesto ($)</label>
                 <input
                   type="number"
                   value={formData.budget}
                   onChange={e => setFormData(prev => ({ ...prev, budget: Number(e.target.value) || 0 }))}
-                  className="w-full px-4 py-2.5 bg-black/40 text-white border border-white/10 rounded-lg text-sm font-mono outline-none focus:border-cyan-400 transition"
+                  className="w-full px-4 py-2.5 bg-black/40 text-ink border border-line/[0.12] rounded-lg text-sm font-mono outline-none focus:border-accent transition"
                   placeholder="0"
                 />
               </div>
               {/* Country / Nationality */}
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Nacionalidad / País del Club</label>
+                <label className="text-xs font-bold text-ink-3 uppercase block mb-1">Nacionalidad / País del Club</label>
                 <select
                   value={formData.country || 204}
                   onChange={e => setFormData(prev => ({ ...prev, country: Number(e.target.value) }))}
-                  className="w-full px-4 py-2.5 bg-black/40 text-white border border-white/10 rounded-lg text-xs outline-none focus:border-cyan-400 transition cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-black/40 text-ink border border-line/[0.12] rounded-lg text-xs outline-none focus:border-accent transition cursor-pointer"
                 >
                   {countryOptions.length > 0 ? (
                     countryOptions.map(c => (
@@ -375,46 +375,46 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                   )}
                 </select>
               </div>
-              <div className="border-t border-white/[0.08] pt-4">
-                <p className="mb-3 text-xs font-black uppercase tracking-wider text-cyan-300">Estadísticas públicas (edición manual)</p>
+              <div className="border-t border-line/[0.12] pt-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-accent-soft">Estadísticas públicas (edición manual)</p>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                   {[
                     ['played', 'Partidos'], ['wins', 'Ganados'], ['draws', 'Empatados'], ['losses', 'Perdidos'],
                     ['gf', 'Goles a favor'], ['ga', 'Goles en contra'], ['titles', 'Títulos'],
                   ].map(([field, label]) => (
                     <label key={field} className="block">
-                      <span className="mb-1 block text-[10px] font-bold uppercase text-slate-400">{label}</span>
+                      <span className="mb-1 block text-[10px] font-bold uppercase text-ink-3">{label}</span>
                       <input
                         type="number"
                         min="0"
                         value={formData.manualStats?.[field] ?? ''}
                         onChange={e => setFormData(prev => ({ ...prev, manualStats: { ...prev.manualStats, [field]: e.target.value } }))}
-                        className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                        className="w-full rounded-lg border border-line/[0.12] bg-black/40 px-3 py-1.5 text-xs text-ink outline-none focus:border-accent font-mono"
                       />
                     </label>
                   ))}
                 </div>
                 <label className="mt-3 block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase text-slate-400">Rivalidad</span>
+                  <span className="mb-1 block text-[10px] font-bold uppercase text-ink-3">Rivalidad</span>
                   <input
                     type="text"
                     value={formData.manualStats?.rival ?? ''}
                     onChange={e => setFormData(prev => ({ ...prev, manualStats: { ...prev.manualStats, rival: e.target.value } }))}
-                    className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white outline-none focus:border-cyan-400"
+                    className="w-full rounded-lg border border-line/[0.12] bg-black/40 px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
                     placeholder="Ej: SK Konya"
                   />
                 </label>
-                <p className="mt-2 text-[10px] text-slate-500">Los campos cargados reemplazan el cálculo automático del perfil público.</p>
+                <p className="mt-2 text-[10px] text-ink-3">Los campos cargados reemplazan el cálculo automático del perfil público.</p>
               </div>
               {editingTeam && (
-                <div className="text-xs text-slate-400 bg-black/30 p-3 rounded-xl border border-white/[0.06]">
-                  <span className="font-bold text-slate-300">User ID:</span> <span className="font-mono text-[11px]">{editingTeam.uid}</span>
+                <div className="text-xs text-ink-3 bg-black/30 p-3 rounded-xl border border-line/[0.08]">
+                  <span className="font-bold text-ink-2">User ID:</span> <span className="font-mono text-[11px]">{editingTeam.uid}</span>
                 </div>
               )}
             </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-white/[0.08]">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-400 font-bold text-xs hover:text-white transition">Cancelar</button>
-              <button onClick={handleSaveTeam} disabled={isSaving} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition shadow disabled:opacity-50 active:scale-95">
+            <div className="flex justify-end gap-3 p-5 border-t border-line/[0.12]">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-ink-3 font-bold text-xs hover:text-ink transition">Cancelar</button>
+              <button onClick={handleSaveTeam} disabled={isSaving} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-ink font-bold text-xs uppercase tracking-wider rounded-xl transition shadow disabled:opacity-50 active:scale-95">
                 <Save size={14} /> {isSaving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>

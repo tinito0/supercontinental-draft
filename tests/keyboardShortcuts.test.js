@@ -54,13 +54,13 @@ describe('components/ui/KeyboardShortcutsHelp', () => {
     expect(html).toContain('Abrir / cerrar esta ayuda');
     expect(html).toContain('Cerrar ventana o modal activo');
 
-    // Key badge styling requirement: bg-white/10 text-white font-mono text-xs px-2 py-1 rounded-lg border border-white/20
-    expect(html).toContain('bg-white/10');
-    expect(html).toContain('font-mono');
-    expect(html).toContain('border-white/20');
+    // Keys are rendered as <kbd> with the design-system key style (docs/DESIGN_SYSTEM.md, `.kbd`).
+    expect(html).toContain('<kbd');
+    expect(html).toContain('kbd');
 
-    // Dark panel design requirement: bg-[#111722]
-    expect(html).toContain('bg-[#111722]');
+    // Panel uses the design tokens, not hex literals.
+    expect(html).toContain('bg-raised');
+    expect(html).not.toContain('bg-[#');
   });
 });
 

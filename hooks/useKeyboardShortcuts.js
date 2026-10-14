@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * Checks if an element is an input, textarea, select or contenteditable element
  * where normal text typing should take precedence over shortcuts.
  */
-function isTyping(target) {
+export function isTyping(target) {
   if (!target) return false;
   const tagName = target.tagName ? target.tagName.toUpperCase() : '';
   if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {

@@ -111,12 +111,12 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#06080d] text-[#f8fafc] font-sans overflow-hidden">
+    <div className="flex min-h-screen bg-canvas text-ink font-sans overflow-hidden">
       
       {/* ── LEFT PANEL: BRANDING & AMBIENT VIDEO (DESKTOP) ── */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 relative border-r border-white/5 p-12 overflow-hidden">
+      <div className="hidden lg:flex flex-col justify-between w-1/2 relative border-r border-line/[0.12] p-12 overflow-hidden">
         {/* Background Ambient Video */}
-        <div className="absolute inset-0 z-0 bg-[#06080d] overflow-hidden">
+        <div className="absolute inset-0 z-0 bg-canvas overflow-hidden">
           <video
             ref={videoRef}
             autoPlay
@@ -142,12 +142,12 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
           <div className="flex items-center gap-3">
             <img src="/logo.webp" alt="SCL" className="w-9 h-9 object-contain" />
             <div>
-              <div className="text-sm font-black tracking-wide text-white leading-tight">{APP_NAME}</div>
-              <div className="text-[10px] font-bold tracking-widest text-[#00b4d8] uppercase">LIGA MASTER PES 2021</div>
+              <div className="text-sm font-bold tracking-wide text-ink leading-tight">{APP_NAME}</div>
+              <div className="text-[10px] font-bold tracking-widest text-accent uppercase">LIGA MASTER PES 2021</div>
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-success/10 border border-success/20 text-success-soft text-xs font-bold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             MERCADO ACTIVO
           </div>
@@ -155,41 +155,41 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
 
         {/* Center Main Copy */}
         <div className="relative z-10 max-w-md my-auto py-8">
-          <div className="inline-block text-[11px] font-extrabold tracking-wider text-[#00b4d8] uppercase mb-3">
+          <div className="inline-block text-[11px] font-extrabold tracking-wider text-accent uppercase mb-3">
             TEMPORADA OFICIAL · PES 2021
           </div>
-          <h1 className="text-4xl xl:text-5xl font-black text-white tracking-tight uppercase leading-[1.08] mb-4">
+          <h1 className="text-4xl xl:text-5xl font-bold text-ink tracking-tight uppercase leading-[1.08] mb-4">
             Gestión Deportiva &amp; Mercado en Vivo
           </h1>
-          <p className="text-slate-400 text-base leading-relaxed mb-8">
+          <p className="text-ink-3 text-base leading-relaxed mb-8">
             Control de acceso exclusivo para managers de la liga. Administrá tu presupuesto, diseñá tus alineaciones tácticas S1 y exportá directamente a tu consola o PC.
           </p>
 
           {/* Feature Badges */}
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5">
-              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-300">Bloqueo de fichajes en tiempo real sin solapamientos</span>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-line/[0.12]">
+              <Zap className="w-4 h-4 text-warning-soft shrink-0" />
+              <span className="text-xs font-semibold text-ink-2">Bloqueo de fichajes en tiempo real sin solapamientos</span>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5">
-              <Sliders className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-300">Pizarra táctica sincronizada con Preset oficial S1</span>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-line/[0.12]">
+              <Sliders className="w-4 h-4 text-accent shrink-0" />
+              <span className="text-xs font-semibold text-ink-2">Pizarra táctica sincronizada con Preset oficial S1</span>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5">
-              <Package className="w-4 h-4 text-indigo-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-300">Exportación automática de Option File ZIP (EJOGC327)</span>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-line/[0.12]">
+              <Package className="w-4 h-4 text-accent-soft shrink-0" />
+              <span className="text-xs font-semibold text-ink-2">Exportación automática de Option File ZIP (EJOGC327)</span>
             </div>
           </div>
         </div>
 
         {/* Bottom copyright */}
-        <div className="relative z-10 text-xs text-slate-500 font-medium">
+        <div className="relative z-10 text-xs text-ink-3 font-medium">
           © {new Date().getFullYear()} {APP_NAME}. Sistema de competición deportiva.
         </div>
       </div>
 
       {/* ── RIGHT PANEL: AUTHENTICATION FORM ── */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-12 md:p-16 relative min-h-screen bg-white dark:bg-[#06080d] text-slate-900 dark:text-slate-100 transition-colors duration-200">
+      <div className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-12 md:p-16 relative min-h-screen bg-canvas text-ink-2 transition-colors duration-200">
         
         {/* Top bar with back action */}
         <div className="flex items-center justify-between w-full max-w-[420px] mx-auto">
@@ -197,14 +197,14 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
             <button
               type="button"
               onClick={onBackToLanding}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors py-2"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-ink-3 hover:text-ink transition-colors py-2"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Volver al inicio</span>
             </button>
           ) : <div />}
 
-          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">v2.6.0</span>
+          <span className="text-[11px] font-mono text-ink-3">v2.6.0</span>
         </div>
 
         {/* Central Auth Container */}
@@ -213,18 +213,18 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
           {/* Mobile Logo Branding */}
           <div className="flex lg:hidden flex-col items-center text-center mb-8">
             <img src="/logo.webp" alt="SCL" className="w-14 h-14 object-contain mb-3" />
-            <div className="text-lg font-bold text-slate-900 dark:text-white">{APP_NAME}</div>
-            <div className="text-xs text-sky-600 dark:text-[#00b4d8] font-bold">LIGA MASTER PES 2021</div>
+            <div className="text-lg font-bold text-ink">{APP_NAME}</div>
+            <div className="text-xs text-accent font-bold">LIGA MASTER PES 2021</div>
           </div>
 
           {/* Header titles */}
           <div className="mb-8 text-center lg:text-left">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight mb-2">
               {showEmailForm 
                 ? (forgotPasswordMode ? 'Recuperar Acceso' : 'Migración de Cuenta') 
                 : 'Portal de Acceso'}
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+            <p className=" text-ink-3 text-sm leading-relaxed">
               {isMigrated
                 ? 'Tu cuenta ya fue migrada a Google. Hacé clic en el botón inferior para ingresar.'
                 : showEmailForm 
@@ -237,16 +237,16 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
 
           {/* Feedback alerts */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-3">
+            <div className="mb-6 p-4 rounded-xl bg-danger/10 border border-danger/20 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-              <span className="text-rose-700 dark:text-rose-300 text-xs font-medium leading-snug">{error}</span>
+              <span className=" text-danger-soft text-xs font-medium leading-snug">{error}</span>
             </div>
           )}
           
           {success && (
-            <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
+            <div className="mb-6 p-4 rounded-xl bg-success/10 border border-success/20 flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              <span className="text-emerald-700 dark:text-emerald-300 text-xs font-medium leading-snug">{success}</span>
+              <span className=" text-success-soft text-xs font-medium leading-snug">{success}</span>
             </div>
           )}
 
@@ -257,10 +257,10 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isLoggingIn}
-                className="w-full flex items-center justify-center gap-3 py-3 px-6 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full flex items-center justify-center gap-3 py-3 px-6 bg-surface hover:bg-raised text-ink border border-line/20 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isLoggingIn ? (
-                  <Activity className="w-5 h-5 animate-spin text-sky-500" />
+                  <Activity className="w-5 h-5 animate-spin text-accent" />
                 ) : (
                   <>
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -275,26 +275,26 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
               </button>
 
               {isMigrated ? (
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
+                <div className="p-4 rounded-xl bg-success/10 border border-success/20 flex items-start gap-3">
                   <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span className="text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                  <span className=" text-success-soft text-xs font-semibold">
                     Tu cuenta ya está vinculada a Google. Utilizá el botón principal para ingresar.
                   </span>
                 </div>
               ) : (
                 <>
                   <div className="relative flex items-center py-2">
-                    <div className="flex-grow border-t border-slate-200 dark:border-slate-800" />
-                    <span className="flex-shrink-0 mx-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    <div className="flex-grow border-t border-line/20" />
+                    <span className="flex-shrink-0 mx-4 text-[10px] font-bold text-ink-3 uppercase tracking-wider">
                       O BIEN
                     </span>
-                    <div className="flex-grow border-t border-slate-200 dark:border-slate-800" />
+                    <div className="flex-grow border-t border-line/20" />
                   </div>
 
                   <button
                     type="button"
                     onClick={() => { setShowEmailForm(true); setError(''); setSuccess(''); }}
-                    className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl font-semibold transition-all text-xs cursor-pointer"
+                    className="w-full py-2.5 px-4 bg-surface hover:bg-raised border border-line/20 text-ink-2 hover:text-ink rounded-xl font-semibold transition-all text-xs cursor-pointer"
                   >
                     Migrar cuenta antigua (Email y Contraseña)
                   </button>
@@ -305,18 +305,18 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
             /* ── EMAIL / PASSWORD FORM MODE ── */
             <form onSubmit={forgotPasswordMode ? handleResetPassword : handleEmailLogin} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-semibold text-ink-2">
                   Correo Electrónico
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-ink-3">
                     <Mail className="h-4 w-4" />
                   </div>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all outline-none text-sm font-medium placeholder-slate-400"
+                    className="w-full pl-10 pr-4 py-2.5 bg-surface text-ink border border-line/20 rounded-xl focus:border-accent focus:ring-1 focus:ring-accent transition-all outline-none text-sm font-medium placeholder-slate-400"
                     placeholder="manager@equipo.com"
                     spellCheck="false"
                     required
@@ -327,26 +327,26 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
               {!forgotPasswordMode && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <label className="text-xs font-semibold text-ink-2">
                       Contraseña
                     </label>
                     <button 
                       type="button" 
                       onClick={() => { setForgotPasswordMode(true); setError(''); setSuccess(''); }}
-                      className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline transition-colors"
+                      className="text-xs font-semibold text-accent hover:underline transition-colors"
                     >
                       ¿Olvidaste tu clave?
                     </button>
                   </div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-ink-3">
                       <Lock className="h-4 w-4" />
                     </div>
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all outline-none text-sm font-medium tracking-widest placeholder-slate-400"
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface text-ink border border-line/20 rounded-xl focus:border-accent focus:ring-1 focus:ring-accent transition-all outline-none text-sm font-medium tracking-widest placeholder-slate-400"
                       placeholder="••••••••"
                       required
                     />
@@ -358,7 +358,7 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
                 <button
                   type="submit"
                   disabled={isLoggingIn || isResetting}
-                  className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                  className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-ink bg-accent hover:bg-accent transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                 >
                   {isLoggingIn || isResetting ? (
                     <Activity className="w-5 h-5 animate-spin" />
@@ -382,7 +382,7 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
                 <button 
                   type="button"
                   onClick={() => { setShowEmailForm(false); setForgotPasswordMode(false); setError(''); setSuccess(''); }}
-                  className="w-full py-2 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                  className="w-full py-2 text-xs font-medium text-ink-3 hover:text-ink transition-colors cursor-pointer"
                 >
                   Volver al inicio de sesión con Google
                 </button>
@@ -392,7 +392,7 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
         </div>
 
         {/* Footer info */}
-        <div className="w-full max-w-[420px] mx-auto text-center text-xs text-slate-400 dark:text-slate-600">
+        <div className="w-full max-w-[420px] mx-auto text-center text-xs text-ink-3">
           Supercontinental Master League · Compatible con PES 2021
         </div>
       </div>

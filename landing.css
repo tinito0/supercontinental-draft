@@ -25,8 +25,8 @@
   --scl-surface-elevated: #111722;
   --scl-border: rgba(255, 255, 255, 0.07);
   --scl-border-hover: rgba(255, 255, 255, 0.18);
-  --scl-accent: #00b4d8;
-  --scl-accent-hover: #38bdf8;
+  --scl-accent: #3a66c4;
+  --scl-accent-hover: #4d7ad6;
   --scl-text-primary: #f8fafc;
   --scl-text-secondary: #94a3b8;
   --scl-text-muted: #64748b;
@@ -301,13 +301,13 @@
   border: none;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 20px rgba(0, 180, 216, 0.28);
+  box-shadow: 0 4px 20px rgba(58, 102, 196, 0.28);
 }
 
 .landing-hero__cta-primary:hover {
   background: var(--scl-accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 180, 216, 0.42);
+  box-shadow: 0 8px 30px rgba(58, 102, 196, 0.42);
 }
 
 .landing-hero__cta-secondary {
@@ -606,7 +606,7 @@
   left: 0;
   right: 0;
   background: rgba(3, 7, 18, 0.9);
-  color: #38bdf8;
+  color: #4d7ad6;
   font-size: 0.58rem;
   font-weight: 900;
   text-align: center;
@@ -810,7 +810,7 @@
 .web-model__market-pos {
   font-size: 0.7rem;
   font-weight: 800;
-  color: #38bdf8;
+  color: #4d7ad6;
 }
 
 .web-model__market-price {

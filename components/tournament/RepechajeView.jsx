@@ -86,8 +86,8 @@ export const RepechajeView = memo(function RepechajeView({
 
           {/* FINAL COPA DE PLATA (CENTER) */}
           <div className="flex flex-col items-center z-10 px-2">
-            <div className="flex items-center gap-2 px-3.5 py-1 mb-2.5 rounded-full bg-slate-800 border border-slate-600 text-slate-200 text-xs font-black uppercase tracking-wider shadow-lg">
-              <Trophy className="w-4 h-4 text-slate-400" />
+            <div className="flex items-center gap-2 px-3.5 py-1 mb-2.5 rounded-full bg-raised border border-line/20 text-ink-2 text-xs font-bold uppercase tracking-wider shadow-lg">
+              <Trophy className="w-4 h-4 text-ink-3" />
               <span>Final Copa de Plata</span>
             </div>
             <MatchCard

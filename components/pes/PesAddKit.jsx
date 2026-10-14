@@ -31,9 +31,9 @@ export function PesAddKit({ kits, teamId, version, onApply, onCreated }) {
   };
 
   if (!open) return <Button onClick={() => setOpen(true)}><Plus className="w-3.5 h-3.5" />Agregar kit</Button>;
-  const sel = 'bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white';
+  const sel = 'input min-h-9';
   return (
-    <div className="mt-3 rounded-lg border border-white/[0.08] p-3 space-y-2 text-xs text-slate-300">
+    <div className="mt-3 rounded-lg border border-line/[0.12] p-3 space-y-2 text-xs text-ink-2">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1">Tipo
           <select className={sel} value={category} onChange={e => { setCategory(e.target.value); setFrom(''); setSection(''); }}>
@@ -51,9 +51,9 @@ export function PesAddKit({ kits, teamId, version, onApply, onCreated }) {
             {(sections.length ? sections : ['default']).map(s => <option key={s} value={s}>{s === 'default' ? '(sin sección)' : `[${s}]`}</option>)}
           </select>
         </label>
-        <span className="pb-1">Carpeta nueva: <b className="text-white">{name}</b></span>
+        <span className="pb-1">Carpeta nueva: <b className="text-ink">{name}</b></span>
       </div>
-      <p className="text-[11px] text-slate-500">
+      <p className="text-[11px] text-ink-3">
         Se copian los valores del config.txt (incluidos los nombres de textura). Después importá la textura propia del kit nuevo con otro nombre en «Texturas del kit»;
         si no, comparte las del kit copiado.
       </p>
@@ -61,7 +61,7 @@ export function PesAddKit({ kits, teamId, version, onApply, onCreated }) {
         <Button variant="primary" disabled={busy || !source} onClick={add}><Plus className="w-3.5 h-3.5" />{busy ? 'Agregando…' : `Crear ${name}`}</Button>
         <Button onClick={() => setOpen(false)}>Cancelar</Button>
       </div>
-      {!templates.length && <p className="text-[11px] text-amber-300">El equipo no tiene kits de este tipo para copiar.</p>}
+      {!templates.length && <p className="text-[11px] text-warning-soft">El equipo no tiene kits de este tipo para copiar.</p>}
       <ErrorText error={error} />
     </div>
   );

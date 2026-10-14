@@ -5,59 +5,77 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* --- Estilos Personalizados --- */
 
-/* --- Configuración General y Tema Oscuro (SCL) --- */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-button,
-a,
-input,
-select,
-textarea,
-[role="button"] {
-  touch-action: manipulation;
-}
-
-/* El indicador de teclado debe permanecer visible incluso donde Tailwind use outline-none. */
-:where(button, a, input, select, textarea, [role="button"]):focus-visible {
-  outline: 2px solid var(--app-focus) !important;
-  outline-offset: var(--app-focus-offset);
-}
-
+/* ════════════════════════════════════════════════════════════════════
+   SISTEMA DE DISEÑO — Supercontinental Draft
+   Dirección: gráfica de transmisión deportiva. Fondo azul-carbón, un solo
+   acento (cyan de la marca), tipografía condensada para títulos y cifras.
+   Los colores se definen como canales RGB para que Tailwind admita opacidad
+   (bg-accent/10). Ver tailwind.config.js.
+   ════════════════════════════════════════════════════════════════════ */
 :root,
 .dark {
-  --app-bg: #06080d;
-  --app-surface: #0c1017;
-  --app-surface-elevated: #111722;
-  --app-border: rgba(255, 255, 255, 0.07);
-  --app-border-hover: rgba(255, 255, 255, 0.18);
-  --app-accent: #00b4d8;
-  --app-accent-hover: #38bdf8;
-  --app-focus: #67e8f9;
-  --app-focus-offset: 3px;
-  --app-text-primary: #f8fafc;
-  --app-text-secondary: #94a3b8;
-  --app-text-muted: #64748b;
-  --app-success: #10b981;
-  --app-success-muted: rgba(16, 185, 129, 0.15);
-  --app-warning: #f59e0b;
-  --app-warning-muted: rgba(245, 158, 11, 0.15);
-  --app-danger: #ef4444;
-  --app-danger-muted: rgba(239, 68, 68, 0.15);
-  --app-info: #00b4d8;
-  --app-info-muted: rgba(0, 180, 216, 0.15);
-  --app-radius-sm: 6px;
-  --app-radius-md: 10px;
-  --app-radius-lg: 16px;
-  --app-radius-xl: 24px;
-  --app-shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
-  --app-shadow-md: 0 4px 12px rgba(0,0,0,0.5);
-  --app-shadow-lg: 0 8px 24px rgba(0,0,0,0.6);
+  /* Superficies (de atrás hacia adelante) */
+  --c-canvas: 8 11 20;          /* #080b14 fondo de la app (azul tinta) */
+  --c-surface: 14 19 32;        /* #0e1320 paneles y regiones de página */
+  --c-raised: 21 27 43;         /* #151b2b campos, filas, controles dentro de paneles */
+  --c-overlay: 29 37 58;        /* #1d253a menús, hover de elementos elevados, pestaña activa */
+  /* Texto */
+  --c-ink: 241 245 249;         /* #f1f5f9 principal */
+  --c-ink-2: 184 194 214;       /* #b8c2d6 secundario (≈ 10:1 sobre surface) */
+  --c-ink-3: 134 146 171;       /* #8692ab apagado (≈ 5.6:1 sobre surface) */
+  /* Líneas */
+  --c-line: 150 166 200;        /* usar con opacidad: border-line/15 */
+  /* Acento único: azul real del escudo SCL (logo #325db4), un punto más claro para la pantalla */
+  --c-accent: 58 102 196;       /* #3a66c4 botón principal, selección (blanco encima: 5.6:1) */
+  --c-accent-hover: 77 122 214; /* #4d7ad6 */
+  --c-accent-soft: 147 176 242; /* #93b0f2 texto/íconos acentuados sobre fondo oscuro */
+  --c-accent-deep: 22 36 74;    /* #16244a fondos teñidos de azul */
+  --c-on-accent: 255 255 255;   /* texto sobre el azul */
+  /* Lavanda del escudo: solo marcas de la competición (no para interacción) */
+  --c-crest-lavender: 123 120 176; /* #7b78b0 */
+  /* Semánticos */
+  --c-success: 34 197 94;       /* #22c55e */
+  --c-success-soft: 74 222 128;
+  --c-warning: 245 158 11;      /* #f59e0b */
+  --c-warning-soft: 252 211 77;
+  --c-danger: 239 68 68;        /* #ef4444 */
+  --c-danger-soft: 248 113 113;
+
+  /* Compatibilidad con los nombres anteriores (--app-*) */
+  --app-bg: rgb(var(--c-canvas));
+  --app-surface: rgb(var(--c-surface));
+  --app-surface-elevated: rgb(var(--c-raised));
+  --app-border: rgb(var(--c-line) / 0.14);
+  --app-border-hover: rgb(var(--c-line) / 0.3);
+  --app-accent: rgb(var(--c-accent));
+  --app-accent-hover: rgb(var(--c-accent-hover));
+  --app-focus: rgb(var(--c-accent-soft));
+  --app-focus-offset: 2px;
+  --app-text-primary: rgb(var(--c-ink));
+  --app-text-secondary: rgb(var(--c-ink-2));
+  --app-text-muted: rgb(var(--c-ink-3));
+  --app-success: rgb(var(--c-success));
+  --app-success-muted: rgb(var(--c-success) / 0.15);
+  --app-warning: rgb(var(--c-warning));
+  --app-warning-muted: rgb(var(--c-warning) / 0.15);
+  --app-danger: rgb(var(--c-danger));
+  --app-danger-muted: rgb(var(--c-danger) / 0.15);
+  --app-info: rgb(var(--c-accent));
+  --app-info-muted: rgb(var(--c-accent) / 0.15);
+
+  /* Radios: chicos adentro, más suaves en contenedores */
+  --app-radius-sm: 4px;
+  --app-radius-md: 6px;
+  --app-radius-lg: 8px;
+  --app-radius-xl: 12px;
+  --app-radius-2xl: 16px;
+
+  /* Sombras teñidas con el azul del fondo; la luz viene de arriba */
+  --app-shadow-sm: 0 1px 2px rgb(2 6 12 / 0.5);
+  --app-shadow-md: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 6px 16px rgb(2 6 12 / 0.45);
+  --app-shadow-lg: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 16px 40px rgb(2 6 12 / 0.6);
+
   --app-z-dropdown: 50;
   --app-z-sticky: 60;
   --app-z-modal: 100;
@@ -72,15 +90,225 @@ textarea,
   --app-space-xl: 24px;
   --app-space-2xl: 32px;
   --app-space-3xl: 48px;
+  --app-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   color-scheme: dark;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: var(--app-text-primary);
-  line-height: 1.6;
-  background-color: var(--app-bg);
-  transition: background-color 0.2s ease, color 0.2s ease;
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: 'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgb(var(--c-ink));
+    background-color: rgb(var(--c-canvas));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Barlow Condensed', 'Barlow', ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.005em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* El indicador de teclado debe permanecer visible incluso donde Tailwind use outline-none. */
+  :where(button, a, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid var(--app-focus) !important;
+    outline-offset: var(--app-focus-offset);
+  }
+
+  ::selection {
+    background: rgb(var(--c-accent) / 0.35);
+    color: rgb(var(--c-ink));
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgb(var(--c-ink-3));
+  }
+}
+
+/* Movimiento reducido: sin animaciones decorativas ni desplazamientos suaves. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* ── Tipografía ─────────────────────────────────────────────── */
+  .font-display { font-family: 'Barlow Condensed', 'Barlow', ui-sans-serif, system-ui, sans-serif; }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3;
+  }
+  .page-title {
+    @apply font-display text-[28px] sm:text-[32px] font-bold leading-none text-ink tracking-tight;
+  }
+  .section-title {
+    @apply font-display text-lg font-bold leading-tight text-ink tracking-wide uppercase;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ── Superficies ───────────────────────────────────────────── */
+  .panel {
+    @apply bg-surface border border-line/[0.12] rounded-2xl;
+    box-shadow: var(--app-shadow-md);
+  }
+  .panel-flat {
+    @apply bg-surface border border-line/[0.12] rounded-2xl;
+  }
+  .well {
+    @apply bg-raised border border-line/10 rounded-xl;
+  }
+
+  /* ── Botones ───────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-lg text-sm font-semibold whitespace-nowrap select-none
+      transition-[background-color,border-color,color,transform,box-shadow] duration-150
+      disabled:opacity-45 disabled:cursor-not-allowed active:translate-y-px;
+  }
+  .btn-sm { @apply min-h-8 px-3 text-xs rounded-md gap-1.5; }
+  .btn-lg { @apply min-h-12 px-5 text-base; }
+  .btn-icon { @apply min-h-10 min-w-10 px-0; }
+  .btn-icon.btn-sm { @apply min-h-8 min-w-8; }
+  .btn-primary {
+    @apply bg-accent text-on-accent hover:bg-accent-hover shadow-[0_1px_0_rgb(255_255_255/0.14)_inset];
+  }
+  .btn-secondary {
+    @apply bg-raised text-ink border border-line/[0.16] hover:bg-overlay hover:border-line/30;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-ink-2 hover:text-ink hover:bg-white/[0.05];
+  }
+  .btn-danger {
+    @apply bg-danger/[0.12] text-danger-soft border border-danger/30 hover:bg-danger/20;
+  }
+  .btn-success {
+    @apply bg-success/[0.12] text-success-soft border border-success/30 hover:bg-success/20;
+  }
+
+  /* ── Campos ────────────────────────────────────────────────── */
+  .field-label {
+    @apply block text-xs font-semibold text-ink-2 mb-1.5;
+  }
+  .field-help {
+    @apply mt-1 text-xs text-ink-3;
+  }
+  .field-error {
+    @apply mt-1 text-xs font-medium text-danger-soft;
+  }
+  .input {
+    @apply w-full min-h-10 px-3 rounded-lg bg-raised text-ink text-sm border border-line/[0.16]
+      transition-colors duration-150 outline-none
+      hover:border-line/30 focus:border-accent focus:ring-2 focus:ring-accent/25
+      disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .input[aria-invalid="true"] { @apply border-danger/60 focus:ring-danger/25; }
+  .select {
+    @apply input appearance-none pr-9 bg-no-repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238692ab' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.6rem center;
+  }
+
+  /* ── Chips, pestañas, teclas ───────────────────────────────── */
+  .chip {
+    @apply inline-flex items-center gap-1.5 min-h-7 px-2.5 rounded-md text-xs font-semibold bg-raised text-ink-2 border border-line/[0.14];
+  }
+  .tab-list {
+    @apply inline-flex items-center gap-1 p-1 rounded-lg bg-raised border border-line/[0.12];
+  }
+  .tab {
+    @apply inline-flex items-center gap-1.5 min-h-8 px-3 rounded-md text-xs font-semibold text-ink-2 transition-colors hover:text-ink;
+  }
+  .tab[aria-selected="true"],
+  .tab[aria-current="page"],
+  .tab[aria-pressed="true"] {
+    @apply bg-overlay text-ink shadow-[0_1px_0_rgb(255_255_255/0.05)_inset];
+  }
+  .kbd {
+    @apply inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded border border-line/25 bg-raised text-[11px] font-semibold text-ink-2 font-mono;
+  }
+
+  /* ── Datos ─────────────────────────────────────────────────── */
+  .data-table { @apply w-full text-sm text-ink-2; }
+  .data-table thead th {
+    @apply sticky top-0 bg-surface text-left text-[11px] font-semibold uppercase tracking-wider text-ink-3 px-3 py-2 border-b border-line/[0.12];
+  }
+  .data-table tbody td { @apply px-3 py-2 border-b border-line/[0.07]; }
+  .data-table tbody tr { @apply transition-colors hover:bg-white/[0.025]; }
+
+  /* ── Esqueletos de carga ───────────────────────────────────── */
+  .skeleton {
+    @apply rounded-md bg-white/[0.05];
+    animation: skeleton-pulse 1.4s var(--app-ease) infinite;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Utilidades de entrada usadas en toda la app (animate-in / fade-in / zoom-in-95 / slide-in-*). */
+@layer utilities {
+  .animate-in { animation: app-enter 180ms var(--app-ease) both; }
+  .fade-in { --enter-opacity: 0; }
+  .zoom-in-95 { --enter-scale: 0.97; }
+  .slide-in-from-top { --enter-ty: -8px; }
+  .slide-in-from-bottom { --enter-ty: 8px; }
+  .slide-in-from-right { --enter-tx: 12px; }
+  .slide-in-from-left { --enter-tx: -12px; }
+  .slide-in-from-top-2 { --enter-ty: -8px; }
+  .slide-in-from-top-3 { --enter-ty: -12px; }
+  .slide-in-from-bottom-4 { --enter-ty: 16px; }
+  .slide-in-from-bottom-10 { --enter-ty: 40px; }
+  .slide-in-from-right-10 { --enter-tx: 40px; }
+  .zoom-in-90 { --enter-scale: 0.9; }
+  .zoom-in-75 { --enter-scale: 0.75; }
+  .zoom-in-50 { --enter-scale: 0.5; }
+}
+
+@keyframes app-enter {
+  from {
+    opacity: var(--enter-opacity, 1);
+    transform: translate3d(var(--enter-tx, 0), var(--enter-ty, 0), 0) scale(var(--enter-scale, 1));
+  }
 }
 
 /* --- Paleta de Colores para Estadísticas (Píldoras) --- */
@@ -174,7 +402,7 @@ body {
 
 /* Verde esmeralda */
 .ovr-text-50 {
-  color: #38bdf8 !important;
+  color: #4d7ad6 !important;
 }
 
 /* Azul claro */
@@ -334,8 +562,8 @@ body {
 }
 
 .sidebar--open {
-  width: 224px;
-  min-width: 224px;
+  width: 232px;
+  min-width: 232px;
   box-shadow: 1px 0 0 var(--app-border, rgba(255, 255, 255, 0.07));
 }
 
@@ -361,7 +589,7 @@ body {
     transform: translateX(-100%);
     transition: transform 300ms ease-in-out;
     z-index: 60;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.6);
+    box-shadow: 8px 0 32px rgb(2 6 12 / 0.6);
   }
 
   .sidebar--open {
@@ -372,10 +600,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     border-radius: 8px;
-    color: #9ca3af;
+    color: rgb(var(--c-ink-3));
     background: transparent;
     border: none;
     cursor: pointer;
@@ -999,11 +1227,11 @@ body {
 .scout-guide-ring {
   position: fixed;
   z-index: 121;
-  border: 2px solid rgba(0, 180, 216, 0.95);
+  border: 2px solid rgba(58, 102, 196, 0.95);
   border-radius: 12px;
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.02),
-    0 0 28px rgba(0, 180, 216, 0.34);
+    0 0 28px rgba(58, 102, 196, 0.34);
   pointer-events: none;
   transition: left 180ms ease, top 180ms ease, width 180ms ease, height 180ms ease;
 }
@@ -1012,7 +1240,7 @@ body {
   position: fixed;
   z-index: 122;
   max-width: min(340px, calc(100vw - 24px));
-  border: 1px solid rgba(0, 180, 216, 0.28);
+  border: 1px solid rgba(58, 102, 196, 0.28);
   border-radius: 14px;
   background: rgba(12, 16, 23, 0.96);
   padding: 16px;

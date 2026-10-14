@@ -1,25 +1,21 @@
 import React, { useState, useMemo, memo } from 'react';
-import { X, Search, Users, ExternalLink, ArrowUpDown, DollarSign, Award, Shield, ChevronDown, ChevronsUpDown, Star } from 'lucide-react';
+import { X, Search, Users, ExternalLink, ArrowUpDown, ChevronDown, ChevronsUpDown, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
-import { formatPriceShort, getFlagUrl, getStatAndOvrColorClass } from '../utils/helpers.js';
+import { formatPriceShort, getFlagUrl, getStatAndOvrColorClass, getPosColorClass } from '../utils/helpers.js';
+import { Page } from './ui/Page.jsx';
+import { PageHeader } from './ui/PageHeader.jsx';
+import { Tabs } from './ui/Tabs.jsx';
+import { Stat } from './ui/Stat.jsx';
+import { EmptyState } from './ui/EmptyState.jsx';
 
-/* ── Posiciones con paleta unificada del mercado ── */
-const POS_COLOR = {
-  DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444',
-  MC: '#22c55e', MCD: '#22c55e', MO: '#22c55e', MI: '#22c55e', MD: '#22c55e',
-  DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6',
-  PT: '#eab308',
-};
-
-/* ── Grupos de posiciones tácticas para filtro rápido en orden táctico ── */
 const POS_GROUPS = [
-  { id: 'TODOS', label: 'Todos', color: '#94a3b8' },
-  { id: 'DEF', label: 'DEF', color: '#3b82f6' },
-  { id: 'MED', label: 'MED', color: '#22c55e' },
-  { id: 'DEL', label: 'DEL', color: '#ef4444' },
-  { id: 'PT', label: 'PT', color: '#eab308' },
+  { id: 'TODOS', label: 'Todos' },
+  { id: 'DEF', label: 'DEF' },
+  { id: 'MED', label: 'MED' },
+  { id: 'DEL', label: 'DEL' },
+  { id: 'PT', label: 'PT' },
 ];
 
 const POS_GROUP_MAP = {
@@ -46,27 +42,11 @@ const POS_ORDER_WEIGHT = {
 };
 
 const TACTICAL_SECTIONS = [
-  { id: 'DEF', label: 'Defensores', color: '#3b82f6' },
-  { id: 'MED', label: 'Mediocampistas', color: '#22c55e' },
-  { id: 'DEL', label: 'Delanteros', color: '#ef4444' },
-  { id: 'PT', label: 'Arqueros', color: '#eab308' },
+  { id: 'DEF', label: 'Defensores' },
+  { id: 'MED', label: 'Mediocampistas' },
+  { id: 'DEL', label: 'Delanteros' },
+  { id: 'PT', label: 'Arqueros' },
 ];
-
-/* ── Umbrales dinámicos de color OVR consistentes con el mercado ── */
-const OVR_COLOR_THRESHOLDS = [
-  [90, '#1ec9a4'],
-  [85, '#a0dd00'],
-  [75, '#ffc400'],
-  [65, '#ec7d22'],
-];
-const OVR_COLOR_DEFAULT = '#94a3b8';
-
-function getOvrColor(ovr) {
-  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
-    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
-  }
-  return OVR_COLOR_DEFAULT;
-}
 
 export const TeamsModal = memo(function TeamsModal({
   isPage,
@@ -194,379 +174,175 @@ export const TeamsModal = memo(function TeamsModal({
 
   if (!isVisible && !isPage) return null;
 
-  const inner = (
-    <div
-      className={isPage
-        ? "w-full h-full min-h-0 flex flex-col bg-[#06080d] text-slate-200"
-        : "bg-[#0c1017] border border-white/[0.08] sm:rounded-2xl shadow-2xl w-full max-w-7xl h-[100dvh] sm:h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 text-slate-200"}
-      onClick={e => e.stopPropagation()}
-    >
-      {/* ── HEADER SUPERIOR ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 shrink-0 bg-[#0c1017] border-b border-white/[0.08]">
-        <div>
-          <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2.5">
-            <Users className="w-5 h-5 text-[#00b4d8]" /> {title}
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
-        </div>
+  const SECTION_DOT = { DEF: 'pos-defensa', MED: 'pos-medio', DEL: 'pos-delantero', PT: 'pos-portero' };
+  const filtersActive = Boolean(searchQuery) || selectedPosGroup !== 'TODOS';
 
-        {!isPage && (
-          <button
-            onClick={onClose}
-            aria-label="Cerrar modal"
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition"
-          >
-            <X className="w-5 h-5" />
+  const toolbar = (
+    <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+      <div className="relative flex-1 min-w-0 lg:max-w-md">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none" aria-hidden="true" />
+        <input type="text" placeholder="Buscar por club o jugador…" aria-label="Buscar por club o jugador" value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)} className="input pl-10 pr-10" />
+        {searchQuery && (
+          <button type="button" onClick={() => setSearchQuery('')} aria-label="Borrar búsqueda"
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md flex items-center justify-center text-ink-3 hover:text-ink hover:bg-white/10">
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         )}
       </div>
-
-      {/* ── CONTENEDOR CON SCROLL (Toolbar incluida en el scroll para mobile) ── */}
-      <div className="flex-grow min-h-0 overflow-y-auto custom-scrollbar">
-        {/* ── BARRA DE HERRAMIENTAS & FILTROS TIPO MERCADO ── */}
-        <div className="px-4 sm:px-6 py-3 bg-[#0c1017] border-b border-white/[0.08] flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 sm:sticky sm:top-0 sm:z-10">
-          {/* Input de Búsqueda y Filtros de Posición */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 min-w-0">
-            {/* Input de Búsqueda */}
-            <div className="relative flex-1 min-w-[200px] max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Buscar por equipo o jugador..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full min-h-11 pl-10 pr-4 py-2.5 bg-[#111722] text-white rounded-xl text-sm outline-none border border-white/[0.08] focus:border-cyan-500 placeholder:text-slate-500 transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold"
-                >
-                  Limpiar
-                </button>
-              )}
-            </div>
-
-            {/* Filtro Táctico por Posición - Swipeable en mobile */}
-            <div className="w-full sm:w-auto flex items-center gap-1 bg-[#111722] p-1 rounded-xl border border-white/[0.08] overflow-x-auto no-scrollbar shrink-0">
-              {POS_GROUPS.map(pos => {
-                const isActive = selectedPosGroup === pos.id;
-                return (
-                  <button
-                    key={pos.id}
-                    type="button"
-                    onClick={() => setSelectedPosGroup(pos.id)}
-                    className={`flex-1 sm:flex-initial px-3.5 py-2 text-xs font-black rounded-lg transition-all cursor-pointer select-none whitespace-nowrap min-h-[38px] flex items-center justify-center ${
-                      isActive
-                        ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                        : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                    }`}
-                    style={isActive && pos.id !== 'TODOS' ? { color: pos.color } : {}}
-                  >
-                    {pos.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Selector de Orden, Toggle Acordeón y Resumen */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Botón de Expandir / Colapsar Todo */}
-            <button
-              type="button"
-              onClick={toggleAllCollapse}
-              className="min-h-11 px-3 py-2 bg-[#111722] text-slate-300 hover:text-white rounded-xl text-xs sm:text-sm font-semibold border border-white/[0.08] hover:border-white/[0.16] flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
-              title={isAllExpanded ? 'Colapsar todos los equipos' : 'Expandir todos los equipos'}
-            >
-              <ChevronsUpDown className="w-4 h-4 text-slate-400" />
-              <span>{isAllExpanded ? 'Colapsar todo' : 'Expandir todo'}</span>
-            </button>
-
-            <div className="relative">
-              <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                className="appearance-none min-h-11 pl-9 pr-8 py-2.5 bg-[#111722] text-slate-200 rounded-xl text-xs sm:text-sm font-semibold border border-white/[0.08] focus:border-cyan-500 outline-none cursor-pointer"
-              >
-                <option value="spent-desc">Gasto (Mayor a Menor)</option>
-                <option value="spent-asc">Gasto (Menor a Mayor)</option>
-                <option value="ovr-desc">Media OVR (Mayor a Menor)</option>
-                <option value="players-desc">Plantilla (Mayor a Menor)</option>
-                <option value="name-asc">Nombre de Equipo (A-Z)</option>
-              </select>
-              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-            </div>
-
-            {/* Quick Metrics Pills (Conservados compactos) */}
-            <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-400">
-              <span className="px-3 py-2 bg-[#111722] border border-white/[0.08] rounded-xl flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-[#00b4d8]" />
-                <strong className="text-white">{filteredAndSortedTeams.length}</strong> Equipos
-              </span>
-              <span className="px-3 py-2 bg-[#111722] border border-white/[0.08] rounded-xl flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                Gasto total: <strong className="text-emerald-400">{formatPriceShort(leagueSummary.totalSpent)}</strong>
-              </span>
-            </div>
-          </div>
+      <Tabs label="Filtrar por línea" value={selectedPosGroup} onChange={setSelectedPosGroup} className="self-start"
+        tabs={POS_GROUPS.map(p => ({ id: p.id, label: p.label }))} />
+      <div className="flex items-center gap-2 lg:ml-auto">
+        <div className="relative flex-1 sm:flex-none">
+          <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none z-[1]" aria-hidden="true" />
+          <select value={sortOption} onChange={(e) => setSortOption(e.target.value)} aria-label="Ordenar clubes" className="select pl-9 sm:w-56">
+            <option value="spent-desc">Gasto: mayor a menor</option>
+            <option value="spent-asc">Gasto: menor a mayor</option>
+            <option value="ovr-desc">Media: mayor a menor</option>
+            <option value="players-desc">Plantel: más jugadores</option>
+            <option value="name-asc">Nombre (A–Z)</option>
+          </select>
         </div>
-
-        {/* ── LISTADO DE EQUIPOS (ACORDEÓN) ── */}
-        <div className="px-4 sm:px-6 py-4 space-y-4 pb-20">
-        {filteredAndSortedTeams.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-[#0c1017] p-12 text-center flex flex-col items-center justify-center">
-            <Users className="w-12 h-12 mb-3 text-slate-600" />
-            <p className="text-base font-bold text-slate-300">No se encontraron equipos</p>
-            <p className="text-xs text-slate-500 mt-1">Prueba con otro término de búsqueda o limpia el filtro de posición.</p>
-            {(searchQuery || selectedPosGroup !== 'TODOS') && (
-              <button
-                onClick={() => { setSearchQuery(''); setSelectedPosGroup('TODOS'); }}
-                className="mt-4 px-4 py-2 bg-[#111722] hover:bg-[#161f2e] border border-white/10 rounded-xl text-xs font-bold text-[#00b4d8] transition cursor-pointer"
-              >
-                Restablecer filtros
-              </button>
-            )}
-          </div>
-        ) : (
-          filteredAndSortedTeams.map(team => {
-            const isCollapsed = !expandedTeamIds.has(team.userId);
-            const displayedPlayers = selectedPosGroup === 'TODOS'
-              ? team.players
-              : team.players.filter(p => (POS_GROUP_MAP[selectedPosGroup] || []).includes(p.POS_NOMBRE));
-
-            return (
-              <div
-                key={team.userId}
-                className="rounded-2xl overflow-hidden bg-[#0c1017] border border-white/[0.08] hover:border-white/[0.16] transition-all shadow-md"
-              >
-                {/* Team header bar (clickable para acordeón) */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={!isCollapsed}
-                  aria-label={`${isCollapsed ? 'Desplegar' : 'Plegar'} plantilla de ${team.teamName}`}
-                  onClick={() => toggleTeamCollapse(team.userId)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      toggleTeamCollapse(team.userId);
-                    }
-                  }}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 sm:px-6 py-4 bg-[#111722]/90 hover:bg-[#131b28] border-b border-white/[0.06] cursor-pointer select-none transition focus:outline-none focus:ring-1 focus:ring-sky-500"
-                >
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div className="w-12 h-12 rounded-xl bg-[#090d16] border border-white/10 p-1.5 flex items-center justify-center shrink-0">
-                      <img
-                        src={team.logoUrl || DEFAULT_LOGO}
-                        alt={`Escudo de ${team.teamName}`}
-                        width={36}
-                        height={36}
-                        className="w-full h-full object-contain"
-                        onError={(e) => { e.target.src = DEFAULT_LOGO; }}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-wide">
-                          {team.teamName}
-                        </h3>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/team/${team.userId}`); }}
-                          className="text-xs font-bold bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 hover:text-white border border-white/[0.08] px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition cursor-pointer"
-                          title="Ver Perfil Oficial del Equipo"
-                        >
-                          Perfil <ExternalLink size={12} />
-                        </button>
-                      </div>
-                      <span className="text-xs text-slate-400 font-mono">ID: {team.userId?.substring(0, 8)}</span>
-                    </div>
-                  </div>
-
-                  {/* Métricas del Equipo y Chevron */}
-                  <div className="flex items-center gap-3 sm:gap-5 justify-between sm:justify-end shrink-0">
-                    <div className="flex items-center gap-3 sm:gap-5 bg-[#090d16]/80 px-4 py-2 rounded-xl border border-white/[0.06]">
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Inversión</p>
-                        <p className="text-sm font-black text-emerald-400 font-mono tabular-nums">{formatPriceShort(team.totalCost)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Media OVR</p>
-                        <p
-                          className="text-sm font-black font-mono px-2 py-0.5 rounded-md inline-block tabular-nums"
-                          style={{ color: getOvrColor(team.avgOvr), backgroundColor: 'rgba(255,255,255,0.06)' }}
-                        >
-                          {team.avgOvr || '—'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Plantilla</p>
-                        <p className="text-sm font-black text-slate-200 font-mono">
-                          {selectedPosGroup === 'TODOS' ? `${team.players.length} jug.` : `${displayedPlayers.length} / ${team.players.length}`}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-2 rounded-lg bg-white/[0.04] text-slate-400 hover:text-white transition">
-                      <ChevronDown
-                        className={`w-5 h-5 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180 text-cyan-400'}`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contenido Desplegable de Jugadores */}
-                {!isCollapsed && (
-                  <div className="p-3 sm:p-5 space-y-5 bg-[#090d15]/60">
-                    {team.players.length === 0 ? (
-                      <div className="py-8 text-center bg-[#111722]/30 rounded-xl border border-dashed border-white/[0.06]">
-                        <p className="text-xs text-slate-400 font-medium">Este equipo aún no ha fichado jugadores en el mercado.</p>
-                      </div>
-                    ) : displayedPlayers.length === 0 ? (
-                      <div className="py-8 text-center bg-[#111722]/30 rounded-xl border border-dashed border-white/[0.06]">
-                        <p className="text-xs text-slate-400 font-medium">
-                          No hay jugadores registrados en la demarcación seleccionada ({selectedPosGroup}).
-                        </p>
-                      </div>
-                    ) : (
-                      TACTICAL_SECTIONS.map(sec => {
-                        const secPlayers = displayedPlayers.filter(p => getPosCategory(p.POS_NOMBRE) === sec.id);
-                        if (secPlayers.length === 0) return null;
-
-                        const secTotalValue = secPlayers.reduce((sum, p) => sum + (Number(p.Precio) || 0), 0);
-                        const secAvgOvr = Math.round(secPlayers.reduce((sum, p) => sum + (Number(p.OVR_CALCULADO) || 0), 0) / secPlayers.length);
-
-                        return (
-                          <div key={sec.id} className="space-y-2.5">
-                            {/* Cabecera de Demarcación Táctica Profesional */}
-                            <div className="flex items-center justify-between px-1 py-1 border-b border-white/[0.06]">
-                              <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: sec.color }} />
-                                <h4 className="text-xs font-black uppercase tracking-wider text-white">
-                                  {sec.label}
-                                </h4>
-                                <span className="text-xs font-mono font-bold text-slate-400 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
-                                  {secPlayers.length}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-3 text-xs font-mono text-slate-400">
-                                <span>Media: <strong className="text-white">{secAvgOvr}</strong></span>
-                                <span className="hidden sm:inline">Valor: <strong className="text-emerald-400">{formatPriceShort(secTotalValue)}</strong></span>
-                              </div>
-                            </div>
-
-                            {/* Roster Sheet de Jugadores (Sin rebotes IA, diseño fútbol profesional Transfermarkt/SofaScore) */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
-                              {secPlayers.map(player => {
-                                const posColor = POS_COLOR[player.POS_NOMBRE] || '#94a3b8';
-                                const ovr = player.OVR_CALCULADO || 0;
-                                const isTopStar = team.players.length > 1 && player.Id === team.topPlayerId;
-                                const ovrColorClass = getStatAndOvrColorClass(ovr);
-
-                                return (
-                                  <div
-                                    key={player.Id}
-                                    onClick={() => onPlayerClick && onPlayerClick(player)}
-                                    className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-xl bg-[#111722]/80 hover:bg-[#162030] border border-white/[0.06] hover:border-white/[0.14] transition-colors cursor-pointer group shadow-xs"
-                                    title={`Ver ficha técnica de ${player.Name}`}
-                                  >
-                                    {/* Izquierda: Foto y Datos */}
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                      <div className="relative shrink-0">
-                                        <img
-                                          src={`/fotos_jugadores/${player.Id}.webp`}
-                                          alt={player.Name}
-                                          className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover bg-black/60 border border-white/10"
-                                          onError={(e) => {
-                                            e.target.onerror = null;
-                                            e.target.src = `https://placehold.co/44x44/111/444?text=${player.Name?.[0] || '?'}`;
-                                          }}
-                                        />
-                                      </div>
-
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5">
-                                          <p className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
-                                            {player.Name}
-                                          </p>
-                                          {isTopStar && (
-                                            <span
-                                              className="text-[10px] font-black text-amber-300 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20 flex items-center gap-1 shrink-0"
-                                              title="Jugador estrella del plantel"
-                                            >
-                                              <Star size={10} className="fill-amber-300 text-amber-300" />
-                                              <span className="hidden sm:inline">Figura</span>
-                                            </span>
-                                          )}
-                                        </div>
-
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <span
-                                            className="text-[10px] font-black text-slate-950 px-1.5 py-0.5 rounded font-mono"
-                                            style={{ backgroundColor: posColor }}
-                                          >
-                                            {player.POS_NOMBRE}
-                                          </span>
-                                          <img
-                                            src={getFlagUrl(player.Country1)}
-                                            className="w-4 h-3 rounded-[2px] opacity-85 shrink-0"
-                                            onError={(e) => { e.target.style.display = 'none'; }}
-                                            alt=""
-                                          />
-                                          {player.Age && (
-                                            <span className="text-xs text-slate-400 font-mono">
-                                              {player.Age}a
-                                            </span>
-                                          )}
-                                          {player.Foot && (
-                                            <span className="text-xs text-slate-500 font-mono hidden sm:inline">
-                                              • {player.Foot}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Derecha: Precio y Píldora OVR */}
-                                    <div className="flex items-center gap-2.5 shrink-0">
-                                      <span className="text-xs sm:text-sm font-black text-emerald-400 font-mono tabular-nums">
-                                        {formatPriceShort(player.Precio)}
-                                      </span>
-                                      <span className={`stat-value ${ovrColorClass} w-8 h-8 sm:w-9 sm:h-9 rounded-lg font-mono font-black text-xs sm:text-sm flex items-center justify-center tabular-nums shadow-sm border border-black/25 !text-black`}>
-                                        {ovr}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-        </div>
+        <button type="button" onClick={toggleAllCollapse} className="btn btn-secondary shrink-0" aria-label={isAllExpanded ? 'Plegar todos los clubes' : 'Desplegar todos los clubes'}>
+          <ChevronsUpDown className="w-4 h-4" aria-hidden="true" /><span className="hidden sm:inline">{isAllExpanded ? 'Plegar todo' : 'Desplegar todo'}</span>
+        </button>
       </div>
     </div>
   );
 
-  if (isPage) return inner;
+  const list = filteredAndSortedTeams.length === 0 ? (
+    <EmptyState icon={Users} title="No se encontraron clubes" description="Probá con otra búsqueda o quitá el filtro de línea."
+      actionLabel={filtersActive ? 'Restablecer filtros' : undefined} onAction={filtersActive ? () => { setSearchQuery(''); setSelectedPosGroup('TODOS'); } : undefined} />
+  ) : (
+    <ul className="space-y-3">
+      {filteredAndSortedTeams.map(team => {
+        const isCollapsed = !expandedTeamIds.has(team.userId);
+        const displayedPlayers = selectedPosGroup === 'TODOS'
+          ? team.players
+          : team.players.filter(p => (POS_GROUP_MAP[selectedPosGroup] || []).includes(p.POS_NOMBRE));
+        const panelId = `rival-${team.userId}`;
+
+        return (
+          <li key={team.userId} className="panel-flat overflow-hidden">
+            <div className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3">
+              <button type="button" aria-expanded={!isCollapsed} aria-controls={panelId}
+                aria-label={`${isCollapsed ? 'Desplegar' : 'Plegar'} el plantel de ${team.teamName}`}
+                onClick={() => toggleTeamCollapse(team.userId)}
+                className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 text-left min-h-12 rounded-lg">
+                <img src={team.logoUrl || DEFAULT_LOGO} alt="" width={40} height={40} className="w-10 h-10 object-contain shrink-0"
+                  onError={(e) => { e.currentTarget.src = DEFAULT_LOGO; }} />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-lg font-bold text-ink truncate leading-tight">{team.teamName}</span>
+                  <span className="block text-xs text-ink-3 mt-0.5">
+                    <span className="num">{selectedPosGroup === 'TODOS' ? team.players.length : `${displayedPlayers.length}/${team.players.length}`}</span> jugadores
+                    <span className="sm:hidden"> · <span className="num">{formatPriceShort(team.totalCost)}</span></span>
+                  </span>
+                </span>
+                <span className="hidden sm:block text-right shrink-0">
+                  <span className="block eyebrow">Invertido</span>
+                  <span className="block font-display num text-lg font-bold text-ink leading-tight">{formatPriceShort(team.totalCost)}</span>
+                </span>
+                <span className={`w-10 h-10 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 ${team.avgOvr ? getStatAndOvrColorClass(team.avgOvr) : 'bg-raised text-ink-3'}`}
+                  title="Media del plantel">{team.avgOvr || '—'}</span>
+                <ChevronDown className={`w-5 h-5 text-ink-3 shrink-0 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} aria-hidden="true" />
+              </button>
+              <button type="button" onClick={() => navigate(`/team/${team.userId}`)} className="btn btn-ghost btn-icon shrink-0"
+                aria-label={`Ver el perfil de ${team.teamName}`} title="Ver perfil del club">
+                <ExternalLink className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            {!isCollapsed && (
+              <div id={panelId} className="border-t border-line/[0.08] px-3 sm:px-5 py-4 space-y-5">
+                {team.players.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-ink-3">Este club todavía no fichó jugadores.</p>
+                ) : displayedPlayers.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-ink-3">No tiene jugadores en la línea elegida.</p>
+                ) : (
+                  TACTICAL_SECTIONS.map(sec => {
+                    const secPlayers = displayedPlayers.filter(p => getPosCategory(p.POS_NOMBRE) === sec.id);
+                    if (secPlayers.length === 0) return null;
+                    const secTotalValue = secPlayers.reduce((sum, p) => sum + (Number(p.Precio) || 0), 0);
+                    const secAvgOvr = Math.round(secPlayers.reduce((sum, p) => sum + (Number(p.OVR_CALCULADO) || 0), 0) / secPlayers.length);
+
+                    return (
+                      <section key={sec.id} aria-label={sec.label}>
+                        <div className="flex items-center justify-between gap-3 pb-2 mb-2 border-b border-line/[0.07]">
+                          <h4 className="eyebrow flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${SECTION_DOT[sec.id]}`} aria-hidden="true" />{sec.label} <span className="num text-ink-3">{secPlayers.length}</span>
+                          </h4>
+                          <p className="text-xs text-ink-3">
+                            Media <span className="num font-semibold text-ink-2">{secAvgOvr}</span>
+                            <span className="hidden sm:inline"> · Valor <span className="num font-semibold text-ink-2">{formatPriceShort(secTotalValue)}</span></span>
+                          </p>
+                        </div>
+                        <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4">
+                          {secPlayers.map(player => {
+                            const ovr = player.OVR_CALCULADO || 0;
+                            const isTopStar = team.players.length > 1 && player.Id === team.topPlayerId;
+                            return (
+                              <li key={player.Id}>
+                                <button type="button" onClick={() => onPlayerClick && onPlayerClick(player)} title={`Ver ficha de ${player.Name}`}
+                                  className="group w-full flex items-center gap-3 py-2 min-h-14 text-left rounded-lg -mx-2 px-2 hover:bg-white/[0.03] transition-colors">
+                                  <img src={`/fotos_jugadores/${player.Id}.webp`} alt="" width={40} height={40} loading="lazy"
+                                    className="w-10 h-10 rounded-lg object-cover object-top bg-raised shrink-0"
+                                    onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                                  <span className="min-w-0 flex-1">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="text-sm font-semibold text-ink group-hover:text-accent-soft transition-colors truncate">{player.Name}</span>
+                                      {isTopStar && <Star className="w-3.5 h-3.5 shrink-0 fill-current text-warning-soft" aria-label="Figura del plantel" />}
+                                    </span>
+                                    <span className="flex items-center gap-2 mt-0.5 text-xs text-ink-3">
+                                      <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                                      <img src={getFlagUrl(player.Country1)} className="w-4 h-3 rounded-[2px] shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} alt="" />
+                                      {player.Age ? <span>{player.Age} años</span> : null}
+                                      <span className="num">{formatPriceShort(player.Precio)}</span>
+                                    </span>
+                                  </span>
+                                  <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </section>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  const summary = (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 border-y border-line/[0.08] py-4">
+      <Stat label="Clubes" value={leagueSummary.totalTeams} size="sm" />
+      <Stat label="Jugadores fichados" value={leagueSummary.totalSignedPlayers} size="sm" />
+      <Stat label="Gasto de la liga" value={formatPriceShort(leagueSummary.totalSpent)} size="sm" />
+      <Stat label="Media de la liga" value={leagueSummary.leagueAvgOvr || '—'} size="sm" tone="accent" />
+    </div>
+  );
+
+  if (isPage) {
+    return (
+      <Page className="pb-16">
+        <PageHeader eyebrow="Mercado" title={title} description={subtitle} />
+        {summary}
+        {toolbar}
+        {list}
+      </Page>
+    );
+  }
 
   return (
-    <BaseModal
-      isOpen={isVisible}
-      onClose={onClose}
-      size="2xl"
-      showClose={false}
-      className="!p-0 !max-w-7xl !bg-transparent !border-0 !shadow-none"
-      contentClassName="!p-0 !overflow-hidden flex flex-col"
-    >
-      {inner}
+    <BaseModal isOpen={isVisible} onClose={onClose} size="2xl" title={title} subtitle={subtitle} icon={Users}
+      className="h-[100dvh] sm:h-[90vh] !max-w-7xl" contentClassName="p-4 sm:p-6 space-y-5">
+      {summary}
+      {toolbar}
+      {list}
     </BaseModal>
   );
 });

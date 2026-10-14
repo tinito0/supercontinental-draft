@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { X, Save, Edit2, Trophy, ShieldAlert, LayoutGrid, Star, CalendarDays } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
+import { Tabs } from './ui/Tabs.jsx';
+import { Spinner } from './ui/Spinner.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { normalizeTournamentView } from '../utils/tournamentViews.js';
 import {
@@ -58,7 +60,7 @@ export const TournamentModal = memo(function TournamentModal({
 
   // Close on Escape key
   useEffect(() => {
-    if (!isVisible && !isPage) return;
+    if (!isVisible || isPage) return; // as a page there is nothing to close
     const handleEsc = (e) => {
       if (e.key === 'Escape' && onClose) onClose();
     };
@@ -266,11 +268,17 @@ export const TournamentModal = memo(function TournamentModal({
     setLocalData(prev => ({ ...prev, matches: (prev.matches || []).filter(match => match.id !== matchId) }));
   }, []);
 
-  const handleCopyObsLink = (view) => {
-    const url = `${window.location.origin}/torneo?mode=obs&view=${view}`;
-    navigator.clipboard.writeText(url);
-    alert(`Enlace OBS de ${view} copiado al portapapeles!`);
+  const [copiedObs, setCopiedObs] = useState(null);
+  const copyObsUrl = async (label, query) => {
+    const url = `${window.location.origin}/torneo?mode=obs&${query}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedObs({ label, ok: true });
+    } catch {
+      setCopiedObs({ label, ok: false, url });
+    }
   };
+  const handleCopyObsLink = (view) => copyObsUrl(view === 'groups' ? 'Tabla' : 'Bracket', `view=${view}`);
 
   const pendingMatchesCount = useMemo(() => {
     if (!localData?.matches || !Array.isArray(localData.matches)) return 0;
@@ -294,10 +302,7 @@ export const TournamentModal = memo(function TournamentModal({
   if (!localData) {
     return (
       <div className={isPage ? `w-full h-full flex flex-col items-center justify-center p-12 ${tournamentShellClass}` : `fixed inset-0 z-[100] flex flex-col items-center justify-center p-12 ${tournamentShellClass}`}>
-        <div className="w-10 h-10 border-4 border-[#00b4d8]/20 border-t-[#00b4d8] rounded-full animate-spin mb-4" />
-        <span className="text-sm font-bold text-slate-300 uppercase tracking-widest animate-pulse">
-          Cargando Torneo...
-        </span>
+        <Spinner size="lg" label="Cargando el torneo…" />
       </div>
     );
   }
@@ -307,71 +312,54 @@ export const TournamentModal = memo(function TournamentModal({
       <div className={`${tournamentBackdropClass} z-0`}></div>
       <div className="relative z-10 w-full h-full flex flex-col" onClick={e => e.stopPropagation()}>
           {!isObsMode && (
-            <div className="flex flex-col px-4 py-3 bg-[#0c1017]/95 backdrop-blur border-b border-white/10 shrink-0 gap-3">
-              {/* Fila superior: Marca + Contexto de fase + Acciones */}
-              <div className="flex flex-wrap justify-between items-center gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 p-1.5 flex items-center justify-center shrink-0 shadow-sm">
-                    <img src={DEFAULT_LOGO} className="w-full h-full object-contain drop-shadow" alt="Logo" onError={(e) => { e.target.style.display = 'none'; }} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-white tracking-wide text-sm">Torneo SCL</span>
-                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#00b4d8]/15 text-[#00b4d8] border border-[#00b4d8]/30">
-                        Temporada 2
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                      <span className="font-semibold text-slate-300">{currentPhaseContext}</span>
-                      {pendingMatchesCount > 0 && (
-                        <>
-                          <span className="text-white/20">•</span>
-                          <span className="text-[#00b4d8] font-semibold">{pendingMatchesCount} {pendingMatchesCount === 1 ? 'partido pendiente' : 'partidos pendientes'}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+            <div className={`flex flex-col shrink-0 gap-4 ${isPage ? 'pb-4' : 'px-4 sm:px-6 py-4 border-b border-line/10'}`}>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <p className="eyebrow mb-1.5">Competición</p>
+                  {isPage ? <h1 className="page-title">Torneo</h1> : <h2 className="font-display text-2xl font-bold text-ink">Torneo</h2>}
+                  <p className="mt-2 text-sm text-ink-2">
+                    {currentPhaseContext}
+                    {pendingMatchesCount > 0 && <span className="text-ink-3"> · <span className="num">{pendingMatchesCount}</span> {pendingMatchesCount === 1 ? 'partido pendiente' : 'partidos pendientes'}</span>}
+                  </p>
                 </div>
-
-                {/* Botones de acción derecha */}
-                <div className="flex items-center gap-2">
-                  {isPage && (
-                    <>
-                      <TournamentActionButton onClick={() => handleCopyObsLink('groups')}>
-                        Link OBS Tabla
-                      </TournamentActionButton>
-                      <TournamentActionButton onClick={() => handleCopyObsLink('bracket')}>
-                        Link OBS Bracket
-                      </TournamentActionButton>
-                      <TournamentActionButton tone="yellow" onClick={() => { const url = `${window.location.origin}/torneo?mode=obs&view=goleadores`; navigator.clipboard.writeText(url); alert('Enlace OBS Goleadores copiado!'); }}>
-                        Link OBS Goleadores
-                      </TournamentActionButton>
-                      <TournamentActionButton tone="slate" onClick={() => { const url = `${window.location.origin}/torneo?mode=obs&view=bracket&tournament=copa-plata`; navigator.clipboard.writeText(url); alert('Enlace OBS Copa de Plata copiado!'); }}>
-                        Link OBS Plata
-                      </TournamentActionButton>
-                    </>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isPage && isAdmin && (
+                    <details className="relative">
+                      <summary className="btn btn-secondary list-none cursor-pointer [&::-webkit-details-marker]:hidden">Enlaces OBS</summary>
+                      <div className="absolute right-0 top-full mt-2 z-dropdown panel p-2 w-56 flex flex-col">
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => handleCopyObsLink('groups')}>Copiar enlace de la tabla</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => handleCopyObsLink('bracket')}>Copiar enlace del bracket</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Goleadores', 'view=goleadores')}>Copiar enlace de goleadores</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Plata', 'view=bracket&tournament=copa-plata')}>Copiar enlace de Copa de Plata</button>
+                      </div>
+                    </details>
                   )}
                   {isAdmin && (
-                    <TournamentActionButton tone="green" onClick={() => (isEditing ? handleSave() : setIsEditing(true))}>
-                      {isEditing ? <><Save className="w-4 h-4 mr-2" /> Guardar</> : <><Edit2 className="w-4 h-4 mr-2" /> Editar</>}
-                    </TournamentActionButton>
+                    <button type="button" className={`btn ${isEditing ? 'btn-primary' : 'btn-secondary'}`} onClick={() => (isEditing ? handleSave() : setIsEditing(true))}>
+                      {isEditing ? <><Save className="w-4 h-4" aria-hidden="true" />Guardar</> : <><Edit2 className="w-4 h-4" aria-hidden="true" />Editar</>}
+                    </button>
                   )}
-                  <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition cursor-pointer" title="Cerrar"><X size={20} /></button>
+                  {!isPage && onClose && (
+                    <button type="button" onClick={onClose} className="btn btn-ghost btn-icon" aria-label="Cerrar torneo"><X className="w-5 h-5" aria-hidden="true" /></button>
+                  )}
                 </div>
               </div>
-
-              {/* Fila de Tabs con badges numéricos y sin (Admin) */}
-              <div className="flex items-center gap-1 bg-[#111722] p-1 rounded-xl border border-white/[0.08] overflow-x-auto max-w-full">
-                <TournamentTabButton id="matches" label="Partidos" icon={CalendarDays} badge={pendingMatchesCount} activeTab={activeTab} onClick={setActiveTab} />
-                <TournamentTabButton id="groups" label="Tabla" icon={LayoutGrid} activeTab={activeTab} onClick={setActiveTab} />
-                <TournamentTabButton id="bracket" label="Brackets" icon={Trophy} activeTab={activeTab} onClick={setActiveTab} />
-                {isAdmin && <TournamentTabButton id="repechaje" label="Plata" icon={Trophy} endIcon={ShieldAlert} activeTab={activeTab} onClick={setActiveTab} />}
-                {isAdmin && <TournamentTabButton id="stats" label="Goleadores" icon={Star} endIcon={ShieldAlert} activeTab={activeTab} onClick={setActiveTab} />}
-              </div>
+              {copiedObs && (
+                <p role="status" className={`text-xs ${copiedObs.ok ? 'text-success-soft' : 'text-warning-soft'}`}>
+                  {copiedObs.ok ? `Enlace OBS de ${copiedObs.label} copiado.` : <>No se pudo copiar. Enlace: <code className="text-ink-2 break-all">{copiedObs.url}</code></>}
+                </p>
+              )}
+              <Tabs label="Secciones del torneo" value={activeTab} onChange={setActiveTab} tabs={[
+                { id: 'matches', label: 'Partidos', icon: CalendarDays, count: pendingMatchesCount || null },
+                { id: 'groups', label: 'Tabla', icon: LayoutGrid },
+                { id: 'bracket', label: 'Brackets', icon: Trophy },
+                { id: 'repechaje', label: 'Copa de Plata', icon: Trophy, hidden: !isAdmin },
+                { id: 'stats', label: 'Goleadores', icon: Star, hidden: !isAdmin },
+              ]} />
             </div>
           )}
 
-          <div className={`flex-grow relative ${isObsMode ? 'flex flex-col items-center justify-center p-0 overflow-hidden' : 'w-full h-full overflow-y-auto overflow-x-hidden p-3 sm:p-6 custom-scrollbar'}`}>
+          <div className={`flex-grow relative ${isObsMode ? 'flex flex-col items-center justify-center p-0 overflow-hidden' : `w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar ${isPage ? '' : 'p-3 sm:p-6'}`}`}>
             <div
               className={isObsMode ? 'w-[1920px] h-[1080px] flex flex-col items-center justify-center transition-transform duration-500 origin-center' : 'w-full max-w-7xl mx-auto flex flex-col'}
               style={{
@@ -451,7 +439,7 @@ export const TournamentModal = memo(function TournamentModal({
   if (isPage) {
     return (
       <TournamentTeamsContext.Provider value={teamOptions}>
-        <div className={`w-full h-full animate-in fade-in duration-300 ${tournamentShellClass}`}>
+        <div className="mx-auto w-full max-w-page h-full min-h-[32rem] flex flex-col relative text-ink">
           {content}
         </div>
       </TournamentTeamsContext.Provider>

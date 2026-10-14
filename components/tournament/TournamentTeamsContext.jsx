@@ -10,7 +10,7 @@ export const TeamSelect = memo(function TeamSelect({ value, onChange, className 
     <select
       value={currentValue}
       onChange={event => onChange(event.target.value)}
-      className={`bg-[#0c1017] text-white rounded-lg border border-white/10 px-2 py-1 outline-none focus:border-[#00b4d8] text-xs transition-colors ${className}`}
+      className={`bg-surface text-ink rounded-lg border border-line/[0.12] px-2 py-1 outline-none focus:border-accent text-xs transition-colors ${className}`}
     >
       <option value="">Seleccionar club...</option>
       {hasCurrentValue && <option value={currentValue}>{currentValue}</option>}

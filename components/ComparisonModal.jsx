@@ -1,6 +1,6 @@
 import React, { useMemo, memo } from 'react';
 import { Radar } from 'react-chartjs-2';
-import { X, Target } from 'lucide-react';
+import { X, Target, Check } from 'lucide-react';
 import { STAT_NAMES_MAP, STATS_JUGADOR_CAMPO, STATS_PORTERO, PLAYER_SKILLS_MAP } from '../utils/constants.js';
 import { getPosColorClass, getStatAndOvrColorClass, formatPriceShort } from '../utils/helpers.js';
 import { BaseModal } from './ui/BaseModal.jsx';
@@ -31,10 +31,10 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
       {
         label: playerA.Name,
         data: dataA,
-        backgroundColor: 'rgba(0, 180, 216, 0.20)',
-        borderColor: '#00b4d8',
+        backgroundColor: 'rgba(58, 102, 196, 0.20)',
+        borderColor: '#3a66c4',
         borderWidth: 2,
-        pointBackgroundColor: '#00b4d8',
+        pointBackgroundColor: '#3a66c4',
         pointBorderColor: '#ffffff',
         pointRadius: 3.5,
         pointHoverRadius: 5,
@@ -108,29 +108,29 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
     }
 
     return (
-      <div className="py-2 px-1 border-b border-white/[0.04] last:border-0 flex flex-col gap-1.5 transition-colors hover:bg-white/[0.02] rounded-lg">
+      <div className="py-2 px-1 border-b border-line/[0.08] last:border-0 flex flex-col gap-1.5 transition-colors hover:bg-white/[0.02] rounded-lg">
         {/* Fila superior: Valores numéricos y nombre */}
         <div className="flex items-center justify-between text-xs sm:text-sm">
           {/* Valor A */}
           <div className="flex items-center gap-1.5 min-w-[3.2rem]">
             <span
               className={`stat-value ${colorClassA} px-2 py-0.5 rounded-md font-mono font-bold text-xs sm:text-sm tabular-nums min-w-[2.2rem] text-center inline-flex items-center justify-center transition-all ${
-                isAWin ? 'ring-2 ring-cyan-400/80 shadow-[0_0_8px_rgba(0,180,216,0.35)] scale-105' : 'opacity-70'
+                isAWin ? 'ring-2 ring-accent/80 shadow-[0_0_8px_rgba(58, 102, 196,0.35)] scale-105' : 'opacity-70'
               }`}
             >
               {numA}
             </span>
-            {isAWin && <span className="text-[10px] text-cyan-400 font-black hidden sm:inline">▲</span>}
+            {isAWin && <span className="text-[10px] text-accent font-bold hidden sm:inline">▲</span>}
           </div>
 
           {/* Nombre de la estadística */}
-          <span className="flex-1 text-center font-semibold text-slate-300 truncate px-2 text-xs sm:text-sm">
+          <span className="flex-1 text-center font-semibold text-ink-2 truncate px-2 text-xs sm:text-sm">
             {label}
           </span>
 
           {/* Valor B */}
           <div className="flex items-center justify-end gap-1.5 min-w-[3.2rem]">
-            {isBWin && <span className="text-[10px] text-orange-400 font-black hidden sm:inline">▲</span>}
+            {isBWin && <span className="text-[10px] text-orange-400 font-bold hidden sm:inline">▲</span>}
             <span
               className={`stat-value ${colorClassB} px-2 py-0.5 rounded-md font-mono font-bold text-xs sm:text-sm tabular-nums min-w-[2.2rem] text-center inline-flex items-center justify-center transition-all ${
                 isBWin ? 'ring-2 ring-orange-400/80 shadow-[0_0_8px_rgba(251,146,60,0.35)] scale-105' : 'opacity-70'
@@ -147,7 +147,7 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
           <div className="flex-1 bg-white/[0.07] rounded-full h-full overflow-hidden flex justify-end">
             <div
               className={`h-full rounded-full transition-all duration-300 ${colorClassA} ${
-                isAWin ? 'opacity-100 shadow-[0_0_6px_rgba(0,180,216,0.3)]' : 'opacity-40'
+                isAWin ? 'opacity-100 shadow-[0_0_6px_rgba(58, 102, 196,0.3)]' : 'opacity-40'
               }`}
               style={{ width: `${pctA}%` }}
             />
@@ -184,12 +184,12 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
       <div className="flex flex-col h-full min-h-0 relative">
 
         {/* HEADER DUELO STICKY */}
-        <div className="sticky top-0 z-30 bg-[#0c1017] p-3 sm:p-4 pr-12 sm:pr-4 border-b border-white/[0.08] flex justify-between items-center shrink-0">
+        <div className="sticky top-0 z-30 bg-surface p-3 sm:p-4 pr-12 sm:pr-4 border-b border-line/[0.12] flex justify-between items-center shrink-0">
 
           {/* JUGADOR A */}
           <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
             <div className="relative shrink-0">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-slate-700 bg-slate-800 shadow-sm">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-line/20 bg-raised shadow-sm">
                 <img
                   src={`/fotos_jugadores/${playerA.Id}.webp`}
                   alt={playerA.Name}
@@ -202,19 +202,19 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
               </div>
             </div>
             <div className="min-w-0">
-              <h3 className="text-xs sm:text-base font-bold text-white leading-tight truncate">
+              <h3 className="text-xs sm:text-base font-bold text-ink leading-tight truncate">
                 {playerA.Name}
               </h3>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded !text-black ${getPosColorClass(playerA.POS_NOMBRE)}`}>
                   {playerA.POS_NOMBRE}
                 </span>
-                <span className="text-xs font-semibold text-slate-300 tabular-nums">
+                <span className="text-xs font-semibold text-ink-2 tabular-nums">
                   {formatPriceShort(playerA.Precio)}
                 </span>
                 {playerA.PlayingStyle && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
-                    <Target className="w-3 h-3 text-slate-400" />
+                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-ink-3 bg-raised px-1.5 py-0.5 rounded border border-line/20">
+                    <Target className="w-3 h-3 text-ink-3" />
                     {playerA.PlayingStyle}
                   </span>
                 )}
@@ -224,7 +224,7 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
 
           {/* CENTRO: DUEL BADGE */}
           <div className="flex flex-col items-center justify-center px-2 shrink-0">
-            <span className="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 tabular-nums">
+            <span className="px-2.5 py-1 rounded-full bg-raised border border-line/20 text-xs font-semibold text-ink-2 tabular-nums">
               {ovrDiff > 0 ? `+${ovrDiff} A` : ovrDiff < 0 ? `+${Math.abs(ovrDiff)} B` : 'PARIDAD'}
             </span>
           </div>
@@ -232,17 +232,17 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
           {/* JUGADOR B */}
           <div className="flex items-center gap-3 sm:gap-4 flex-1 justify-end text-right min-w-0">
             <div className="min-w-0">
-              <h3 className="text-xs sm:text-base font-bold text-white leading-tight truncate">
+              <h3 className="text-xs sm:text-base font-bold text-ink leading-tight truncate">
                 {playerB.Name}
               </h3>
               <div className="flex items-center gap-2 mt-1 justify-end flex-wrap">
                 {playerB.PlayingStyle && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
-                    <Target className="w-3 h-3 text-slate-400" />
+                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-ink-3 bg-raised px-1.5 py-0.5 rounded border border-line/20">
+                    <Target className="w-3 h-3 text-ink-3" />
                     {playerB.PlayingStyle}
                   </span>
                 )}
-                <span className="text-xs font-semibold text-slate-300 tabular-nums">
+                <span className="text-xs font-semibold text-ink-2 tabular-nums">
                   {formatPriceShort(playerB.Precio)}
                 </span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded !text-black ${getPosColorClass(playerB.POS_NOMBRE)}`}>
@@ -251,7 +251,7 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
               </div>
             </div>
             <div className="relative shrink-0">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-slate-700 bg-slate-800 shadow-sm">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-line/20 bg-raised shadow-sm">
                 <img
                   src={`/fotos_jugadores/${playerB.Id}.webp`}
                   alt={playerB.Name}
@@ -267,7 +267,7 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
 
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 z-50 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-colors"
+            className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 z-50 p-1.5 rounded-lg bg-raised/80 hover:bg-overlay text-ink-3 hover:text-ink border border-line/20 transition-colors"
             title="Cerrar"
             aria-label="Cerrar comparador"
           >
@@ -281,15 +281,15 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
 
             {/* COLUMNA IZQUIERDA: RADAR Y FÍSICO */}
             <div className="lg:col-span-4 space-y-4">
-              <div className="bg-[#111722] p-4 rounded-xl border border-slate-800 shadow-sm flex flex-col items-center justify-center">
+              <div className="bg-raised p-4 rounded-xl border border-line/20 shadow-sm flex flex-col items-center justify-center">
                 <div className="w-full flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-300">Superposición de atributos</span>
+                  <span className="text-xs font-semibold text-ink-2">Superposición de atributos</span>
                   <div className="flex items-center gap-3 text-xs font-medium">
-                    <span className="flex items-center gap-1.5 text-slate-300">
+                    <span className="flex items-center gap-1.5 text-ink-2">
                       <span className="w-2 h-2 rounded-full bg-blue-500" />
                       {playerA.Name.split(' ').pop()}
                     </span>
-                    <span className="flex items-center gap-1.5 text-slate-300">
+                    <span className="flex items-center gap-1.5 text-ink-2">
                       <span className="w-2 h-2 rounded-full bg-amber-500" />
                       {playerB.Name.split(' ').pop()}
                     </span>
@@ -300,8 +300,8 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
                 </div>
               </div>
 
-              <div className="bg-[#111722] p-4 sm:p-5 rounded-xl border border-slate-800 shadow-sm">
-                <h4 className="text-xs sm:text-sm font-semibold text-white mb-3 text-center border-b border-slate-800 pb-2">
+              <div className="bg-raised p-4 sm:p-5 rounded-xl border border-line/20 shadow-sm">
+                <h4 className="text-xs sm:text-sm font-semibold text-ink mb-3 text-center border-b border-line/20 pb-2">
                   Biometría y Perfil
                 </h4>
                 <StatBarRow label="Edad" valA={playerA.Age} valB={playerB.Age} isWeakFoot={false} />
@@ -314,8 +314,8 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
             <div className="lg:col-span-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(statGroups).map(([groupName, statKeys]) => (
-                  <div key={groupName} className="bg-[#111722] p-4 sm:p-5 rounded-xl border border-slate-800 shadow-sm transition">
-                    <h4 className="text-xs sm:text-sm font-semibold text-white mb-3 text-center border-b border-slate-800 pb-2">
+                  <div key={groupName} className="bg-raised p-4 sm:p-5 rounded-xl border border-line/20 shadow-sm transition">
+                    <h4 className="text-xs sm:text-sm font-semibold text-ink mb-3 text-center border-b border-line/20 pb-2">
                       {groupName}
                     </h4>
                     {statKeys.map(key => {
@@ -329,22 +329,22 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
           </div>
 
           {/* ── HABILIDADES DE JUGADOR COMPARATIVAS ── */}
-          <div className="bg-[#111722] p-4 sm:p-5 rounded-xl border border-slate-800 shadow-sm mt-4">
-            <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-slate-800">
-              <h4 className="text-xs sm:text-sm font-semibold text-white">
+          <div className="bg-raised p-4 sm:p-5 rounded-xl border border-line/20 shadow-sm mt-4">
+            <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-line/20">
+              <h4 className="text-xs sm:text-sm font-semibold text-ink">
                 Habilidades especiales ({skillsA.length} vs {skillsB.length})
               </h4>
-              <div className="flex items-center gap-3 text-xs font-medium text-slate-400">
+              <div className="flex items-center gap-3 text-xs font-medium text-ink-3">
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-blue-500/30 border border-blue-500" /> {playerA.Name.split(' ').pop()}</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500" /> {playerB.Name.split(' ').pop()}</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-slate-700 border border-slate-500" /> Compartidas</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-warning/30 border border-amber-500" /> {playerB.Name.split(' ').pop()}</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-overlay border border-slate-500" /> Compartidas</span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Player A Skills */}
               <div className="space-y-1.5">
-                <div className="text-xs font-medium text-slate-300">
+                <div className="text-xs font-medium text-ink-2">
                   {playerA.Name} ({skillsA.length})
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -356,23 +356,23 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
                           key={skill}
                           className={`text-xs font-medium px-2.5 py-1 rounded-md border ${
                             isShared
-                              ? 'bg-slate-800/90 text-slate-200 border-slate-700'
+                              ? 'bg-raised/90 text-ink-2 border-line/20'
                               : 'bg-blue-500/10 text-blue-300 border-blue-500/25'
                           }`}
                         >
-                          {skill} {isShared && '✓'}
+                          {skill}{isShared && <Check className="w-3 h-3 inline ml-1" aria-label="en común" />}
                         </span>
                       );
                     })
                   ) : (
-                    <span className="text-xs text-slate-500 italic">Sin habilidades especiales</span>
+                    <span className="text-xs text-ink-3 italic">Sin habilidades especiales</span>
                   )}
                 </div>
               </div>
 
               {/* Player B Skills */}
               <div className="space-y-1.5">
-                <div className="text-xs font-medium text-slate-300">
+                <div className="text-xs font-medium text-ink-2">
                   {playerB.Name} ({skillsB.length})
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -384,16 +384,16 @@ export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClos
                           key={skill}
                           className={`text-xs font-medium px-2.5 py-1 rounded-md border ${
                             isShared
-                              ? 'bg-slate-800/90 text-slate-200 border-slate-700'
-                              : 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+                              ? 'bg-raised/90 text-ink-2 border-line/20'
+                              : 'bg-warning/10 text-warning-soft border-warning/25'
                           }`}
                         >
-                          {skill} {isShared && '✓'}
+                          {skill}{isShared && <Check className="w-3 h-3 inline ml-1" aria-label="en común" />}
                         </span>
                       );
                     })
                   ) : (
-                    <span className="text-xs text-slate-500 italic">Sin habilidades especiales</span>
+                    <span className="text-xs text-ink-3 italic">Sin habilidades especiales</span>
                   )}
                 </div>
               </div>

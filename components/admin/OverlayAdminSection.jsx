@@ -176,8 +176,8 @@ export const OverlayAdminSection = memo(function OverlayAdminSection({
               ['showLowerThird', 'Lower third'],
               ['showTicker', 'Ticker'],
             ].map(([field, label]) => (
-              <label key={field} className={`flex items-center justify-between rounded-xl border px-4 py-3 cursor-pointer transition ${form[field] ? 'bg-blue-500/10 border-blue-500/50 text-white' : 'bg-black/30 border-slate-700/70 text-slate-400 hover:bg-white/5'}`}>
-                <span className="font-semibold text-sm text-slate-200">{label}</span>
+              <label key={field} className={`flex items-center justify-between rounded-xl border px-4 py-3 cursor-pointer transition ${form[field] ? 'bg-blue-500/10 border-blue-500/50 text-ink' : 'bg-black/30 border-line/15 text-ink-3 hover:bg-white/5'}`}>
+                <span className="font-semibold text-sm text-ink-2">{label}</span>
                 <input
                   type="checkbox"
                   checked={Boolean(form[field])}

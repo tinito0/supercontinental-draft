@@ -54,21 +54,21 @@ function SlotRow({ slot, state, editable, cfg, onImport }) {
   };
 
   return (
-    <li className="border-t border-white/[0.04] py-2">
+    <li className="border-t border-line/[0.08] py-2">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="w-40 text-slate-300 font-bold">{slot.label}</span>
-        <code className="text-slate-400">{state.file || '—'}{state.ext || ''}</code>
+        <span className="w-40 text-ink-2 font-bold">{slot.label}</span>
+        <code className="text-ink-3">{state.file || '—'}{state.ext || ''}</code>
         <Pill tone={tone}>{text}</Pill>
         {editable && (
           <>
             {!slot.derived && <input value={name} onChange={e => setName(e.target.value)} placeholder={state.file || 'nombre_archivo'} aria-label={`Nombre de archivo para ${slot.label}`}
-              className="w-40 bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white" />}
+              className="w-40 input min-h-9" />}
             <input ref={inputRef} type="file" accept=".ftex,.dds,.png,.jpg,.jpeg,.webp" hidden onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
             <Button disabled={busy} onClick={() => inputRef.current?.click()}><Upload className="w-3.5 h-3.5" />{busy ? 'Convirtiendo…' : 'Importar'}</Button>
           </>
         )}
       </div>
-      {result && <p className="text-[11px] text-emerald-300 mt-1">Importada y verificada: {result}</p>}
+      {result && <p className="text-[11px] text-success-soft mt-1">Importada y verificada: {result}</p>}
       <ErrorText error={error} />
     </li>
   );
@@ -81,9 +81,9 @@ function FontLibrary({ kits, version, cfg, editable, onAssign }) {
       {FONT_SLOTS.map(slot => {
         const current = getKitValue(cfg, slot.key) || '';
         return (
-          <label key={slot.kind} className="flex flex-col gap-1 text-[11px] text-slate-400">{slot.label}
+          <label key={slot.kind} className="flex flex-col gap-1 text-[11px] text-ink-3">{slot.label}
             <select value={current} disabled={!editable} onChange={e => onAssign(slot.key, e.target.value)}
-              className="bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white">
+              className="select min-h-9">
               {slot.kind === 'chest' && <option value="">(sin número en el pecho)</option>}
               {!lib[slot.kind].some(f => f.file === current) && current && <option value={current}>{current}</option>}
               {lib[slot.kind].map(f => (
@@ -93,7 +93,7 @@ function FontLibrary({ kits, version, cfg, editable, onAssign }) {
           </label>
         );
       })}
-      <p className="sm:col-span-2 text-[11px] text-slate-500">
+      <p className="sm:col-span-2 text-[11px] text-ink-3">
         Solo se cambia el nombre en el config.txt. El kit-server busca la textura en la carpeta de este kit y luego en los CPK; si la fuente vive en la carpeta de otro equipo, importá el archivo acá.
       </p>
     </div>
@@ -140,24 +140,24 @@ function FontGenerator({ editable, onImport }) {
   };
 
   const set = (k, v) => setOpts(o => ({ ...o, [k]: v }));
-  const input = 'bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white';
+  const input = 'input min-h-9';
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-2 text-[11px] text-slate-400">
+      <div className="flex flex-wrap items-end gap-2 text-[11px] text-ink-3">
         <label className="flex flex-col gap-1">Fuente (.ttf/.otf/.woff)
-          <input type="file" accept=".ttf,.otf,.woff,.woff2" disabled={!editable} onChange={e => e.target.files[0] && loadFont(e.target.files[0])} className="text-xs text-slate-300" />
+          <input type="file" accept=".ttf,.otf,.woff,.woff2" disabled={!editable} onChange={e => e.target.files[0] && loadFont(e.target.files[0])} className="text-xs text-ink-2" />
         </label>
         <label className="flex flex-col gap-1">Hoja
-          <select value={kind} onChange={e => setKind(e.target.value)} className={input}>{FONT_SLOTS.map(s => <option key={s.kind} value={s.kind}>{s.label}</option>)}</select>
+          <select value={kind} onChange={e => setKind(e.target.value)} className="select min-h-9">{FONT_SLOTS.map(s => <option key={s.kind} value={s.kind}>{s.label}</option>)}</select>
         </label>
         <label className="flex flex-col gap-1">Ancho
-          <select value={width} onChange={e => setWidth(Number(e.target.value))} className={input}>{FONT_WIDTHS.map(w => <option key={w} value={w}>{w}x{w / FONT_SLOTS.find(s => s.kind === kind).aspect}</option>)}</select>
+          <select value={width} onChange={e => setWidth(Number(e.target.value))} className="select min-h-9">{FONT_WIDTHS.map(w => <option key={w} value={w}>{w}x{w / FONT_SLOTS.find(s => s.kind === kind).aspect}</option>)}</select>
         </label>
         <label className="flex flex-col gap-1">Relleno<input type="color" value={opts.fill} onChange={e => set('fill', e.target.value)} className="w-10 h-7 bg-transparent" /></label>
         <label className="flex flex-col gap-1">Borde<input type="number" min={0} max={20} value={opts.outline} onChange={e => set('outline', Number(e.target.value))} className={`${input} w-16`} /></label>
         <label className="flex flex-col gap-1">Color borde<input type="color" value={opts.outlineColor} onChange={e => set('outlineColor', e.target.value)} className="w-10 h-7 bg-transparent" /></label>
         <label className="flex flex-col gap-1">Peso
-          <select value={opts.weight} onChange={e => set('weight', Number(e.target.value))} className={input}>{[400, 500, 600, 700, 800, 900].map(w => <option key={w}>{w}</option>)}</select>
+          <select value={opts.weight} onChange={e => set('weight', Number(e.target.value))} className="select min-h-9">{[400, 500, 600, 700, 800, 900].map(w => <option key={w}>{w}</option>)}</select>
         </label>
         <label className="flex items-center gap-1"><input type="checkbox" checked={opts.italic} onChange={e => set('italic', e.target.checked)} />Itálica</label>
         <label className="flex flex-col gap-1">Ancho de letra<input type="range" min={0.6} max={1.2} step={0.05} value={opts.widthScale} onChange={e => set('widthScale', Number(e.target.value))} /></label>
@@ -167,9 +167,9 @@ function FontGenerator({ editable, onImport }) {
         <div className="rounded-lg bg-[repeating-conic-gradient(#1e293b_0%_25%,#0f172a_0%_50%)] [background-size:16px_16px] p-2 overflow-x-auto">
           <canvas ref={preview} className="w-full h-auto" aria-label="Vista previa de la hoja de fuente" />
         </div>
-      ) : <p className="text-xs text-slate-500">Cargá una fuente para ver la hoja que se va a generar (las casillas siguen las plantillas de Letters/Numbers Template).</p>}
+      ) : <p className="text-xs text-ink-3">Cargá una fuente para ver la hoja que se va a generar (las casillas siguen las plantillas de Letters/Numbers Template).</p>}
       <Button variant="primary" disabled={!family || !editable || busy} onClick={generate}><Wand2 className="w-3.5 h-3.5" />{busy ? 'Generando…' : 'Generar y aplicar a este kit'}</Button>
-      {done && <p className="text-[11px] text-emerald-300">Generada y verificada: {done}. Se exporta junto al config.txt.</p>}
+      {done && <p className="text-[11px] text-success-soft">Generada y verificada: {done}. Se exporta junto al config.txt.</p>}
       <ErrorText error={error} />
     </div>
   );
@@ -193,7 +193,7 @@ export function PesKitTextures({ pes, teamId, kit, cfg, editable, onApply }) {
             <SlotRow key={slot.slot} slot={slot} state={slotStatus(kits, teamId, kit, cfg, slot)} editable={editable} cfg={cfg} onImport={importTexture} />
           ))}
         </ul>
-        <p className="mt-2 text-[11px] text-slate-500">
+        <p className="mt-2 text-[11px] text-ink-3">
           .ftex y .dds se guardan tal cual (se verifica su estructura). PNG/JPG/WebP se convierten a FTEX DXT5 en potencia de 2; las hojas de fuente deben tener proporción 4:1 (letras) u 8:1 (números). Las texturas no se prueban dentro del juego.
         </p>
       </Card>

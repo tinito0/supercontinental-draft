@@ -15,29 +15,29 @@ export const StatsView = memo(function StatsView({
       <TournamentSectionTitle title="LÍDERES INDIVIDUALES" subtitle="ESTADÍSTICAS DEL TORNEO" />
       <div className={`w-full ${isObsMode ? 'grid grid-cols-2 gap-12 max-w-[1500px] mt-8' : 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-4'}`}>
         {/* GOLEADORES */}
-        <div className="bg-white dark:bg-[#0c1017] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="bg-slate-50 dark:bg-slate-900/80 px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className=" bg-surface rounded-xl border border-line/20 shadow-sm overflow-hidden">
+          <div className=" bg-surface/80 px-4 py-3 border-b border-line/20 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <div className="w-7 h-7 rounded-lg bg-warning/10 flex items-center justify-center text-warning-soft">
                 <Trophy className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Máximos Goleadores</h3>
+              <h3 className="text-sm font-bold text-ink uppercase tracking-wide">Máximos Goleadores</h3>
             </div>
-            <span className="text-xs text-slate-400 font-medium">Goles</span>
+            <span className="text-xs text-ink-3 font-medium">Goles</span>
           </div>
-          <div className="p-3 space-y-2 divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="p-3 space-y-2 divide-y divide-line/[0.08]">
             {localData.topScorers.map((player, idx) => {
               const photoUrl = player.photoUrl || (player.playerId ? `/fotos_jugadores/${player.playerId}.webp` : getPlayerPhoto?.(player.name));
 
               return (
-                <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
+                <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-amber-500 text-white shadow-sm' : idx === 1 ? 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200' : idx === 2 ? 'bg-amber-700/70 text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-amber-500 text-ink shadow-sm' : idx === 1 ? ' bg-overlay text-ink-2' : idx === 2 ? 'bg-amber-700/70 text-ink' : ' text-ink-3'}`}>
                       {idx + 1}
                     </div>
 
                     {/* Foto del jugador con mini escudo del club */}
-                    <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-black/40 border border-white/10 shrink-0 shadow-sm">
+                    <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-black/40 border border-line/[0.12] shrink-0 shadow-sm">
                       <img
                         src={photoUrl || `https://placehold.co/32x32/111/555?text=${(player.name || '?').substring(0, 1)}`}
                         alt={player.name}
@@ -57,22 +57,22 @@ export const StatsView = memo(function StatsView({
                     <div className="flex flex-col min-w-0">
                       {isEditing ? (
                         <>
-                          <input placeholder="Nombre" value={player.name} onChange={e => updateStat('topScorers', idx, 'name', e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white px-2 py-1 mb-1 rounded border border-slate-300 dark:border-slate-700 text-xs"/>
-                          <input placeholder="Club" value={player.team} onChange={e => updateStat('topScorers', idx, 'team', e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-xs"/>
+                          <input placeholder="Nombre" value={player.name} onChange={e => updateStat('topScorers', idx, 'name', e.target.value)} className=" bg-surface text-ink px-2 py-1 mb-1 rounded border border-line/20 text-xs"/>
+                          <input placeholder="Club" value={player.team} onChange={e => updateStat('topScorers', idx, 'team', e.target.value)} className=" bg-surface text-ink-3 px-2 py-1 rounded border border-line/20 text-xs"/>
                         </>
                       ) : (
                         <>
-                          <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">{player.name || '—'}</span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{player.team || 'Sin equipo'}</span>
+                          <span className="text-xs sm:text-sm font-semibold text-ink truncate">{player.name || '—'}</span>
+                          <span className="text-[11px] text-ink-3 truncate">{player.team || 'Sin equipo'}</span>
                         </>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 pl-3">
                     {isEditing ? (
-                      <input type="number" value={player.goals} onChange={e => updateStat('topScorers', idx, 'goals', e.target.value)} className="w-14 bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 text-center font-bold text-base rounded p-1 border border-sky-300 dark:border-sky-800" />
+                      <input type="number" value={player.goals} onChange={e => updateStat('topScorers', idx, 'goals', e.target.value)} className="w-14 bg-accent-deep/40 text-accent text-center font-bold text-base rounded p-1 border border-accent-deep" />
                     ) : (
-                      <div className="min-w-[32px] text-right font-bold text-sm sm:text-base text-sky-600 dark:text-sky-400 tabular-nums">
+                      <div className="min-w-[32px] text-right font-bold text-sm sm:text-base text-accent tabular-nums">
                         {player.goals || 0}
                       </div>
                     )}
@@ -84,29 +84,29 @@ export const StatsView = memo(function StatsView({
         </div>
 
         {/* ASISTIDORES */}
-        <div className="bg-white dark:bg-[#0c1017] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="bg-slate-50 dark:bg-slate-900/80 px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className=" bg-surface rounded-xl border border-line/20 shadow-sm overflow-hidden">
+          <div className=" bg-surface/80 px-4 py-3 border-b border-line/20 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center text-success-soft">
                 <Star className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Máximos Asistidores</h3>
+              <h3 className="text-sm font-bold text-ink uppercase tracking-wide">Máximos Asistidores</h3>
             </div>
-            <span className="text-xs text-slate-400 font-medium">Asist</span>
+            <span className="text-xs text-ink-3 font-medium">Asist</span>
           </div>
-          <div className="p-3 space-y-2 divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="p-3 space-y-2 divide-y divide-line/[0.08]">
             {localData.topAssisters.map((player, idx) => {
               const photoUrl = player.photoUrl || (player.playerId ? `/fotos_jugadores/${player.playerId}.webp` : getPlayerPhoto?.(player.name));
 
               return (
-                <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
+                <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-emerald-500 text-white shadow-sm' : idx === 1 ? 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200' : idx === 2 ? 'bg-emerald-700/70 text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-emerald-500 text-ink shadow-sm' : idx === 1 ? ' bg-overlay text-ink-2' : idx === 2 ? 'bg-emerald-700/70 text-ink' : ' text-ink-3'}`}>
                       {idx + 1}
                     </div>
 
                     {/* Foto del jugador con mini escudo del club */}
-                    <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-black/40 border border-white/10 shrink-0 shadow-sm">
+                    <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-black/40 border border-line/[0.12] shrink-0 shadow-sm">
                       <img
                         src={photoUrl || `https://placehold.co/32x32/111/555?text=${(player.name || '?').substring(0, 1)}`}
                         alt={player.name}
@@ -126,22 +126,22 @@ export const StatsView = memo(function StatsView({
                     <div className="flex flex-col min-w-0">
                       {isEditing ? (
                         <>
-                          <input placeholder="Nombre" value={player.name} onChange={e => updateStat('topAssisters', idx, 'name', e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white px-2 py-1 mb-1 rounded border border-slate-300 dark:border-slate-700 text-xs"/>
-                          <input placeholder="Club" value={player.team} onChange={e => updateStat('topAssisters', idx, 'team', e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-xs"/>
+                          <input placeholder="Nombre" value={player.name} onChange={e => updateStat('topAssisters', idx, 'name', e.target.value)} className=" bg-surface text-ink px-2 py-1 mb-1 rounded border border-line/20 text-xs"/>
+                          <input placeholder="Club" value={player.team} onChange={e => updateStat('topAssisters', idx, 'team', e.target.value)} className=" bg-surface text-ink-3 px-2 py-1 rounded border border-line/20 text-xs"/>
                         </>
                       ) : (
                         <>
-                          <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">{player.name || '—'}</span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{player.team || 'Sin equipo'}</span>
+                          <span className="text-xs sm:text-sm font-semibold text-ink truncate">{player.name || '—'}</span>
+                          <span className="text-[11px] text-ink-3 truncate">{player.team || 'Sin equipo'}</span>
                         </>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 pl-3">
                     {isEditing ? (
-                      <input type="number" value={player.assists} onChange={e => updateStat('topAssisters', idx, 'assists', e.target.value)} className="w-14 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-center font-bold text-base rounded p-1 border border-emerald-300 dark:border-emerald-800" />
+                      <input type="number" value={player.assists} onChange={e => updateStat('topAssisters', idx, 'assists', e.target.value)} className="w-14 bg-emerald-950/40 text-success-soft text-center font-bold text-base rounded p-1 border border-emerald-800" />
                     ) : (
-                      <div className="min-w-[32px] text-right font-bold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 tabular-nums">
+                      <div className="min-w-[32px] text-right font-bold text-sm sm:text-base text-success-soft tabular-nums">
                         {player.assists || 0}
                       </div>
                     )}

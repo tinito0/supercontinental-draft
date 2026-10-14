@@ -1,14 +1,91 @@
 import React, { memo, useMemo } from 'react';
-import {
-  TrendingUp, Users, DollarSign, ArrowRight, Shield,
-  Award, Flame, Calendar, Activity, Zap
-} from 'lucide-react';
-import { DEFAULT_LOGO, DEFAULT_BUDGET } from '../utils/constants.js';
-import { formatPriceShort, getStatAndOvrColorClass } from '../utils/helpers.js';
+import { ArrowRight, Users, ShoppingBag, CalendarDays, Trophy } from 'lucide-react';
+import { DEFAULT_LOGO } from '../utils/constants.js';
+import { formatPriceShort, getStatAndOvrColorClass, getPosColorClass } from '../utils/helpers.js';
+import { Page } from './ui/Page.jsx';
+import { PageHeader, SectionHeader } from './ui/PageHeader.jsx';
+import { Stat } from './ui/Stat.jsx';
+import { Button } from './ui/Button.jsx';
+import { EmptyState } from './ui/EmptyState.jsx';
+
+const sameName = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+const goalDiff = t => (Number(t.gf) || 0) - (Number(t.gc) || 0);
+const RESULT = {
+  V: { label: 'Victoria', className: 'bg-success text-canvas' },
+  E: { label: 'Empate', className: 'bg-warning text-canvas' },
+  D: { label: 'Derrota', className: 'bg-danger text-ink' },
+};
+
+function Crest({ src, name, className = '' }) {
+  return (
+    <img src={src || DEFAULT_LOGO} alt={name ? `Escudo de ${name}` : ''} width={40} height={40} loading="lazy"
+      className={`object-contain ${className}`} onError={e => { e.currentTarget.src = DEFAULT_LOGO; }} />
+  );
+}
+
+/** Next (or last) match of the user's club, scoreboard style. */
+function MatchFocus({ match, teamName, getLogo }) {
+  const completed = match.status === 'completed';
+  const side = (name, fallback) => {
+    const mine = sameName(name, teamName);
+    return (
+      <div className="flex flex-col items-center text-center gap-2 min-w-0">
+        <Crest src={getLogo(name)} name={name} className={`w-14 h-14 sm:w-16 sm:h-16 ${mine ? '' : 'opacity-90'}`} />
+        <span className={`text-sm font-semibold truncate max-w-full ${mine ? 'text-accent-soft' : 'text-ink'}`}>{name || fallback}</span>
+        {mine && <span className="text-[11px] text-ink-3 -mt-1.5">Tu club</span>}
+      </div>
+    );
+  };
+  return (
+    <div>
+      <p className="text-center text-xs text-ink-3">
+        <span className={completed ? 'text-ink-2' : 'text-accent-soft font-semibold'}>{completed ? 'Finalizado' : 'Próximo partido'}</span>
+        {match.round && ` · ${match.round}`}{match.date && ` · ${match.date}`}
+      </p>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6 mt-4">
+        {side(match.homeTeam, 'Local')}
+        {completed ? (
+          <p className="font-display num text-4xl sm:text-5xl font-bold text-ink leading-none whitespace-nowrap" aria-label={`Resultado ${match.homeScore ?? 0} a ${match.awayScore ?? 0}`}>
+            {match.homeScore ?? 0}<span className="text-ink-3 mx-2">–</span>{match.awayScore ?? 0}
+          </p>
+        ) : (
+          <p className="font-display text-2xl font-bold text-ink-3">VS</p>
+        )}
+        {side(match.awayTeam, 'Visitante')}
+      </div>
+    </div>
+  );
+}
+
+function StandingRow({ team, position, isUser, getLogo }) {
+  return (
+    <tr className={isUser ? 'bg-accent/10' : ''}>
+      <td className={`text-center num font-semibold ${position <= 4 ? 'text-success-soft' : 'text-ink-3'}`}>{position}</td>
+      <td>
+        <span className="flex items-center gap-2.5 min-w-0">
+          <Crest src={getLogo(team.name)} className="w-5 h-5 shrink-0" />
+          <span className={`truncate ${isUser ? 'font-semibold text-accent-soft' : 'text-ink'}`}>{team.name}</span>
+          {isUser && <span className="sr-only">(tu club)</span>}
+        </span>
+      </td>
+      <td className="text-center num">{team.pj}</td>
+      <td className="text-center num">{goalDiff(team)}</td>
+      <td className="text-right num font-display text-base font-bold text-ink">{team.pts}</td>
+    </tr>
+  );
+}
+
+function StandingsSkeleton() {
+  return (
+    <div className="space-y-2 p-4" aria-hidden="true">
+      {[...Array(6)].map((_, i) => <div key={i} className="skeleton h-9" />)}
+    </div>
+  );
+}
 
 export const OverviewTab = memo(function OverviewTab({
   userProfile,
-  remainingBudget,
+  remainingBudget: _remainingBudget, // the remaining budget is shown only in the top header
   ownedCart = [],
   tournamentData,
   allTeams = {},
@@ -19,626 +96,171 @@ export const OverviewTab = memo(function OverviewTab({
 }) {
   const teamName = userProfile?.teamName || 'Mi Equipo';
   const logoUrl = userProfile?.logoUrl || DEFAULT_LOGO;
+  const tournamentLoading = isLoading || tournamentData === null;
 
-  // Resolve team logo helper
-  const getLogo = (name) => {
-    if (!name || !allTeams) return DEFAULT_LOGO;
-    const target = name.trim().toLowerCase();
-    const foundId = Object.keys(allTeams).find(
-      id => allTeams[id]?.teamName?.trim().toLowerCase() === target
-    );
-    return foundId ? (allTeams[foundId]?.logoUrl || DEFAULT_LOGO) : DEFAULT_LOGO;
-  };
+  const logoByName = useMemo(() => {
+    const m = new Map();
+    for (const t of Object.values(allTeams || {})) if (t?.teamName) m.set(t.teamName.trim().toLowerCase(), t.logoUrl || DEFAULT_LOGO);
+    return m;
+  }, [allTeams]);
+  const getLogo = name => logoByName.get((name || '').trim().toLowerCase()) || DEFAULT_LOGO;
 
-  // ── 1. User league standings & table info ──
   const leagueTable = useMemo(() => {
-    if (!tournamentData?.league || !Array.isArray(tournamentData.league)) return [];
-    return [...tournamentData.league]
+    if (!Array.isArray(tournamentData?.league)) return [];
+    return tournamentData.league
       .filter(t => t.name && t.name !== 'Club...')
-      .sort((a, b) => {
-        const ptsA = Number(a.pts) || 0;
-        const ptsB = Number(b.pts) || 0;
-        if (ptsB !== ptsA) return ptsB - ptsA;
-        const dgA = (Number(a.gf) || 0) - (Number(a.gc) || 0);
-        const dgB = (Number(b.gf) || 0) - (Number(b.gc) || 0);
-        return dgB - dgA;
-      });
+      .sort((a, b) => (Number(b.pts) || 0) - (Number(a.pts) || 0) || goalDiff(b) - goalDiff(a));
   }, [tournamentData?.league]);
 
-  const userRankIndex = useMemo(() => {
-    if (!teamName || leagueTable.length === 0) return -1;
-    return leagueTable.findIndex(t => t.name?.trim().toLowerCase() === teamName.trim().toLowerCase());
-  }, [leagueTable, teamName]);
-
+  const userRankIndex = useMemo(() => leagueTable.findIndex(t => sameName(t.name, teamName)), [leagueTable, teamName]);
   const userLeagueStats = userRankIndex >= 0 ? leagueTable[userRankIndex] : null;
 
-  // ── 2. User next match / recent match ──
   const userMatches = useMemo(() => {
-    if (!tournamentData?.matches || !Array.isArray(tournamentData.matches)) return [];
-    const tLower = teamName.trim().toLowerCase();
-    return tournamentData.matches.filter(m =>
-      m.homeTeam?.trim().toLowerCase() === tLower ||
-      m.awayTeam?.trim().toLowerCase() === tLower
-    );
+    if (!Array.isArray(tournamentData?.matches)) return [];
+    return tournamentData.matches.filter(m => sameName(m.homeTeam, teamName) || sameName(m.awayTeam, teamName));
   }, [tournamentData?.matches, teamName]);
 
-  const nextMatch = useMemo(() => {
-    return userMatches.find(m => m.status !== 'completed') || null;
-  }, [userMatches]);
+  const finished = useMemo(() => userMatches.filter(m => m.status === 'completed'), [userMatches]);
+  const nextMatch = useMemo(() => userMatches.find(m => m.status !== 'completed') || null, [userMatches]);
+  const lastMatch = finished.length ? finished[finished.length - 1] : null;
 
-  const lastMatch = useMemo(() => {
-    const finished = userMatches.filter(m => m.status === 'completed');
-    return finished.length > 0 ? finished[finished.length - 1] : null;
-  }, [userMatches]);
+  const recentForm = useMemo(() => finished.slice(-5).map(m => {
+    const home = sameName(m.homeTeam, teamName);
+    const mine = Number(home ? m.homeScore : m.awayScore) || 0;
+    const theirs = Number(home ? m.awayScore : m.homeScore) || 0;
+    return mine > theirs ? 'V' : mine === theirs ? 'E' : 'D';
+  }), [finished, teamName]);
 
-  // Forma reciente (últimos 5 partidos: V, E, D)
-  const recentForm = useMemo(() => {
-    const finished = userMatches.filter(m => m.status === 'completed');
-    const tLower = teamName.trim().toLowerCase();
-    return finished.slice(-5).map(m => {
-      const isHome = m.homeTeam?.trim().toLowerCase() === tLower;
-      const myScore = isHome ? Number(m.homeScore ?? 0) : Number(m.awayScore ?? 0);
-      const oppScore = isHome ? Number(m.awayScore ?? 0) : Number(m.homeScore ?? 0);
-      if (myScore > oppScore) return { res: 'V', color: 'bg-emerald-500 text-black', label: 'Victoria' };
-      if (myScore === oppScore) return { res: 'E', color: 'bg-amber-400 text-black', label: 'Empate' };
-      return { res: 'D', color: 'bg-rose-500 text-white', label: 'Derrota' };
-    });
-  }, [userMatches, teamName]);
-
-  // ── 3. Squad stats & star players ──
-  const topPlayers = useMemo(() => {
-    if (!ownedCart || ownedCart.length === 0) return [];
-    return [...ownedCart]
-      .sort((a, b) => (b.OVR_CALCULADO || 0) - (a.OVR_CALCULADO || 0))
-      .slice(0, 5);
-  }, [ownedCart]);
-
-  const averageOvr = useMemo(() => {
-    if (!ownedCart || ownedCart.length === 0) return 0;
-    const sum = ownedCart.reduce((acc, p) => acc + (p.OVR_CALCULADO || 0), 0);
-    return Math.round(sum / ownedCart.length);
-  }, [ownedCart]);
-
-  // Budget calculations
-  const initBudget = userProfile?.budget || DEFAULT_BUDGET;
-  const currentBudget = typeof remainingBudget === 'number' ? remainingBudget : initBudget;
-  const budgetPct = Math.min(100, Math.max(0, (currentBudget / initBudget) * 100));
+  const topPlayers = useMemo(() => [...ownedCart].sort((a, b) => (b.OVR_CALCULADO || 0) - (a.OVR_CALCULADO || 0)).slice(0, 5), [ownedCart]);
+  const averageOvr = useMemo(() => (ownedCart.length ? Math.round(ownedCart.reduce((acc, p) => acc + (p.OVR_CALCULADO || 0), 0) / ownedCart.length) : 0), [ownedCart]);
+  const lastSigning = signingToasts.length ? signingToasts[signingToasts.length - 1]?.playerName : null;
+  const match = nextMatch || lastMatch;
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12 animate-in fade-in duration-300">
+    <Page className="pb-10">
+      <PageHeader
+        eyebrow="Supercontinental League"
+        title={(
+          <span className="flex items-center gap-3 sm:gap-4">
+            <Crest src={logoUrl} name={teamName} className="w-11 h-11 sm:w-14 sm:h-14 shrink-0" />
+            <span className="min-w-0 truncate">{teamName}</span>
+          </span>
+        )}
+        description={lastSigning ? `Último fichaje: ${lastSigning}.` : undefined}
+        actions={(
+          <>
+            <Button variant="secondary" icon={Users} onClick={() => setActiveTab('My Team')}>Mi plantel</Button>
+            <Button variant="primary" iconRight={ArrowRight} onClick={() => setActiveTab('Marketplace')}>Ir al mercado</Button>
+          </>
+        )}
+      />
 
-      {/* ─── HERO COCKPIT SOFASCORE ─── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0c1017] via-[#111722] to-[#0c1017] border border-white/[0.08] p-5 sm:p-7 shadow-xl">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#00b4d8]/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          {/* Identity */}
-          <div className="flex items-center gap-4 sm:gap-5">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/[0.03] border border-white/10 p-2.5 flex items-center justify-center shrink-0 shadow-lg">
-              <img
-                src={logoUrl}
-                alt={teamName}
-                width={80}
-                height={80}
-                className="w-full h-full object-contain drop-shadow"
-                onError={(e) => { e.target.src = DEFAULT_LOGO; }}
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-[#00b4d8]/15 text-[#00b4d8] border border-[#00b4d8]/30">
-                  Supercontinental League
-                </span>
-                <span className="text-xs text-slate-400 font-semibold hidden sm:inline">
-                  Temporada 2
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {teamName}
-              </h1>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <p className="text-xs sm:text-sm text-slate-400">
-                  {ownedCart.length} jugadores · OVR promedio {averageOvr || '---'} · Presupuesto {formatPriceShort(currentBudget / 1000000)}
-                </p>
-                {recentForm.length > 0 && (
-                  <div className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-lg border border-white/5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Forma:</span>
-                    <div className="flex items-center gap-1">
-                      {recentForm.map((f, i) => (
-                        <span
-                          key={i}
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${f.color} shadow-xs`}
-                          title={`${f.label}`}
-                        >
-                          {f.res}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {signingToasts.length > 0 && (
-                  <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Último fichaje:</span>
-                    <span className="text-[11px] font-bold text-emerald-300 truncate max-w-[120px]">
-                      {signingToasts[signingToasts.length - 1]?.playerName || 'Nuevo jugador'}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-black/30 p-2 sm:p-2.5 rounded-xl border border-white/5">
-            {/* Presupuesto */}
-            <div className="p-3 rounded-lg bg-white/[0.02]">
-              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
-                Presupuesto
-              </span>
-              <div className="text-xl sm:text-2xl font-black text-emerald-400 tabular-nums">
-                {formatPriceShort(currentBudget / 1000000)}
-              </div>
-              <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all"
-                  style={{ width: `${budgetPct}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Plantilla */}
-            <div className="p-3 rounded-lg bg-white/[0.02]">
-              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
-                Fichajes
-              </span>
-              <div className="text-xl sm:text-2xl font-black text-white tabular-nums">
-                {ownedCart.length}{' '}
-                <span className="text-xs text-slate-400 font-normal">jugadores</span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-2 truncate">
-                Límite reglamentario
-              </div>
-            </div>
-
-            {/* Media Equipo */}
-            <div className="p-3 rounded-lg bg-white/[0.02]">
-              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
-                Media Plantel
-              </span>
-              <div className="text-xl sm:text-2xl font-black text-[#00b4d8] tabular-nums">
-                {averageOvr > 0 ? averageOvr : '---'}
-              </div>
-              <div className="text-[10px] text-slate-400 mt-2">
-                OVR Promedio
-              </div>
-            </div>
-
-            {/* Posición Tabla */}
-            <div className="p-3 rounded-lg bg-white/[0.02]">
-              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
-                Posición Liga
-              </span>
-              <div className="text-xl sm:text-2xl font-black text-amber-400 tabular-nums">
-                {userRankIndex >= 0 ? `#${userRankIndex + 1}` : '---'}
-              </div>
-              <div className="text-[10px] text-slate-400 mt-2 tabular-nums">
-                {userLeagueStats ? `${userLeagueStats.pts} pts (${userLeagueStats.pj} PJ)` : 'Sin clasif.'}
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 border-y border-line/[0.08] py-5">
+        <Stat label="Jugadores" value={ownedCart.length} hint="en el plantel" />
+        <Stat label="Media del plantel" value={averageOvr || '—'} tone="accent" hint="OVR promedio" />
+        <Stat label="Posición" value={userRankIndex >= 0 ? `${userRankIndex + 1}.º` : '—'}
+          hint={userLeagueStats ? `${userLeagueStats.pts} pts · ${userLeagueStats.pj} PJ` : 'Sin clasificación'} />
+        <div className="min-w-0">
+          <p className="eyebrow">Forma</p>
+          {recentForm.length ? (
+            <ol className="flex items-center gap-1.5 mt-2" aria-label="Últimos resultados, del más viejo al más reciente">
+              {recentForm.map((r, i) => (
+                <li key={i} title={RESULT[r].label} aria-label={RESULT[r].label}
+                  className={`w-7 h-7 rounded-md flex items-center justify-center font-display text-sm font-bold ${RESULT[r].className}`}>{r}</li>
+              ))}
+            </ol>
+          ) : <p className="font-display text-[28px] font-bold leading-none mt-1.5 text-ink-3">—</p>}
+          <p className="mt-1 text-xs text-ink-3">Últimos 5 partidos</p>
         </div>
       </div>
 
-      {/* ─── ONBOARDING BANNER (SI NO TIENE JUGADORES) ─── */}
       {ownedCart.length === 0 && !isLoading && (
-        <div className="rounded-2xl bg-gradient-to-r from-sky-950/40 via-[#111722] to-sky-950/20 border border-[#00b4d8]/30 p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#00b4d8]/15 border border-[#00b4d8]/30 flex items-center justify-center text-[#00b4d8] shrink-0">
-              <Zap className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-white">¡Comienza a armar tu plantilla!</h3>
-              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
-                Tu club aún no tiene futbolistas fichados. Visita el Mercado para explorar jugadores, definir tu Jugador Franquicia y completar tu alineación.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setActiveTab('Marketplace')}
-            className="px-5 py-2.5 bg-[#00b4d8] hover:bg-[#38bdf8] text-[#030712] font-black text-xs rounded-xl shadow-lg transition active:scale-95 shrink-0 cursor-pointer flex items-center justify-center gap-2"
-          >
-            <span>Ir al Mercado</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
+        <EmptyState icon={ShoppingBag} title="Tu plantel está vacío"
+          description="Entrá al mercado para fichar jugadores, elegir a tu jugador franquicia y completar el once."
+          actionLabel="Ir al mercado" onAction={() => setActiveTab('Marketplace')} />
       )}
 
-      {/* ─── MAIN GRID ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* COLUMNA 1 & 2: PARTIDO EN FOCO & TABLA RESUMEN */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* PARTIDO EN FOCO (NEXT MATCH CARD) */}
-          <div className="rounded-2xl bg-[#0c1017] border border-white/[0.08] p-5 shadow-lg">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#00b4d8]" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-white">
-                  {nextMatch ? 'Próximo Encuentro' : lastMatch ? 'Último Partido Jugado' : 'Agenda de Partidos'}
-                </h2>
-              </div>
-              <span className="text-xs text-slate-400 font-medium">
-                {nextMatch?.round || lastMatch?.round || 'Fase Regular'}
-              </span>
-            </div>
-
-            {isLoading || tournamentData === null ? (
-              <div className="bg-[#111722] rounded-xl p-5 border border-white/[0.06] animate-pulse">
-                <div className="h-4 w-28 bg-white/10 rounded mx-auto mb-5" />
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 flex flex-col items-center gap-2">
-                    <div className="w-14 h-14 rounded-2xl bg-white/10" />
-                    <div className="h-3 w-20 bg-white/10 rounded" />
-                  </div>
-                  <div className="px-4 py-2 rounded-lg bg-white/10 w-16 h-8" />
-                  <div className="flex-1 flex flex-col items-center gap-2">
-                    <div className="w-14 h-14 rounded-2xl bg-white/10" />
-                    <div className="h-3 w-20 bg-white/10 rounded" />
-                  </div>
+        <div className="lg:col-span-2 space-y-6 min-w-0">
+          <section className="panel p-5 sm:p-6" aria-labelledby="overview-match">
+            <SectionHeader as="h2" title={<span id="overview-match">{nextMatch ? 'Próximo partido' : lastMatch ? 'Último partido' : 'Partidos'}</span>}
+              actions={<Button size="sm" variant="ghost" icon={CalendarDays} onClick={() => setActiveTab('Tournament')}>Fixture</Button>} />
+            <div className="mt-5">
+              {tournamentLoading ? (
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6" aria-hidden="true">
+                  <div className="skeleton h-24" /><div className="skeleton h-10 w-16" /><div className="skeleton h-24" />
                 </div>
-              </div>
-            ) : nextMatch || lastMatch ? (
-              (() => {
-                const match = nextMatch || lastMatch;
-                const isCompleted = match.status === 'completed';
-                const isHome = match.homeTeam?.trim().toLowerCase() === teamName.trim().toLowerCase();
-                const isAway = match.awayTeam?.trim().toLowerCase() === teamName.trim().toLowerCase();
-
-                return (
-                  <div className="bg-[#111722] rounded-xl p-5 border border-white/[0.06]">
-                    <div className="text-center mb-3">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        isCompleted ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
-                      }`}>
-                        {isCompleted ? 'Finalizado' : 'Próximo Partido'}
-                      </span>
-                      {match.date && (
-                        <span className="text-xs text-slate-400 ml-2 font-medium">
-                          {match.date}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Duelo de Equipos */}
-                    <div className="grid grid-cols-7 items-center gap-2 py-3">
-                      {/* Local */}
-                      <div className="col-span-3 flex flex-col items-center text-center">
-                        <div className={`w-14 h-14 rounded-xl p-2 bg-black/40 border flex items-center justify-center mb-2 shadow-md ${
-                          isHome ? 'border-[#00b4d8] ring-2 ring-[#00b4d8]/20' : 'border-white/10'
-                        }`}>
-                          <img
-                            src={getLogo(match.homeTeam)}
-                            alt={match.homeTeam}
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { e.target.src = DEFAULT_LOGO; }}
-                          />
-                        </div>
-                        <span className={`text-sm font-bold truncate max-w-[140px] ${isHome ? 'text-[#00b4d8]' : 'text-white'}`}>
-                          {match.homeTeam || 'Local'}
-                        </span>
-                        {isHome && (
-                          <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                            (Tu Equipo)
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Marcador o VS */}
-                      <div className="col-span-1 flex flex-col items-center justify-center">
-                        {isCompleted ? (
-                          <div className="flex items-center gap-2 text-2xl sm:text-3xl font-black text-white tabular-nums">
-                            <span>{match.homeScore ?? 0}</span>
-                            <span className="text-slate-500 text-lg">-</span>
-                            <span>{match.awayScore ?? 0}</span>
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-white/[0.05] border border-white/10 flex items-center justify-center text-xs font-black text-slate-400">
-                            VS
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Visitante */}
-                      <div className="col-span-3 flex flex-col items-center text-center">
-                        <div className={`w-14 h-14 rounded-xl p-2 bg-black/40 border flex items-center justify-center mb-2 shadow-md ${
-                          isAway ? 'border-[#00b4d8] ring-2 ring-[#00b4d8]/20' : 'border-white/10'
-                        }`}>
-                          <img
-                            src={getLogo(match.awayTeam)}
-                            alt={match.awayTeam}
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { e.target.src = DEFAULT_LOGO; }}
-                          />
-                        </div>
-                        <span className={`text-sm font-bold truncate max-w-[140px] ${isAway ? 'text-[#00b4d8]' : 'text-white'}`}>
-                          {match.awayTeam || 'Visitante'}
-                        </span>
-                        {isAway && (
-                          <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                            (Tu Equipo)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()
-            ) : (
-              <div className="p-8 text-center bg-[#111722] rounded-xl border border-white/[0.04] text-slate-400 text-sm">
-                No hay partidos programados actualmente en el fixture.
-              </div>
-            )}
-          </div>
-
-          {/* TABLA DE POSICIONES REDUCIDA ESTILO SOFASCORE */}
-          <div className="rounded-2xl bg-[#0c1017] border border-white/[0.08] p-5 shadow-lg">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-4">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-white">
-                  Clasificación de la Liga
-                </h2>
-              </div>
-              <span className="text-xs text-slate-400 font-mono">
-                Top 6
-              </span>
+              ) : match ? (
+                <MatchFocus match={match} teamName={teamName} getLogo={getLogo} />
+              ) : (
+                <p className="py-6 text-center text-sm text-ink-3">Todavía no hay partidos de tu club en el fixture.</p>
+              )}
             </div>
+          </section>
 
-            {isLoading || tournamentData === null ? (
-              <div className="space-y-2.5 animate-pulse py-2">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded bg-white/10" />
-                      <div className="w-5 h-5 rounded-full bg-white/10" />
-                      <div className="w-28 h-3 rounded bg-white/10" />
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="w-6 h-3 rounded bg-white/10" />
-                      <div className="w-6 h-3 rounded bg-white/10" />
-                      <div className="w-8 h-3 rounded bg-white/15" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : leagueTable.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[340px]" aria-label="Tabla de posiciones de la liga">
-                  <caption className="sr-only">Clasificación resumida del torneo - Primeros 6 clubes</caption>
+          <section className="panel-flat overflow-hidden" aria-labelledby="overview-table">
+            <div className="px-5 pt-5 sm:px-6">
+              <SectionHeader title={<span id="overview-table">Clasificación</span>}
+                actions={<Button size="sm" variant="ghost" icon={Trophy} onClick={() => setActiveTab('Tournament')}>Tabla completa</Button>} />
+            </div>
+            {tournamentLoading ? <StandingsSkeleton /> : leagueTable.length > 0 ? (
+              <div className="overflow-x-auto mt-3">
+                <table className="data-table table-fixed [&_td]:px-2 [&_th]:px-2 sm:[&_td]:px-3 sm:[&_th]:px-3">
+                  <caption className="sr-only">Primeros seis clubes de la liga{userRankIndex >= 6 ? ' y la posición de tu club' : ''}</caption>
                   <thead>
-                    <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.06] pb-2">
-                      <th scope="col" className="py-2 px-2 text-center w-8">#</th>
-                      <th scope="col" className="py-2 px-3">Club</th>
-                      <th scope="col" className="py-2 px-2 text-center w-10">PJ</th>
-                      <th scope="col" className="py-2 px-2 text-center w-10">DG</th>
-                      <th scope="col" className="py-2 px-3 text-right w-12 text-white font-extrabold">PTS</th>
-                    </tr>
+                    <tr><th scope="col" className="w-10 !text-center">#</th><th scope="col">Club</th><th scope="col" className="w-12 !text-center">PJ</th><th scope="col" className="w-12 !text-center">DG</th><th scope="col" className="w-14 !text-right">Pts</th></tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.03] text-xs">
-                    {leagueTable.slice(0, 6).map((team, idx) => {
-                      const isUser = team.name?.trim().toLowerCase() === teamName.trim().toLowerCase();
-                      const isTop4 = idx < 4;
-                      const borderClass = isTop4 ? 'border-l-[3px] border-emerald-500' : 'border-l-[3px] border-transparent';
-                      const bgClass = isUser ? 'bg-[#00b4d8]/10' : 'hover:bg-white/[0.03]';
-
-                      return (
-                        <tr key={team.id || idx} className={`${borderClass} ${bgClass} transition-colors h-10`}>
-                          <td className={`text-center font-mono font-bold tabular-nums ${isTop4 ? 'text-emerald-400' : 'text-slate-400'}`}>
-                            {idx + 1}
-                          </td>
-                          <td className="px-3 py-1.5 flex items-center gap-2.5">
-                            <img
-                              src={getLogo(team.name)}
-                              alt=""
-                              width={20}
-                              height={20}
-                              className="w-5 h-5 object-contain shrink-0"
-                              onError={(e) => { e.target.src = DEFAULT_LOGO; }}
-                            />
-                            <span className={`font-semibold truncate max-w-[180px] ${isUser ? 'text-[#00b4d8] font-bold' : 'text-slate-200'}`}>
-                              {team.name}
-                            </span>
-                            {isUser && (
-                              <span className="text-[9px] font-extrabold px-1 py-0.2 rounded bg-[#00b4d8]/20 text-[#00b4d8]">
-                                TÚ
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-2 text-center text-slate-400 tabular-nums">{team.pj}</td>
-                          <td className="px-2 text-center text-slate-400 tabular-nums">
-                            {(Number(team.gf) || 0) - (Number(team.gc) || 0)}
-                          </td>
-                          <td className="px-3 text-right font-black text-white tabular-nums">
-                            {team.pts}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                  <tbody>
+                    {leagueTable.slice(0, 6).map((team, idx) => (
+                      <StandingRow key={team.id || team.name} team={team} position={idx + 1} isUser={sameName(team.name, teamName)} getLogo={getLogo} />
+                    ))}
                     {userRankIndex >= 6 && userLeagueStats && (
-                      <>
-                        <tr className="h-6">
-                          <td colSpan={5} className="text-center text-[10px] text-slate-500">···</td>
-                        </tr>
-                        <tr className="bg-[#00b4d8]/10 border-l-[3px] border-[#00b4d8] transition-colors h-10">
-                          <td className="text-center font-mono font-bold tabular-nums text-slate-400">{userRankIndex + 1}</td>
-                          <td className="px-3 py-1.5 flex items-center gap-2.5">
-                            <img src={getLogo(userLeagueStats.name)} alt="" className="w-5 h-5 object-contain shrink-0" onError={(e) => { e.target.src = DEFAULT_LOGO; }} />
-                            <span className="font-bold text-[#00b4d8] truncate max-w-[180px]">{userLeagueStats.name}</span>
-                            <span className="text-[9px] font-extrabold px-1 py-0.2 rounded bg-[#00b4d8]/20 text-[#00b4d8]">TÚ</span>
-                          </td>
-                          <td className="px-2 text-center text-slate-400 tabular-nums">{userLeagueStats.pj}</td>
-                          <td className="px-2 text-center text-slate-400 tabular-nums">{(Number(userLeagueStats.gf) || 0) - (Number(userLeagueStats.gc) || 0)}</td>
-                          <td className="px-3 text-right font-black text-white tabular-nums">{userLeagueStats.pts}</td>
-                        </tr>
-                      </>
+                      <StandingRow team={userLeagueStats} position={userRankIndex + 1} isUser getLogo={getLogo} />
                     )}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="p-6 text-center text-slate-400 text-xs">
-                Aún no hay posiciones registradas para el torneo.
-              </div>
+              <p className="px-6 py-8 text-center text-sm text-ink-3">Todavía no hay posiciones registradas.</p>
             )}
-          </div>
-
+          </section>
         </div>
 
-        {/* COLUMNA 3: JUGADORES CLAVE & ACCIONES RÁPIDAS */}
-        <div className="space-y-6">
-
-          {/* FIGURAS DEL EQUIPO */}
-          <div className="rounded-2xl bg-[#0c1017] border border-white/[0.08] p-5 shadow-lg">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-4">
-              <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-amber-400" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-white">
-                  Figuras del Plantel
-                </h2>
-              </div>
-              <button
-                onClick={() => setActiveTab('My Team')}
-                className="text-xs text-[#00b4d8] hover:text-[#38bdf8] font-semibold transition cursor-pointer"
-              >
-                Ver táctica →
-              </button>
-            </div>
-
-            {isLoading ? (
-              <div className="space-y-2.5 animate-pulse">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-[#111722] border border-white/[0.05]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-white/10" />
-                      <div className="space-y-1.5">
-                        <div className="w-24 h-3.5 rounded bg-white/10" />
-                        <div className="w-16 h-2.5 rounded bg-white/10" />
-                      </div>
-                    </div>
-                    <div className="w-12 h-3.5 rounded bg-white/10" />
-                  </div>
-                ))}
-              </div>
-            ) : topPlayers.length > 0 ? (
-              <div className="space-y-2.5">
-                {topPlayers.map((player) => {
-                  const ovrColor = getStatAndOvrColorClass(player.OVR_CALCULADO);
-
-                  return (
-                    <button
-                      key={player.Id}
-                      type="button"
-                      onClick={() => onPlayerClick?.(player.Id)}
-                      aria-label={`Ver perfil de ${player.Name}, ${player.POS_NOMBRE}, OVR ${player.OVR_CALCULADO}`}
-                      className="w-full text-left group flex items-center justify-between p-2.5 rounded-xl bg-[#111722] border border-white/[0.05] hover:border-white/[0.15] cursor-pointer transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4d8]"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative shrink-0">
-                          <img
-                            src={`/fotos_jugadores/${player.Id}.webp`}
-                            alt={player.Name}
-                            className="w-10 h-10 object-cover rounded-lg bg-black/40"
-                            onError={(e) => {
-                              e.target.src = `https://placehold.co/40x40/111/444?text=${player.Name.substring(0, 1)}`;
-                            }}
-                          />
-                          <div className={`absolute -bottom-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px] !text-black shadow ${ovrColor}`}>
-                            {player.OVR_CALCULADO}
-                          </div>
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-[#00b4d8] transition-colors">
-                            {player.Name}
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                            <span className="font-bold text-slate-300">{player.POS_NOMBRE}</span>
-                            <span>•</span>
-                            <span>{player.Age} años</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0 font-bold text-emerald-400 text-xs tabular-nums">
-                        {formatPriceShort(player.Precio)}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-6 text-center text-slate-400 text-xs">
-                Aún no tienes jugadores fichados.{' '}
-                <button
-                  onClick={() => setActiveTab('Marketplace')}
-                  className="text-[#00b4d8] font-bold hover:underline block mx-auto mt-2"
-                >
-                  Explorar Mercado
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* ACCESOS DIRECTOS */}
-          <div className="rounded-2xl bg-[#0c1017] border border-white/[0.08] p-5 shadow-lg space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-2 border-b border-white/[0.06]">
-              Accesos Rápidos
-            </h2>
-
-            <button
-              onClick={() => setActiveTab('Marketplace')}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-[#00b4d8]/15 to-transparent border border-[#00b4d8]/30 hover:border-[#00b4d8]/60 text-white font-bold text-sm transition group cursor-pointer active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <Zap className="w-4 h-4 text-[#00b4d8]" />
-                <span>Mercado de Fichajes</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('My Team')}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-[#111722] border border-white/[0.06] hover:border-white/[0.15] text-white font-semibold text-sm transition group cursor-pointer active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-emerald-400" />
-                <span>Armar Formación 11</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('Financials')}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-[#111722] border border-white/[0.06] hover:border-white/[0.15] text-white font-semibold text-sm transition group cursor-pointer active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <DollarSign className="w-4 h-4 text-amber-400" />
-                <span>Finanzas y Ofertas</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-            </button>
-          </div>
-
-        </div>
-
+        <section className="panel-flat p-5 sm:p-6 self-start min-w-0" aria-labelledby="overview-stars">
+          <SectionHeader title={<span id="overview-stars">Figuras del plantel</span>}
+            actions={<Button size="sm" variant="ghost" onClick={() => setActiveTab('My Team')}>Ver plantel</Button>} />
+          {isLoading ? (
+            <div className="mt-4 space-y-3" aria-hidden="true">{[...Array(5)].map((_, i) => <div key={i} className="skeleton h-12" />)}</div>
+          ) : topPlayers.length > 0 ? (
+            <ul className="mt-3 divide-y divide-line/[0.07]">
+              {topPlayers.map(player => (
+                <li key={player.Id}>
+                  <button type="button" onClick={() => onPlayerClick?.(player.Id)}
+                    aria-label={`Ver perfil de ${player.Name}, ${player.POS_NOMBRE}, OVR ${player.OVR_CALCULADO}`}
+                    className="group w-full flex items-center gap-3 py-2.5 min-h-14 text-left rounded-lg transition-colors hover:bg-white/[0.03] -mx-2 px-2">
+                    <img src={`/fotos_jugadores/${player.Id}.webp`} alt="" width={40} height={40} loading="lazy"
+                      className="w-10 h-10 rounded-lg object-cover object-top bg-raised shrink-0"
+                      onError={e => { e.currentTarget.style.visibility = 'hidden'; }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-ink group-hover:text-accent-soft transition-colors">{player.Name}</span>
+                      <span className="flex items-center gap-2 text-xs text-ink-3 mt-0.5">
+                        <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                        {player.Age > 0 && <span>{player.Age} años</span>}
+                        <span className="num">{formatPriceShort(player.Precio)}</span>
+                      </span>
+                    </span>
+                    <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 ${getStatAndOvrColorClass(player.OVR_CALCULADO)}`}>
+                      {player.OVR_CALCULADO}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-ink-3">Todavía no fichaste jugadores.</p>
+          )}
+        </section>
       </div>
-
-    </div>
+    </Page>
   );
 });

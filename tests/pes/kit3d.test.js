@@ -5,6 +5,7 @@ import { parseKitPack, selectKitParts, fitParts } from '../../pes/kits/kitModels
 import { parseSiderRoots, textureCandidates, kitTextureFiles } from '../../pes/kits/textureLocator.js';
 import { parseKitConfig, getKitValue } from '../../pes/kits/kitConfig.js';
 import { SYNTHETIC_KIT_CONFIG } from './fixtures.js';
+import { readerFromFiles } from '../../components/pes/kit3d/gameFolder.js';
 
 const PACK = path.resolve(__dirname, '../../public/pes/kitpack.bin');
 
@@ -53,6 +54,26 @@ describe('kit texture lookup order', () => {
       'livecpk/UML_Kits/Asset/model/character/uniform/texture/#windx11/u0126p1.ftex',
     ]);
     expect(textureCandidates('a/b/config.txt', '../evil', [])).toEqual([]);
+  });
+
+  it('falls back to livecpk packs that sider.ini does not list (kit textures in VRED_Kits)', async () => {
+    const TEX = 'Asset/model/character/uniform/texture/#windx11';
+    const file = (rel, text = '') => ({ name: rel.split('/').pop(), webkitRelativePath: `PES/${rel}`, arrayBuffer: async () => new TextEncoder().encode(text).buffer });
+    const reader = await readerFromFiles([
+      file('sider.ini', 'cpk.root = ".\\livecpk\\UML_Kits"\n'),
+      file(`livecpk/UML_Kits/${TEX}/other.ftex`, 'x'),
+      file(`livecpk/VRED_Kits/${TEX}/u4128p1.ftex`, 'kit'),
+      file('content/kit-server/2. Bundesliga/Bochum/p1/u4128p1_name.ftex', 'name'),
+    ]);
+    expect(reader.roots).toEqual(['livecpk/UML_Kits']);
+    expect(reader.fallbackRoots).toEqual(['livecpk/VRED_Kits']);
+    const roots = [...reader.roots, ...reader.fallbackRoots];
+    const find = async name => {
+      for (const p of textureCandidates('2. Bundesliga/Bochum/p1/config.txt', name, roots)) if (await reader.read(p)) return p;
+      return null;
+    };
+    expect(await find('u4128p1')).toBe(`livecpk/VRED_Kits/${TEX}/u4128p1.ftex`);
+    expect(await find('u4128p1_name')).toBe('content/kit-server/2. Bundesliga/Bochum/p1/u4128p1_name.ftex');
   });
 
   it('lists the textures a kit needs from its config', () => {

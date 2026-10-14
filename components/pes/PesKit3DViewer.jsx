@@ -109,8 +109,11 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
   const kitPx = useMemo(() => kitPixels(tex.textures.kit?.canvas), [tex]);
   const maps = useMemo(() => {
     if (!useGenerated) return { nrm: tex.textures.nrm?.canvas || null, srm: tex.textures.srm?.canvas || null };
-    return fabricPreview(kitPx, fabric);
-  }, [useGenerated, kitPx, tex, fabric.fabric, fabric.repeat, fabric.strength, fabric.emboss]);
+    const generated = fabricPreview(kitPx, fabric);
+    // The kit-server ships _srm (shine) for many kits but never _nrm: in automatic mode the relief is
+    // generated and the kit's own shine map is kept.
+    return fabric.mode === 'auto' && tex.textures.srm ? { ...generated, srm: tex.textures.srm.canvas } : generated;
+  }, [useGenerated, kitPx, tex, fabric.mode, fabric.fabric, fabric.repeat, fabric.strength, fabric.emboss]);
 
   const saveFabric = async () => {
     setSaving({ busy: true });
@@ -180,7 +183,8 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
   });
 
   const set = patch => setOpts(o => ({ ...o, ...patch }));
-  const sel = 'bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white';
+  const sel = 'select min-h-9 w-40 text-xs';
+  const field = 'input min-h-9 text-sm';
   const t = tex.textures;
   const found = Object.entries(tex.files || {}).filter(([, f]) => f);
 
@@ -188,15 +192,15 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
       <div className="relative self-start">
         <canvas ref={canvasRef} tabIndex={0} aria-label={`Kit ${kit} en 3D. Arrastrá para girar, rueda o +/− para acercar, flechas para mover, doble clic para volver al frente.`}
-          className="w-full aspect-[4/5] max-h-[560px] rounded-xl bg-[#0b0f16] cursor-grab active:cursor-grabbing focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400" />
-        {(status.loading || tex.loading) && <span className="absolute top-2 left-2 flex items-center gap-1 text-[11px] text-slate-300"><Loader2 className="w-3.5 h-3.5 animate-spin" />Cargando…</span>}
-        {status.error && <p className="absolute inset-x-2 top-2 text-xs text-red-300 bg-black/60 rounded p-2" role="alert">{status.error.message}</p>}
+          className="w-full aspect-[4/5] max-h-[560px] rounded-xl bg-canvas cursor-grab active:cursor-grabbing focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+        {(status.loading || tex.loading) && <span className="absolute top-2 left-2 flex items-center gap-1 text-[11px] text-ink-2"><Loader2 className="w-3.5 h-3.5 animate-spin" />Cargando…</span>}
+        {status.error && <p className="absolute inset-x-2 top-2 text-xs text-danger-soft bg-black/60 rounded p-2" role="alert">{status.error.message}</p>}
         <Button className="absolute bottom-2 right-2" onClick={() => { Object.assign(viewRef.current, DEFAULT_VIEW); draw(); }} aria-label="Volver al frente"><RotateCcw className="w-3.5 h-3.5" /></Button>
       </div>
 
-      <div className="space-y-3 text-xs text-slate-300">
+      <div className="space-y-5 text-xs text-ink-2 [&_fieldset+fieldset]:border-t [&_fieldset+fieldset]:border-line/[0.08] [&_fieldset+fieldset]:pt-4">
         <fieldset className="space-y-2">
-          <legend className="font-bold text-slate-200 mb-1">Vista</legend>
+          <legend className="eyebrow mb-2">Vista</legend>
           <label className="flex items-center justify-between gap-2">Luz
             <select className={sel} value={opts.light} onChange={e => set({ light: e.target.value })}>
               {Object.entries(LIGHT_PRESETS).map(([k, p]) => <option key={k} value={k}>{p.n}</option>)}
@@ -217,26 +221,26 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
         </fieldset>
 
         <fieldset className="space-y-2">
-          <legend className="font-bold text-slate-200 mb-1">Nombre y número</legend>
+          <legend className="eyebrow mb-2">Nombre y número</legend>
           <label className="flex items-center gap-2"><input type="checkbox" checked={opts.decals} onChange={e => set({ decals: e.target.checked })} />Mostrar con las fuentes del kit</label>
           {players.length > 0 && (
-            <select className={`${sel} w-full`} aria-label="Jugador del plantel" value="" onChange={e => { const p = players[Number(e.target.value)]; if (p) setSample({ name: p.name, number: String(p.number) }); }}>
+            <select className="select min-h-9 w-full text-xs" aria-label="Jugador del plantel" value="" onChange={e => { const p = players[Number(e.target.value)]; if (p) setSample({ name: p.name, number: String(p.number) }); }}>
               <option value="">Usar un jugador del plantel…</option>
               {players.map((p, i) => <option key={`${p.number}-${p.name}`} value={i}>{p.number} · {p.name}</option>)}
             </select>
           )}
           <div className="flex gap-2">
-            <input className={`${sel} flex-1 min-w-0`} aria-label="Nombre en la espalda" value={sample.name} maxLength={16} onChange={e => setSample(s => ({ ...s, name: e.target.value }))} />
-            <input className={`${sel} w-14`} aria-label="Número" inputMode="numeric" value={sample.number} maxLength={2} onChange={e => setSample(s => ({ ...s, number: e.target.value.replace(/\D/g, '') }))} />
+            <input className={`${field} flex-1 min-w-0`} aria-label="Nombre en la espalda" value={sample.name} maxLength={16} onChange={e => setSample(s => ({ ...s, name: e.target.value }))} />
+            <input className={`${field} w-16 num text-center`} aria-label="Número" inputMode="numeric" value={sample.number} maxLength={2} onChange={e => setSample(s => ({ ...s, number: e.target.value.replace(/\D/g, '') }))} />
           </div>
-          {value('Name') === '1' && <p className="text-[11px] text-slate-500">Este kit tiene el nombre apagado (Name=1).</p>}
+          {value('Name') === '1' && <p className="text-[11px] text-ink-3">Este kit tiene el nombre apagado (Name=1).</p>}
         </fieldset>
 
         <fieldset className="space-y-2">
-          <legend className="font-bold text-slate-200 mb-1">Tela (relieve y brillo)</legend>
+          <legend className="eyebrow mb-2">Tela (relieve y brillo)</legend>
           <label className="flex items-center justify-between gap-2">Mapas
             <select className={sel} value={fabric.mode} onChange={e => setFabric(f => ({ ...f, mode: e.target.value }))}>
-              <option value="auto">{tex.textures.nrm ? 'Los del kit' : 'Generados'} (automático)</option>
+              <option value="auto">{tex.textures.nrm ? 'Los del kit' : tex.textures.srm ? 'Relieve generado + brillo del kit' : 'Generados'} (automático)</option>
               <option value="kit" disabled={!tex.textures.nrm}>Los del kit (_nrm/_srm)</option>
               <option value="gen">Generar con una tela</option>
             </select>
@@ -260,22 +264,22 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
               {onImportTexture && (
                 <Button variant="primary" disabled={saving?.busy} onClick={saveFabric}><Save className="w-3.5 h-3.5" />{saving?.busy ? 'Generando 2048 px…' : 'Guardar nrm y srm en el kit'}</Button>
               )}
-              {saving?.done && <p className="text-[11px] text-emerald-300">{saving.done}</p>}
-              {saving?.error && <p className="text-[11px] text-red-300" role="alert">{saving.error.message}</p>}
+              {saving?.done && <p className="text-[11px] text-success-soft">{saving.done}</p>}
+              {saving?.error && <p className="text-[11px] text-danger-soft" role="alert">{saving.error.message}</p>}
             </>
           )}
         </fieldset>
 
         <fieldset className="space-y-1.5">
-          <legend className="font-bold text-slate-200 mb-1">Texturas</legend>
+          <legend className="eyebrow mb-2">Texturas</legend>
           {found.map(([slot, file]) => (
             <p key={slot} className="flex items-center justify-between gap-2">
-              <span className="truncate" title={t[slot]?.path || file}>{SLOT_LABEL[slot]}: <span className="text-slate-500">{file}</span></span>
-              {t[slot] ? <Pill tone="green">{t[slot].source === 'workspace' ? 'subida' : 'del juego'}</Pill> : <Pill tone="amber">no encontrada</Pill>}
+              <span className="truncate min-w-0" title={t[slot]?.path || file}>{SLOT_LABEL[slot]}: <span className="text-ink-3">{file}</span></span>
+              {t[slot] ? <Pill tone="green">{t[slot].source === 'workspace' ? 'subida' : t[slot].from || 'del juego'}</Pill> : <Pill tone="amber">no encontrada</Pill>}
             </p>
           ))}
-          {!t.kit && <p className="text-[11px] text-slate-500">Sin la textura del kit se usan los colores del config.txt.</p>}
-          {tex.errors.map(e => <p key={e} className="flex gap-1 text-[11px] text-amber-300"><AlertTriangle className="w-3.5 h-3.5 shrink-0" />{e}</p>)}
+          {!t.kit && <p className="text-[11px] text-ink-3">Sin la textura del kit se usan los colores del config.txt.</p>}
+          {tex.errors.map(e => <p key={e} className="flex gap-1 text-[11px] text-warning-soft"><AlertTriangle className="w-3.5 h-3.5 shrink-0" />{e}</p>)}
           <GameFolderControls game={game} />
         </fieldset>
       </div>
@@ -287,17 +291,17 @@ function GameFolderControls({ game }) {
   const { folder, error } = game;
   return (
     <div className="pt-1 space-y-1.5">
-      {folder?.read && <p className="text-[11px] text-slate-400">Carpeta del juego: <b>{folder.name}</b>{folder.hasSiderIni ? ` · ${folder.roots.length} carpetas livecpk` : ''}</p>}
+      {folder?.read && <p className="text-[11px] text-ink-3">Carpeta del juego: <b>{folder.name}</b>{folder.hasSiderIni ? ` · ${folder.roots.length} carpetas de sider.ini` : ''}{folder.fallbackRoots?.length ? ` + ${folder.fallbackRoots.length} de livecpk como respaldo` : ''}</p>}
       {folder?.pending && <Button onClick={game.allow}><FolderOpen className="w-3.5 h-3.5" />Permitir leer «{folder.name}»</Button>}
       {canPickFolder() ? (
         <Button onClick={game.pick}><FolderOpen className="w-3.5 h-3.5" />{folder?.read ? 'Cambiar carpeta del juego' : 'Abrir carpeta de PES 2021'}</Button>
       ) : (
-        <label className="block text-[11px] text-slate-400">Elegí la carpeta de texturas (…/texture/#windx11):
+        <label className="block text-[11px] text-ink-3">Elegí la carpeta de texturas (…/texture/#windx11):
           <input type="file" webkitdirectory="" multiple className="mt-1 block w-full text-[11px]" onChange={e => e.target.files?.length && game.fromFiles(e.target.files)} />
         </label>
       )}
-      <p className="text-[11px] text-slate-500">Las texturas se leen desde tu PC, solo para la vista previa; no se suben ni se modifican.</p>
-      {error && <p className="text-[11px] text-red-300" role="alert">{error.message}</p>}
+      <p className="text-[11px] text-ink-3">Orden de búsqueda: carpeta del kit en kit-server, carpetas de sider.ini y después el resto de livecpk. Se leen desde tu PC solo para la vista previa; no se suben ni se modifican.</p>
+      {error && <p className="text-[11px] text-danger-soft" role="alert">{error.message}</p>}
     </div>
   );
 }

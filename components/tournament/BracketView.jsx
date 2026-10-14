@@ -70,8 +70,8 @@ export const BracketView = memo(function BracketView({
 
           {/* GRAN FINAL (CENTER) */}
           <div className="flex flex-col items-center z-10 px-2">
-            <div className="flex items-center gap-2 px-3.5 py-1 mb-2.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider shadow-lg">
-              <Trophy className="w-4 h-4 text-amber-400" />
+            <div className="flex items-center gap-2 px-3.5 py-1 mb-2.5 rounded-full bg-warning/15 border border-warning/40 text-warning-soft text-xs font-bold uppercase tracking-wider shadow-lg">
+              <Trophy className="w-4 h-4 text-warning-soft" />
               <span>Gran Final Oro</span>
             </div>
             <MatchCard

@@ -1,20 +1,21 @@
 import React from 'react';
 
+// Badges mark a state the user must notice (docs/DESIGN_SYSTEM.md). Metadata is plain text, not a badge.
 const VARIANT_MAP = {
-  default: 'bg-white/[0.06] text-slate-300 border-white/[0.08]',
-  primary: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-  success: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  warning: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  danger: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
-  purple: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  outline: 'bg-transparent text-slate-300 border-white/20',
-  surface: 'bg-[#0c1017] text-slate-200 border-white/[0.08] shadow-sm',
+  default: 'bg-white/[0.06] text-ink-2 border-line/15',
+  primary: 'bg-accent/15 text-accent-soft border-accent/30',
+  success: 'bg-success/[0.12] text-success-soft border-success/30',
+  warning: 'bg-warning/[0.12] text-warning-soft border-warning/30',
+  danger: 'bg-danger/[0.12] text-danger-soft border-danger/30',
+  purple: 'bg-accent/15 text-accent-soft border-accent/30', // legacy name: maps to the accent
+  outline: 'bg-transparent text-ink-2 border-line/25',
+  surface: 'bg-raised text-ink border-line/15',
 };
 
 const SIZE_MAP = {
-  xs: 'text-[10px] px-1.5 py-0.5 rounded-md gap-1',
-  sm: 'text-xs px-2.5 py-0.5 rounded-lg gap-1.5',
-  md: 'text-sm px-3 py-1 rounded-xl gap-2',
+  xs: 'text-[10px] px-1.5 py-0.5 rounded gap-1',
+  sm: 'text-[11px] px-2 py-0.5 rounded-md gap-1.5',
+  md: 'text-xs px-2.5 py-1 rounded-md gap-1.5',
 };
 
 export function Badge({
@@ -27,20 +28,12 @@ export function Badge({
   className = '',
   ...props
 }) {
-  const variantClass = VARIANT_MAP[variant] || VARIANT_MAP.default;
-  const sizeClass = SIZE_MAP[size] || SIZE_MAP.sm;
-
   return (
     <span
-      className={`inline-flex items-center font-bold tracking-wide border font-mono select-none ${variantClass} ${sizeClass} ${className}`}
+      className={`inline-flex items-center font-semibold border whitespace-nowrap select-none ${VARIANT_MAP[variant] || VARIANT_MAP.default} ${SIZE_MAP[size] || SIZE_MAP.sm} ${className}`}
       {...props}
     >
-      {dot && (
-        <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`}
-          aria-hidden="true"
-        />
-      )}
+      {dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} aria-hidden="true" />}
       {Icon && <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
       {children}
     </span>

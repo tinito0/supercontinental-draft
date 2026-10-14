@@ -20,10 +20,10 @@ function KitSchematic({ model }) {
         <rect x="34" y="127" width="14" height="20" rx="2" fill={c(model.socksColor)} />
         <rect x="72" y="127" width="14" height="20" rx="2" fill={c(model.socksColor)} />
       </svg>
-      <figcaption className="text-[10px] text-slate-500 text-center max-w-[12rem]">
+      <figcaption className="text-[10px] text-ink-3 text-center max-w-[12rem]">
         Esquema con los colores del config.txt. No es la textura del kit.
       </figcaption>
-      <div className="flex gap-2 text-[10px] text-slate-400">
+      <div className="flex gap-2 text-[10px] text-ink-3">
         <span className="flex items-center gap-1"><i className="w-3 h-3 rounded-sm inline-block" style={{ background: c(model.menuColor1) }} />UniColor 1</span>
         <span className="flex items-center gap-1"><i className="w-3 h-3 rounded-sm inline-block" style={{ background: c(model.menuColor2) }} />UniColor 2</span>
       </div>
@@ -36,7 +36,7 @@ function KitValueInput({ line, readOnly, modified, onCommit }) {
   React.useEffect(() => setDraft(line.value), [line.value]);
   const editable = !readOnly && KIT_EDITABLE_KEYS.includes(line.key);
   const commit = v => { if (editable && v !== line.value) onCommit(v); };
-  const base = 'w-full bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white disabled:text-slate-500';
+  const base = 'w-full input min-h-9';
   let control;
   if (COLOR_KEYS.includes(line.key)) {
     control = (
@@ -47,7 +47,7 @@ function KitValueInput({ line, readOnly, modified, onCommit }) {
     );
   } else if (line.constraint?.type === 'enum') {
     control = (
-      <select value={draft} disabled={!editable} onChange={e => { setDraft(e.target.value); commit(e.target.value); }} className={base}>
+      <select value={draft} disabled={!editable} onChange={e => { setDraft(e.target.value); commit(e.target.value); }} className="w-full select min-h-9">
         {!line.constraint.values.map(String).includes(draft) && <option value={draft}>{draft} (fuera de lista)</option>}
         {line.constraint.values.map(v => <option key={v} value={String(v)}>{v}{line.constraint.labels[v] ? ` — ${line.constraint.labels[v]}` : ''}</option>)}
       </select>
@@ -58,8 +58,8 @@ function KitValueInput({ line, readOnly, modified, onCommit }) {
       onChange={e => setDraft(e.target.value)} onBlur={() => commit(draft)} onKeyDown={e => e.key === 'Enter' && commit(draft)} className={base} />;
   }
   return (
-    <label className={`flex flex-col gap-1 text-[11px] ${modified ? 'text-cyan-300' : 'text-slate-400'}`}>
-      <span title={line.comment}>{line.key}{line.constraint?.type === 'range' && <span className="text-slate-600"> ({line.constraint.min}–{line.constraint.max})</span>}{modified && ' •'}</span>
+    <label className={`flex flex-col gap-1 text-[11px] ${modified ? 'text-accent-soft' : 'text-ink-3'}`}>
+      <span title={line.comment}>{line.key}{line.constraint?.type === 'range' && <span className="text-ink-3"> ({line.constraint.min}–{line.constraint.max})</span>}{modified && ' •'}</span>
       {control}
     </label>
   );
@@ -108,7 +108,7 @@ export function PesKitsPanel({ pes, onApply }) {
     return (s ? teams.filter(t => String(t.id) === s || t.name.toLowerCase().includes(s) || t.folder.toLowerCase().includes(s)) : teams).slice(0, 300);
   }, [teams, q]);
 
-  if (!kits) return <Card><p className="text-xs text-slate-400">Cargá la carpeta kit-server del Parche para editar kits.</p></Card>;
+  if (!kits) return <Card><p className="text-xs text-ink-3">Cargá la carpeta kit-server del Parche para editar kits.</p></Card>;
 
   const kitList = teamId != null ? kits.kitsOf(teamId) : [];
   const players = teamId != null ? squadOf(ws, teamId) : [];
@@ -133,8 +133,8 @@ export function PesKitsPanel({ pes, onApply }) {
           {filtered.map(t => (
             <li key={t.id}>
               <button type="button" onClick={() => { setTeamId(t.id); setKit(null); }}
-                className={`w-full text-left px-2 py-1.5 rounded text-xs ${t.id === teamId ? 'bg-cyan-500/15 text-white' : 'text-slate-300 hover:bg-white/[0.04]'}`}>
-                <span className="text-slate-500 mr-2">{t.id}</span>{t.name}
+                className={`w-full text-left px-2 py-1.5 rounded text-xs ${t.id === teamId ? 'bg-accent/15 text-ink' : 'text-ink-2 hover:bg-white/[0.04]'}`}>
+                <span className="text-ink-3 mr-2">{t.id}</span>{t.name}
                 {!canEditTeam(t.id) && caps.has('kit.edit') && <Pill>fuera de la liga</Pill>}
               </button>
             </li>
@@ -143,22 +143,22 @@ export function PesKitsPanel({ pes, onApply }) {
       </Card>
 
       <div className="space-y-4">
-        {teamId == null && <Card><p className="text-xs text-slate-400">Elegí un equipo para ver sus kits.</p></Card>}
+        {teamId == null && <Card><p className="text-xs text-ink-3">Elegí un equipo para ver sus kits.</p></Card>}
         {teamId != null && (
           <Card title={`Kits · ${kits.map.get(teamId)}`}>
             <div className="flex flex-wrap gap-2">
               {kitList.map(k => (
                 <button key={k.kit} type="button" onClick={() => setKit(k.kit)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border ${k.kit === kit ? 'border-cyan-500/60 bg-cyan-500/10 text-white' : 'border-white/[0.08] text-slate-300 hover:bg-white/[0.04]'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border ${k.kit === kit ? 'border-accent/60 bg-accent/10 text-ink' : 'border-line/[0.12] text-ink-2 hover:bg-white/[0.04]'}`}>
                   <Shirt className="w-3.5 h-3.5" />{k.kit}
                   <Pill tone={k.category === 'goalkeeper' ? 'amber' : 'slate'}>{k.category === 'goalkeeper' ? 'arquero' : k.category === 'player' ? 'jugador' : 'otro'}</Pill>
                   {!k.inOrder && <Pill>no está en order.ini</Pill>}
-                  {k.modified && <span className="text-cyan-400">•</span>}
+                  {k.modified && <span className="text-accent">•</span>}
                 </button>
               ))}
             </div>
             {editable && <div className="mt-3"><PesAddKit kits={kits} teamId={teamId} version={version} onApply={onApply} onCreated={setKit} /></div>}
-            {!editable && <p className="mt-2 text-[11px] text-slate-500">Solo lectura para tu rol en este equipo.</p>}
+            {!editable && <p className="mt-2 text-[11px] text-ink-3">Solo lectura para tu rol en este equipo.</p>}
           </Card>
         )}
         <ErrorText error={error} />

@@ -60,7 +60,7 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
   const renderBadge = (keyText) => (
     <kbd
       key={keyText}
-      className="bg-white/10 text-white font-mono text-xs px-2 py-1 rounded-lg border border-white/20 shadow-sm min-w-[24px] text-center inline-block"
+      className="kbd"
     >
       {keyText}
     </kbd>
@@ -74,16 +74,16 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
       subtitle="Navegación y acciones rápidas del sistema"
       icon={Keyboard}
       size="sm"
-      className="bg-[#111722] border border-white/10 rounded-2xl max-w-md mx-auto"
+      className="bg-raised border border-line/[0.12] rounded-2xl max-w-md mx-auto"
       footer={
         <div className="flex items-center justify-between w-full">
-          <span className="text-[11px] text-slate-400">
-            Presiona <kbd className="bg-white/10 text-white font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/20">Esc</kbd> o haz clic afuera
+          <span className="text-[11px] text-ink-3">
+            Presiona <kbd className="kbd">Esc</kbd> o haz clic afuera
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 transition active:scale-95 cursor-pointer"
+            className="px-4 py-1.5 rounded-xl text-xs font-bold text-ink bg-accent/20 hover:bg-accent/30 border border-accent/30 transition active:scale-95 cursor-pointer"
           >
             Entendido
           </button>
@@ -95,9 +95,9 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
           {SHORTCUTS.map((item) => (
             <div
               key={item.description}
-              className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition-colors"
+              className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/[0.03] border border-line/[0.08] hover:bg-white/[0.06] transition-colors"
             >
-              <span className="text-xs sm:text-sm text-slate-300 font-medium">
+              <span className="text-xs sm:text-sm text-ink-2 font-medium">
                 {item.description}
               </span>
 
@@ -107,7 +107,7 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
                 {item.badgeType === 'combo' && (
                   <div className="flex items-center gap-1">
                     {renderBadge(item.keys[0])}
-                    <span className="text-slate-400 text-xs font-semibold">+</span>
+                    <span className="text-ink-3 text-xs font-semibold">+</span>
                     {renderBadge(item.keys[1])}
                   </div>
                 )}
@@ -115,9 +115,9 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
                 {item.badgeType === 'alternative' && (
                   <div className="flex items-center gap-1">
                     {renderBadge(item.primary[0])}
-                    <span className="text-slate-500 text-xs px-0.5">o</span>
+                    <span className="text-ink-3 text-xs px-0.5">o</span>
                     {renderBadge(item.secondary[0])}
-                    <span className="text-slate-400 text-xs font-semibold">+</span>
+                    <span className="text-ink-3 text-xs font-semibold">+</span>
                     {renderBadge(item.secondary[1])}
                   </div>
                 )}
@@ -126,8 +126,8 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
           ))}
         </div>
 
-        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs">
-          <Info className="w-4 h-4 shrink-0 text-cyan-400 mt-0.5" />
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-accent/10 border border-accent/20 text-accent-soft text-xs">
+          <Info className="w-4 h-4 shrink-0 text-accent mt-0.5" />
           <p className="leading-relaxed">
             Los atajos están deshabilitados automáticamente mientras escribes en campos de búsqueda o texto.
           </p>

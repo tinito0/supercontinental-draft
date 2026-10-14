@@ -1,7 +1,8 @@
 // Draft → PES: each draft team (built by a user in the marketplace) replaces an existing game team.
 // Input is the same data utils/pesExport.js used for the EJOGC CSVs (teamName, country, players,
 // dorsals, formation + lineup, setPieces, tactics). Output is a list of engine operations for:
-//   pesdb  Team.bin names/abbreviation/country, PlayerAssignment.bin squad
+//   pesdb  Team.bin names/abbreviation/country, PlayerAssignment.bin squad, Tactics.bin + TacticsFormation.bin
+//          (strategy and formation in every preset, as pesExport's Formation.csv did through EJOGC)
 //   EDIT   team name/abbreviation/country, full squad + order + formation + strategy + captain + takers
 //   both   transferred players are removed from their previous club (national teams untouched)
 //   both   optional coach: the replaced team's own coach is renamed (Coach.bin + EDIT coach entry)
@@ -11,6 +12,7 @@ import { planTeamReplacement } from './teamReplacement.js';
 import { readField } from './core/fields.js';
 import { EDIT_TACTICS, EDIT_TAKER_ROLES, EDIT_STRATEGY } from './formats/pes2021/editLayout.js';
 import { PesValidationError } from './core/errors.js';
+import { TACTICS_STRATEGY } from './formats/pes2021/tacticsLayout.js';
 
 /** App position code → PES role (same table as utils/pesExport.js PES_POSITION_MAP). */
 export const PES_POSITION_MAP = { PT: 0, DFC: 1, LI: 2, LD: 3, MCD: 4, MC: 5, MI: 6, MD: 7, MO: 8, EI: 9, ED: 10, SD: 11, DC: 12 };
@@ -50,6 +52,14 @@ export function strategyFromTactics(tactics = {}, defaults = {}) {
   for (const k of ['supportRange', 'defensiveLine', 'compactness']) if (t[k] != null) out[k] = clamp(t[k], 1, 10);
   for (const k of ['numbersInAttack', 'numbersInDefense']) if (t[k] != null) out[k] = clamp(t[k] + 1, 1, 3);
   for (const k of Object.keys(out)) if (out[k] === undefined || !(k in EDIT_STRATEGY)) delete out[k];
+  return out;
+}
+
+/** App tactics → Tactics.bin values: the base stores the app's own values (FormationModal TacticsPanel). */
+export function binStrategyFromTactics(tactics = {}, defaults = {}) {
+  const t = { ...defaults, ...tactics };
+  const out = {};
+  for (const [k, [lo, hi]] of Object.entries(TACTICS_STRATEGY)) if (t[k] != null && Number.isFinite(Number(t[k]))) out[k] = clamp(Number(t[k]), lo, hi);
   return out;
 }
 
@@ -290,6 +300,9 @@ export function planDraftTransfer(ws, draftTeams, mapping, options) {
         if (Number.isInteger(country) && country > 0 && country < 512) editOps.push({ type: 'edit.team.set', target: { teamId: pesTeamId }, field: 'country', value: country });
         editOps.push({ type: 'edit.team.squad', target: { teamId: pesTeamId }, value: spec });
         run(editOps.map(op => ({ ...op, batch: 'draft.transfer' })));
+      }
+      if (ws.bin?.tables.tactics && ws.bin.tables.team?.has(pesTeamId)) {
+        run([{ type: 'bin.team.tactics', target: { teamId: pesTeamId }, value: { strategy: binStrategyFromTactics(t.tactics, options.defaultTactics), formation: spec.formation }, batch: 'draft.transfer' }]);
       }
       const coach = options.coaches?.[t.id];
       if (coach?.name?.trim()) {

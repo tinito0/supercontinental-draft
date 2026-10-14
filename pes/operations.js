@@ -5,6 +5,7 @@ import { authorize } from './permissions.js';
 import { PesValidationError } from './core/errors.js';
 import { validateFieldValue } from './core/fields.js';
 import { textureFromFile, TEXTURE_SLOT_IDS } from './kits/kitTextures.js';
+import { writeTeamTactics } from './formats/pes2021/tacticsBin.js';
 
 /**
  * @typedef {object} PesWorkspace
@@ -20,7 +21,7 @@ function requireBin(ws) {
 }
 function requireTable(ws, kind) {
   const t = requireBin(ws).tables[kind];
-  if (!t) throw new PesValidationError('NO_TABLE', `Falta ${{ team: 'Team.bin', player: 'Player.bin', coach: 'Coach.bin' }[kind] || 'PlayerAssignment.bin'}.`);
+  if (!t) throw new PesValidationError('NO_TABLE', `Falta ${{ team: 'Team.bin', player: 'Player.bin', coach: 'Coach.bin', tactics: 'Tactics.bin', tacticsFormation: 'TacticsFormation.bin' }[kind] || 'PlayerAssignment.bin'}.`);
   return t;
 }
 function requireEdit(ws) {
@@ -67,6 +68,7 @@ const APPLY = {
     pa.remove(op.target.assignmentId);
     return { before, after: null };
   },
+  'bin.team.tactics': (ws, op) => writeTeamTactics(requireBin(ws).tables, op.target.teamId, op.value || {}),
   'edit.team.set': (ws, op) => requireEdit(ws).setTeamField(op.target.teamId, op.field, op.value),
   'edit.player.set': (ws, op) => requireEdit(ws).setPlayerField(op.target.playerId, op.field, op.value),
   'edit.coach.set': (ws, op) => requireEdit(ws).setCoachField(op.target.coachId, op.field, op.value),

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Calculator, Play, Save, RefreshCw } from 'lucide-react';
-import { Card, Button, Pill, ErrorText } from './PesUi.jsx';
+import { Card, Button, Pill, ErrorText, Issue } from './PesUi.jsx';
+import { useCountries } from './useCountries.js';
 import { loadDraftTeams } from '../../services/draftTeamsService.js';
 import { planDraftTransfer, coachNameOfTeam } from '../../pes/draftTransfer.js';
 import { FORMATIONS, DEFAULT_TACTICS } from '../../utils/constants.js';
@@ -22,26 +23,8 @@ function TargetInput({ value, label, onCommit }) {
     <input list="pes-game-teams" value={text} placeholder="id o nombre del equipo del juego" aria-label={label}
       onChange={e => { setText(e.target.value); if (/ — /.test(e.target.value)) onCommit(e.target.value); }}
       onBlur={() => onCommit(text)}
-      className="w-full max-w-sm bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white" />
+      className="w-full max-w-sm input min-h-9" />
   );
-}
-
-/** Country list of the app (public/paises.json, same as the EJOGC exporter). */
-function useCountries() {
-  const [countries, setCountries] = useState([]);
-  useEffect(() => {
-    let alive = true;
-    fetch('/paises.json')
-      .then(r => (r.ok ? r.json() : {}))
-      .then(data => {
-        if (!alive) return;
-        setCountries(Object.entries(data).map(([id, name]) => ({ id: Number(id), name }))
-          .filter(c => c.id > 0 && c.name && c.name !== 'N/A').sort((a, b) => a.name.localeCompare(b.name)));
-      })
-      .catch(() => { if (alive) setCountries([]); });
-    return () => { alive = false; };
-  }, []);
-  return countries;
 }
 
 /** Coach of one draft team: empty name keeps the game team's coach. */
@@ -53,10 +36,10 @@ function CoachInput({ team, value, current, countries, onChange }) {
       <input value={name} maxLength={44} aria-label={`Nombre del DT de ${team.name}`}
         placeholder={current ? `Mantiene a ${current}` : 'Mantiene el DT del juego'}
         onChange={e => onChange({ name: e.target.value, country })}
-        className="w-40 bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white" />
+        className="w-40 input min-h-9" />
       {name.trim() && (
         <select value={country} aria-label={`Nacionalidad del DT de ${team.name}`} onChange={e => onChange({ name, country: Number(e.target.value) })}
-          className="w-32 bg-[#111722] border border-white/[0.08] rounded-md px-1 py-1 text-xs text-white">
+          className="w-32 select min-h-9">
           {!countries.some(c => c.id === country) && <option value={country}>País {country}</option>}
           {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
@@ -77,7 +60,7 @@ function RemovedList({ removed }) {
     byClub.get(key).set(r.playerId, entry);
   }
   return (
-    <details className="text-xs text-slate-300">
+    <details className="text-xs text-ink-2">
       <summary className="cursor-pointer">{removed.length ? `${byClub.size} club(es) pierden jugadores fichados` : 'Ningún fichado estaba en otro club'}</summary>
       <ul className="mt-2 space-y-1 max-h-72 overflow-y-auto">
         {[...byClub].map(([club, players]) => (
@@ -148,7 +131,7 @@ export function PesDraftPanel({ pes }) {
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
 
-  if (!ws) return <Card><p className="text-xs text-slate-400">Cargá el espacio de trabajo (base y EDIT) primero.</p></Card>;
+  if (!ws) return <Card><p className="text-xs text-ink-3">Cargá el espacio de trabajo (base y EDIT) primero.</p></Card>;
   const mapped = Object.keys(map).length;
 
   return (
@@ -158,22 +141,22 @@ export function PesDraftPanel({ pes }) {
         <Button onClick={saveMap}><Save className="w-3.5 h-3.5" />Guardar asignación</Button>
         <Button variant="primary" disabled={!teams || !mapped} onClick={calculate}><Calculator className="w-3.5 h-3.5" />Calcular</Button>
       </>}>
-        <p className="text-xs text-slate-400 mb-3">
+        <p className="text-xs text-ink-3 mb-3">
           Cada equipo del draft reemplaza al equipo del juego que elijas: nombre, abreviatura, país, plantel con dorsales, 11 titular, formación,
           estrategia, capitán y pateadores. Se escribe en la base (Team.bin, PlayerAssignment.bin) y en el EDIT. Los fichados salen de su club original
           (las selecciones no se tocan). Si escribís un DT, se renombra el entrenador del equipo reemplazado (Coach.bin y EDIT); vacío, queda el del juego.
           Nada se modifica hasta que tocás «Aplicar».
         </p>
         <datalist id="pes-game-teams">{options.map(o => <option key={o.id} value={`${o.id} — ${o.name}${o.national ? ' (selección)' : ''}`} />)}</datalist>
-        {!teams && !error && <p className="text-xs text-slate-400">Cargando equipos del draft…</p>}
+        {!teams && !error && <p className="text-xs text-ink-3">Cargando equipos del draft…</p>}
         {teams && (
-          <table className="w-full text-xs text-slate-300">
-            <thead><tr className="text-left text-slate-500"><th className="py-1">Equipo del draft</th><th>Jugadores</th><th>Reemplaza a</th><th>DT</th></tr></thead>
+          <table className="w-full text-xs text-ink-2">
+            <thead><tr className="text-left text-ink-3"><th className="py-1">Equipo del draft</th><th>Jugadores</th><th>Reemplaza a</th><th>DT</th></tr></thead>
             <tbody>
               {teams.map(t => (
-                <tr key={t.id} className="border-t border-white/[0.04]">
-                  <td className="py-1.5"><Users className="inline w-3.5 h-3.5 mr-1 text-slate-500" />{t.name}{!t.inWhitelist && <Pill>fuera de la lista</Pill>}</td>
-                  <td className={t.players.length < 11 || t.players.length > 40 ? 'text-red-300' : ''}>{t.players.length}</td>
+                <tr key={t.id} className="border-t border-line/[0.08]">
+                  <td className="py-1.5"><Users className="inline w-3.5 h-3.5 mr-1 text-ink-3" />{t.name}{!t.inWhitelist && <Pill>fuera de la lista</Pill>}</td>
+                  <td className={t.players.length < 11 || t.players.length > 40 ? 'text-danger-soft' : ''}>{t.players.length}</td>
                   <td className="py-1">
                     <TargetInput value={map[t.id] ? `${map[t.id]} — ${nameOf(map[t.id]) || ''}` : ''} label={`Equipo del juego para ${t.name}`}
                       onCommit={v => setTarget(t.id, v)} />
@@ -187,31 +170,31 @@ export function PesDraftPanel({ pes }) {
             </tbody>
           </table>
         )}
-        {notice && <p className="text-xs text-emerald-300 mt-3">{notice}</p>}
+        {notice && <p className="text-xs text-success-soft mt-3">{notice}</p>}
         <ErrorText error={error} />
       </Card>
 
       {plan && (
         <Card title="Resultado del cálculo" actions={<Button variant="primary" disabled={!plan.ok || busy} onClick={apply}><Play className="w-3.5 h-3.5" />Aplicar {plan.ops.length} cambios</Button>}>
           {plan.errors.length > 0 && (
-            <div className="mb-3 text-xs text-red-300 space-y-1">
+            <div className="mb-3 text-xs text-danger-soft space-y-1">
               <p className="font-bold">Hay que corregir esto antes de aplicar:</p>
-              {plan.errors.map(e => <p key={e}>✕ {e}</p>)}
+              {plan.errors.map(e => <Issue key={e} tone="error">{e}</Issue>)}
             </div>
           )}
           {plan.ok && (
-            <table className="w-full text-xs text-slate-300 mb-3">
-              <thead><tr className="text-left text-slate-500"><th className="py-1">Equipo del draft</th><th>Reemplaza a</th><th>Plantel</th><th>DT</th></tr></thead>
+            <div className="overflow-x-auto mb-3"><table className="data-table min-w-[32rem]">
+              <thead><tr className="text-left text-ink-3"><th className="py-1">Equipo del draft</th><th>Reemplaza a</th><th>Plantel</th><th>DT</th></tr></thead>
               <tbody>{plan.teams.map(t => (
-                <tr key={t.draftTeamId} className="border-t border-white/[0.04]"><td className="py-1">{t.name}</td><td>{nameOf(t.pesTeamId)} ({t.pesTeamId})</td><td>{t.players}</td><td>{t.coachName || <span className="text-slate-500">{coachNameOfTeam(ws, t.pesTeamId) || 'sin cambios'}</span>}</td></tr>
+                <tr key={t.draftTeamId} className="border-t border-line/[0.08]"><td className="py-1">{t.name}</td><td>{nameOf(t.pesTeamId)} ({t.pesTeamId})</td><td>{t.players}</td><td>{t.coachName || <span className="text-ink-3">{coachNameOfTeam(ws, t.pesTeamId) || 'sin cambios'}</span>}</td></tr>
               ))}</tbody>
-            </table>
+            </table></div>
           )}
           {plan.ok && <RemovedList removed={plan.removed} />}
           {plan.warnings.length > 0 && (
-            <details className="mt-2 text-xs text-amber-300">
+            <details className="mt-2 text-xs text-warning-soft">
               <summary className="cursor-pointer">{plan.warnings.length} aviso(s)</summary>
-              <ul className="mt-1 space-y-0.5 max-h-60 overflow-y-auto">{plan.warnings.map(w => <li key={w}>⚠ {w}</li>)}</ul>
+              <ul className="mt-1 space-y-0.5 max-h-60 overflow-y-auto">{plan.warnings.map(w => <Issue as="li" key={w} tone="warning">{w}</Issue>)}</ul>
             </details>
           )}
         </Card>

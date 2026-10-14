@@ -223,9 +223,9 @@ export default function TeamScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4 text-slate-300">
-        <div className="w-10 h-10 border-3 border-sky-500/20 border-t-sky-500 rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-400">Cargando perfil táctico...</p>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4 text-ink-2">
+        <div className="w-10 h-10 border-3 border-accent/20 border-t-accent-soft rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-ink-3">Cargando perfil táctico...</p>
       </div>
     );
   }
@@ -233,22 +233,22 @@ export default function TeamScreen() {
   if (error) {
     const isNetworkError = error.includes('conexión');
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-200">
-        <div className={`w-16 h-16 ${isNetworkError ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-500/10 border-red-500/20 text-red-400'} rounded-xl flex items-center justify-center mb-5 border`}>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-ink-2">
+        <div className={`w-16 h-16 ${isNetworkError ? 'bg-warning/10 border-warning/20 text-warning-soft' : 'bg-danger/10 border-danger/20 text-danger-soft'} rounded-xl flex items-center justify-center mb-5 border`}>
           {isNetworkError ? <WifiOff className="w-8 h-8" /> : <Shield className="w-8 h-8" />}
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">{error}</h2>
-        <p className="text-sm text-slate-400 max-w-sm mb-6">No se pudieron recuperar los registros oficiales del equipo solicitado.</p>
+        <h2 className="text-xl font-bold text-ink mb-2">{error}</h2>
+        <p className="text-sm text-ink-3 max-w-sm mb-6">No se pudieron recuperar los registros oficiales del equipo solicitado.</p>
         <div className="flex items-center gap-3">
           <button 
             onClick={fetchTeam} 
-            className="flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-medium px-4 py-2 rounded-lg transition cursor-pointer text-sm"
+            className="flex items-center gap-2 bg-accent hover:bg-accent text-ink font-medium px-4 py-2 rounded-lg transition cursor-pointer text-sm"
           >
             <RefreshCw size={16} /> Reintentar
           </button>
           <button 
             onClick={() => navigate('/')} 
-            className="flex items-center gap-2 text-slate-300 hover:text-white font-medium transition px-4 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm cursor-pointer"
+            className="flex items-center gap-2 text-ink-2 hover:text-ink font-medium transition px-4 py-2 rounded-lg border border-line/20 hover:bg-raised text-sm cursor-pointer"
           >
             <ArrowLeft size={16} /> Volver al Inicio
           </button>
@@ -259,15 +259,15 @@ export default function TeamScreen() {
 
   if (!teamData) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-200">
-        <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mb-4">
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-ink-2">
+        <div className="w-16 h-16 rounded-xl bg-surface border border-line/20 flex items-center justify-center text-ink-3 mb-4">
           <Users className="w-8 h-8" />
         </div>
-        <h2 className="text-lg font-bold text-white">No se encontraron datos del equipo</h2>
-        <p className="text-sm text-slate-400 mt-1 mb-6">El equipo aún no ha configurado su plantilla pública.</p>
+        <h2 className="text-lg font-bold text-ink">No se encontraron datos del equipo</h2>
+        <p className="text-sm text-ink-3 mt-1 mb-6">El equipo aún no ha configurado su plantilla pública.</p>
         <button 
           onClick={() => navigate('/')} 
-          className="flex items-center gap-2 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 font-medium px-4 py-2 rounded-lg text-sm transition cursor-pointer"
+          className="flex items-center gap-2 text-accent bg-accent/10 hover:bg-accent/20 border border-accent/30 font-medium px-4 py-2 rounded-lg text-sm transition cursor-pointer"
         >
           <ArrowLeft size={16} /> Volver al Inicio
         </button>
@@ -312,14 +312,14 @@ export default function TeamScreen() {
   const goalDiff = teamRecord.gf - teamRecord.ga;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col selection:bg-sky-500/30">
+    <div className="min-h-screen bg-slate-950 text-ink-2 flex flex-col selection:bg-accent/30">
       {/* ── HEADER PANEL DE IDENTIDAD ── */}
-      <div className="bg-slate-900/95 border-b border-slate-800 px-4 py-6 sm:py-7 relative">
+      <div className="bg-surface/95 border-b border-line/20 px-4 py-6 sm:py-7 relative">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
             {/* Escudo del equipo */}
             <div className="relative group shrink-0">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-slate-800 border border-slate-700 p-2.5 flex items-center justify-center shadow-md">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-raised border border-line/20 p-2.5 flex items-center justify-center shadow-md">
                 <img 
                   src={teamData?.logoUrl || DEFAULT_LOGO} 
                   width={96}
@@ -334,31 +334,31 @@ export default function TeamScreen() {
             {/* Metadatos y Nombre */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                <span className="bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-semibold px-2 py-0.5 rounded">
+                <span className="bg-accent/10 text-accent border border-accent/20 text-xs font-semibold px-2 py-0.5 rounded">
                   SCL DRAFT 2026
                 </span>
-                <span className="text-slate-400 text-xs font-medium">
+                <span className="text-ink-3 text-xs font-medium">
                   Ficha oficial de equipo
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-white leading-tight">
+              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-ink leading-tight">
                 {teamData?.teamName || 'Equipo'}
               </h1>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
-                <span className="inline-flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300">
-                  <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Formación: <strong className="text-white">{teamData?.formation || '4-3-3'}</strong></span>
+                <span className="inline-flex items-center gap-1.5 bg-raised/80 border border-line/15 px-2.5 py-1 rounded-lg text-xs font-medium text-ink-2">
+                  <Trophy className="w-3.5 h-3.5 text-warning-soft" />
+                  <span>Formación: <strong className="text-ink">{teamData?.formation || '4-3-3'}</strong></span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300">
-                  <Users className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Titulares: <strong className="text-white">{Object.values(publicLineup).length}</strong></span>
+                <span className="inline-flex items-center gap-1.5 bg-raised/80 border border-line/15 px-2.5 py-1 rounded-lg text-xs font-medium text-ink-2">
+                  <Users className="w-3.5 h-3.5 text-accent" />
+                  <span>Titulares: <strong className="text-ink">{Object.values(publicLineup).length}</strong></span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300">
-                  <Shield className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Suplentes: <strong className="text-white">{substitutes.length}</strong></span>
+                <span className="inline-flex items-center gap-1.5 bg-raised/80 border border-line/15 px-2.5 py-1 rounded-lg text-xs font-medium text-ink-2">
+                  <Shield className="w-3.5 h-3.5 text-accent-soft" />
+                  <span>Suplentes: <strong className="text-ink">{substitutes.length}</strong></span>
                 </span>
                 {unavailableCount > 0 && (
-                  <span className="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-lg text-xs font-medium text-red-400">
+                  <span className="inline-flex items-center gap-1.5 bg-danger/10 border border-danger/20 px-2.5 py-1 rounded-lg text-xs font-medium text-danger-soft">
                     <span>Bajas: <strong>{unavailableCount}</strong></span>
                   </span>
                 )}
@@ -370,7 +370,7 @@ export default function TeamScreen() {
           <div className="shrink-0 w-full sm:w-auto flex justify-center sm:justify-end">
             <button
               onClick={handleBack}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-medium rounded-lg border border-slate-700 transition text-sm cursor-pointer shadow-xs w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-raised hover:bg-overlay text-ink-2 hover:text-ink font-medium rounded-lg border border-line/20 transition text-sm cursor-pointer shadow-xs w-full sm:w-auto"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Volver atrás</span>
@@ -381,37 +381,37 @@ export default function TeamScreen() {
 
       {/* ── FRANJA DE RENDIMIENTO & RÉCORD DEPORTIVO ── */}
       <section className="w-full max-w-6xl mx-auto px-4 pt-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 bg-slate-900 p-3 rounded-xl border border-slate-800">
-          <div className="bg-slate-800/60 rounded-lg p-3 text-center border border-slate-700/50">
-            <p className="text-xs font-medium text-slate-400">Partidos</p>
-            <p className="mt-1 text-lg sm:text-xl font-bold text-white tabular-nums">{teamRecord.played}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 bg-surface p-3 rounded-xl border border-line/20">
+          <div className="bg-raised/60 rounded-lg p-3 text-center border border-line/15">
+            <p className="text-xs font-medium text-ink-3">Partidos</p>
+            <p className="mt-1 text-lg sm:text-xl font-bold text-ink tabular-nums">{teamRecord.played}</p>
           </div>
 
-          <div className="bg-slate-800/60 rounded-lg p-3 text-center border border-slate-700/50">
-            <p className="text-xs font-medium text-slate-400">Balance G-E-P</p>
-            <p className="mt-1 text-lg sm:text-xl font-bold text-sky-400 tabular-nums">
+          <div className="bg-raised/60 rounded-lg p-3 text-center border border-line/15">
+            <p className="text-xs font-medium text-ink-3">Balance G-E-P</p>
+            <p className="mt-1 text-lg sm:text-xl font-bold text-accent tabular-nums">
               {teamRecord.wins}-{teamRecord.draws}-{teamRecord.losses}
             </p>
           </div>
 
-          <div className="bg-slate-800/60 rounded-lg p-3 text-center border border-slate-700/50">
-            <p className="text-xs font-medium text-slate-400">Goles (Dif)</p>
-            <p className="mt-1 text-lg sm:text-xl font-bold text-emerald-400 tabular-nums">
-              {teamRecord.gf}:{teamRecord.ga} <span className="text-xs font-normal text-slate-400">({goalDiff > 0 ? `+${goalDiff}` : goalDiff})</span>
+          <div className="bg-raised/60 rounded-lg p-3 text-center border border-line/15">
+            <p className="text-xs font-medium text-ink-3">Goles (Dif)</p>
+            <p className="mt-1 text-lg sm:text-xl font-bold text-success-soft tabular-nums">
+              {teamRecord.gf}:{teamRecord.ga} <span className="text-xs font-normal text-ink-3">({goalDiff > 0 ? `+${goalDiff}` : goalDiff})</span>
             </p>
           </div>
 
-          <div className="bg-slate-800/60 rounded-lg p-3 text-center border border-slate-700/50">
-            <p className="text-xs font-medium text-slate-400">Racha Reciente</p>
+          <div className="bg-raised/60 rounded-lg p-3 text-center border border-line/15">
+            <p className="text-xs font-medium text-ink-3">Racha Reciente</p>
             <div className="mt-1 flex items-center justify-center gap-1 min-h-[28px]">
               {teamRecord.form.length > 0 ? (
                 teamRecord.form.slice(-5).map((res, i) => (
                   <span
                     key={i}
                     className={`w-5 h-5 rounded text-[11px] font-bold flex items-center justify-center ${
-                      res === 'G' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                      res === 'P' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
-                      'bg-slate-700/40 text-slate-300 border border-slate-600/40'
+                      res === 'G' ? 'bg-success/20 text-success-soft border border-success/30' :
+                      res === 'P' ? 'bg-danger/20 text-danger-soft border border-danger/30' :
+                      'bg-overlay/40 text-ink-2 border border-line/15'
                     }`}
                     title={res === 'G' ? 'Victoria' : res === 'P' ? 'Derrota' : 'Empate'}
                   >
@@ -419,22 +419,22 @@ export default function TeamScreen() {
                   </span>
                 ))
               ) : (
-                <span className="text-sm font-medium text-slate-500">—</span>
+                <span className="text-sm font-medium text-ink-3">—</span>
               )}
             </div>
           </div>
 
-          <div className="bg-slate-800/60 rounded-lg p-3 text-center border border-slate-700/50">
-            <p className="text-xs font-medium text-slate-400">Títulos SCL</p>
-            <p className="mt-1 text-lg sm:text-xl font-bold text-amber-400 tabular-nums flex items-center justify-center gap-1">
-              <Trophy size={16} className="text-amber-400" />
+          <div className="bg-raised/60 rounded-lg p-3 text-center border border-line/15">
+            <p className="text-xs font-medium text-ink-3">Títulos SCL</p>
+            <p className="mt-1 text-lg sm:text-xl font-bold text-warning-soft tabular-nums flex items-center justify-center gap-1">
+              <Trophy size={16} className="text-warning-soft" />
               {teamRecord.titles}
             </p>
           </div>
 
-          <div className="bg-slate-800/60 rounded-lg p-3 text-center border border-slate-700/50">
-            <p className="text-xs font-medium text-slate-400">Rival Directo</p>
-            <p className="mt-1 text-sm font-semibold text-slate-200 truncate" title={teamRecord.rival}>
+          <div className="bg-raised/60 rounded-lg p-3 text-center border border-line/15">
+            <p className="text-xs font-medium text-ink-3">Rival Directo</p>
+            <p className="mt-1 text-sm font-semibold text-ink-2 truncate" title={teamRecord.rival}>
               {teamRecord.rival || '—'}
             </p>
           </div>
@@ -443,17 +443,17 @@ export default function TeamScreen() {
 
       {/* ── PIZARRA TÁCTICA DEL 11 INICIAL ── */}
       <main className="w-full max-w-6xl mx-auto px-4 py-6 flex flex-col items-center">
-        <div className="w-full max-w-3xl bg-slate-900 rounded-xl border border-slate-800 p-3 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between px-1 pb-3 mb-2 border-b border-slate-800">
+        <div className="w-full max-w-3xl bg-surface rounded-xl border border-line/20 p-3 sm:p-5 shadow-sm">
+          <div className="flex items-center justify-between px-1 pb-3 mb-2 border-b border-line/20">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-sky-400" />
-              <span className="text-sm font-semibold text-slate-200">Disposición Táctica Oficial</span>
+              <Activity className="w-4 h-4 text-accent" />
+              <span className="text-sm font-semibold text-ink-2">Disposición Táctica Oficial</span>
             </div>
-            <span className="text-xs font-medium text-slate-300 bg-slate-800 px-2.5 py-0.5 rounded border border-slate-700">
+            <span className="text-xs font-medium text-ink-2 bg-raised px-2.5 py-0.5 rounded border border-line/20">
               {teamData?.formation || '4-3-3'}
             </span>
           </div>
-          <div className="rounded-lg overflow-hidden bg-slate-950 border border-slate-800">
+          <div className="rounded-lg overflow-hidden bg-slate-950 border border-line/20">
             <Pitch 
               formation={currentFormation}
               lineup={publicLineup}
@@ -468,18 +468,18 @@ export default function TeamScreen() {
 
       {/* ── BANCO DE SUPLENTES (AUTOMÁTICO: ORDENADOS POR POSICIÓN Y OVR) ── */}
       <section className="w-full max-w-6xl mx-auto px-4 pb-8">
-        <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 sm:p-5 shadow-sm">
+        <div className="bg-surface rounded-xl border border-line/20 p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
-              <Users className="w-5 h-5 text-sky-400" />
-              <h2 className="text-base sm:text-lg font-bold text-white">
+              <Users className="w-5 h-5 text-accent" />
+              <h2 className="text-base sm:text-lg font-bold text-ink">
                 Banco de Suplentes
               </h2>
-              <span className="text-xs text-slate-400 font-medium bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+              <span className="text-xs text-ink-3 font-medium bg-raised px-2 py-0.5 rounded border border-line/20">
                 {substitutes.length} jugadores
               </span>
             </div>
-            <span className="text-xs text-slate-400 font-normal hidden sm:inline">
+            <span className="text-xs text-ink-3 font-normal hidden sm:inline">
               Ordenados por posición (Def, Med, Del, Arq) y OVR
             </span>
           </div>
@@ -496,8 +496,8 @@ export default function TeamScreen() {
                 return (
                   <div
                     key={player.Id}
-                    className={`flex items-center gap-3 rounded-lg p-2.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 transition relative ${
-                      isUnavailable ? 'opacity-60 bg-red-950/10 border-red-500/20' : ''
+                    className={`flex items-center gap-3 rounded-lg p-2.5 bg-raised/60 hover:bg-raised border border-line/15 transition relative ${
+                      isUnavailable ? 'opacity-60 bg-red-950/10 border-danger/20' : ''
                     }`}
                   >
                     {/* Foto del suplente con dorsal */}
@@ -505,14 +505,14 @@ export default function TeamScreen() {
                       <img
                         src={`/fotos_jugadores/${player.Id}.webp`}
                         alt={player.Name}
-                        className="w-11 h-11 rounded-lg object-cover bg-slate-950 border border-slate-700"
+                        className="w-11 h-11 rounded-lg object-cover bg-slate-950 border border-line/20"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = `https://placehold.co/44x44/111/444?text=${player.Name?.[0] || '?'}`;
                         }}
                       />
                       {dorsal && (
-                        <span className="absolute -bottom-1 -right-1 bg-slate-950 text-white text-[10px] font-bold px-1 rounded border border-slate-700">
+                        <span className="absolute -bottom-1 -right-1 bg-slate-950 text-ink text-[10px] font-bold px-1 rounded border border-line/20">
                           #{dorsal}
                         </span>
                       )}
@@ -520,23 +520,23 @@ export default function TeamScreen() {
 
                     {/* Datos del suplente */}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-100">
+                      <p className="truncate text-sm font-semibold text-ink-2">
                         {player.Name}
                       </p>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span
-                          className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded"
+                          className="text-[10px] font-bold text-ink px-1.5 py-0.5 rounded"
                           style={{ backgroundColor: posColor }}
                         >
                           {player.POS_NOMBRE || 'DEF'}
                         </span>
                         {player.Precio && (
-                          <span className="text-xs font-semibold text-emerald-400 tabular-nums">
+                          <span className="text-xs font-semibold text-success-soft tabular-nums">
                             {formatPriceShort(player.Precio)}
                           </span>
                         )}
                         {isUnavailable && (
-                          <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 px-1 py-0.5 rounded border border-red-500/20">
+                          <span className="text-[10px] font-semibold text-danger-soft bg-danger/10 px-1 py-0.5 rounded border border-danger/20">
                             Baja
                           </span>
                         )}
@@ -554,9 +554,9 @@ export default function TeamScreen() {
               })}
             </div>
           ) : (
-            <div className="p-6 text-center bg-slate-800/30 rounded-lg border border-dashed border-slate-800">
-              <p className="text-sm text-slate-400 font-medium">No hay suplentes en la plantilla de este equipo.</p>
-              <p className="text-xs text-slate-500 mt-1">Todos los jugadores disponibles están asignados al 11 titular.</p>
+            <div className="p-6 text-center bg-raised/30 rounded-lg border border-dashed border-line/20">
+              <p className="text-sm text-ink-3 font-medium">No hay suplentes en la plantilla de este equipo.</p>
+              <p className="text-xs text-ink-3 mt-1">Todos los jugadores disponibles están asignados al 11 titular.</p>
             </div>
           )}
         </div>
@@ -564,12 +564,12 @@ export default function TeamScreen() {
 
       {/* ── HISTORIAL DE MERCADO ── */}
       <section className="w-full max-w-6xl mx-auto px-4 pb-12">
-        <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 sm:p-5 shadow-sm">
+        <div className="bg-surface rounded-xl border border-line/20 p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" /> Historial de Mercado
+            <h2 className="text-sm sm:text-base font-bold text-ink flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-success-soft" /> Historial de Mercado
             </h2>
-            <span className="text-xs text-slate-400">Últimos movimientos</span>
+            <span className="text-xs text-ink-3">Últimos movimientos</span>
           </div>
 
           {transferHistory.length > 0 ? (
@@ -579,18 +579,18 @@ export default function TeamScreen() {
                 return (
                   <div 
                     key={`${transfer.playerId}-${index}`} 
-                    className="flex items-center justify-between gap-3 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 p-2.5 transition"
+                    className="flex items-center justify-between gap-3 rounded-lg bg-raised/60 hover:bg-raised border border-line/15 p-2.5 transition"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-200">
+                      <p className="truncate text-sm font-semibold text-ink-2">
                         {transfer.playerName || 'Jugador'}
                       </p>
-                      <p className={`text-xs font-medium mt-0.5 ${isSale ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      <p className={`text-xs font-medium mt-0.5 ${isSale ? 'text-warning-soft' : 'text-success-soft'}`}>
                         {isSale ? 'Venta de jugador' : 'Fichaje confirmado'}
                         {transfer.type === 'transfer' ? ' · Entre clubes' : ''}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm font-bold text-white tabular-nums bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                    <span className="shrink-0 text-sm font-bold text-ink tabular-nums bg-raised px-2 py-0.5 rounded border border-line/20">
                       ${Number(transfer.price || 0).toFixed(2)}M
                     </span>
                   </div>
@@ -598,14 +598,14 @@ export default function TeamScreen() {
               })}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 italic py-2">Todavía no hay movimientos de mercado registrados para este club.</p>
+            <p className="text-xs text-ink-3 italic py-2">Todavía no hay movimientos de mercado registrados para este club.</p>
           )}
         </div>
       </section>
 
       {/* ── FOOTER EDITORIAL OFICIAL ── */}
-      <footer className="mt-auto py-5 border-t border-slate-800 text-center bg-slate-950">
-        <p className="text-xs text-slate-500 font-normal">
+      <footer className="mt-auto py-5 border-t border-line/20 text-center bg-slate-950">
+        <p className="text-xs text-ink-3 font-normal">
           SCL Draft 2026 • Argentina
         </p>
       </footer>

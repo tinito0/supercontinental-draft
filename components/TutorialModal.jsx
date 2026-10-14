@@ -185,27 +185,27 @@ export const TutorialModal = memo(function TutorialModal({ isVisible, onClose, b
         </button>
 
         <div className="flex items-center gap-3 mb-4 pr-20">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center">
-            <HelpCircle className="w-5 h-5 text-cyan-300" />
+          <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center">
+            <HelpCircle className="w-5 h-5 text-accent-soft" />
           </div>
           <div>
-            <p className="text-[10px] text-cyan-300 font-black uppercase tracking-widest">Guia del manager</p>
-            <p className="text-[11px] text-gray-500 font-bold">{step + 1} / {steps.length}</p>
+            <p className="text-[10px] text-accent-soft font-bold uppercase tracking-widest">Guia del manager</p>
+            <p className="text-[11px] text-ink-3 font-bold">{step + 1} / {steps.length}</p>
           </div>
         </div>
 
-        <h3 className="text-lg font-black text-white mb-2">{current.title}</h3>
-        <p className="text-sm text-gray-300 leading-relaxed">{current.description}</p>
+        <h3 className="text-lg font-bold text-ink mb-2">{current.title}</h3>
+        <p className="text-sm text-ink-2 leading-relaxed">{current.description}</p>
 
         {step === 1 && budget && (
-          <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Tu presupuesto</span>
-            <span className="text-xl font-black text-emerald-400">{formatBudget(budget)}</span>
+          <div className="mt-4 bg-success/10 border border-success/20 rounded-xl px-4 py-3">
+            <span className="text-[10px] text-ink-3 font-bold uppercase tracking-wider block">Tu presupuesto</span>
+            <span className="text-xl font-bold text-success-soft">{formatBudget(budget)}</span>
           </div>
         )}
 
         {!spotlightRect && (
-          <p className="mt-3 text-xs text-yellow-200/80 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+          <p className="mt-3 text-xs text-yellow-200/80 bg-warning/10 border border-warning/20 rounded-lg px-3 py-2">
             Este elemento no esta visible en esta pantalla. Segui avanzando o abrilo desde el menu cuando quieras probarlo.
           </p>
         )}
@@ -216,7 +216,7 @@ export const TutorialModal = memo(function TutorialModal({ isVisible, onClose, b
               key={item.targetSelector}
               type="button"
               onClick={() => setStep(index)}
-              className={`h-2 rounded-full transition-all ${index === step ? 'w-7 bg-cyan-400' : 'w-2 bg-white/15 hover:bg-white/30'}`}
+              className={`h-2 rounded-full transition-all ${index === step ? 'w-7 bg-accent' : 'w-2 bg-white/15 hover:bg-white/30'}`}
               aria-label={`Ir al paso ${index + 1}`}
             />
           ))}
@@ -228,7 +228,7 @@ export const TutorialModal = memo(function TutorialModal({ isVisible, onClose, b
             onClick={() => setStep(index => Math.max(0, index - 1))}
             disabled={step === 0}
             title={step === 0 ? 'Este es el primer paso' : undefined}
-            className="flex-1 min-h-11 rounded-xl bg-white/[0.06] disabled:opacity-40 text-sm font-black text-white flex items-center justify-center gap-2"
+            className="flex-1 min-h-11 rounded-xl bg-white/[0.06] disabled:opacity-40 text-sm font-bold text-ink flex items-center justify-center gap-2"
           >
             <ChevronLeft className="w-4 h-4" /> Anterior
           </button>
@@ -238,7 +238,7 @@ export const TutorialModal = memo(function TutorialModal({ isVisible, onClose, b
               if (isLast) onClose();
               else setStep(index => Math.min(steps.length - 1, index + 1));
             }}
-            className="flex-1 min-h-11 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-sm font-black text-white flex items-center justify-center gap-2"
+            className="flex-1 min-h-11 rounded-xl bg-accent hover:bg-accent text-sm font-bold text-ink flex items-center justify-center gap-2"
           >
             {isLast ? <><Check className="w-4 h-4" /> Finalizar</> : <>Siguiente <ChevronRight className="w-4 h-4" /></>}
           </button>

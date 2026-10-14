@@ -80,7 +80,7 @@ export const PlayerCard = memo(function PlayerCard({
         }
       }}
       aria-label={`Ver detalles de ${player.Name}, ${player.POS_NOMBRE}, OVR ${ovr}`}
-      className={`player-card w-full text-left cursor-pointer ${isLockedByOther ? 'player-card--locked' : ''} ${isInMyCart ? 'player-card--owned' : ''} ${isComparing ? 'player-card--comparing' : ''} focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00b4d8]`}
+      className={`player-card w-full text-left cursor-pointer ${isLockedByOther ? 'player-card--locked' : ''} ${isInMyCart ? 'player-card--owned' : ''} ${isComparing ? 'player-card--comparing' : ''} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent`}
       style={{
         '--pos-accent': posColor,
         '--ovr-color': ovrColor,
@@ -95,7 +95,7 @@ export const PlayerCard = memo(function PlayerCard({
     >
       {/* ═══════════ PRICE HEADER (TOP) ═══════════ */}
       <div className="player-card__price-header">
-        <DollarSign className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+        <DollarSign className="w-3.5 h-3.5 text-success-soft flex-shrink-0" />
         <span className="player-card__price">
           {formatPriceShort(player.Precio)}
         </span>
@@ -108,7 +108,7 @@ export const PlayerCard = memo(function PlayerCard({
           aria-label={isWishlisted ? 'Quitar de favoritos' : 'Añadir a favoritos'}
           aria-pressed={isWishlisted}
           className={`absolute top-2 right-2 z-20 min-w-11 min-h-11 flex items-center justify-center rounded-full transition-all duration-200 backdrop-blur-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300
-            ${isWishlisted ? 'bg-yellow-500/25 text-yellow-400' : 'bg-black/40 text-white/60 hover:bg-black/60 hover:text-white'}`}
+            ${isWishlisted ? 'bg-warning/25 text-warning-soft' : 'bg-black/40 text-white/60 hover:bg-black/60 hover:text-ink'}`}
           title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}
         >
           <Star className="w-4 h-4" fill={isWishlisted ? "currentColor" : "none"} />
@@ -198,7 +198,7 @@ export const PlayerCard = memo(function PlayerCard({
             {lockedTeamLogo ? (
               <img src={lockedTeamLogo} alt="Vendido" width={64} height={64} className="w-16 h-16 object-contain drop-shadow-xl" />
             ) : (
-              <div className="bg-red-600/90 text-white font-black text-xs uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg shadow-lg border border-red-400/30 rotate-[-8deg]">
+              <div className="bg-red-600/90 text-ink font-bold text-xs uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg shadow-lg border border-red-400/30 rotate-[-8deg]">
                 VENDIDO
               </div>
             )}
@@ -209,7 +209,7 @@ export const PlayerCard = memo(function PlayerCard({
         {isInMyCart && !isLockedByOther && (
           <>
             <div className="player-card__owned-stripe" />
-            <div className="absolute top-2 left-2 z-30 bg-[#00b4d8] text-[#030712] font-black text-[8px] uppercase tracking-wider px-2 py-1 rounded shadow-md">
+            <div className="absolute top-2 left-2 z-30 bg-accent text-on-accent font-bold text-[8px] uppercase tracking-wider px-2 py-1 rounded shadow-md">
               EN TU EQUIPO
             </div>
           </>

@@ -35,6 +35,13 @@ function handleReader(root) {
   }
   return {
     name: root.name,
+    async list(rel) {
+      const d = await dir(rel);
+      if (!d) return [];
+      const names = [];
+      for await (const [n, h] of d.entries()) if (h.kind === 'directory') names.push(n);
+      return names;
+    },
     async read(rel) {
       const i = rel.lastIndexOf('/');
       const d = await dir(i < 0 ? '' : rel.slice(0, i));
@@ -52,22 +59,43 @@ export function filesReader(fileList) {
   const files = [...fileList];
   const top = files[0]?.webkitRelativePath.split('/')[0] || '';
   const byPath = new Map(files.map(f => [f.webkitRelativePath.split('/').slice(1).join('/').toLowerCase(), f]));
+  // Name-only matching is for a bare texture folder; with the game folder the lookup order must hold.
   const byName = new Map();
+  const textureFolderOnly = !byPath.has('sider.ini');
   for (const f of files) if (/\.(ftex|dds)$/i.test(f.name) && !byName.has(f.name.toLowerCase())) byName.set(f.name.toLowerCase(), f);
   return {
     name: top,
+    async list(rel) {
+      const prefix = rel.toLowerCase().replace(/\/+$/, '') + '/';
+      const names = new Set();
+      for (const f of files) {
+        const p = f.webkitRelativePath.split('/').slice(1);
+        if (p.length > 2 && (p.slice(0, -1).join('/') + '/').toLowerCase().startsWith(prefix)) names.add(p.join('/').slice(prefix.length).split('/')[0]);
+      }
+      return [...names];
+    },
     async read(rel) {
-      const f = byPath.get(rel.toLowerCase()) || (/\.(ftex|dds)$/i.test(rel) ? byName.get(rel.split('/').pop().toLowerCase()) : null);
+      const f = byPath.get(rel.toLowerCase()) || (textureFolderOnly && /\.(ftex|dds)$/i.test(rel) ? byName.get(rel.split('/').pop().toLowerCase()) : null);
       return f ? new Uint8Array(await f.arrayBuffer()) : null;
     },
   };
 }
 
-/** Adds the livecpk roots of the folder's sider.ini (lookup order of the game). */
+/**
+ * Adds the livecpk roots of the folder's sider.ini (lookup order of the game), then every other
+ * livecpk folder as a fallback: kit textures referenced by kit-server configs also live in packs the
+ * ini does not list (e.g. livecpk/VRED_Kits), and the preview should still find them.
+ */
 async function withRoots(reader) {
   const ini = await reader.read('sider.ini');
   const roots = ini ? parseSiderRoots(new TextDecoder().decode(ini)) : [];
-  return { ...reader, roots, hasSiderIni: Boolean(ini) };
+  const listed = new Set(roots.map(r => r.toLowerCase()));
+  let fallbackRoots = [];
+  try {
+    fallbackRoots = (await reader.list?.('livecpk') || [])
+      .map(n => `livecpk/${n}`).filter(r => !listed.has(r.toLowerCase())).sort((a, b) => a.localeCompare(b));
+  } catch { fallbackRoots = []; }
+  return { ...reader, roots, fallbackRoots, hasSiderIni: Boolean(ini) };
 }
 
 /** Asks for the game folder (Chrome/Edge) and remembers it. */

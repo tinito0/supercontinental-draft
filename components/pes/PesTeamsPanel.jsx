@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Replace, Play, X } from 'lucide-react';
-import { Card, Button, Pill, FieldInput, SearchInput, ErrorText } from './PesUi.jsx';
+import { Card, Button, Pill, FieldInput, SearchInput, ErrorText, Issue } from './PesUi.jsx';
 import { EDIT_TEAM_FIELDS, EDIT_LOCKED_FIELDS, from6bit, to6bit } from '../../pes/formats/pes2021/editLayout.js';
 import { EDIT_TEAM_KIT_FIELDS } from '../../pes/permissions.js';
 import { planTeamReplacement } from '../../pes/teamReplacement.js';
@@ -20,12 +20,12 @@ function TeamColours({ edit, teamId, canEdit, onApply }) {
   return (
     <div className="flex flex-wrap gap-4">
       {[['c1', 'Color 1', colour('c1r', 'c1g', 'c1b')], ['c2', 'Color 2', colour('c2r', 'c2g', 'c2b')]].map(([p, label, value]) => (
-        <label key={p} className="flex items-center gap-2 text-xs text-slate-300">
+        <label key={p} className="flex items-center gap-2 text-xs text-ink-2">
           <input type="color" value={value} disabled={!canEdit} onChange={e => setColour(p, e.target.value)} className="w-9 h-9 rounded bg-transparent" />
-          {label} <code className="text-slate-500">{value}</code>
+          {label} <code className="text-ink-3">{value}</code>
         </label>
       ))}
-      <p className="w-full text-[11px] text-slate-500">El EDIT guarda cada canal en 6 bits: el color se redondea al más cercano.</p>
+      <p className="w-full text-[11px] text-ink-3">El EDIT guarda cada canal en 6 bits: el color se redondea al más cercano.</p>
     </div>
   );
 }
@@ -58,24 +58,24 @@ function ReplacementWizard({ ws, teamId, apply, onDone }) {
   return (
     <Card title="Reemplazar equipo" actions={<Button onClick={onDone}><X className="w-3.5 h-3.5" />Cerrar</Button>}>
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="text-xs text-slate-400 flex flex-col gap-1">Nombre nuevo (se aplica a los nombres en inglés/español/base)
-          <input value={names} onChange={e => setNames(e.target.value)} className="bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1.5 text-white" />
+        <label className="text-xs text-ink-3 flex flex-col gap-1">Nombre nuevo (se aplica a los nombres en inglés/español/base)
+          <input value={names} onChange={e => setNames(e.target.value)} className="input" />
         </label>
-        <label className="text-xs text-slate-400 flex flex-col gap-1">Plantel nuevo: una línea por jugador, <code>idJugador:dorsal</code> (vacío = no tocar el plantel)
-          <textarea value={roster} onChange={e => setRoster(e.target.value)} rows={6} className="bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1.5 text-white font-mono" />
+        <label className="text-xs text-ink-3 flex flex-col gap-1">Plantel nuevo: una línea por jugador, <code>idJugador:dorsal</code> (vacío = no tocar el plantel)
+          <textarea value={roster} onChange={e => setRoster(e.target.value)} rows={6} className="input font-mono" />
         </label>
       </div>
       <div className="mt-3 flex gap-2"><Button variant="primary" onClick={buildPlan}><Play className="w-3.5 h-3.5" />Calcular impacto</Button></div>
       <ErrorText error={error} />
       {plan && (
-        <div className="mt-3 space-y-2 text-xs text-slate-300">
+        <div className="mt-3 space-y-2 text-xs text-ink-2">
           <p>Cambios de datos: {plan.impact.fieldChanges} · filas reutilizadas {plan.impact.rowsReused} · agregadas {plan.impact.rowsAdded} · quitadas {plan.impact.rowsRemoved}</p>
           <p>Salen {plan.impact.playersOut.length} jugadores · entran {plan.impact.playersIn.length}</p>
-          {plan.impact.otherClubs.length > 0 && <p className="text-amber-300">Siguen asignados a otro club: {plan.impact.otherClubs.map(o => `${o.playerId} (equipo ${o.teamIds.join('/')})`).join(', ')}</p>}
-          {plan.warnings.map(w => <p key={w} className="text-amber-300">⚠ {w}</p>)}
-          {plan.errors.map(e => <p key={e} className="text-red-300">✕ {e}</p>)}
+          {plan.impact.otherClubs.length > 0 && <p className="text-warning-soft">Siguen asignados a otro club: {plan.impact.otherClubs.map(o => `${o.playerId} (equipo ${o.teamIds.join('/')})`).join(', ')}</p>}
+          {plan.warnings.map(w => <Issue key={w} tone="warning">{w}</Issue>)}
+          {plan.errors.map(e => <Issue key={e} tone="error">{e}</Issue>)}
           <Button variant="primary" disabled={!plan.ok || !plan.ops.length} onClick={run}>Aplicar {plan.ops.length} operaciones</Button>
-          <p className="text-slate-500">Se aplican todas juntas o ninguna. Quedan como cambios sin guardar hasta que toques «Guardar».</p>
+          <p className="text-ink-3">Se aplican todas juntas o ninguna. Quedan como cambios sin guardar hasta que toques «Guardar».</p>
         </div>
       )}
     </Card>
@@ -105,7 +105,7 @@ export function PesTeamsPanel({ pes, onApply }) {
     return (s ? teams.filter(t => String(t.id) === s || (t.name || '').toLowerCase().includes(s)) : teams).slice(0, 200);
   }, [teams, q]);
 
-  if (!ws?.bin?.tables.team && !ws?.edit) return <Card><p className="text-xs text-slate-400">Cargá Team.bin o un EDIT para ver equipos.</p></Card>;
+  if (!ws?.bin?.tables.team && !ws?.edit) return <Card><p className="text-xs text-ink-3">Cargá Team.bin o un EDIT para ver equipos.</p></Card>;
 
   const binTeam = teamId != null && ws.bin?.tables.team?.has(teamId) ? ws.bin.tables.team : null;
   const editHasTeam = teamId != null && ws.edit?.teams.has(teamId);
@@ -122,8 +122,8 @@ export function PesTeamsPanel({ pes, onApply }) {
           {filtered.map(t => (
             <li key={t.id}>
               <button type="button" onClick={() => { setTeamId(t.id); setReplacing(false); }}
-                className={`w-full text-left px-2 py-1.5 rounded text-xs ${t.id === teamId ? 'bg-cyan-500/15 text-white' : 'text-slate-300 hover:bg-white/[0.04]'}`}>
-                <span className="text-slate-500 mr-2">{t.id}</span>{t.name}{t.national && <Pill>selección</Pill>}
+                className={`w-full text-left px-2 py-1.5 rounded text-xs ${t.id === teamId ? 'bg-accent/15 text-ink' : 'text-ink-2 hover:bg-white/[0.04]'}`}>
+                <span className="text-ink-3 mr-2">{t.id}</span>{t.name}{t.national && <Pill>selección</Pill>}
               </button>
             </li>
           ))}
@@ -131,7 +131,7 @@ export function PesTeamsPanel({ pes, onApply }) {
       </Card>
 
       <div className="space-y-4">
-        {teamId == null && <Card><p className="text-xs text-slate-400">Elegí un equipo.</p></Card>}
+        {teamId == null && <Card><p className="text-xs text-ink-3">Elegí un equipo.</p></Card>}
 
         {binTeam && (
           <Card title={`Team.bin · ${binTeam.get(teamId, 'nameEnglish')}`} actions={caps.has('team.replace') && ws.bin.tables.assignment && ws.bin.tables.player &&
@@ -150,17 +150,17 @@ export function PesTeamsPanel({ pes, onApply }) {
 
         {binTeam && squad.length > 0 && (
           <Card title={`Plantel en PlayerAssignment.bin (${squad.length})`}>
-            <table className="w-full text-xs text-slate-300">
-              <thead><tr className="text-left text-slate-500"><th className="py-1">Dorsal</th><th>Jugador</th><th>Id</th><th>Fila</th></tr></thead>
+            <table className="w-full text-xs text-ink-2">
+              <thead><tr className="text-left text-ink-3"><th className="py-1">Dorsal</th><th>Jugador</th><th>Id</th><th>Fila</th></tr></thead>
               <tbody>
                 {squad.sort((a, b) => a.shirtNumber - b.shirtNumber).map(r => (
-                  <tr key={r.id} className="border-t border-white/[0.04]">
+                  <tr key={r.id} className="border-t border-line/[0.08]">
                     <td className="py-1 w-20">
                       <FieldInput field={ws.bin.tables.assignment.field('shirtNumber')} value={r.shirtNumber} label=" " readOnly={!canEditTeam}
                         modified={modified.has(opKey({ type: 'bin.assignment.set', target: { assignmentId: r.id }, field: 'shirtNumber' }))}
                         onCommit={value => onApply([{ type: 'bin.assignment.set', target: { assignmentId: r.id }, field: 'shirtNumber', value }])} />
                     </td>
-                    <td>{playerName(r.playerId)}</td><td className="text-slate-500">{r.playerId}</td><td className="text-slate-600">{r.id}</td>
+                    <td>{playerName(r.playerId)}</td><td className="text-ink-3">{r.playerId}</td><td className="text-ink-3">{r.id}</td>
                   </tr>
                 ))}
               </tbody>
@@ -183,17 +183,17 @@ export function PesTeamsPanel({ pes, onApply }) {
                   onCommit={value => onApply([{ type: 'edit.team.set', target: { teamId }, field: f.name, value }])} />
               ))}
             </div>
-            <h4 className="mt-4 mb-1 text-[11px] font-bold uppercase text-slate-400">Plantel en el EDIT</h4>
-            <table className="w-full text-xs text-slate-300">
+            <h4 className="mt-4 mb-1 text-[11px] font-bold uppercase text-ink-3">Plantel en el EDIT</h4>
+            <table className="w-full text-xs text-ink-2">
               <tbody>
                 {ws.edit.roster(teamId).map(r => (
-                  <tr key={r.slot} className="border-t border-white/[0.04]">
+                  <tr key={r.slot} className="border-t border-line/[0.08]">
                     <td className="py-1 w-20">
                       <FieldInput field={{ name: 'dorsal', kind: 'bits', offset: 0, shift: 0, bits: 7, addend: 0 }} value={r.number} label=" " readOnly={!canEditTeam}
                         modified={modified.has(opKey({ type: 'edit.roster.number', target: { teamId, slot: r.slot } }))}
                         onCommit={value => onApply([{ type: 'edit.roster.number', target: { teamId, slot: r.slot }, value }])} />
                     </td>
-                    <td>{playerName(r.playerId)}</td><td className="text-slate-500">{r.playerId}</td>
+                    <td>{playerName(r.playerId)}</td><td className="text-ink-3">{r.playerId}</td>
                   </tr>
                 ))}
               </tbody>

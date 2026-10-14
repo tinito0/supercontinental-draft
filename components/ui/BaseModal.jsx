@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { isTyping } from '../../hooks/useKeyboardShortcuts.js';
 
 const SIZE_MAP = {
   sm: 'max-w-md',
@@ -25,6 +26,11 @@ export function BaseModal({
   contentClassName = '',
 }) {
   const dialogRef = useRef(null);
+  // Parents usually pass an inline onClose (a new function on every render). Reading it through a ref
+  // keeps the focus effect below tied to opening/closing only: re-running it on each render moved the
+  // focus to the first focusable control (the close button) while the user was typing in a field.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   // Keep keyboard focus inside the dialog and return it to the trigger on close.
   // This is deliberately centralized so every consumer gets the same baseline.
@@ -38,7 +44,12 @@ export function BaseModal({
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose?.();
+        // Escape inside a field leaves the field first; it never closes the dialog while typing.
+        if (isTyping(e.target)) {
+          e.target.blur?.();
+          return;
+        }
+        onCloseRef.current?.();
         return;
       }
 
@@ -73,7 +84,7 @@ export function BaseModal({
       window.removeEventListener('keydown', handleKeyDown);
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -84,42 +95,43 @@ export function BaseModal({
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel || (typeof title === 'string' ? title : 'Ventana emergente')}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in"
       onClick={onClose}
     >
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={`bg-[#0c1017] border border-white/[0.08] rounded-2xl w-full shadow-2xl flex flex-col overflow-hidden max-h-[92vh] animate-in zoom-in-95 duration-200 ${sizeClass} ${className}`}
+        className={`bg-surface border border-line/[0.14] rounded-t-2xl sm:rounded-2xl w-full shadow-lg flex flex-col overflow-hidden max-h-[94dvh] sm:max-h-[92dvh] animate-in slide-in-from-bottom sm:zoom-in-95 ${sizeClass} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {(title || showClose) && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] bg-[#0f141d]/50 shrink-0">
+          <div className="flex items-center justify-between gap-3 pl-5 pr-3 py-3 border-b border-line/10 shrink-0">
             <div className="flex items-center gap-3 min-w-0 pr-4">
               {Icon && (
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                  <Icon className="w-4 h-4" />
+                <div className="w-9 h-9 rounded-lg bg-accent/[0.14] flex items-center justify-center text-accent-soft shrink-0">
+                  <Icon className="w-[18px] h-[18px]" aria-hidden="true" />
                 </div>
               )}
               <div className="min-w-0">
                 {title && (
-                  <h3 className="text-sm sm:text-base font-black text-white tracking-wide truncate">
+                  <h2 className="font-display text-lg sm:text-xl font-bold text-ink leading-tight truncate">
                     {title}
-                  </h3>
+                  </h2>
                 )}
                 {subtitle && (
-                  <p className="text-xs text-slate-400 truncate mt-0.5">{subtitle}</p>
+                  <p className="text-xs text-ink-3 truncate mt-0.5">{subtitle}</p>
                 )}
               </div>
             </div>
             {showClose && (
               <button
+                type="button"
                 onClick={onClose}
-                aria-label="Cerrar modal"
-                className="w-11 h-11 rounded-xl text-slate-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center transition active:scale-95 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                aria-label="Cerrar"
+                className="w-11 h-11 rounded-lg text-ink-3 hover:text-ink hover:bg-white/[0.06] flex items-center justify-center transition-colors shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -132,7 +144,7 @@ export function BaseModal({
 
         {/* Footer */}
         {footer && (
-          <div className="px-5 py-3.5 border-t border-white/[0.06] bg-[#0f141d]/50 flex items-center justify-end gap-2.5 shrink-0">
+          <div className="px-5 py-3.5 border-t border-line/10 flex items-center justify-end gap-2.5 shrink-0">
             {footer}
           </div>
         )}

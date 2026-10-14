@@ -1,8 +1,12 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, runTransaction, Timestamp } from 'firebase/firestore';
-import { AlertCircle, Clock, HelpCircle, Search, Star, Trash2, UserPlus } from 'lucide-react';
+import { Clock, HelpCircle, Loader2, Search, Star, Trash2, UserPlus } from 'lucide-react';
 import { APP_ID, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
-import { formatPriceShort, getFlagUrl, getRegionById } from '../utils/helpers.js';
+import { formatPriceShort, getFlagUrl, getRegionById, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
+import { Page } from './ui/Page.jsx';
+import { PageHeader, SectionHeader } from './ui/PageHeader.jsx';
+import { Alert } from './ui/Alert.jsx';
+import { EmptyState } from './ui/EmptyState.jsx';
 import { buildResultsAsync, positionGroups, RESULT_COUNT_MIN, RESULT_COUNT_MAX } from '../utils/scoutEngine.js';
 
 const MONTHLY_SEARCH_LIMIT = 5;
@@ -13,30 +17,6 @@ const DEFAULT_SCOUTS = [
   { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 4, imageUrl: '/scouts/fefe-farfan.webp', specialty: 'Elite total', description: 'El mejor ojeador de todos. Tarda mas porque filtra fino y prioriza coincidencias premium.' },
   { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantanea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para testear resultados.' },
 ];
-
-/* ── Posiciones con paleta unificada del mercado ── */
-const POS_COLOR = {
-  DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444',
-  MC: '#22c55e', MCD: '#22c55e', MO: '#22c55e', MI: '#22c55e', MD: '#22c55e',
-  DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6',
-  PT: '#eab308',
-};
-
-/* ── Umbrales dinámicos de color OVR consistentes con el mercado ── */
-const OVR_COLOR_THRESHOLDS = [
-  [90, '#1ec9a4'],
-  [85, '#a0dd00'],
-  [75, '#ffc400'],
-  [65, '#ec7d22'],
-];
-const OVR_COLOR_DEFAULT = '#94a3af';
-
-function getOvrColor(ovr) {
-  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
-    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
-  }
-  return OVR_COLOR_DEFAULT;
-}
 
 const SCOUT_TUTORIAL_STEPS = [
   {
@@ -242,18 +222,18 @@ function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
       )}
       <div className="scout-guide-popover" style={tooltipStyle}>
         <button type="button" onClick={onClose} className="scout-guide-skip">Saltar</button>
-        <div className="text-[10px] font-black uppercase text-[#00b4d8] mb-2 tracking-wider">
+        <div className="eyebrow mb-2">
           Paso {stepIndex + 1} de {steps.length}
         </div>
-        <h3 className="text-base font-black text-white mb-2">{activeStep.title}</h3>
-        <p className="text-sm text-slate-300 leading-relaxed">{activeStep.description}</p>
+        <h3 className="font-display text-lg font-bold text-ink mb-2">{activeStep.title}</h3>
+        <p className="text-sm text-ink-2 leading-relaxed">{activeStep.description}</p>
         <div className="flex items-center justify-between gap-3 mt-5">
           <button
             type="button"
             onClick={() => setStepIndex(index => Math.max(0, index - 1))}
             disabled={stepIndex === 0}
             title={stepIndex === 0 ? 'Este es el primer paso' : undefined}
-            className="min-h-11 px-4 rounded-xl bg-[#111722] hover:bg-[#161f2e] border border-white/[0.08] disabled:opacity-40 text-sm font-bold text-slate-200 transition"
+            className="btn btn-secondary"
           >
             Anterior
           </button>
@@ -263,7 +243,7 @@ function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
               if (isLast) onClose();
               else setStepIndex(index => Math.min(steps.length - 1, index + 1));
             }}
-            className="min-h-11 px-5 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] text-sm font-black text-[#030712] transition shadow-md active:scale-95"
+            className="btn btn-primary"
           >
             {isLast ? 'Finalizar' : 'Siguiente'}
           </button>
@@ -515,499 +495,278 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
     }
   };
 
+  const quotaFull = monthlyUsage >= MONTHLY_SEARCH_LIMIT;
+  const fieldLabel = 'field-label';
+
   return (
-    <div className="w-full h-full min-h-0 flex flex-col bg-[#06080d] relative overflow-hidden text-slate-200">
-      {/* Sutil halo atmosférico cyan tipo radar */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-72 bg-[radial-gradient(ellipse_at_top,_rgba(0,180,216,0.08)_0%,_transparent_70%)] pointer-events-none z-0" />
+    <Page className="pb-24">
+      <PageHeader
+        eyebrow="Mi club"
+        title="Scouting"
+        description="Mandá ojeadores a buscar jugadores con los criterios que elijas. Cada búsqueda usa una de tus asignaciones del mes."
+        actions={(
+          <>
+            <span className={`text-sm ${quotaFull ? 'text-danger-soft' : 'text-ink-3'}`}>
+              Cupo del mes: <span className="num font-semibold text-ink">{monthlyUsage}/{MONTHLY_SEARCH_LIMIT}</span>
+            </span>
+            <button type="button" onClick={() => setIsGuideOpen(true)} className="btn btn-secondary">
+              <HelpCircle className="w-4 h-4" aria-hidden="true" />Cómo funciona
+            </button>
+          </>
+        )}
+      />
 
-      {/* ── HEADER SUPERIOR ── */}
-      <div className="relative z-10 px-4 sm:px-6 py-4 bg-[#0c1017] border-b border-white/[0.08]">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base sm:text-xl font-black text-white flex items-center gap-2.5">
-              <Search className="w-5 h-5 text-[#00b4d8]" /> Scouting & Red de Ojeadores
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">Asigna misiones de exploración táctica para descubrir talentos y promesas de fichaje.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsGuideOpen(true)}
-            className="min-h-11 px-4 rounded-xl bg-[#111722] hover:bg-[#161f2e] border border-white/[0.08] text-slate-200 text-xs font-bold flex items-center gap-2 transition shadow-sm cursor-pointer"
-          >
-            <HelpCircle className="w-4 h-4 text-[#00b4d8]" /> Ayuda
-          </button>
+      {quotaFull && (
+        <Alert tone="danger" title="Cupo mensual agotado">
+          Usaste las {MONTHLY_SEARCH_LIMIT} asignaciones de este mes. El cupo se restablece el 1.º del mes que viene.
+        </Alert>
+      )}
+
+      <form onSubmit={handleCreate} className="panel p-4 sm:p-6 space-y-6" aria-labelledby="scout-form-title">
+        <div>
+          <h2 id="scout-form-title" className="section-title">Nueva búsqueda</h2>
+          <p className="text-xs text-ink-3 mt-1">
+            {selectedScout?.testDurationSeconds ? 'Este ojeador de prueba vuelve en 1 segundo.' : `El resultado llega cuando termina el trabajo de ${selectedScout?.durationHours || 12} horas.`}
+          </p>
         </div>
-      </div>
 
-      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto custom-scrollbar px-3 sm:px-6 py-4 space-y-4 pb-24">
-        <form onSubmit={handleCreate} className="rounded-2xl border border-white/[0.08] bg-[#0c1017] p-4 sm:p-6 space-y-5 shadow-xl backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+        <fieldset data-scout-target="scout-picker">
+          <legend className="eyebrow mb-3">Ojeador</legend>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" role="radiogroup" aria-label="Ojeador">
+            {scouts.map(scout => {
+              const selected = selectedScoutId === scout.id;
+              return (
+                <button
+                  key={scout.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  disabled={quotaFull}
+                  title={quotaFull ? 'Ya usaste las asignaciones de este mes' : scout.description || undefined}
+                  onClick={() => setSelectedScoutId(scout.id)}
+                  className={`min-h-[88px] rounded-xl border p-3 text-left transition-colors flex gap-3 overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed ${
+                    selected ? 'bg-accent/10 border-accent' : 'bg-raised border-line/[0.12] hover:border-line/30'
+                  }`}
+                >
+                  <span className="w-14 h-14 rounded-lg overflow-hidden bg-surface flex-shrink-0 flex items-center justify-center">
+                    {scout.imageUrl ? (
+                      <img src={scout.imageUrl} alt="" width={56} height={56} className="w-full h-full object-cover object-top"
+                        onError={e => {
+                          if (e.currentTarget.src.endsWith('.webp')) e.currentTarget.src = '/scouts/fefe-farfan.png';
+                          else e.currentTarget.style.display = 'none';
+                        }} />
+                    ) : (
+                      <span className="font-display text-lg font-bold text-ink-2">{scout.name.slice(0, 2).toUpperCase()}</span>
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-ink truncate">{scout.name}</span>
+                    <span className="block text-xs text-ink-3 mt-0.5">Calidad <span className="num text-ink-2">{scout.quality}</span> · {scout.testDurationSeconds ? '1 seg' : `${scout.durationHours} h`}</span>
+                    <span className="block text-xs text-ink-3 line-clamp-2 mt-0.5">{scout.specialty}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-line/[0.08] pt-5">
+          <label data-scout-target="position">
+            <span className={fieldLabel}>Zona del campo</span>
+            <select value={criteria.positionGroup} onChange={e => setCriteria(prev => ({ ...prev, positionGroup: e.target.value, positions: [] }))} className="select">
+              <option value="">Cualquier posición</option>
+              {Object.keys(positionGroups).map(group => <option key={group} value={group}>{group}</option>)}
+            </select>
+          </label>
+          <label data-scout-target="attention" className="md:col-span-2">
+            <span className={fieldLabel}>Qué priorizar</span>
+            <select value={criteria.attention} onChange={e => setCriteria(prev => ({ ...prev, attention: e.target.value }))} className="select">
+              {attentionOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <fieldset data-scout-target="specific-position">
+          <div className="flex items-end justify-between gap-3 mb-3">
             <div>
-              <h3 className="text-sm font-black text-white uppercase tracking-wider">Nueva asignación de exploración</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {selectedScout?.testDurationSeconds ? 'Este ojeador de prueba vuelve en 1 segundo.' : `El resultado se libera cuando termina el trabajo de ${selectedScout?.durationHours || 12} horas.`}
+              <legend className="eyebrow">Posición específica</legend>
+              <p className="text-xs text-ink-3 mt-1">
+                {criteria.positionGroup ? 'Sin elegir ninguna se buscan jugadores para toda la línea.' : 'Elegí primero una zona del campo para filtrar por puesto.'}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${
-                monthlyUsage >= MONTHLY_SEARCH_LIMIT
-                  ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                  : 'bg-[#111722] border-white/[0.08] text-slate-300'
-              }`}>
-                Cupo mensual: <strong className="text-white">{monthlyUsage}</strong>/{MONTHLY_SEARCH_LIMIT}
-              </span>
-            </div>
-          </div>
-
-          {/* Ojeadores */}
-          <div data-scout-target="scout-picker" className="rounded-xl border border-white/[0.08] bg-[#111722]/50 p-4">
-            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-              <div>
-                <p className="text-xs font-black text-slate-300 uppercase tracking-wider">Seleccionar Ojeador</p>
-                <p className="text-xs text-slate-400">Cupo mensual disponible: {MONTHLY_SEARCH_LIMIT - monthlyUsage} asignaciones restantes</p>
-              </div>
-              {monthlyUsage >= MONTHLY_SEARCH_LIMIT && (
-                <span className="text-xs font-black text-red-300 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                  Cupo agotado
-                </span>
-              )}
-            </div>
-
-            {monthlyUsage >= MONTHLY_SEARCH_LIMIT && (
-              <div className="mb-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3 flex items-center gap-2.5 text-xs text-red-200">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                <span>Usaste los 5 scouts disponibles de este mes. El cupo se restablece automáticamente el 1° del próximo mes.</span>
-              </div>
+            {criteria.positions.length > 0 && (
+              <button type="button" onClick={() => setCriteria(prev => ({ ...prev, positions: [] }))} className="btn btn-ghost btn-sm">Restablecer</button>
             )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-              {scouts.map(scout => {
-                const selected = selectedScoutId === scout.id;
-                const isQuotaFull = monthlyUsage >= MONTHLY_SEARCH_LIMIT;
-                return (
-                  <button
-                    key={scout.id}
-                    type="button"
-                    disabled={isQuotaFull}
-                    title={isQuotaFull ? 'Ya usaste los 5 scouts disponibles de este mes' : undefined}
-                    onClick={() => setSelectedScoutId(scout.id)}
-                    className={`min-h-[96px] rounded-xl border p-3.5 text-left transition flex gap-3 overflow-hidden cursor-pointer ${
-                      isQuotaFull
-                        ? 'opacity-40 cursor-not-allowed bg-[#111722]/40 border-white/5'
-                        : selected
-                        ? 'bg-[#00b4d8]/10 border-[#00b4d8] ring-2 ring-[#00b4d8]/30 shadow-[0_0_15px_rgba(0,180,216,0.15)]'
-                        : 'bg-[#111722] border-white/[0.08] hover:bg-[#161f2e] hover:border-white/[0.18]'
-                    }`}
-                  >
-                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-black/60 border border-white/10 flex-shrink-0">
-                      {scout.imageUrl ? (
-                        <img
-                          src={scout.imageUrl}
-                          alt={scout.name}
-                          width={56}
-                          height={56}
-                          className="w-full h-full object-cover object-top"
-                          onError={e => {
-                            if (e.currentTarget.src.endsWith('.webp')) {
-                              e.currentTarget.src = '/scouts/fefe-farfan.png';
-                            } else {
-                              e.currentTarget.style.display = 'none';
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-sm font-black text-[#00b4d8]">{scout.name.slice(0, 2).toUpperCase()}</div>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-black text-white truncate">{scout.name}</p>
-                      <p className="text-[11px] font-black text-[#00b4d8] mt-0.5">Q{scout.quality} • {scout.testDurationSeconds ? '1 seg' : `${scout.durationHours} h`}</p>
-                      <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{scout.specialty}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label data-scout-target="position" className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Zona del campo</span>
-              <select
-                value={criteria.positionGroup}
-                onChange={e => setCriteria(prev => ({ ...prev, positionGroup: e.target.value, positions: [] }))}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-              >
-                <option value="">Cualquier posición</option>
-                {Object.keys(positionGroups).map(group => <option key={group} value={group}>{group}</option>)}
-              </select>
-            </label>
-            <label data-scout-target="attention" className="space-y-1.5 md:col-span-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Aspectos a priorizar</span>
-              <select
-                value={criteria.attention}
-                onChange={e => setCriteria(prev => ({ ...prev, attention: e.target.value }))}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-              >
-                {attentionOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-              </select>
-            </label>
-          </div>
-
-          {/* Posición específica */}
-          <div data-scout-target="specific-position" className="rounded-xl border border-white/[0.08] bg-[#111722]/50 p-4">
-            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-              <div>
-                <p className="text-xs font-black text-slate-300 uppercase tracking-wider">Posición específica</p>
-                <p className="text-xs text-slate-400">
-                  {criteria.positionGroup ? 'Ninguna = se buscan jugadores aptos para toda la línea elegida.' : 'Cualquier posición = no se filtra por zona del campo.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCriteria(prev => ({ ...prev, positions: [] }))}
-                className="min-h-10 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white hover:bg-white/[0.06] transition cursor-pointer"
-              >
-                Restablecer
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-              {specificPositions.length === 0 && (
-                <div className="col-span-full min-h-11 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-xs font-medium text-slate-400 px-3 text-center">
-                  {criteria.positionGroup ? 'No hay puestos específicos para esta línea' : 'Elegí una posición arriba (Arquero, Defensa, Medio o Delantero) para filtrar por puestos'}
-                </div>
-              )}
+          {specificPositions.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
               {specificPositions.map(pos => {
                 const selected = criteria.positions.includes(pos);
                 return (
-                  <button
-                    key={pos}
-                    type="button"
-                    onClick={() => setCriteria(prev => ({
-                      ...prev,
-                      positions: selected ? prev.positions.filter(item => item !== pos) : [...prev.positions, pos],
-                    }))}
-                    className={`min-h-11 rounded-xl border text-sm font-black transition cursor-pointer ${
-                      selected
-                        ? 'bg-[#00b4d8] border-[#00b4d8] text-[#030712] shadow-sm'
-                        : 'bg-[#111722] border-white/[0.08] text-slate-300 hover:text-white hover:bg-[#161f2e]'
-                    }`}
-                  >
+                  <button key={pos} type="button" aria-pressed={selected}
+                    onClick={() => setCriteria(prev => ({ ...prev, positions: selected ? prev.positions.filter(item => item !== pos) : [...prev.positions, pos] }))}
+                    className={`min-h-11 rounded-lg border text-sm font-semibold transition-colors ${selected ? 'bg-accent border-accent text-on-accent' : 'bg-raised border-line/[0.14] text-ink-2 hover:text-ink hover:border-line/30'}`}>
                     {pos}
                   </button>
                 );
               })}
             </div>
-          </div>
+          )}
+        </fieldset>
 
-          {/* Área geográfica y presupuesto */}
-          <div data-scout-target="area" className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label data-scout-target="budget" className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">País</span>
-              <select
-                value={criteria.countryId}
-                onChange={e => setCriteria(prev => ({ ...prev, countryId: e.target.value }))}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-              >
-                <option value="">Cualquiera</option>
-                {sortedCountries.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Región</span>
-              <select
-                value={criteria.region}
-                onChange={e => setCriteria(prev => ({ ...prev, region: e.target.value }))}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-              >
-                <option value="">Cualquiera</option>
-                {REGIONES.map(region => <option key={region} value={region}>{region}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Presupuesto</span>
-              <select
-                value={criteria.considerBudget}
-                onChange={e => setCriteria(prev => ({ ...prev, considerBudget: e.target.value }))}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-              >
-                <option value="considerar">Considerar disponibles</option>
-                <option value="ignorar">Ignorar límite</option>
-              </select>
-            </label>
-          </div>
+        <div data-scout-target="area" className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-line/[0.08] pt-5">
+          <label data-scout-target="budget">
+            <span className={fieldLabel}>País</span>
+            <select value={criteria.countryId} onChange={e => setCriteria(prev => ({ ...prev, countryId: e.target.value }))} className="select">
+              <option value="">Cualquiera</option>
+              {sortedCountries.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+          </label>
+          <label>
+            <span className={fieldLabel}>Región</span>
+            <select value={criteria.region} onChange={e => setCriteria(prev => ({ ...prev, region: e.target.value }))} className="select">
+              <option value="">Cualquiera</option>
+              {REGIONES.map(region => <option key={region} value={region}>{region}</option>)}
+            </select>
+          </label>
+          <label>
+            <span className={fieldLabel}>Presupuesto</span>
+            <select value={criteria.considerBudget} onChange={e => setCriteria(prev => ({ ...prev, considerBudget: e.target.value }))} className="select">
+              <option value="considerar">Solo los que puedo pagar</option>
+              <option value="ignorar">Ignorar el presupuesto</option>
+            </select>
+          </label>
+        </div>
 
-          {/* Atributos y rangos */}
-          <div data-scout-target="attributes" className="grid grid-cols-2 md:grid-cols-7 gap-3">
-            {[
-              ['minAge', 'Edad mín'],
-              ['maxAge', 'Edad máx'],
-              ['minOvr', 'OVR mín'],
-              ['maxOvr', 'OVR máx'],
-            ].map(([key, label]) => (
-              <label key={key} className="space-y-1.5">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="99"
-                  value={criteria[key]}
-                  onChange={e => setCriteria(prev => ({ ...prev, [key]: e.target.value }))}
-                  className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-                />
-              </label>
-            ))}
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Presup. máx</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder={effectiveBudgetMax || 'M'}
-                value={criteria.budgetMax}
-                onChange={e => setCriteria(prev => ({ ...prev, budgetMax: e.target.value }))}
-                disabled={criteria.considerBudget === 'ignorar'}
-                title={criteria.considerBudget === 'ignorar' ? 'Has elegido ignorar el límite de presupuesto' : undefined}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors disabled:opacity-40"
-              />
+        <div data-scout-target="attributes" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+          {[['minAge', 'Edad mín'], ['maxAge', 'Edad máx'], ['minOvr', 'OVR mín'], ['maxOvr', 'OVR máx']].map(([key, label]) => (
+            <label key={key}>
+              <span className={fieldLabel}>{label}</span>
+              <input type="number" inputMode="numeric" min="0" max="99" value={criteria[key]} onChange={e => setCriteria(prev => ({ ...prev, [key]: e.target.value }))} className="input num" />
             </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Atributo 1</span>
-              <select
-                value={criteria.statKey}
-                onChange={e => setCriteria(prev => ({ ...prev, statKey: e.target.value }))}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-              >
-                {statOptions.map(key => <option key={key} value={key}>{STAT_NAMES_MAP[key] || key}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mín 1</span>
-              <input
-                type="number"
-                min="0"
-                max="99"
-                placeholder="Ej. 80"
-                value={criteria.statMin}
-                onChange={e => setCriteria(prev => ({ ...prev, statMin: e.target.value }))}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-              />
-            </label>
-          </div>
+          ))}
+          <label>
+            <span className={fieldLabel}>Precio máx (M)</span>
+            <input type="number" inputMode="decimal" min="0" step="0.01" placeholder={effectiveBudgetMax || 'M'} value={criteria.budgetMax}
+              onChange={e => setCriteria(prev => ({ ...prev, budgetMax: e.target.value }))} disabled={criteria.considerBudget === 'ignorar'}
+              title={criteria.considerBudget === 'ignorar' ? 'Elegiste ignorar el presupuesto' : undefined} className="input num" />
+          </label>
+          <label className="col-span-2 sm:col-span-1 lg:col-span-1">
+            <span className={fieldLabel}>Atributo 1</span>
+            <select value={criteria.statKey} onChange={e => setCriteria(prev => ({ ...prev, statKey: e.target.value }))} className="select">
+              {statOptions.map(key => <option key={key} value={key}>{STAT_NAMES_MAP[key] || key}</option>)}
+            </select>
+          </label>
+          <label>
+            <span className={fieldLabel}>Mínimo 1</span>
+            <input type="number" inputMode="numeric" min="0" max="99" placeholder="Ej. 80" value={criteria.statMin} onChange={e => setCriteria(prev => ({ ...prev, statMin: e.target.value }))} className="input num" />
+          </label>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Atributo 2 opcional</span>
-              <select
-                value={criteria.statKey2}
-                onChange={e => setCriteria(prev => ({ ...prev, statKey2: e.target.value, statMin2: e.target.value ? prev.statMin2 : '' }))}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-              >
-                <option value="">Sin segundo atributo</option>
-                {statOptions.filter(key => key !== criteria.statKey).map(key => <option key={key} value={key}>{STAT_NAMES_MAP[key] || key}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mín 2</span>
-              <input
-                type="number"
-                min="0"
-                max="99"
-                placeholder="Ej. 75"
-                value={criteria.statMin2}
-                onChange={e => setCriteria(prev => ({ ...prev, statMin2: e.target.value }))}
-                disabled={!criteria.statKey2}
-                title={!criteria.statKey2 ? 'Primero debes seleccionar un atributo opcional' : undefined}
-                className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors disabled:opacity-40"
-              />
-            </label>
-          </div>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Habilidad especial o rasgo</span>
-            <select
-              value={criteria.traitKey}
-              onChange={e => setCriteria(prev => ({ ...prev, traitKey: e.target.value }))}
-              className="w-full min-h-11 bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] rounded-xl px-3.5 text-sm font-semibold text-white outline-none transition-colors"
-            >
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <label>
+            <span className={fieldLabel}>Atributo 2 (opcional)</span>
+            <select value={criteria.statKey2} onChange={e => setCriteria(prev => ({ ...prev, statKey2: e.target.value, statMin2: e.target.value ? prev.statMin2 : '' }))} className="select">
+              <option value="">Sin segundo atributo</option>
+              {statOptions.filter(key => key !== criteria.statKey).map(key => <option key={key} value={key}>{STAT_NAMES_MAP[key] || key}</option>)}
+            </select>
+          </label>
+          <label>
+            <span className={fieldLabel}>Mínimo 2</span>
+            <input type="number" inputMode="numeric" min="0" max="99" placeholder="Ej. 75" value={criteria.statMin2} onChange={e => setCriteria(prev => ({ ...prev, statMin2: e.target.value }))}
+              disabled={!criteria.statKey2} title={!criteria.statKey2 ? 'Primero elegí el segundo atributo' : undefined} className="input num" />
+          </label>
+          <label>
+            <span className={fieldLabel}>Habilidad especial</span>
+            <select value={criteria.traitKey} onChange={e => setCriteria(prev => ({ ...prev, traitKey: e.target.value }))} className="select">
               <option value="">Sin habilidad puntual</option>
               {Object.entries(PLAYER_SKILLS_MAP).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
           </label>
-
-          {/* Comparativa informativa de ojeadores */}
-          <div className="rounded-xl border border-[#00b4d8]/20 bg-[#00b4d8]/5 p-4 text-xs text-slate-300">
-            <p className="font-black text-[#00b4d8] uppercase tracking-wider mb-2">Especialidades de la red de ojeadores</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-              {scouts.map(scout => (
-                <div key={scout.id} className="rounded-xl bg-[#0c1017] border border-white/[0.08] p-3 shadow-sm">
-                  <p className="font-black text-white">{scout.name} • <span className="text-[#00b4d8]">Q{scout.quality}</span></p>
-                  <p className="text-emerald-400 font-bold mt-0.5">{scout.specialty}</p>
-                  <p className="text-slate-400 mt-1 leading-relaxed">{scout.description || 'Mayor calidad significa menos variación y mejores coincidencias.'}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Botón de Enviar Scout */}
-          <div data-scout-target="submit" className="pt-2">
-            <button
-              type="submit"
-              disabled={isCreating || monthlyUsage >= MONTHLY_SEARCH_LIMIT}
-              title={isCreating ? 'Hay una operación en curso' : (monthlyUsage >= MONTHLY_SEARCH_LIMIT) ? 'Ya usaste los 5 scouts disponibles de este mes' : undefined}
-              className="w-full min-h-12 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] disabled:opacity-50 disabled:cursor-not-allowed text-[#030712] text-sm font-black uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40 active:scale-[0.99] cursor-pointer"
-            >
-              {isCreating ? (
-                <>
-                  <div className="w-4 h-4 rounded-full border-2 border-black/30 border-t-black animate-spin" />
-                  <span>Asignando misión de scout...</span>
-                </>
-              ) : monthlyUsage >= MONTHLY_SEARCH_LIMIT ? (
-                <span>Cupo mensual agotado ({monthlyUsage}/{MONTHLY_SEARCH_LIMIT})</span>
-              ) : (
-                <>
-                  <Search className="w-4 h-4" />
-                  <span>Enviar asignación de scout</span>
-                </>
-              )}
-            </button>
-            <p className="mt-2 text-center text-xs text-slate-500 font-medium">
-              {monthlyUsage >= MONTHLY_SEARCH_LIMIT
-                ? 'Ya alcanzaste el límite de 5 búsquedas de este mes.'
-                : `La búsqueda consume 1 de tus ${MONTHLY_SEARCH_LIMIT} asignaciones mensuales (${monthlyUsage}/${MONTHLY_SEARCH_LIMIT} usadas).`}
-            </p>
-          </div>
-        </form>
-
-        {/* Listado de Búsquedas Activas */}
-        <div className="space-y-4">
-          {isLoading ? (
-            <div className="rounded-2xl border border-white/[0.08] bg-[#0c1017] p-8 flex items-center justify-center gap-3 text-slate-300 text-sm font-bold shadow-md">
-              <div className="w-5 h-5 rounded-full border-2 border-[#00b4d8]/30 border-t-[#00b4d8] animate-spin" />
-              <span>Cargando búsquedas de scout en curso...</span>
-            </div>
-          ) : searches.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-[#0c1017] p-10 text-center flex flex-col items-center justify-center">
-              <Search className="w-10 h-10 mx-auto text-slate-600 mb-3" />
-              <p className="text-base font-bold text-slate-300">Todavía no mandaste ningún scout.</p>
-              <p className="text-xs text-slate-500 mt-1">Configurá los filtros arriba y enviá a un ojeador a explorar talentos.</p>
-            </div>
-          ) : searches.map(search => (
-            <div key={search.id} className="rounded-2xl border border-white/[0.08] bg-[#0c1017] overflow-hidden shadow-md">
-              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] bg-[#111722]/80">
-                <div>
-                  <p className="text-sm font-black text-white flex items-center gap-2">
-                    {search.scoutName || 'Scout'}
-                    <span className="text-[#00b4d8] font-bold px-2 py-0.5 bg-[#00b4d8]/10 rounded-md text-xs border border-[#00b4d8]/20">
-                      Q{search.scoutQuality || '-'}
-                    </span>
-                  </p>
-                  <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
-                    <Clock className="w-3.5 h-3.5 text-[#00b4d8]" />
-                    {search.status === 'searching' ? getTimeLeft(search.resolvesAt) : search.status === 'done' ? 'Resultados listos para evaluar' : 'Descartada'}
-                  </p>
-                </div>
-                {search.status !== 'dismissed' && (
-                  <button
-                    onClick={() => dismissSearch(search.id)}
-                    className="min-h-10 px-3.5 rounded-xl text-xs font-black text-red-400 hover:bg-red-500/15 border border-transparent hover:border-red-500/25 transition flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" /> Descartar
-                  </button>
-                )}
-              </div>
-
-              {search.status === 'done' && (search.results || []).length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
-                  {search.results.map(player => {
-                    const isWatchlisted = wishlistSet?.has(player.Id);
-                    const posColor = POS_COLOR[player.POS_NOMBRE] || '#94a3b8';
-                    const ovr = player.OVR_CALCULADO || 0;
-                    const ovrColor = getOvrColor(ovr);
-
-                    return (
-                      <div
-                        key={player.Id}
-                        className="rounded-xl border border-white/[0.08] bg-[#111722]/70 hover:bg-[#161f2e] hover:border-[#00b4d8]/40 p-4 transition-all duration-200 shadow-sm group flex flex-col justify-between"
-                      >
-                        <div>
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={`/fotos_jugadores/${player.Id}.webp`}
-                              alt={player.Name}
-                              className="w-12 h-12 rounded-xl object-cover bg-black/60 border border-white/10 flex-shrink-0"
-                              onError={e => {
-                                e.target.onerror = null;
-                                e.target.src = `https://placehold.co/48x48/111/444?text=${player.Name?.[0] || '?'}`;
-                              }}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-black text-white group-hover:text-[#00b4d8] transition truncate">
-                                {player.Name}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span
-                                  className="text-[9px] font-black text-white px-1.5 py-0.5 rounded"
-                                  style={{ backgroundColor: posColor }}
-                                >
-                                  {player.POS_NOMBRE}
-                                </span>
-                                <img
-                                  src={getFlagUrl(player.Country1)}
-                                  alt=""
-                                  className="w-4 h-3 rounded-[2px] opacity-80"
-                                  onError={e => { e.target.style.display = 'none'; }}
-                                />
-                                <span className="text-xs text-slate-400 font-medium">{player.Age} años</span>
-                              </div>
-                            </div>
-                            <span
-                              className="text-sm font-black px-2 py-0.5 rounded-md flex-shrink-0"
-                              style={{ color: ovrColor, backgroundColor: 'rgba(255,255,255,0.04)' }}
-                            >
-                              {ovr}
-                            </span>
-                          </div>
-
-                          <div className="mt-3.5 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs font-semibold">
-                            <span className="text-slate-400">Vel <strong className="text-white font-mono">{player.Speed || '-'}</strong></span>
-                            <span className="text-slate-400">Fin <strong className="text-white font-mono">{player.Finishing || '-'}</strong></span>
-                            <span className="text-emerald-400 font-black">{formatPriceShort(player.Precio)}</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 mt-4 pt-2">
-                          <button
-                            disabled={isWatchlisted}
-                            title={isWatchlisted ? 'Este jugador ya está en tu watchlist' : undefined}
-                            onClick={() => onAddToWatchlist(player.Id)}
-                            className="min-h-10 rounded-xl bg-[#0c1017] hover:bg-black/60 border border-white/[0.08] disabled:opacity-50 text-xs font-bold text-yellow-400 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                          >
-                            <Star className="w-3.5 h-3.5" fill={isWatchlisted ? 'currentColor' : 'none'} />
-                            {isWatchlisted ? 'En watchlist' : 'Watchlist'}
-                          </button>
-                          <button
-                            onClick={() => onPlayerClick(player)}
-                            className="min-h-10 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] text-[#030712] text-xs font-black flex items-center justify-center gap-1.5 transition shadow-sm active:scale-95 cursor-pointer"
-                          >
-                            <UserPlus className="w-3.5 h-3.5" /> Negociar
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
         </div>
-      </div>
-      <ScoutGuidedTutorial
-        steps={SCOUT_TUTORIAL_STEPS}
-        isOpen={isGuideOpen}
-        onClose={() => setIsGuideOpen(false)}
-      />
-    </div>
+
+        <div data-scout-target="submit" className="border-t border-line/[0.08] pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-xs text-ink-3">
+            {quotaFull ? `Ya usaste las ${MONTHLY_SEARCH_LIMIT} búsquedas de este mes.` : `Usa 1 de tus ${MONTHLY_SEARCH_LIMIT} asignaciones del mes (${monthlyUsage} usadas).`}
+          </p>
+          <button type="submit" disabled={isCreating || quotaFull}
+            title={isCreating ? 'Hay una operación en curso' : quotaFull ? 'Ya usaste las asignaciones de este mes' : undefined}
+            className="btn btn-primary btn-lg w-full sm:w-auto">
+            {isCreating ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Search className="w-4 h-4" aria-hidden="true" />}
+            {isCreating ? 'Enviando ojeador…' : quotaFull ? 'Cupo agotado' : 'Enviar ojeador'}
+          </button>
+        </div>
+      </form>
+
+      <section className="space-y-4" aria-labelledby="scout-searches-title">
+        <SectionHeader title={<span id="scout-searches-title">Búsquedas</span>} />
+        {isLoading ? (
+          <div className="space-y-3" aria-hidden="true">{[0, 1].map(i => <div key={i} className="skeleton h-28 rounded-2xl" />)}</div>
+        ) : searches.length === 0 ? (
+          <EmptyState icon={Search} title="Todavía no mandaste ningún ojeador" description="Elegí los criterios arriba y enviá a un ojeador a buscar." />
+        ) : searches.map(search => (
+          <article key={search.id} className="panel-flat overflow-hidden" aria-label={`Búsqueda de ${search.scoutName || 'ojeador'}`}>
+            <header className="px-4 sm:px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 border-b border-line/[0.08]">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">{search.scoutName || 'Ojeador'} <span className="text-ink-3 font-normal">· calidad <span className="num">{search.scoutQuality || '-'}</span></span></p>
+                <p className={`text-xs flex items-center gap-1.5 mt-0.5 ${search.status === 'done' ? 'text-success-soft' : 'text-ink-3'}`}>
+                  <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                  {search.status === 'searching' ? getTimeLeft(search.resolvesAt) : search.status === 'done' ? 'Resultados listos' : 'Descartada'}
+                </p>
+              </div>
+              {search.status !== 'dismissed' && (
+                <button type="button" onClick={() => dismissSearch(search.id)} className="btn btn-ghost btn-sm text-danger-soft hover:text-danger-soft">
+                  <Trash2 className="w-4 h-4" aria-hidden="true" />Descartar
+                </button>
+              )}
+            </header>
+
+            {search.status === 'done' && (search.results || []).length > 0 && (
+              <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
+                {search.results.map(player => {
+                  const isWatchlisted = wishlistSet?.has(player.Id);
+                  const ovr = player.OVR_CALCULADO || 0;
+                  return (
+                    <li key={player.Id} className="rounded-xl border border-line/[0.12] bg-raised p-3.5 flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <img src={`/fotos_jugadores/${player.Id}.webp`} alt="" width={48} height={48}
+                          className="w-12 h-12 rounded-lg object-cover object-top bg-surface flex-shrink-0"
+                          onError={e => { e.currentTarget.style.visibility = 'hidden'; }} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-ink truncate">{player.Name}</p>
+                          <p className="flex items-center gap-2 mt-1 text-xs text-ink-3">
+                            <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                            <img src={getFlagUrl(player.Country1)} alt="" className="w-4 h-3 rounded-[2px]" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                            {player.Age} años
+                          </p>
+                        </div>
+                        <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
+                      </div>
+                      <p className="flex items-center justify-between text-xs text-ink-3 border-t border-line/[0.07] pt-2.5">
+                        <span>Velocidad <span className="num font-semibold text-ink-2">{player.Speed || '-'}</span></span>
+                        <span>Finalización <span className="num font-semibold text-ink-2">{player.Finishing || '-'}</span></span>
+                        <span className="num font-semibold text-ink">{formatPriceShort(player.Precio)}</span>
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" disabled={isWatchlisted} onClick={() => onAddToWatchlist(player.Id)} aria-pressed={Boolean(isWatchlisted)}
+                          title={isWatchlisted ? 'Ya está en tus favoritos' : undefined} className="btn btn-secondary btn-sm min-h-10">
+                          <Star className="w-3.5 h-3.5" fill={isWatchlisted ? 'currentColor' : 'none'} aria-hidden="true" />
+                          {isWatchlisted ? 'En favoritos' : 'Favorito'}
+                        </button>
+                        <button type="button" onClick={() => onPlayerClick(player)} className="btn btn-primary btn-sm min-h-10">
+                          <UserPlus className="w-3.5 h-3.5" aria-hidden="true" />Ver y negociar
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </article>
+        ))}
+      </section>
+
+      <ScoutGuidedTutorial steps={SCOUT_TUTORIAL_STEPS} isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+    </Page>
   );
 });

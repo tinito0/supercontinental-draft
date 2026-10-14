@@ -59,7 +59,7 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
         <div className="relative flex flex-col items-center">
           {/* Dorsal badge */}
           {playerDorsal && (
-            <div className="absolute -top-1 -left-1.5 bg-white text-black font-black text-[9px] w-5 h-5 flex items-center justify-center rounded-full z-30 shadow-md border border-gray-200"
+            <div className="absolute -top-1 -left-1.5 bg-white text-black font-bold text-[9px] w-5 h-5 flex items-center justify-center rounded-full z-30 shadow-md border border-slate-200"
               style={{ textShadow: 'none' }}>
               {playerDorsal}
             </div>
@@ -90,7 +90,7 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
           </div>
           {/* Position and OVR Row */}
           <div className="flex flex-row items-center justify-center gap-1 mt-1">
-            <span className={`px-1.5 py-[2px] text-[9px] font-bold rounded border ${slotColors.badge} text-white leading-none shadow-sm`}>
+            <span className={`px-1.5 py-[2px] text-[9px] font-bold rounded border ${slotColors.badge} text-ink leading-none shadow-sm`}>
               {player?.POS_NOMBRE || readOnlySlot?.pos || pos}
             </span>
             {playerOvr && (
@@ -100,7 +100,7 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
             )}
           </div>
           {/* Player name */}
-          <span className="block mt-0.5 text-[11px] font-bold text-white truncate max-w-[74px] text-center leading-none"
+          <span className="block mt-0.5 text-[11px] font-bold text-ink truncate max-w-[74px] text-center leading-none"
             style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}>
             {playerName}
           </span>
@@ -110,10 +110,10 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
         <div className="flex flex-col items-center">
           <div className={`w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center
             transition-all
-            ${holdingPlayer ? 'animate-pulse border-emerald-400/80 bg-emerald-500/20' : 'border-white/30 bg-white/5'}
+            ${holdingPlayer ? 'animate-pulse border-emerald-400/80 bg-success/20' : 'border-white/30 bg-white/5'}
             ${!isReadOnly ? 'group-hover:bg-white/15 group-hover:border-white/60' : ''}`}
           >
-            <span className={`text-xs font-bold ${emptyColors.text} ${!isReadOnly ? 'group-hover:text-white' : ''} transition-colors`}>
+            <span className={`text-xs font-bold ${emptyColors.text} ${!isReadOnly ? 'group-hover:text-ink' : ''} transition-colors`}>
               {pos}
             </span>
           </div>

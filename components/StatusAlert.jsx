@@ -4,7 +4,7 @@ import { CheckCircle, AlertTriangle, Loader2, X } from 'lucide-react';
 export const StatusAlert = memo(function StatusAlert({ type, message, onClose }) {
   const isLoading = type === 'loading';
   const isError = type === 'error';
-  const bgColor = isLoading ? 'bg-sky-700' : type === 'success' ? 'bg-green-600' : type === 'warning' ? 'bg-amber-600' : 'bg-red-600';
+  const bgColor = isLoading ? 'bg-accent-deep' : type === 'success' ? 'bg-green-600' : type === 'warning' ? 'bg-amber-600' : 'bg-red-600';
   const Icon = isLoading ? Loader2 : type === 'success' ? CheckCircle : AlertTriangle;
 
   return (
@@ -12,7 +12,7 @@ export const StatusAlert = memo(function StatusAlert({ type, message, onClose })
       role={isError ? 'alert' : 'status'}
       aria-live={isError ? 'assertive' : 'polite'}
       aria-atomic="true"
-      className={`fixed bottom-4 right-4 max-w-[calc(100vw-2rem)] p-4 rounded-lg text-white font-semibold shadow-2xl transition-opacity duration-300 flex items-center z-[120] ${bgColor}`}
+      className={`fixed bottom-4 right-4 max-w-[calc(100vw-2rem)] p-4 rounded-lg text-ink font-semibold shadow-2xl transition-opacity duration-300 flex items-center z-[120] ${bgColor}`}
     >
       <Icon className={`w-5 h-5 mr-2 shrink-0 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
       <span>{message}</span>

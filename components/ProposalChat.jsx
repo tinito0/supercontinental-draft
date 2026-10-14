@@ -90,25 +90,25 @@ export const ProposalChat = memo(function ProposalChat({
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
+    <div className="mt-3 rounded-xl border border-line/20 bg-surface/50 overflow-hidden">
       {/* Header / Toggle */}
       <button
         type="button"
         onClick={() => setIsExpanded(prev => !prev)}
-        className="w-full px-3 py-2 flex items-center justify-between bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left"
+        className="w-full px-3 py-2 flex items-center justify-between bg-surface/80 hover:bg-raised transition text-left"
       >
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+          <MessageSquare className="w-3.5 h-3.5 text-accent" />
+          <span className="text-xs font-bold text-ink-2">
             Chat de negociación
           </span>
           {messages.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">
               {messages.length}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1 text-slate-400 text-xs font-medium">
+        <div className="flex items-center gap-1 text-ink-3 text-xs font-medium">
           <span>{isExpanded ? 'Ocultar' : 'Ver chat'}</span>
           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </div>
@@ -116,13 +116,13 @@ export const ProposalChat = memo(function ProposalChat({
 
       {/* Body */}
       {isExpanded && (
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+        <div className="p-3 border-t border-line/20 space-y-2.5">
           {/* Message List */}
           <div className="max-h-56 min-h-[80px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
             {isLoading ? (
-              <p className="text-center text-xs text-slate-400 py-3 font-medium">Cargando mensajes...</p>
+              <p className="text-center text-xs text-ink-3 py-3 font-medium">Cargando mensajes...</p>
             ) : messages.length === 0 ? (
-              <p className="text-center text-xs text-slate-400 py-3 font-medium italic">
+              <p className="text-center text-xs text-ink-3 py-3 font-medium italic">
                 {isClosed
                   ? 'No hubo mensajes en esta negociación.'
                   : 'Todavía no hay mensajes. Podés negociar el precio o condiciones acá.'}
@@ -144,10 +144,10 @@ export const ProposalChat = memo(function ProposalChat({
                           alt=""
                           width={14}
                           height={14}
-                          className="w-3.5 h-3.5 rounded object-contain bg-slate-100 dark:bg-slate-800"
+                          className="w-3.5 h-3.5 rounded object-contain bg-raised"
                           onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                         />
-                        <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[150px]">
+                        <span className="text-[10px] font-semibold text-ink-3 truncate max-w-[150px]">
                           {msg.senderTeamName || 'Rival'}
                         </span>
                       </div>
@@ -155,14 +155,14 @@ export const ProposalChat = memo(function ProposalChat({
                     <div
                       className={`max-w-[85%] rounded-xl px-3 py-1.5 text-xs break-words shadow-sm ${
                         isMine
-                          ? 'bg-sky-600 text-white'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+                          ? 'bg-accent text-ink'
+                          : ' bg-raised border border-line/20 text-ink-2'
                       }`}
                     >
                       <p className="leading-snug">{msg.text}</p>
                       {timeStr && (
                         <span className={`block text-[9px] mt-0.5 text-right font-medium ${
-                          isMine ? 'text-sky-100' : 'text-slate-400'
+                          isMine ? 'text-accent-soft' : 'text-ink-3'
                         }`}>
                           {timeStr}
                         </span>
@@ -177,7 +177,7 @@ export const ProposalChat = memo(function ProposalChat({
 
           {/* Composer / Closed Banner */}
           {isClosed ? (
-            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-slate-100 dark:bg-slate-800/50 text-slate-500 text-[11px] font-medium">
+            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-raised/50 text-ink-3 text-[11px] font-medium">
               <Lock className="w-3.5 h-3.5" />
               <span>Esta negociación fue cerrada. Chat en modo solo lectura.</span>
             </div>
@@ -191,12 +191,12 @@ export const ProposalChat = memo(function ProposalChat({
                 aria-label="Escribir mensaje de negociación"
                 maxLength={400}
                 disabled={isSending}
-                className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500 transition placeholder:text-slate-400"
+                className="flex-1 bg-raised border border-line/20 rounded-lg px-3 py-1.5 text-xs text-ink outline-none focus:border-accent transition placeholder:text-ink-3"
               />
               <button
                 type="submit"
                 disabled={!text.trim() || isSending}
-                className="w-7 h-7 rounded-lg bg-sky-600 hover:bg-sky-500 text-white flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                className="w-7 h-7 rounded-lg bg-accent hover:bg-accent text-ink flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 title={isSending ? 'Hay una operación en curso' : !text.trim() ? 'Completa los datos requeridos primero' : 'Enviar mensaje'}
                 aria-label="Enviar mensaje"
               >

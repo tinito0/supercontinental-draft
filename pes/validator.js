@@ -10,10 +10,21 @@ function issue(key, severity, scope, message) { return { key, severity, scope, m
 
 function binIssues(tables) {
   const out = [];
-  const { team, player, assignment, coach } = tables;
-  for (const t of [team, player, assignment, coach]) {
+  const { team, player, assignment, coach, tactics, tacticsFormation } = tables;
+  for (const t of [team, player, assignment, coach, tactics, tacticsFormation]) {
     if (!t) continue;
     for (const id of t.duplicateIds) out.push(issue(`dup:${t.file}:${id}`, 'error', t.file, `${t.file}: id ${id} repetido.`));
+  }
+  if (tactics && team) {
+    for (const id of tactics.ids()) {
+      const tid = tactics.get(id, 'teamId');
+      if (!team.has(tid)) out.push(issue(`tactics-team:${id}:${tid}`, 'warning', 'Tactics.bin', `Táctica ${id}: el equipo ${tid} no existe en Team.bin.`));
+    }
+  }
+  if (tactics && tacticsFormation) {
+    const missing = new Set();
+    for (const key of tacticsFormation.ids()) { const id = tacticsFormation.get(key, 'tacticsId'); if (!tactics.has(id)) missing.add(id); }
+    for (const id of missing) out.push(issue(`formation-tactics:${id}`, 'warning', 'TacticsFormation.bin', `Formación de la táctica ${id}: no existe en Tactics.bin.`));
   }
   if (team && coach) {
     for (const id of team.ids()) {

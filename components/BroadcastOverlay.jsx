@@ -114,7 +114,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           grid-template-columns: 1fr 180px 1fr;
           align-items: stretch;
           background: linear-gradient(90deg, rgba(2,6,23,0.94), ${theme.panel}f5, rgba(2,6,23,0.94));
-          border: 2px solid rgba(56,189,248,0.62);
+          border: 2px solid rgba(77, 122, 214,0.62);
           box-shadow: 0 18px 55px rgba(0,0,0,0.55), 0 0 34px rgba(14,165,233,0.24);
           clip-path: polygon(2.5% 0, 97.5% 0, 100% 24%, 100% 100%, 0 100%, 0 24%);
         }
@@ -145,7 +145,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           text-overflow: ellipsis;
         }
         .broadcast-score-core {
-          background: linear-gradient(180deg, #e0f2fe, #38bdf8 44%, #075985);
+          background: linear-gradient(180deg, #e0f2fe, #4d7ad6 44%, #075985);
           color: #020617;
           display: flex;
           flex-direction: column;
@@ -282,7 +282,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           left: 0;
           width: 50%;
           height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.28), transparent);
+          background: linear-gradient(90deg, transparent, rgba(77, 122, 214, 0.28), transparent);
           transform: skewX(-25deg);
           animation: broadcastTickerSweep 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
           pointer-events: none;
@@ -300,7 +300,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           display: flex;
           align-items: center;
           padding: 0 18px;
-          background: #38bdf8;
+          background: #4d7ad6;
           color: #020617;
           font-size: 13px;
           font-weight: 1000;
@@ -328,7 +328,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           min-height: 470px;
           padding: 42px 50px;
           background: linear-gradient(145deg, rgba(2,6,23,0.96), ${theme.panel}f0);
-          border: 2px solid rgba(56,189,248,0.58);
+          border: 2px solid rgba(77, 122, 214,0.58);
           box-shadow: 0 28px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .broadcast-panel-kicker {
@@ -384,7 +384,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           align-items: center;
           height: 110px;
           border-radius: 999px;
-          background: #38bdf8;
+          background: #4d7ad6;
           color: #020617;
           font-size: 30px;
           font-weight: 1000;
@@ -418,7 +418,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(56,189,248,0.18);
+          background: rgba(77, 122, 214,0.18);
           color: #7dd3fc;
           font-size: 20px;
           font-weight: 1000;

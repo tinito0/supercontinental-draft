@@ -1,5 +1,5 @@
 // PES 2021 database (pesdb) reader/writer for the files with a verified layout:
-// Team.bin, Player.bin, PlayerAssignment.bin and Coach.bin. Other pesdb files are recognised
+// Team.bin, Player.bin, PlayerAssignment.bin, Coach.bin, Tactics.bin and TacticsFormation.bin. Other pesdb files are recognised
 // and carried through untouched, but cannot be edited.
 //
 // Edits are applied to a working copy of the decompressed payload; the source
@@ -12,6 +12,7 @@ import {
   TEAM_FIELDS, PLAYER_FIELDS, ASSIGNMENT_FIELDS,
 } from './binLayout.js';
 import { COACH_RECORD_SIZE, COACH_FIELDS } from './coachLayout.js';
+import { TACTICS_RECORD_SIZE, TACTICS_FIELDS, TACTICS_FORMATION_RECORD_SIZE, TACTICS_FORMATION_FIELDS, formationRowKey } from './tacticsLayout.js';
 
 export const FORMAT_ID = 'pes2021-pesdb';
 
@@ -21,12 +22,18 @@ export const BIN_TABLES = {
   player: { file: 'Player.bin', recordSize: PLAYER_RECORD_SIZE, fields: PLAYER_FIELDS },
   assignment: { file: 'PlayerAssignment.bin', recordSize: ASSIGNMENT_RECORD_SIZE, fields: ASSIGNMENT_FIELDS },
   coach: { file: 'Coach.bin', recordSize: COACH_RECORD_SIZE, fields: COACH_FIELDS },
+  tactics: { file: 'Tactics.bin', recordSize: TACTICS_RECORD_SIZE, fields: TACTICS_FIELDS },
+  // Rows have no id of their own: keyed by tactics id + formation + slot.
+  tacticsFormation: {
+    file: 'TacticsFormation.bin', recordSize: TACTICS_FORMATION_RECORD_SIZE, fields: TACTICS_FORMATION_FIELDS,
+    key: (data, base, f) => formationRowKey(readField(data, base, f.get('tacticsId')), readField(data, base, f.get('formation')), readField(data, base, f.get('slot'))),
+  },
 };
 
 /** Known pesdb files that are recognised but not editable (layouts not verified). */
 export const PASSTHROUGH_FILES = [
   'CoachDeleteList.bin', 'Competition.bin', 'CompetitionEntry.bin', 'CompetitionRegulation.bin',
-  'Country.bin', 'Derby.bin', 'PlayerDeleteList.bin', 'Stadium.bin', 'Tactics.bin', 'TacticsFormation.bin', 'PlayerAppearance.bin',
+  'Country.bin', 'Derby.bin', 'PlayerDeleteList.bin', 'Stadium.bin', 'PlayerAppearance.bin',
 ];
 
 const fieldMap = fields => new Map(fields.map(f => [f.name, f]));
@@ -39,7 +46,8 @@ export class RecordTable {
     this.recordSize = def.recordSize;
     this.fields = def.fields;
     this.fieldByName = fieldMap(def.fields);
-    this.idField = this.fieldByName.get('id');
+    this.idField = this.fieldByName.get('id') || null;
+    this.keyOf = def.key ? (data, base) => def.key(data, base, this.fieldByName) : (data, base) => readField(data, base, this.idField);
     this.header = container.header;
     this.compressed = container.compressed;
     this.source = container.payload; // never mutated
@@ -58,7 +66,7 @@ export class RecordTable {
     this.index = new Map();
     this.duplicateIds = [];
     for (let i = 0; i < this.count; i++) {
-      const id = readField(this.data, i * this.recordSize, this.idField);
+      const id = this.keyOf(this.data, i * this.recordSize);
       if (this.index.has(id)) this.duplicateIds.push(id); else this.index.set(id, i);
     }
   }
@@ -90,7 +98,7 @@ export class RecordTable {
   /** All records as { id, index } in file order. */
   ids() {
     const out = [];
-    for (let i = 0; i < this.count; i++) out.push(readField(this.data, i * this.recordSize, this.idField));
+    for (let i = 0; i < this.count; i++) out.push(this.keyOf(this.data, i * this.recordSize));
     return out;
   }
 
@@ -99,8 +107,8 @@ export class RecordTable {
     if (f.confidence === 'unverified' || f.confidence === 'partial') {
       throw new PesValidationError('FIELD_READ_ONLY', `${this.file}: "${name}" es de solo lectura (su significado no está verificado).`, { file: this.file, field: name });
     }
-    if (f === this.idField) {
-      throw new PesValidationError('ID_IMMUTABLE', `${this.file}: el id no se puede cambiar (otras tablas lo referencian).`, { file: this.file });
+    if (f === this.idField || f.locked) {
+      throw new PesValidationError('ID_IMMUTABLE', `${this.file}: "${name}" identifica el registro y no se puede cambiar (otras tablas lo referencian).`, { file: this.file, field: name });
     }
     const base = this.baseOf(id);
     const before = readField(this.data, base, f);
@@ -174,7 +182,7 @@ export function loadBinDatabase(files) {
     }
   }
   if (!Object.keys(tables).length) {
-    throw new PesFormatError('NO_SUPPORTED_FILES', 'No se encontró Team.bin, Player.bin, PlayerAssignment.bin ni Coach.bin.', { unsupported });
+    throw new PesFormatError('NO_SUPPORTED_FILES', 'No se encontró ningún archivo editable de la base (Team.bin, Player.bin, PlayerAssignment.bin, Coach.bin, Tactics.bin, TacticsFormation.bin).', { unsupported });
   }
   return { format: FORMAT_ID, tables, passthrough, unsupported };
 }

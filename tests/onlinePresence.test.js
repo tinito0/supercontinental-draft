@@ -138,23 +138,18 @@ describe('components/ui/OnlineIndicator', () => {
     expect(html).toContain('5 online');
   });
 
-  it('applies exact specification styling classes', () => {
+  it('uses the design-system tokens (plain text + status dot, no pill)', () => {
     const html = renderToString(React.createElement(OnlineIndicator, { count: 2 }));
-    expect(html).toContain('bg-emerald-500/10');
-    expect(html).toContain('border-emerald-500/20');
-    expect(html).toContain('text-emerald-400');
-    expect(html).toContain('text-[11px]');
-    expect(html).toContain('font-bold');
-    expect(html).toContain('px-2.5');
-    expect(html).toContain('py-1');
-    expect(html).toContain('rounded-full');
+    expect(html).toContain('text-ink-2');
+    expect(html).toContain('bg-success');
+    expect(html).not.toContain('border-emerald');
   });
 
-  it('contains pulsing green dot animation elements', () => {
+  it('shows a static presence dot (no looping animation) hidden from screen readers', () => {
     const html = renderToString(React.createElement(OnlineIndicator, { count: 1 }));
-    expect(html).toContain('animate-pulse');
-    expect(html).toContain('animate-ping');
-    expect(html).toContain('bg-emerald-400');
+    expect(html).not.toContain('animate-ping');
+    expect(html).not.toContain('animate-pulse');
+    expect(html).toMatch(/<span[^>]*bg-success[^>]*aria-hidden="true"|<span[^>]*aria-hidden="true"[^>]*bg-success/);
   });
 });
 
@@ -174,7 +169,9 @@ describe('components/TopHeader integration', () => {
     expect(html).toContain('4 online');
     expect(html).toContain('Atlético Test');
     expect(html).toContain('role="status"');
-    expect(html).toContain('Presupuesto:');
+    // Budget label (visible from sm, read by screen readers on every width) and amount.
+    expect(html).toContain('Presupuesto');
+    expect(html).toContain('$50.00M');
   });
 });
 

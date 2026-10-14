@@ -3,7 +3,7 @@ import {
   ChevronRight, Shield, Users, Zap, BarChart2, Trophy, 
   ArrowLeftRight, Target, Lock, Globe, MessageCircle,
   BookOpen, ChevronDown, ExternalLink, Package, Sliders, Radio, Cpu,
-  Volume2, VolumeX, Check, Download, Search, Filter, Play, RefreshCw, Layers, CheckCircle2
+  Check, Download, Search, Filter, Play, RefreshCw, Layers, CheckCircle2
 } from 'lucide-react';
 import { APP_NAME } from '../utils/constants.js';
 
@@ -157,11 +157,13 @@ const MiniCard = memo(function MiniCard({ player }) {
    ═══════════════════════════════════════════════════════════════════ */
 function Reveal({ children, delay = 0, className = '' }) {
   const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
+  // With reduced motion (or no IntersectionObserver) the content is shown right away.
+  const [visible, setVisible] = useState(() => typeof window === 'undefined' || !('IntersectionObserver' in window)
+    || Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches));
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || visible) return undefined;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) { 
         setVisible(true); 
@@ -347,7 +349,7 @@ function WebAppModel() {
             {/* Right: Tactics S1 Parameters Panel */}
             <div className="web-model__tactics-col">
               <div className="web-model__panel-header">
-                <Sliders className="w-4 h-4 text-cyan-400" />
+                <Sliders className="w-4 h-4 text-accent" />
                 <h4>Estrategia S1 (Preset Oficial)</h4>
               </div>
 
@@ -375,20 +377,20 @@ function WebAppModel() {
               <div className="web-model__divider" />
 
               <div className="web-model__panel-header">
-                <Target className="w-4 h-4 text-amber-400" />
+                <Target className="w-4 h-4 text-warning-soft" />
                 <h4>Lanzadores Asignados PES</h4>
               </div>
               <div className="web-model__tactic-item">
                 <span className="web-model__tactic-label">Tiros Libres</span>
-                <span className="web-model__tactic-val text-amber-300">{currentFormation.tactics.freekicks}</span>
+                <span className="web-model__tactic-val text-warning-soft">{currentFormation.tactics.freekicks}</span>
               </div>
               <div className="web-model__tactic-item">
                 <span className="web-model__tactic-label">Penales</span>
-                <span className="web-model__tactic-val text-amber-300">{currentFormation.tactics.penalties}</span>
+                <span className="web-model__tactic-val text-warning-soft">{currentFormation.tactics.penalties}</span>
               </div>
               <div className="web-model__tactic-item">
                 <span className="web-model__tactic-label">Saques de Esquina</span>
-                <span className="web-model__tactic-val text-amber-300">{currentFormation.tactics.corners}</span>
+                <span className="web-model__tactic-val text-warning-soft">{currentFormation.tactics.corners}</span>
               </div>
             </div>
           </div>
@@ -480,7 +482,7 @@ function WebAppModel() {
               ].map(f => (
                 <div key={f.name} className="web-model__file-card">
                   <div className="web-model__file-header">
-                    <Package className="w-4 h-4 text-cyan-400" />
+                    <Package className="w-4 h-4 text-accent" />
                     <span className="web-model__file-name">{f.name}</span>
                     <span className="web-model__file-badge">CSV VÁLIDO</span>
                   </div>
@@ -498,12 +500,12 @@ function WebAppModel() {
               >
                 {exportStep === 'generating' ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-cyan-300" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-accent-soft" />
                     <span>Empaquetando CSVs...</span>
                   </>
                 ) : exportStep === 'done' ? (
                   <>
-                    <Check className="w-4 h-4 text-emerald-400" />
+                    <Check className="w-4 h-4 text-success-soft" />
                     <span>¡Paquete Option File Listo (.ZIP)!</span>
                   </>
                 ) : (
@@ -525,22 +527,31 @@ function WebAppModel() {
 /* ═══════════════════════════════════════════════════════════════════
    MAIN LANDING PAGE COMPONENT
    ═══════════════════════════════════════════════════════════════════ */
+const HERO_STOP_SECONDS = 0.5;
+
 export function LandingPage({ onEnter }) {
   const videoRef = useRef(null);
-  const [isMuted, setIsMuted] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
 
-  // Toggle video audio
-  const handleToggleAudio = () => {
-    if (videoRef.current) {
-      const nextMuted = !videoRef.current.muted;
-      videoRef.current.muted = nextMuted;
-      setIsMuted(nextMuted);
-      if (!nextMuted) {
-        videoRef.current.play().catch(() => {});
-      }
-    }
-  };
+  // The hero video plays only its first half second and then holds that frame. With reduced motion it
+  // never plays: it shows the same frame directly.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return undefined;
+    let raf = 0;
+    const freeze = () => { video.pause(); video.currentTime = HERO_STOP_SECONDS; };
+    const watch = () => {
+      if (video.currentTime >= HERO_STOP_SECONDS) { freeze(); return; }
+      raf = requestAnimationFrame(watch);
+    };
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const onReady = () => {
+      if (reduced) { freeze(); return; }
+      video.play().then(() => { raf = requestAnimationFrame(watch); }).catch(freeze);
+    };
+    if (video.readyState >= 2) onReady(); else video.addEventListener('loadeddata', onReady, { once: true });
+    return () => { cancelAnimationFrame(raf); video.removeEventListener('loadeddata', onReady); };
+  }, []);
 
   // Duplicate cards for seamless infinite scroll
   const carouselCards = useMemo(() => [...SHOWCASE_PLAYERS, ...SHOWCASE_PLAYERS], []);
@@ -585,9 +596,7 @@ export function LandingPage({ onEnter }) {
         <div className="landing-hero__video-wrap">
           <video
             ref={videoRef}
-            autoPlay
-            loop
-            muted={isMuted}
+            muted
             playsInline
             preload="auto"
             onLoadedData={() => setVideoLoaded(true)}
@@ -597,26 +606,6 @@ export function LandingPage({ onEnter }) {
           </video>
           <div className="landing-hero__vignette" />
         </div>
-
-        {/* Audio Toggle Button */}
-        <button
-          type="button"
-          onClick={handleToggleAudio}
-          className="landing-hero__audio-btn"
-          aria-label={isMuted ? "Activar sonido del video" : "Silenciar video"}
-        >
-          {isMuted ? (
-            <>
-              <VolumeX className="w-4 h-4 text-gray-300" />
-              <span>Activar sonido</span>
-            </>
-          ) : (
-            <>
-              <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span className="text-emerald-300">Sonido activo</span>
-            </>
-          )}
-        </button>
 
         {/* Hero Content */}
         <div className="landing-hero__content">
@@ -700,48 +689,48 @@ export function LandingPage({ onEnter }) {
           {/* Pilar 1 */}
           <Reveal delay={100} className="landing-pillar">
             <div className="landing-pillar__icon-wrap">
-              <Shield className="w-6 h-6 text-cyan-400" />
+              <Shield className="w-6 h-6 text-accent" />
             </div>
             <h3 className="landing-pillar__title">Mercado y Finanzas en Vivo</h3>
             <p className="landing-pillar__desc">
               Presupuestos auditados en la nube. Al fichar un jugador, queda bloqueado inmediatamente para el resto de los rivales sin duplicaciones.
             </p>
             <ul className="landing-pillar__features">
-              <li><CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" /> Sincronización instantánea en Firebase</li>
-              <li><CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" /> Centro de traspasos e intercambios formales</li>
-              <li><CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" /> Ficha de Jugador Franquicia por temporada</li>
+              <li><CheckCircle2 className="w-4 h-4 text-accent shrink-0" /> Sincronización instantánea en Firebase</li>
+              <li><CheckCircle2 className="w-4 h-4 text-accent shrink-0" /> Centro de traspasos e intercambios formales</li>
+              <li><CheckCircle2 className="w-4 h-4 text-accent shrink-0" /> Ficha de Jugador Franquicia por temporada</li>
             </ul>
           </Reveal>
 
           {/* Pilar 2 */}
           <Reveal delay={200} className="landing-pillar">
             <div className="landing-pillar__icon-wrap">
-              <Sliders className="w-6 h-6 text-emerald-400" />
+              <Sliders className="w-6 h-6 text-success-soft" />
             </div>
             <h3 className="landing-pillar__title">Pizarra Táctica y Preset S1</h3>
             <p className="landing-pillar__desc">
               Definí tu 11 titular, convocados y estrategia completa (posesión, contraataque, líneas defensivas, presión y contención).
             </p>
             <ul className="landing-pillar__features">
-              <li><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> Posicionamiento táctico en campo interactivo</li>
-              <li><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> Asignación de lanzadores de tiros libres y penales</li>
-              <li><CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> Criterio guiado por atributos reales de PES</li>
+              <li><CheckCircle2 className="w-4 h-4 text-success-soft shrink-0" /> Posicionamiento táctico en campo interactivo</li>
+              <li><CheckCircle2 className="w-4 h-4 text-success-soft shrink-0" /> Asignación de lanzadores de tiros libres y penales</li>
+              <li><CheckCircle2 className="w-4 h-4 text-success-soft shrink-0" /> Criterio guiado por atributos reales de PES</li>
             </ul>
           </Reveal>
 
           {/* Pilar 3 */}
           <Reveal delay={300} className="landing-pillar">
             <div className="landing-pillar__icon-wrap">
-              <Package className="w-6 h-6 text-indigo-400" />
+              <Package className="w-6 h-6 text-accent-soft" />
             </div>
             <h3 className="landing-pillar__title">Option File y Transmisión</h3>
             <p className="landing-pillar__desc">
               Exportá un archivo ZIP con CSVs listos para importar en el editor EJOGC327 y disputar los partidos en PC o consola.
             </p>
             <ul className="landing-pillar__features">
-              <li><CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" /> Formation.csv, Roster.csv, Team.csv y más</li>
-              <li><CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" /> Overlays limpios listos para OBS Studio</li>
-              <li><CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" /> IA Scout para encontrar sustitutos y gemelos</li>
+              <li><CheckCircle2 className="w-4 h-4 text-accent-soft shrink-0" /> Formation.csv, Roster.csv, Team.csv y más</li>
+              <li><CheckCircle2 className="w-4 h-4 text-accent-soft shrink-0" /> Overlays limpios listos para OBS Studio</li>
+              <li><CheckCircle2 className="w-4 h-4 text-accent-soft shrink-0" /> IA Scout para encontrar sustitutos y gemelos</li>
             </ul>
           </Reveal>
         </div>

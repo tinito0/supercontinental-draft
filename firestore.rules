@@ -201,7 +201,7 @@ service cloud.firestore {
         return ['c1r', 'c1g', 'c1b', 'c2r', 'c2g', 'c2b'];
       }
       function pesOpTypes() {
-        return ['bin.team.set', 'bin.player.set', 'bin.coach.set', 'bin.assignment.set', 'bin.assignment.add', 'bin.assignment.remove',
+        return ['bin.team.set', 'bin.player.set', 'bin.coach.set', 'bin.team.tactics', 'bin.assignment.set', 'bin.assignment.add', 'bin.assignment.remove',
           'edit.team.set', 'edit.player.set', 'edit.coach.set', 'edit.roster.number', 'edit.roster.player', 'edit.team.squad', 'edit.roster.remove',
           'kit.set', 'kit.texture.set', 'kit.add'];
       }

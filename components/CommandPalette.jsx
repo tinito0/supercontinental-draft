@@ -92,22 +92,22 @@ export function CommandPalette({
       onClick={onClose}
     >
       <div 
-        className="bg-[#111722] border border-white/10 rounded-2xl max-w-xl mx-auto shadow-2xl flex flex-col overflow-hidden"
+        className="bg-raised border border-line/[0.12] rounded-2xl max-w-xl mx-auto shadow-2xl flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center px-4 py-3 border-b border-white/10 relative">
-          <Search className="w-5 h-5 text-gray-400 mr-3" />
+        <div className="flex items-center px-4 py-3 border-b border-line/[0.12] relative">
+          <Search className="w-5 h-5 text-ink-3 mr-3" />
           <input
             ref={inputRef}
             type="text"
-            className="flex-1 bg-transparent border-none outline-none text-lg text-white placeholder-gray-500"
+            className="flex-1 bg-transparent border-none outline-none text-lg text-ink placeholder-slate-500"
             placeholder="Buscar jugadores, acciones..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <div className="flex items-center gap-1 ml-3 px-2 py-1 rounded bg-white/5 border border-white/10">
-            <span className="text-xs text-gray-400 font-medium">Ctrl K</span>
+          <div className="flex items-center gap-1 ml-3 px-2 py-1 rounded bg-white/5 border border-line/[0.12]">
+            <span className="text-xs text-ink-3 font-medium">Ctrl K</span>
           </div>
         </div>
 
@@ -129,8 +129,8 @@ export function CommandPalette({
                     <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mr-3">
                       {item.icon}
                     </div>
-                    <span className="text-white flex-1">{item.title}</span>
-                    <ArrowRight className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                    <span className="text-ink flex-1">{item.title}</span>
+                    <ArrowRight className={`w-4 h-4 ${isSelected ? 'text-ink' : 'text-ink-3'}`} />
                   </div>
                 );
               }
@@ -147,11 +147,11 @@ export function CommandPalette({
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center mr-3">
-                    <User className="w-4 h-4 text-gray-300" />
+                    <User className="w-4 h-4 text-ink-2" />
                   </div>
                   <div className="flex flex-col flex-1">
-                    <span className="text-white text-sm font-medium">{item.Name}</span>
-                    <span className="text-gray-400 text-xs">{item.Country1}</span>
+                    <span className="text-ink text-sm font-medium">{item.Name}</span>
+                    <span className="text-ink-3 text-xs">{item.Country1}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPosColorClass(item.POS_NOMBRE)}`}>
@@ -160,7 +160,7 @@ export function CommandPalette({
                     <span className={`px-2 py-0.5 rounded text-xs font-bold ${getStatAndOvrColorClass(item.OVR_CALCULADO)}`}>
                       {item.OVR_CALCULADO}
                     </span>
-                    <span className="text-green-400 font-medium text-sm ml-2">
+                    <span className="text-success-soft font-medium text-sm ml-2">
                       ${(item.Precio || 0).toLocaleString()}
                     </span>
                   </div>
@@ -170,7 +170,7 @@ export function CommandPalette({
           </div>
         )}
         {debouncedTerm && filteredItems.length === 0 && (
-          <div className="p-8 text-center text-gray-400">
+          <div className="p-8 text-center text-ink-3">
             No se encontraron resultados para "{debouncedTerm}"
           </div>
         )}

@@ -2,11 +2,11 @@ import React, { memo, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRightLeft, BadgeDollarSign, Bell, Check, ChevronRight, Info, X } from 'lucide-react';
 
 const TYPE_CONFIG = {
-  warning: { icon: AlertTriangle, wrap: 'bg-amber-500/10 border-amber-500/20 text-amber-900 dark:text-amber-200 hover:bg-amber-500/15', iconColor: 'text-amber-600 dark:text-amber-400' },
-  offer: { icon: BadgeDollarSign, wrap: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-500/15', iconColor: 'text-emerald-600 dark:text-emerald-400' },
-  transfer: { icon: ArrowRightLeft, wrap: 'bg-purple-500/10 border-purple-500/20 text-purple-900 dark:text-purple-200 hover:bg-purple-500/15', iconColor: 'text-purple-600 dark:text-purple-400' },
-  info: { icon: Info, wrap: 'bg-sky-500/10 border-sky-500/20 text-sky-900 dark:text-sky-200 hover:bg-sky-500/15', iconColor: 'text-sky-600 dark:text-sky-400' },
-  default: { icon: Bell, wrap: 'bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800', iconColor: 'text-slate-500 dark:text-slate-400' },
+  warning: { icon: AlertTriangle, wrap: 'bg-warning/10 border-warning/20 text-amber-200 hover:bg-warning/15', iconColor: ' text-warning-soft' },
+  offer: { icon: BadgeDollarSign, wrap: 'bg-success/10 border-success/20 text-emerald-200 hover:bg-success/15', iconColor: ' text-success-soft' },
+  transfer: { icon: ArrowRightLeft, wrap: 'bg-accent/10 border-accent/20 text-accent-soft hover:bg-accent/15', iconColor: ' text-accent-soft' },
+  info: { icon: Info, wrap: 'bg-accent/10 border-accent/20 text-accent-soft hover:bg-accent/15', iconColor: ' text-accent' },
+  default: { icon: Bell, wrap: ' bg-raised/60 border-line/15 text-ink-2 hover:bg-raised', iconColor: ' text-ink-3' },
 };
 
 function getTypeConfig(type) {
@@ -25,19 +25,19 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
       onClick={isClickable ? () => onClick(notif) : undefined}
       onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(notif); } } : undefined}
       className={`group relative flex items-start gap-2.5 p-3 pr-8 rounded-xl text-sm border transition-all duration-150 ${wrap} ${
-        isClickable ? 'cursor-pointer hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500/40' : ''
+        isClickable ? 'cursor-pointer hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-accent/40' : ''
       }`}
     >
-      {isUnread && <span className="absolute top-2.5 left-2 w-2 h-2 rounded-full bg-sky-500" />}
+      {isUnread && <span className="absolute top-2.5 left-2 w-2 h-2 rounded-full bg-accent" />}
 
       <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${iconColor}`} />
 
       <div className="min-w-0 flex-1 pl-1">
-        <p className={`text-xs leading-snug ${isUnread ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>{notif.text}</p>
-        <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-slate-200/50 dark:border-white/[0.06]">
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{notif.time}</span>
+        <p className={`text-xs leading-snug ${isUnread ? 'font-bold text-ink' : 'font-medium text-ink-2'}`}>{notif.text}</p>
+        <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-line/[0.08]">
+          <span className="text-[10px] text-ink-3 font-medium">{notif.time}</span>
           {isClickable && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition-transform">
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-accent group-hover:translate-x-0.5 transition-transform">
               Ver <ChevronRight className="w-3 h-3" />
             </span>
           )}
@@ -48,7 +48,7 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDismiss(notif); }}
-          className="absolute top-2 right-2 min-w-6 min-h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/10 transition cursor-pointer"
+          className="absolute top-2 right-2 min-w-6 min-h-6 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-white/10 transition cursor-pointer"
           title="Descartar"
           aria-label="Descartar notificación"
         >
@@ -88,13 +88,13 @@ export const NotificationsPanel = memo(function NotificationsPanel({
     <div
       role="region"
       aria-label="Panel de notificaciones"
-      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-white dark:bg-[#0c1017] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200"
+      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-surface border border-line/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200"
     >
-      <div className="flex justify-between items-center p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
+      <div className="flex justify-between items-center p-3.5 border-b border-line/20 bg-surface/60">
         <div className="flex items-center gap-2">
-          <h4 className="font-bold text-slate-900 dark:text-white text-sm">Notificaciones</h4>
+          <h4 className="font-bold text-ink text-sm">Notificaciones</h4>
           {unreadCount > 0 && (
-            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-sky-600 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-ink text-[10px] font-bold flex items-center justify-center tabular-nums">
               {unreadCount}
             </span>
           )}
@@ -104,7 +104,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
             <button
               type="button"
               onClick={onMarkAllRead}
-              className="px-2 py-1 flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400 hover:underline font-medium cursor-pointer"
+              className="px-2 py-1 flex items-center gap-1 text-xs text-accent hover:underline font-medium cursor-pointer"
               title="Marcar todas como leídas"
               aria-label="Marcar todas las notificaciones como leídas"
             >
@@ -115,7 +115,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
             <button
               type="button"
               onClick={onClear}
-              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium cursor-pointer"
+              className="px-2 py-1 text-xs text-ink-3 hover:text-ink-2 font-medium cursor-pointer"
               aria-label="Borrar todas las notificaciones"
             >
               Borrar todo
@@ -133,8 +133,8 @@ export const NotificationsPanel = memo(function NotificationsPanel({
             onClick={() => setFilter(id)}
             className={`min-h-7 rounded-lg px-2.5 text-xs font-semibold transition cursor-pointer ${
               filter === id
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? ' bg-white text-slate-950 shadow-sm'
+                : ' text-ink-3 hover:bg-raised'
             }`}
           >
             {label}
@@ -148,12 +148,12 @@ export const NotificationsPanel = memo(function NotificationsPanel({
         className="max-h-[28rem] overflow-y-auto p-3 space-y-2"
       >
         {isLoading ? (
-          <div className="py-6 flex items-center justify-center gap-3 text-xs text-slate-400 font-medium">
-            <div className="w-4 h-4 rounded-full border-2 border-sky-500/30 border-t-sky-500 animate-spin" />
+          <div className="py-6 flex items-center justify-center gap-3 text-xs text-ink-3 font-medium">
+            <div className="w-4 h-4 rounded-full border-2 border-accent/30 border-t-accent-soft animate-spin" />
             Cargando notificaciones...
           </div>
         ) : visibleNotifications.length === 0 ? (
-          <p className="text-slate-400 text-xs text-center py-8">No hay notificaciones en esta categoría.</p>
+          <p className="text-ink-3 text-xs text-center py-8">No hay notificaciones en esta categoría.</p>
         ) : (
           visibleNotifications.map((notif, idx) => (
             <NotificationItem

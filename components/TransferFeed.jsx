@@ -24,7 +24,7 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
   const team = allTeams?.[teamId];
   if (team?.logoUrl) {
     return (
-      <span className="relative w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
+      <span className="relative w-5 h-5 rounded-full bg-raised overflow-hidden flex-shrink-0 border border-line/20">
         <img
           src={team.logoUrl}
           alt=""
@@ -38,7 +38,7 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
     );
   }
   return (
-    <span className="w-5 h-5 rounded-full bg-sky-500/15 flex items-center justify-center text-[8px] font-bold text-sky-600 dark:text-sky-400 flex-shrink-0 border border-sky-500/20">
+    <span className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center text-[8px] font-bold text-accent flex-shrink-0 border border-accent/20">
       {getInitials(teamName)}
     </span>
   );
@@ -46,16 +46,16 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
 
 const TransferSkeleton = memo(function TransferSkeleton() {
   return (
-    <div className="rounded-xl bg-slate-100 dark:bg-slate-900/60 p-3.5 animate-pulse border border-slate-200/60 dark:border-slate-800/60">
+    <div className="rounded-xl bg-surface/60 p-3.5 animate-pulse border border-line/15">
       <div className="flex items-start gap-3">
-        <div className="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-800" />
+        <div className="w-11 h-11 rounded-lg bg-raised" />
         <div className="flex-1 space-y-2">
-          <div className="h-3.5 w-3/4 rounded bg-slate-200 dark:bg-slate-800" />
-          <div className="h-2.5 w-1/2 rounded bg-slate-200 dark:bg-slate-800/70" />
+          <div className="h-3.5 w-3/4 rounded bg-raised" />
+          <div className="h-2.5 w-1/2 rounded bg-raised/70" />
         </div>
-        <div className="h-6 w-14 rounded bg-slate-200 dark:bg-slate-800" />
+        <div className="h-6 w-14 rounded bg-raised" />
       </div>
-      <div className="mt-3 h-8 rounded-lg bg-slate-200 dark:bg-slate-800/50" />
+      <div className="mt-3 h-8 rounded-lg bg-raised/50" />
     </div>
   );
 });
@@ -63,19 +63,19 @@ const TransferSkeleton = memo(function TransferSkeleton() {
 const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams }) {
   if (transfer.type === 'match_result') {
     return (
-      <article className="relative overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/20 p-3.5">
-        <div className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+      <article className="relative overflow-hidden rounded-xl border border-success/20 bg-emerald-950/20 p-3.5">
+        <div className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-success-soft">
           <span>Resultado Final</span>
           <span>{transfer.round || 'Torneo'}</span>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
-          <span className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{transfer.homeTeam}</span>
-          <strong className="rounded-lg bg-emerald-500/15 dark:bg-emerald-500/20 px-2.5 py-1 text-sm font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
+          <span className="truncate text-xs font-bold text-ink-2">{transfer.homeTeam}</span>
+          <strong className="rounded-lg bg-success/20 px-2.5 py-1 text-sm font-bold text-success-soft tabular-nums">
             {transfer.homeScore} - {transfer.awayScore}
           </strong>
-          <span className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{transfer.awayTeam}</span>
+          <span className="truncate text-xs font-bold text-ink-2">{transfer.awayTeam}</span>
         </div>
-        {transfer.mvp && <p className="mt-2 text-center text-[11px] font-medium text-amber-600 dark:text-amber-400">MVP: {transfer.mvp}</p>}
+        {transfer.mvp && <p className="mt-2 text-center text-[11px] font-medium text-warning-soft">MVP: {transfer.mvp}</p>}
       </article>
     );
   }
@@ -91,21 +91,21 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
   const borderLeftTone = isReleased
     ? 'border-l-rose-500'
     : isTransfer
-    ? 'border-l-purple-500'
+    ? 'border-l-accent'
     : isFranchise
     ? 'border-l-amber-500'
-    : 'border-l-sky-500';
+    : 'border-l-accent-soft';
 
   return (
     <article
-      className={`group rounded-xl p-3.5 border border-slate-200 dark:border-slate-800 border-l-[3px] ${borderLeftTone} transition-all duration-200 bg-white dark:bg-[#0f141f] shadow-sm hover:shadow ${
+      className={`group rounded-xl p-3.5 border border-line/[0.12] border-l-[3px] ${borderLeftTone} transition-all duration-200 bg-surface shadow-sm hover:shadow ${
         isReleased ? 'opacity-60 line-through' : ''
       }`}
       style={isReleased ? { animation: 'transferFeedFadeOut 5s ease-out forwards' } : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex items-center gap-2.5">
-          <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
+          <div className="w-11 h-11 rounded-lg bg-raised overflow-hidden flex-shrink-0 border border-line/20">
             <img
               src={`/fotos_jugadores/${transfer.playerId}.webp`}
               alt={transfer.playerName}
@@ -117,16 +117,16 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
             />
           </div>
           <div className="min-w-0">
-            <h4 className={`text-xs font-bold leading-snug truncate ${isReleased ? 'text-slate-500 line-through' : 'text-slate-900 dark:text-white'}`}>
+            <h4 className={`text-xs font-bold leading-snug truncate ${isReleased ? 'text-ink-3 line-through' : ' text-ink'}`}>
               {transfer.playerName}
             </h4>
             <div className="mt-1 flex items-center gap-2">
               <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                isTransfer ? 'text-purple-600 dark:text-purple-400' : isFranchise ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400'
+                isTransfer ? ' text-accent-soft' : isFranchise ? ' text-warning-soft' : ' text-accent'
               }`}>
                 {isTransfer ? 'Traspaso' : isFranchise ? 'Franquicia' : 'Fichaje'}
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+              <span className="inline-flex items-center gap-1 text-[10px] text-ink-3 font-medium">
                 <Clock className="w-3 h-3" /> {time}
               </span>
             </div>
@@ -134,34 +134,34 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
         </div>
 
         {isReleased ? (
-          <span className="shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+          <span className="shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-danger/10 text-danger-soft border border-danger/20">
             Liberado
           </span>
         ) : isFranchise ? (
-          <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+          <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-warning/10 text-warning-soft border border-warning/20">
             <Star className="w-3 h-3" fill="currentColor" /> Gratis
           </span>
         ) : (
-          <span className="shrink-0 rounded px-2 py-0.5 text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 tabular-nums">
+          <span className="shrink-0 rounded px-2 py-0.5 text-xs font-bold bg-success/10 text-success-soft border border-success/20 tabular-nums">
             {formatPriceShort(transfer.price)}
           </span>
         )}
       </div>
 
-      <div className="mt-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 px-2.5 py-1.5 border border-slate-100 dark:border-slate-800/60">
+      <div className="mt-3 rounded-lg bg-surface/60 px-2.5 py-1.5 border border-line/15">
         {isTransfer ? (
           <div className="flex items-center gap-1.5 min-w-0 text-xs">
             <TeamVisual teamId={transfer.fromTeamId} teamName={transfer.fromTeamName} allTeams={allTeams} />
-            <span className="min-w-0 truncate font-medium text-slate-500 dark:text-slate-400">{transfer.fromTeamName}</span>
-            <ArrowRight className="w-3 h-3 text-slate-400 flex-shrink-0" />
+            <span className="min-w-0 truncate font-medium text-ink-3">{transfer.fromTeamName}</span>
+            <ArrowRight className="w-3 h-3 text-ink-3 flex-shrink-0" />
             <TeamVisual teamId={transfer.teamId} teamName={transfer.teamName} allTeams={allTeams} />
-            <span className="min-w-0 truncate font-semibold text-slate-900 dark:text-white">{transfer.teamName}</span>
+            <span className="min-w-0 truncate font-semibold text-ink">{transfer.teamName}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5 min-w-0 text-xs">
             <TeamVisual teamId={transfer.teamId} teamName={transfer.teamName} allTeams={allTeams} />
-            <p className="min-w-0 truncate text-slate-500 dark:text-slate-400">
-              Fichado por <span className="font-semibold text-slate-900 dark:text-white">{transfer.teamName}</span>
+            <p className="min-w-0 truncate text-ink-3">
+              Fichado por <span className="font-semibold text-ink">{transfer.teamName}</span>
             </p>
           </div>
         )}
@@ -238,37 +238,37 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center sm:justify-end z-[70] animate-in fade-in duration-200" onClick={onClose}>
       <div
-        className="w-full sm:max-w-md h-[100dvh] sm:h-full bg-white dark:bg-[#0c1017] flex flex-col shadow-2xl border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-250"
+        className="w-full sm:max-w-md h-[100dvh] sm:h-full bg-surface flex flex-col shadow-2xl border-l border-line/20 animate-in slide-in-from-right duration-250"
         onClick={event => event.stopPropagation()}
       >
         {/* Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/40">
+        <div className="shrink-0 p-4 sm:p-5 border-b border-line/20 flex items-center justify-between bg-surface/40">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0 text-sky-600 dark:text-sky-400">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 text-accent">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Centro de Traspasos</h2>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                <h2 className="text-base font-bold text-ink tracking-tight">Centro de Traspasos</h2>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-danger/10 text-danger-soft border border-danger/20">
                   En Vivo
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Últimos movimientos del mercado</p>
+              <p className="text-xs text-ink-3 font-medium">Últimos movimientos del mercado</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar centro de traspasos"
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Filter Tabs */}
-        <div className="shrink-0 flex gap-1.5 px-4 py-2.5 sm:px-5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/20" role="tablist" aria-label="Filtrar movimientos">
+        <div className="shrink-0 flex gap-1.5 px-4 py-2.5 sm:px-5 border-b border-line/15 bg-surface/20" role="tablist" aria-label="Filtrar movimientos">
           {[
             ['all', 'Todo'],
             ['transfers', 'Traspasos'],
@@ -283,8 +283,8 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
               onClick={() => setFilter(id)}
               className={`min-h-8 rounded-lg px-3 text-xs font-semibold transition cursor-pointer ${
                 filter === id
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? ' bg-white text-slate-950 shadow-sm'
+                  : ' text-ink-3 hover:bg-raised'
               }`}
             >
               {label}
@@ -305,9 +305,9 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
             </>
           ) : visibleTransfers.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center p-8 space-y-3 opacity-60">
-              <History size={40} className="text-slate-400" />
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Aún no hay movimientos en este mercado.</p>
-              <p className="text-xs text-slate-400">Cuando haya fichajes o traspasos, aparecerán aquí.</p>
+              <History size={40} className="text-ink-3" />
+              <p className="text-sm font-semibold text-ink-2">Aún no hay movimientos en este mercado.</p>
+              <p className="text-xs text-ink-3">Cuando haya fichajes o traspasos, aparecerán aquí.</p>
             </div>
           ) : (
             visibleTransfers.map(transfer => (
@@ -322,8 +322,8 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 px-4 py-3 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-800 text-center pb-[max(12px,env(safe-area-inset-bottom))]">
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+        <div className="shrink-0 px-4 py-3 bg-surface/40 border-t border-line/20 text-center pb-[max(12px,env(safe-area-inset-bottom))]">
+          <p className="text-[11px] text-ink-3 font-medium">
             Supercontinental League • Mercado Oficial
           </p>
         </div>

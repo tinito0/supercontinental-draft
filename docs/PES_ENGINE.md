@@ -16,7 +16,7 @@ Draft. This document records what is verified, how the pieces fit, how to operat
 | Sider `content/kit-server` | `map.txt`, `order.ini`, `<kit>/config.txt`, `.ftex/.dds` | 45 config keys + 7 texture slots | All 4 768 `config.txt` of the UML patch re-serialize byte-identical; 400/400 font FTEX parse |
 
 Not supported: CPK archives (pesdb must be extracted / used from a livecpk folder), PES 2020 EDIT (rejected),
-texture pixel decoding (no texture preview), team ID changes.
+writing textures from decoded pixels (decoding is preview-only), team ID changes.
 
 ## 2. Investigation summary
 
@@ -112,6 +112,33 @@ When the Super Admin creates a workspace, each source is packed (`pes/storage/so
 Supabase Storage at `<workspaceId>/sources/<contentSha256>.pesdb|edit|kits`; other users download it automatically,
 the content hash is verified and the copy is cached in IndexedDB. Upload is Super Admin only (bucket policy).
 
+## 4d. Kits: 3D preview, fabric maps, new kits
+
+Where things live in the UML patch: **values** (models, colours, name/number placement, which texture files a kit
+uses) are in Sider's `content/kit-server/<league>/<team>/<kit>/config.txt`; the **texture files** themselves
+(`u0126p1.ftex`, `dor_bla_num.ftex` …, about 7 000 BC7 FTEX) are in
+`livecpk/UML_Kits/Asset/model/character/uniform/texture/#windx11`. The game looks in the kit folder first, then in
+each `cpk.root` of `sider.ini` in order (`pes/kits/textureLocator.js`). The native per-team files
+`livecpk/UML_Kits/common/character0/model/character/uniform/team/<id>/<id>_DEF_1st_realUni.bin` (120 bytes: colours,
+model bytes, texture names at 0x2C/0x38/0x48/0x58/0x68) hold the same data as config.txt and are replaced at runtime
+by the kit-server, so the editor never writes them. Everything is keyed by team id: a draft team that replaces team
+126 wears the kits of the folder mapped to 126 until that folder's kits are edited.
+
+- **3D preview** (`components/pes/PesKit3DViewer.jsx`): garment models of the CometKIT previewer (via PES Editor
+  Rebuilt, `public/pes/kitpack.bin`, downloaded on first use), parts chosen from config.txt (TightKit, Collar,
+  ShortsModel, ShortSleevesModel, goalkeeper sleeves), WebGL fabric shader with stadium lights. Textures come from the
+  workspace (imported/generated, shared) or from the game folder opened in the browser (read-only, File System
+  Access API in Chrome/Edge, folder input elsewhere; nothing is uploaded). FTEX/DDS are decoded by
+  `pes/kits/textureDecode.js` (DXT1/3/5, BC7, RGBA8; verified on the patch's BC7 kit and font textures). Name and
+  numbers are drawn with the kit's own font sheets at the config.txt positions; the value → position conversion is
+  Rebuilt's approximation, not the game's exact placement. Without the kit texture the config colours are used.
+- **Fabric maps** (`pes/kits/fabricMaps.js`): normal map = repeating weave (8 fabrics) + relief of the kit drawings
+  from the texture brightness; SRM = shine/roughness of the fabric. Previewed live in 3D and saved as
+  `<KitFile>_nrm.ftex` (DXT5 2048) / `<KitFile>_srm.ftex` (DXT1 1024) through the normal texture import.
+- **New kits** (`kit.add`): copies a kit's config.txt into the next free `p<n>`/`g<n>` folder and appends it to
+  the chosen `[section]` of order.ini / gk_order.ini, keeping every other line and the line endings. Allowed to the
+  Super Admin and to Kit Managers for league teams. Not tested in game.
+
 ## 5. Authorization
 
 | Role | Can |
@@ -161,8 +188,8 @@ UPDATE\<id>\save\EDIT00000000` (back it up); kit files into the Sider `content/k
   order / flags, semantics unknown) and changing the row count is format-valid but untested in game.
 - GK attribute names, form, injury resistance, reputation stay read-only until confirmed (e.g. with a fresh
   EJOGC "Players" CSV export of `vendor/UML_Database`, which would also upgrade the structural fields).
-- No texture preview (BC7/DXT decoding not implemented); generated/imported PNG textures are DXT5 FTEX while the
-  patch uses BC7. The kit preview is a colour schematic from config values.
+- Generated/imported PNG textures are DXT5/DXT1 FTEX while the patch uses BC7 (both load in the game per Rebuilt).
+  3D name/number placement is approximate (see 4d).
 - Draft → PES does not transfer player appearances or kits; the coach is renamed, never created (adding Coach.bin /
   EDIT coach records is untested in game); the EDIT tactics layout comes from
   PES Editor Rebuilt ("verified in-game") and the user's EDIT, not from in-game tests of this tool.

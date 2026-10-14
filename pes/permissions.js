@@ -28,6 +28,7 @@ export const OP_TYPES = {
   'bin.team.set': 'team.edit',
   'bin.player.set': 'player.edit',
   'bin.coach.set': 'team.edit',
+  'bin.team.tactics': 'team.edit',
   'bin.assignment.set': 'team.edit',
   'bin.assignment.add': 'team.edit',
   'bin.assignment.remove': 'team.edit',

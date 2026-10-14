@@ -9,10 +9,11 @@ const SIZE_MAP = {
 };
 
 const COLOR_MAP = {
-  cyan: 'border-cyan-400 border-t-transparent',
-  blue: 'border-blue-500 border-t-transparent',
-  emerald: 'border-emerald-400 border-t-transparent',
-  amber: 'border-amber-400 border-t-transparent',
+  cyan: 'border-accent-soft border-t-transparent', // legacy name: the accent
+  accent: 'border-accent-soft border-t-transparent',
+  blue: 'border-accent-soft border-t-transparent',
+  emerald: 'border-success-soft border-t-transparent',
+  amber: 'border-warning-soft border-t-transparent',
   white: 'border-white border-t-transparent',
   current: 'border-current border-t-transparent',
 };
@@ -41,7 +42,7 @@ export function Spinner({
         aria-hidden="true"
       />
       {label ? (
-        <span className="text-xs font-medium text-slate-400">{label}</span>
+        <span className="text-xs font-medium text-ink-2">{label}</span>
       ) : (
         <span className="sr-only">{ariaLabel}</span>
       )}

@@ -3,6 +3,15 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './app.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
+// Self-hosted fonts (works offline in the PWA; no third-party font requests).
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
+import '@fontsource/barlow/700.css';
+import '@fontsource/barlow-condensed/500.css';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
+import '@fontsource/barlow-condensed/800.css';
 import './index.css';
 
 // Chart.js registration moved to a lazy-loaded module.

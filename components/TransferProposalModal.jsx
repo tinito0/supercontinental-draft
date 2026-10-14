@@ -102,101 +102,101 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
       contentClassName="!p-0 !overflow-hidden flex flex-col"
     >
       <div 
-        className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] bg-white dark:bg-[#0c1017] flex flex-col relative"
+        className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] bg-surface flex flex-col relative"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60">
+        <div className="px-5 py-4 border-b border-line/20 flex items-center justify-between bg-surface/60">
           <div className="min-w-0">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Proponer Traspaso</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Oferta a <span className="text-sky-600 dark:text-sky-400 font-semibold">{targetTeamName}</span> por <span className="text-slate-900 dark:text-white font-semibold">{player.Name}</span></p>
+            <h3 className="text-base font-bold text-ink">Proponer Traspaso</h3>
+            <p className="text-xs text-ink-3">Oferta a <span className=" text-accent font-semibold">{targetTeamName}</span> por <span className=" text-ink font-semibold">{player.Name}</span></p>
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={onClose} className="p-1.5 text-ink-3 hover:text-ink rounded-lg hover:bg-raised transition-colors">
             <X size={18} />
           </button>
         </div>
 
         {success ? (
           <div className="p-8 text-center flex flex-col items-center">
-            <div className="w-14 h-14 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mb-4">
+            <div className="w-14 h-14 bg-success/10 text-success-soft rounded-full flex items-center justify-center mb-4">
               <Send size={28} />
             </div>
-            <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-1">¡Propuesta Enviada!</h4>
-            <p className="text-slate-500 dark:text-slate-400 text-xs">El mánager de {targetTeamName} ha sido notificado.</p>
+            <h4 className="text-lg font-bold text-ink mb-1">¡Propuesta Enviada!</h4>
+            <p className=" text-ink-3 text-xs">El mánager de {targetTeamName} ha sido notificado.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto custom-scrollbar">
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 p-3.5 flex items-center gap-3.5">
+            <div className="rounded-xl border border-line/20 bg-surface/40 p-3.5 flex items-center gap-3.5">
               <div className="flex flex-col items-center gap-1 shrink-0">
                 <img
                   src={senderTeamLogo || DEFAULT_LOGO}
                   alt={senderTeamName || 'Equipo'}
                   width={44}
                   height={44}
-                  className="w-11 h-11 rounded-lg object-contain bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1"
+                  className="w-11 h-11 rounded-lg object-contain bg-raised border border-line/20 p-1"
                   onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                 />
-                <span className="text-[10px] text-slate-600 dark:text-slate-400 font-semibold max-w-16 truncate">{senderTeamName || 'Tu equipo'}</span>
+                <span className="text-[10px] text-ink-3 font-semibold max-w-16 truncate">{senderTeamName || 'Tu equipo'}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold tracking-wider">Pide traspaso por</p>
+                <p className="text-[10px] text-ink-3 uppercase font-semibold tracking-wider">Pide traspaso por</p>
                 <div className="flex items-center gap-2.5 mt-1.5">
                   <img
                     src={`/fotos_jugadores/${player.Id}.webp`}
                     alt={player.Name}
-                    className="w-12 h-12 rounded-lg object-cover bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                    className="w-12 h-12 rounded-lg object-cover bg-raised border border-line/20"
                     onError={(e) => { e.target.src = `https://placehold.co/56x56/111/333?text=${player.Name?.[0] || '?'}`; }}
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{player.Name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{targetTeamName}</p>
+                    <p className="text-sm font-bold text-ink truncate">{player.Name}</p>
+                    <p className="text-xs text-ink-3 font-medium">{targetTeamName}</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {error && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center gap-2 text-rose-600 dark:text-rose-400 text-xs">
+              <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg flex items-center gap-2 text-danger-soft text-xs">
                 <AlertTriangle size={15} />
                 <span>{error}</span>
               </div>
             )}
             
             <div>
-              <label htmlFor="offer-amount-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Monto Ofrecido (En Millones)</label>
+              <label htmlFor="offer-amount-input" className="block text-xs font-semibold text-ink-2 mb-1.5">Monto Ofrecido (En Millones)</label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3 font-bold text-sm">$</span>
                 <input
                   id="offer-amount-input"
                   type="number"
                   step="0.1"
                   value={offerAmount}
                   onChange={(e) => setOfferAmount(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-7 pr-10 py-2.5 text-slate-900 dark:text-white font-semibold text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all"
+                  className="w-full bg-surface border border-line/20 rounded-xl pl-7 pr-10 py-2.5 text-ink font-semibold text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
                   placeholder={`Ej. ${(player.Precio).toFixed(2)}`}
                   required
                 />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">M</span>
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-3 font-bold text-xs">M</span>
               </div>
-              <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="flex items-center justify-between mt-1.5 text-[11px] text-ink-3">
                 <span>Máximo: ${(Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100).toFixed(2)}M</span>
                 {remainingBudget !== undefined && (
-                  <span className="font-semibold text-sky-600 dark:text-sky-400">
+                  <span className="font-semibold text-accent">
                     Disponible: ${((remainingBudget || 0) / 1000000).toFixed(2)}M
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+              <p className="mt-1 text-[10px] text-ink-3">
                 El vendedor recibe el {Math.round((1 - TRANSFER_FEE_RATE) * 100)}%; comisión {Math.round(TRANSFER_FEE_RATE * 100)}%.
               </p>
             </div>
 
             <div>
-              <label htmlFor="offer-message-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Mensaje (Opcional)</label>
+              <label htmlFor="offer-message-input" className="block text-xs font-semibold text-ink-2 mb-1.5">Mensaje (Opcional)</label>
               <textarea
                 id="offer-message-input"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all resize-none"
+                className="w-full bg-surface border border-line/20 rounded-xl px-3.5 py-2.5 text-ink text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all resize-none"
                 placeholder="Escribe un mensaje para convencer al otro equipo..."
                 rows="3"
               ></textarea>
@@ -207,7 +207,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                 type="submit"
                 disabled={isSubmitting}
                 title={isSubmitting ? 'Hay una operación en curso' : undefined}
-                className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-accent hover:bg-accent text-ink font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

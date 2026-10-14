@@ -39,25 +39,25 @@ export function PesRolesPanel({ actorUid, allTeams = {} }) {
 
   return (
     <Card title="Roles del editor PES">
-      <p className="text-xs text-slate-400 mb-3 [&_code]:text-cyan-300">
+      <p className="text-xs text-ink-3 mb-3 [&_code]:text-accent-soft">
         Sin rol, un usuario no ve el editor (sigue usando el mercado y el resto de la app). Los admins actuales de la app son Super Admin automáticamente. Los permisos se controlan también en las reglas de Firestore. Después de cambiar roles, corré <code>node scripts/sync-pes-claims.mjs --apply</code> para que Supabase (texturas) reconozca el rol.
       </p>
       <div className="flex flex-wrap gap-2 mb-3">
-        <select value={uid} onChange={e => setUid(e.target.value)} aria-label="Usuario" className="bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1.5 text-xs text-white min-w-48">
+        <select value={uid} onChange={e => setUid(e.target.value)} aria-label="Usuario" className="select min-h-9 min-w-48">
           <option value="">Elegí un usuario…</option>
           {users.map(u => <option key={u.uid} value={u.uid}>{u.name} ({u.uid.slice(0, 6)}…)</option>)}
         </select>
-        <select value={preset} onChange={e => setPreset(Number(e.target.value))} aria-label="Rol" className="bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1.5 text-xs text-white">
+        <select value={preset} onChange={e => setPreset(Number(e.target.value))} aria-label="Rol" className="select min-h-9">
           {PRESETS.map((p, i) => <option key={p.label} value={i}>{p.label} — {ROLE_LABELS[p.role]}</option>)}
         </select>
         <Button variant="primary" onClick={assign}><UserPlus className="w-3.5 h-3.5" />Asignar</Button>
       </div>
       <ul className="space-y-1">
         {roles.map(r => (
-          <li key={r.uid} className="flex items-center gap-2 text-xs text-slate-300">
+          <li key={r.uid} className="flex items-center gap-2 text-xs text-ink-2">
             <Pill tone={r.role === 'super_admin' ? 'red' : r.role === 'kit_manager' ? 'cyan' : 'slate'}>{ROLE_LABELS[r.role] || r.role}</Pill>
             <span className="font-bold">{r.label}</span>
-            <span className="text-slate-500">{r.displayName || nameOf(r.uid)} · {r.uid}</span>
+            <span className="text-ink-3">{r.displayName || nameOf(r.uid)} · {r.uid}</span>
             {r.uid !== actorUid && <Button className="ml-auto" variant="danger" onClick={() => remove(r.uid)}><Trash2 className="w-3 h-3" /></Button>}
           </li>
         ))}

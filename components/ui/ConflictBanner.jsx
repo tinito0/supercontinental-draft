@@ -42,13 +42,13 @@ export const ConflictBanner = memo(function ConflictBanner({
     >
       <div className="flex items-center gap-3 min-w-0">
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-amber-500/30"
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-warning/30"
           style={{
             backgroundColor: 'rgba(245, 158, 11, 0.12)',
             color: 'var(--app-warning, #f59e0b)',
           }}
         >
-          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" aria-hidden="true" />
+          <AlertTriangle className="w-4 h-4 shrink-0 text-warning-soft" aria-hidden="true" />
         </div>
         <p className="text-xs sm:text-sm font-semibold text-amber-100 leading-snug break-words">
           {message}
@@ -62,7 +62,7 @@ export const ConflictBanner = memo(function ConflictBanner({
             onClick={onRefresh}
             disabled={isRefreshing}
             title={isRefreshing ? 'Hay una operación en curso' : undefined}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 active:scale-95 border border-amber-500/40 text-amber-100 font-black text-xs uppercase tracking-wider transition duration-150 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning/25 hover:bg-warning/40 active:scale-95 border border-warning/40 text-amber-100 font-bold text-xs uppercase tracking-wider transition duration-150 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs"
             aria-label={refreshLabel}
           >
             <RefreshCw
@@ -77,7 +77,7 @@ export const ConflictBanner = memo(function ConflictBanner({
           <button
             type="button"
             onClick={onDismiss}
-            className="p-1.5 rounded-lg text-amber-300/80 hover:text-amber-100 hover:bg-amber-500/20 active:scale-95 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+            className="p-1.5 rounded-lg text-warning-soft/80 hover:text-amber-100 hover:bg-warning/20 active:scale-95 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
             aria-label={dismissLabel}
             title={dismissLabel}
           >

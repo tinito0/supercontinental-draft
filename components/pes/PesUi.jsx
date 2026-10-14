@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, AlertTriangle, Lock } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Lock, Search, XCircle, CheckCircle2 } from 'lucide-react';
 import { fieldRange } from '../../pes/core/fields.js';
 
-export function Card({ title, actions, children, className = '' }) {
+// Shared building blocks of the PES editor, on the app design system (docs/DESIGN_SYSTEM.md):
+// a region is a panel, groups inside it are separated by hairlines and spacing, not nested cards.
+
+/** One region of the editor: section title, optional description and actions, content. */
+export function Card({ title, description, actions, children, className = '', flush = false }) {
   return (
-    <section className={`rounded-2xl bg-[#0c1017]/80 border border-white/[0.08] p-4 ${className}`}>
+    <section className={`panel-flat ${flush ? '' : 'p-4 sm:p-5'} ${className}`}>
       {(title || actions) && (
-        <header className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          {title && <h3 className="text-xs font-black uppercase tracking-wider text-slate-300">{title}</h3>}
-          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+        <header className={`flex flex-wrap items-end justify-between gap-3 ${flush ? 'px-4 pt-4 sm:px-5 sm:pt-5' : ''} mb-4`}>
+          <div className="min-w-0">
+            {title && <h2 className="section-title">{title}</h2>}
+            {description && <p className="mt-1 text-xs text-ink-3 max-w-[65ch]">{description}</p>}
+          </div>
+          {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </header>
       )}
       {children}
@@ -16,44 +23,79 @@ export function Card({ title, actions, children, className = '' }) {
   );
 }
 
-const BTN = {
-  primary: 'bg-cyan-500 hover:bg-cyan-400 text-slate-950',
-  danger: 'bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30',
-  ghost: 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 border border-white/[0.08]',
-};
+/** Group inside a region: small uppercase label over its content, separated by a hairline. */
+export function Group({ title, aside, children, className = '' }) {
+  return (
+    <div className={`border-t border-line/[0.08] pt-4 first:border-t-0 first:pt-0 ${className}`}>
+      {(title || aside) && (
+        <div className="flex items-baseline justify-between gap-2 mb-3">
+          {title && <h3 className="eyebrow">{title}</h3>}
+          {aside && <div className="text-xs text-ink-3">{aside}</div>}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+const BTN = { primary: 'btn-primary', danger: 'btn-danger', ghost: 'btn-secondary', quiet: 'btn-ghost', success: 'btn-success' };
 
 export function Button({ variant = 'ghost', className = '', children, ...props }) {
   return (
-    <button
-      type="button"
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed ${BTN[variant]} ${className}`}
-      {...props}
-    >
+    <button type="button" className={`btn btn-sm ${BTN[variant] || BTN.ghost} ${className}`} {...props}>
       {children}
     </button>
   );
 }
 
-export function Pill({ tone = 'slate', children }) {
-  const tones = {
-    slate: 'bg-white/[0.06] text-slate-300',
-    green: 'bg-emerald-500/15 text-emerald-300',
-    amber: 'bg-amber-500/15 text-amber-300',
-    red: 'bg-red-500/15 text-red-300',
-    cyan: 'bg-cyan-500/15 text-cyan-300',
-  };
-  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${tones[tone]}`}>{children}</span>;
+const DOT = { slate: 'bg-ink-3', green: 'bg-success', amber: 'bg-warning', red: 'bg-danger', cyan: 'bg-accent', accent: 'bg-accent' };
+const TEXT = { slate: 'text-ink-3', green: 'text-success-soft', amber: 'text-warning-soft', red: 'text-danger-soft', cyan: 'text-accent-soft', accent: 'text-accent-soft' };
+
+/**
+ * State marker: a dot plus text (state is never told by colour alone). Plain metadata should be plain
+ * text, not a Pill.
+ */
+export function Pill({ tone = 'slate', children, className = '' }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap ${TEXT[tone] || TEXT.slate} ${className}`}>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${DOT[tone] || DOT.slate}`} aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
+
+const ISSUE = {
+  error: { icon: XCircle, className: 'text-danger-soft', label: 'Error' },
+  warning: { icon: AlertTriangle, className: 'text-warning-soft', label: 'Advertencia' },
+  ok: { icon: CheckCircle2, className: 'text-success-soft', label: 'Listo' },
+};
+
+/** One line of a checklist or validation result, with an icon instead of a symbol character. */
+export function Issue({ tone = 'error', children, as: Tag = 'p' }) {
+  const t = ISSUE[tone] || ISSUE.error;
+  const Icon = t.icon;
+  return (
+    <Tag className={`flex items-start gap-2 ${t.className}`}>
+      <Icon className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-label={t.label} />
+      <span className="min-w-0">{children}</span>
+    </Tag>
+  );
 }
 
 export function ConfidenceBadge({ confidence }) {
-  if (confidence === 'verified') return <span title="Verificado con datos reales"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /></span>;
-  if (confidence === 'structural') return <span title="Evidencia estructural: revisá el resultado en el juego"><AlertTriangle className="w-3.5 h-3.5 text-amber-400" /></span>;
-  return <span title="Significado sin verificar: solo lectura"><Lock className="w-3.5 h-3.5 text-slate-500" /></span>;
+  if (confidence === 'verified') return <span title="Verificado con datos reales"><ShieldCheck className="w-3.5 h-3.5 text-success" aria-label="Verificado" /></span>;
+  if (confidence === 'structural') return <span title="Evidencia estructural: revisá el resultado en el juego"><AlertTriangle className="w-3.5 h-3.5 text-warning" aria-label="Sin verificar del todo" /></span>;
+  return <span title="Significado sin verificar: solo lectura"><Lock className="w-3.5 h-3.5 text-ink-3" aria-label="Solo lectura" /></span>;
 }
 
 export function ErrorText({ error }) {
   if (!error) return null;
-  return <p role="alert" className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error.message || String(error)}</p>;
+  return (
+    <p role="alert" className="flex items-start gap-2 text-sm text-danger-soft bg-danger/[0.07] border border-danger/30 rounded-xl px-4 py-3">
+      <XCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+      <span className="min-w-0">{error.message || String(error)}</span>
+    </p>
+  );
 }
 
 /**
@@ -74,11 +116,28 @@ export function FieldInput({ field, value, readOnly, onCommit, label, modified }
     if (v !== value) onCommit(v);
   };
 
-  let control;
+  const title = (
+    <span className="flex items-center gap-1.5 min-w-0">
+      {field.confidence && <ConfidenceBadge confidence={field.confidence} />}
+      <span className="truncate">{label || field.name}</span>
+      {modified && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" title="Modificado" aria-label="modificado" />}
+    </span>
+  );
+
   if (field.kind === 'bool') {
-    control = <input type="checkbox" checked={Boolean(draft)} disabled={locked} onChange={e => { setDraft(e.target.checked); commit(e.target.checked); }} className="accent-cyan-500" />;
-  } else {
-    control = (
+    return (
+      <label className={`flex items-center gap-2 min-h-10 text-xs ${modified ? 'text-accent-soft' : 'text-ink-2'}`}>
+        <input type="checkbox" checked={Boolean(draft)} disabled={locked} onChange={e => { setDraft(e.target.checked); commit(e.target.checked); }} className="w-4 h-4 accent-[rgb(var(--c-accent))]" />
+        {title}
+      </label>
+    );
+  }
+  return (
+    <label className={`flex flex-col gap-1 text-xs ${modified ? 'text-accent-soft' : 'text-ink-2'}`}>
+      <span className="flex items-center justify-between gap-2">
+        {title}
+        {range && <span className="num text-[11px] text-ink-3 shrink-0">{range.min}–{range.max}</span>}
+      </span>
       <input
         type={field.kind === 'string' ? 'text' : 'number'}
         value={draft ?? ''}
@@ -89,32 +148,25 @@ export function FieldInput({ field, value, readOnly, onCommit, label, modified }
         onChange={e => setDraft(e.target.value)}
         onBlur={() => commit(draft)}
         onKeyDown={e => { if (e.key === 'Enter') commit(draft); if (e.key === 'Escape') setDraft(value); }}
-        className="w-full bg-[#111722] border border-white/[0.08] rounded-md px-2 py-1 text-xs text-white disabled:text-slate-500"
+        className={`input min-h-9 text-sm ${field.kind === 'string' ? '' : 'num'} ${modified ? 'border-accent/50' : ''}`}
       />
-    );
-  }
-  return (
-    <label className={`flex flex-col gap-1 text-[11px] ${modified ? 'text-cyan-300' : 'text-slate-400'}`}>
-      <span className="flex items-center gap-1">
-        {field.confidence && <ConfidenceBadge confidence={field.confidence} />}
-        {label || field.name}
-        {range && field.kind !== 'bool' && <span className="text-slate-600">({range.min}–{range.max})</span>}
-        {modified && <span className="text-cyan-400">•</span>}
-      </span>
-      {control}
     </label>
   );
 }
 
-export function SearchInput({ value, onChange, placeholder }) {
+export function SearchInput({ value, onChange, placeholder, label }) {
   return (
-    <input
-      type="search"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full bg-[#111722] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500"
-    />
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none" aria-hidden="true" />
+      <input
+        type="search"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label || placeholder}
+        className="input pl-9"
+      />
+    </div>
   );
 }
 

@@ -1,12 +1,17 @@
 import React, { useRef, useState, useEffect, useMemo, memo } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { X, ShoppingCart, DollarSign, Shield, Users, Activity, Calendar, MapPin, ArrowRight, History, ClipboardList } from 'lucide-react';
-import { formatPriceShort } from '../utils/helpers.js';
+import { X, ShoppingCart, DollarSign, ArrowRight, History, ClipboardList } from 'lucide-react';
+import { formatPriceShort, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
 import { DEFAULT_BUDGET } from '../utils/constants.js';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { ProposalChat } from './ProposalChat.jsx';
 import { BaseModal } from './ui/BaseModal.jsx';
+import { Page } from './ui/Page.jsx';
+import { PageHeader } from './ui/PageHeader.jsx';
+import { Tabs } from './ui/Tabs.jsx';
+import { Stat } from './ui/Stat.jsx';
+import { EmptyState } from './ui/EmptyState.jsx';
 import {
   acceptTransferOffer,
   rejectTransferOffer,
@@ -16,102 +21,31 @@ import {
   appendHistory,
 } from '../services/transferService.js';
 
-/* ── Posiciones con paleta unificada del mercado ── */
-const POS_COLOR = {
-  DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444',
-  MC: '#22c55e', MCD: '#22c55e', MO: '#22c55e', MI: '#22c55e', MD: '#22c55e',
-  DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6',
-  PT: '#eab308',
-};
-
-/* ── Umbrales dinámicos de color OVR consistentes con el mercado ── */
-const OVR_COLOR_THRESHOLDS = [
-  [90, '#1ec9a4'],
-  [85, '#a0dd00'],
-  [75, '#ffc400'],
-  [65, '#ec7d22'],
-];
-const OVR_COLOR_DEFAULT = '#94a3af';
-
-function getOvrColor(ovr) {
-  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
-    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
-  }
-  return OVR_COLOR_DEFAULT;
-}
-
-// ─── KpiCard ────────────────────────────────────────────────────────────────
-const KpiCard = memo(function KpiCard({ title, value, icon: Icon, colorClass }) {
-  return (
-    <div className="flex items-center gap-3.5 rounded-xl px-4 py-3 bg-[#0c1017] border border-white/[0.08] shadow-sm">
-      {Icon && (
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#111722] border border-white/[0.08]">
-          <Icon className={`w-4 h-4 ${colorClass || 'text-[#00b4d8]'}`} />
-        </div>
-      )}
-      <div>
-        <p className="text-xs text-slate-400 font-medium leading-tight">{title}</p>
-        <p className="text-lg font-bold text-white leading-tight mt-0.5 tabular-nums">{value}</p>
-      </div>
-    </div>
-  );
-});
-
 // ─── CartMiniPlayerCard ─────────────────────────────────────────────────────
+// Row of the squad: photo, position and OVR in the market's colour scale, current price.
 const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap, allPlayers, onRemove, onCardClick }) {
   const livePlayer = playerMap ? playerMap.get(String(player.Id)) : allPlayers?.find(p => p.Id === player.Id);
   const precio = livePlayer ? livePlayer.Precio : player.Precio;
   const ovr = player.OVR_CALCULADO || 0;
-  const ovrColor = getOvrColor(ovr);
-  const posColor = POS_COLOR[player.POS_NOMBRE] || '#94a3af';
 
   return (
-    <div
-      className="flex items-center gap-3.5 bg-[#0c1017] hover:bg-[#111722] rounded-xl p-3.5
-        border border-white/[0.08] hover:border-[#00b4d8]/40 transition-all duration-200 cursor-pointer group shadow-sm"
-      onClick={onCardClick}
-    >
-      {/* Photo */}
-      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-black/60 border border-white/10">
-        <img
-          src={`/fotos_jugadores/${player.Id}.webp`}
-          alt={player.Name}
-          className="w-full h-full object-cover"
-          onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/48x48/111/444?text=${player.Name[0]}`; }}
-        />
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span
-            className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded"
-            style={{ backgroundColor: posColor }}
-          >
-            {player.POS_NOMBRE}
-          </span>
-          <span
-            className="text-xs font-bold px-1.5 py-0.5 rounded-md tabular-nums"
-            style={{ color: ovrColor, backgroundColor: 'rgba(255,255,255,0.06)' }}
-          >
-            {ovr}
-          </span>
-        </div>
-        <p className="text-sm font-semibold text-white group-hover:text-[#00b4d8] truncate leading-tight transition">{player.Name}</p>
-        <p className="text-xs text-emerald-400 font-semibold mt-1 tabular-nums">
-          {formatPriceShort(precio)}
+    <div className="group relative flex items-center gap-3 rounded-xl p-2.5 pr-1.5 bg-surface border border-line/[0.12] hover:border-line/30 hover:bg-raised transition-colors">
+      <button type="button" onClick={onCardClick} className="absolute inset-0 rounded-xl" aria-label={`Ver perfil de ${player.Name}`} />
+      <img src={`/fotos_jugadores/${player.Id}.webp`} alt="" width={48} height={48} loading="lazy"
+        className="w-12 h-12 rounded-lg object-cover object-top bg-raised shrink-0"
+        onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+      <div className="flex-1 min-w-0 pointer-events-none">
+        <p className="text-sm font-semibold text-ink truncate group-hover:text-accent-soft transition-colors">{player.Name}</p>
+        <p className="mt-1 flex items-center gap-2 text-xs">
+          <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+          <span className="num text-ink-3">{formatPriceShort(precio)}</span>
         </p>
       </div>
-
-      {/* Remove btn */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
-          text-slate-400 hover:text-red-400 hover:bg-red-500/15 border border-transparent hover:border-red-500/25 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer"
-        title="Quitar del equipo"
-        aria-label={`Quitar a ${player.Name} del equipo`}
-      >
-        <X className="w-4 h-4" />
+      <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 pointer-events-none ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
+      <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        className="relative btn btn-ghost btn-icon btn-sm text-ink-3 hover:text-danger-soft"
+        title="Quitar del plantel" aria-label={`Quitar a ${player.Name} del plantel`}>
+        <X className="w-4 h-4" aria-hidden="true" />
       </button>
     </div>
   );
@@ -127,6 +61,8 @@ function getOfferStatusLabel(status) {
   if (status === 'withdrawn') return 'Retirada';
   return 'Negociación';
 }
+
+const STATUS_TONE = { pending: 'text-warning-soft', countered: 'text-warning-soft', accepted: 'text-success-soft', rejected: 'text-danger-soft', withdrawn: 'text-ink-3' };
 
 function getOfferTargetName(offer, allTeams) {
   return offer.targetTeamName || allTeams?.[offer.targetTeamId]?.teamName || 'Equipo rival';
@@ -149,18 +85,17 @@ const OfferTimeline = memo(function OfferTimeline({ offer }) {
       }];
 
   return (
-    <div className="mt-3 space-y-2">
+    <ol className="mt-3 border-l border-line/15 pl-3 space-y-2.5">
       {history.slice(-4).map((item, index) => (
-        <div key={`${item.type || 'event'}-${item.at || index}`} className="rounded-xl bg-black/22 px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.035)]">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-black uppercase text-gray-300">{item.title || 'Movimiento'}</p>
-            {item.amount ? <span className="text-[11px] font-black text-emerald-300">{formatPriceShort(item.amount / 1000000)}</span> : null}
-          </div>
-          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">{item.teamName || 'Equipo'}</p>
-          {item.message ? <p className="mt-1 text-xs italic text-gray-500">"{item.message}"</p> : null}
-        </div>
+        <li key={`${item.type || 'event'}-${item.at || index}`} className="text-xs">
+          <p className="flex items-center justify-between gap-3">
+            <span className="font-semibold text-ink-2">{item.title || 'Movimiento'} · <span className="font-normal text-ink-3">{item.teamName || 'Equipo'}</span></span>
+            {item.amount ? <span className="num font-semibold text-ink">{formatPriceShort(item.amount / 1000000)}</span> : null}
+          </p>
+          {item.message ? <p className="mt-0.5 text-ink-3">«{item.message}»</p> : null}
+        </li>
       ))}
-    </div>
+    </ol>
   );
 });
 
@@ -187,6 +122,7 @@ const NegotiationCard = memo(function NegotiationCard({
   const senderName = getOfferSenderName(offer, allTeams);
   const targetName = getOfferTargetName(offer, allTeams);
   const activeAmount = getOfferAmount(offer);
+  const busyTitle = isProcessing ? 'Hay una operación en curso' : undefined;
   const transferData = {
     ...offer,
     price: (activeAmount || 0) / 1000000,
@@ -200,70 +136,57 @@ const NegotiationCard = memo(function NegotiationCard({
   };
 
   return (
-    <div className="rounded-2xl bg-[#0c1017] border border-white/[0.08] hover:border-white/[0.14] p-4 sm:p-5 shadow-md transition-all">
+    <article className="panel-flat p-4 sm:p-5" aria-label={`Negociación por ${offer.playerName}`}>
       {offer.status === 'accepted' ? (
         <TransferPlayerCard transfer={transferData} player={livePlayer} allTeams={allTeams} compact />
       ) : (
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <img
-                src={`/fotos_jugadores/${offer.playerId}.webp`}
-                alt={offer.playerName}
-                className="h-12 w-12 rounded-xl bg-black/60 border border-white/10 object-cover"
-                onError={(event) => { event.currentTarget.style.display = 'none'; }}
-              />
+              <img src={`/fotos_jugadores/${offer.playerId}.webp`} alt="" width={48} height={48}
+                className="h-12 w-12 rounded-lg bg-raised object-cover object-top shrink-0"
+                onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }} />
               <div className="min-w-0">
-                <h4 className="truncate text-sm font-black uppercase text-white">{offer.playerName}</h4>
-                <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px] font-black uppercase">
-                  <span className="min-w-0 truncate text-[#00b4d8]">{senderName}</span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                  <span className="min-w-0 truncate text-purple-400">{targetName}</span>
-                </div>
+                <h4 className="truncate font-display text-lg font-bold text-ink leading-tight">{offer.playerName}</h4>
+                <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-3">
+                  <span className="min-w-0 truncate text-ink-2">{senderName}</span>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-label="ofrece a" />
+                  <span className="min-w-0 truncate text-ink-2">{targetName}</span>
+                </p>
               </div>
             </div>
             <OfferTimeline offer={offer} />
           </div>
 
-          <div className="w-full shrink-0 lg:w-auto lg:min-w-[250px]">
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-[#111722] border border-white/[0.08] px-3.5 py-2.5 shadow-sm">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{getOfferStatusLabel(offer.status)}</span>
-              <span className="text-lg font-black text-emerald-400">{formatPriceShort((activeAmount || 0) / 1000000)}</span>
+          <div className="w-full shrink-0 lg:w-auto lg:min-w-[260px]">
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <span className={`text-xs font-semibold ${STATUS_TONE[offer.status] || 'text-ink-3'}`}>{getOfferStatusLabel(offer.status)}</span>
+              <span className="font-display num text-2xl font-bold text-ink">{formatPriceShort((activeAmount || 0) / 1000000)}</span>
             </div>
 
             {!isHistory && counteringOfferId === offer.id ? (
               <div className="flex w-full flex-wrap items-center gap-2">
-                <div className="relative min-w-[120px] flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={counterAmount}
-                    onChange={(event) => setCounterAmount(event.target.value)}
-                    placeholder="Monto"
-                    className="min-h-11 w-full rounded-xl bg-[#111722] border border-white/[0.08] focus:border-[#00b4d8] py-2 pl-7 pr-8 text-sm font-bold text-white outline-none transition-colors"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">M</span>
-                </div>
-                <button onClick={() => onCounter(offer)} disabled={isProcessing || !counterAmount} title={isProcessing ? 'Hay una operación en curso' : !counterAmount ? 'Completa los datos requeridos primero' : undefined} className="min-h-11 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-4 text-xs font-black uppercase text-amber-300 transition disabled:opacity-50 cursor-pointer">
-                  Enviar
-                </button>
-                <button onClick={() => { setCounteringOfferId(null); setCounterAmount(''); }} className="min-h-11 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] px-4 text-xs font-black uppercase text-slate-300 transition cursor-pointer">
-                  Cancelar
-                </button>
+                <label className="relative min-w-[120px] flex-1">
+                  <span className="sr-only">Monto de la contraoferta en millones</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-3" aria-hidden="true">$</span>
+                  <input type="number" step="0.1" inputMode="decimal" value={counterAmount} onChange={(event) => setCounterAmount(event.target.value)}
+                    placeholder="Monto" className="input num pl-7 pr-8" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-ink-3" aria-hidden="true">M</span>
+                </label>
+                <button type="button" onClick={() => onCounter(offer)} disabled={isProcessing || !counterAmount}
+                  title={busyTitle || (!counterAmount ? 'Escribí un monto primero' : undefined)} className="btn btn-primary">Enviar</button>
+                <button type="button" onClick={() => { setCounteringOfferId(null); setCounterAmount(''); }} className="btn btn-ghost">Cancelar</button>
               </div>
             ) : !isHistory ? (
-              <div className="flex w-full flex-wrap gap-2">
+              <div className="grid w-full grid-cols-3 gap-2">
                 {isIncoming ? (
                   <>
-                    <button onClick={() => onReject(offer)} disabled={isProcessing} title={isProcessing ? 'Hay una operación en curso' : undefined} className="min-h-11 flex-1 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 px-4 text-xs font-black uppercase text-red-300 transition disabled:opacity-50 cursor-pointer">Rechazar</button>
-                    <button onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing} title={isProcessing ? 'Hay una operación en curso' : undefined} className="min-h-11 flex-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-4 text-xs font-black uppercase text-amber-300 transition disabled:opacity-50 cursor-pointer">Contraoferta</button>
-                    <button onClick={() => onAccept(offer)} disabled={isProcessing} title={isProcessing ? 'Hay una operación en curso' : undefined} className="min-h-11 flex-1 rounded-xl bg-[#00b4d8] hover:bg-[#38bdf8] px-4 text-xs font-black uppercase text-[#030712] transition shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer">Aceptar</button>
+                    <button type="button" onClick={() => onReject(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-danger">Rechazar</button>
+                    <button type="button" onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing} title={busyTitle} className="btn btn-secondary">Contraofertar</button>
+                    <button type="button" onClick={() => onAccept(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-primary">Aceptar</button>
                   </>
                 ) : (
-                  <button onClick={() => onWithdraw(offer)} disabled={isProcessing} title={isProcessing ? 'Hay una operación en curso' : undefined} className="min-h-11 w-full rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 px-4 text-xs font-black uppercase text-red-300 transition disabled:opacity-50 cursor-pointer">
-                    Retirar Oferta
-                  </button>
+                  <button type="button" onClick={() => onWithdraw(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-danger col-span-3">Retirar oferta</button>
                 )}
               </div>
             ) : null}
@@ -271,14 +194,13 @@ const NegotiationCard = memo(function NegotiationCard({
         </div>
       )}
 
-      {/* Negotiation Chat between managers */}
       <ProposalChat
         offerId={offer.id}
         userId={userId || userProfile?.uid}
         userProfile={userProfile}
-        isClosed={isHistory || ['accepted', 'rejected', 'withdrawn'].includes(offer.status)}
+        isClosed={isHistory || CLOSED_STATUSES.has(offer.status)}
       />
-    </div>
+    </article>
   );
 });
 
@@ -418,7 +340,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       datasets: [{
         data: [posCounts.Arqueros, posCounts.Defensores, posCounts.Medios, posCounts.Delanteros],
         backgroundColor: ['#eab308', '#3b82f6', '#22c55e', '#ef4444'],
-        borderColor: '#1f2937',
+        borderColor: '#0e1320',
         borderWidth: 2,
         hoverOffset: 4
       }],
@@ -442,7 +364,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       datasets: [{
         label: 'Jugadores',
         data: sortedCountries.map(([, count]) => count),
-        backgroundColor: '#6366f1',
+        backgroundColor: '#3a66c4',
         borderRadius: 6,
         barThickness: 20,
       }]
@@ -455,12 +377,12 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11, family: 'system-ui' }, boxWidth: 10, padding: 15 } },
+      legend: { position: 'bottom', labels: { color: '#b8c2d6', font: { size: 11, family: 'Barlow' }, boxWidth: 10, padding: 15 } },
       title: { display: false }
     },
     scales: {
-      y: { ticks: { color: '#6b7280', stepSize: 1 }, grid: { color: '#374151', drawBorder: false } },
-      x: { ticks: { color: '#9ca3af' }, grid: { display: false } }
+      y: { ticks: { color: '#8692ab', stepSize: 1 }, grid: { color: 'rgba(150, 166, 200, 0.12)', drawBorder: false } },
+      x: { ticks: { color: '#b8c2d6' }, grid: { display: false } }
     }
   };
 
@@ -468,328 +390,167 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'right', labels: { color: '#9ca3af', font: { size: 11 }, boxWidth: 12, padding: 15 } }
+      legend: { position: 'right', labels: { color: '#b8c2d6', font: { size: 11 }, boxWidth: 12, padding: 15 } }
     }
   };
 
   if (!isVisible && !isPage) return null;
 
+  const initialBudget = userProfile?.budget || DEFAULT_BUDGET || 0;
+  const activeCommitted = committedInOffers !== undefined
+    ? committedInOffers
+    : (sentOffers || []).filter(o => o.senderId === userId && o.status === 'pending').reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
+  const budgetPct = initialBudget > 0 ? Math.min(100, Math.max(0, (remainingBudget / initialBudget) * 100)) : 0;
+  const budgetTone = budgetPct > 50 ? 'bg-success' : budgetPct > 20 ? 'bg-warning' : 'bg-danger';
+  const fmtM = (val) => {
+    const v = Math.abs(val || 0);
+    if (v >= 1000000) return `$${(v / 1000000).toFixed(2)}M`;
+    if (v >= 1000) return `$${(v / 1000).toFixed(0)}K`;
+    return `$${v}`;
+  };
+
+  const tabs = [
+    { id: 'players', label: 'Plantel', count: cart.length },
+    { id: 'offers', label: 'Recibidas', count: incomingOffers?.length || 0 },
+    { id: 'sent', label: 'Enviadas', count: sentOffers?.length || 0 },
+    { id: 'history', label: 'Historial', count: offerHistory?.length || 0 },
+    { id: 'stats', label: 'Gráficos' },
+  ];
+
+  const negotiationProps = {
+    allTeams, playerMap, allPlayers, userId, userProfile, isProcessing, counteringOfferId, counterAmount, setCounterAmount, setCounteringOfferId,
+    onAccept: handleAcceptOffer, onReject: handleRejectOffer, onCounter: handleCounterOffer, onWithdraw: handleWithdrawOffer,
+  };
+
+  const finances = (
+    <section aria-label="Balance financiero" className="border-y border-line/[0.08] py-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
+        <Stat label="Presupuesto inicial" value={fmtM(initialBudget)} size="sm" />
+        <Stat label="Gastado en el plantel" value={fmtM(totalCartCost)} size="sm" />
+        <Stat label="Comprometido en ofertas" value={fmtM(activeCommitted)} size="sm" tone={activeCommitted > 0 ? 'warning' : 'default'} hint="Ofertas enviadas pendientes" />
+        <Stat label="Disponible" value={fmtM(remainingBudget)} size="sm" tone={remainingBudget > 0 ? 'accent' : 'danger'} hint={`${budgetPct.toFixed(0)}% del inicial`} />
+      </div>
+      <div className="mt-4 h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(budgetPct)} aria-label="Presupuesto disponible">
+        <div className={`h-full rounded-full transition-[width] duration-500 ${budgetTone}`} style={{ width: `${budgetPct}%` }} />
+      </div>
+    </section>
+  );
+
+  const content = (
+    <>
+      {activeTab === 'players' && (
+        cart.length === 0 ? (
+          <EmptyState icon={ShoppingCart} title="Tu plantel está vacío" description="Explorá el mercado para fichar jugadores." />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+            {sortedCart.map(player => (
+              <CartMiniPlayerCard key={player.Id} player={player} playerMap={playerMap} allPlayers={allPlayers}
+                onRemove={() => onRemoveFromCart(player)} onCardClick={() => onPlayerClick(player)} />
+            ))}
+          </div>
+        )
+      )}
+
+      {activeTab === 'offers' && (
+        incomingOffers.length === 0 ? (
+          <EmptyState icon={DollarSign} title="No tenés ofertas pendientes" description="Cuando otros clubes ofrezcan por tus jugadores, las vas a ver acá." />
+        ) : (
+          <div className="space-y-3">
+            {incomingOffers.map(offer => <NegotiationCard key={offer.id} offer={offer} isIncoming={true} {...negotiationProps} />)}
+          </div>
+        )
+      )}
+
+      {activeTab === 'sent' && (
+        !sentOffers?.length ? (
+          <EmptyState icon={DollarSign} title="No enviaste ofertas" description="Negociá por jugadores de otros clubes desde Rivales o el Mercado." />
+        ) : (
+          <div className="space-y-3">
+            {sentOffers.map(offer => <NegotiationCard key={offer.id} offer={offer} isIncoming={false} {...negotiationProps} />)}
+          </div>
+        )
+      )}
+
+      {activeTab === 'history' && (
+        !offerHistory?.length ? (
+          <EmptyState icon={History} title="Todavía no hay negociaciones cerradas" description="Las ofertas aceptadas, rechazadas o retiradas quedan guardadas acá." />
+        ) : (
+          <div className="space-y-3">
+            {offerHistory.map(offer => (
+              <NegotiationCard key={offer.id} offer={offer} isHistory={true} isIncoming={offer.targetTeamId === userProfile?.uid} {...negotiationProps} />
+            ))}
+          </div>
+        )
+      )}
+
+      {activeTab === 'stats' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-3 gap-6">
+            <Stat label="Media del plantel" value={statsData.avgOvr} tone="accent" size="sm" />
+            <Stat label="Edad promedio" value={statsData.avgAge} hint="años" size="sm" />
+            <Stat label="Jugadores" value={statsData.totalPlayers} size="sm" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <section className="panel-flat p-5 flex flex-col" aria-labelledby="cart-chart-positions">
+              <h3 id="cart-chart-positions" className="eyebrow mb-4">Distribución por línea</h3>
+              <div className="flex-grow relative min-h-[220px]">
+                <Doughnut data={statsData.positionChartData} options={doughnutOptions} aria-label="Gráfico de jugadores por línea" role="img" />
+              </div>
+            </section>
+            <section className="panel-flat p-5 flex flex-col" aria-labelledby="cart-chart-countries">
+              <h3 id="cart-chart-countries" className="eyebrow mb-4">Nacionalidades</h3>
+              <div className="flex-grow relative min-h-[220px]">
+                <Bar data={statsData.countryChartData} options={chartOptions} aria-label="Gráfico de las cinco nacionalidades más presentes" role="img" />
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const tabList = <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} label="Secciones del plantel" />;
+
+  if (isPage) {
+    return (
+      <Page className="pb-10">
+        <PageHeader
+          eyebrow="Mi club"
+          title="Plantel y finanzas"
+          description={userProfile?.teamName || 'Mi Equipo'}
+          actions={onOpenTactics && (
+            <button type="button" onClick={onOpenTactics} className="btn btn-secondary">
+              <ClipboardList className="w-4 h-4" aria-hidden="true" />Pizarra táctica
+            </button>
+          )}
+        />
+        {finances}
+        {tabList}
+        <div>{content}</div>
+      </Page>
+    );
+  }
+
   const inner = (
-    <div className="w-full h-full min-h-0 flex flex-col bg-[#06080d] relative overflow-hidden">
-      {/* ── Header ── */}
-      <div className="relative z-10 flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 shrink-0 bg-[#0c1017] border-b border-white/[0.08]">
-        <div>
-          <h2 className="text-base sm:text-xl font-bold text-white flex items-center gap-2.5">
-            <DollarSign className="w-5 h-5 text-[#00b4d8]" /> Finanzas & Plantilla
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5 font-medium truncate max-w-[220px] sm:max-w-none">
-            {userProfile?.teamName || 'Mi Equipo'}
-          </p>
+    <div className="w-full h-full min-h-0 flex flex-col bg-surface">
+      <div className="flex justify-between items-center gap-3 px-4 sm:px-6 py-3 shrink-0 border-b border-line/10">
+        <div className="min-w-0">
+          <h2 className="font-display text-xl font-bold text-ink">Plantel y finanzas</h2>
+          <p className="text-xs text-ink-3 truncate">{userProfile?.teamName || 'Mi Equipo'}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {isPage && onOpenTactics && (
-            <button
-              type="button"
-              onClick={onOpenTactics}
-              className="min-h-11 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 text-xs font-black uppercase tracking-wide text-cyan-300 transition hover:bg-cyan-500/20"
-            >
-              <ClipboardList className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
-              Pizarra táctica
-            </button>
-          )}
-          {!isPage && (
-            <button onClick={onClose}
-              aria-label="Cerrar finanzas y plantilla"
-              className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition">
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
+        <button type="button" onClick={onClose} aria-label="Cerrar plantel y finanzas" className="btn btn-ghost btn-icon">
+          <X className="w-5 h-5" aria-hidden="true" />
+        </button>
       </div>
-
-      {/* ── Budget Breakdown — Cohesive 4-KPI Card ── */}
-      {(() => {
-        const initialBudget = userProfile?.budget || DEFAULT_BUDGET || 0;
-        const activeCommitted = committedInOffers !== undefined
-          ? committedInOffers
-          : (sentOffers || [])
-              .filter(o => o.senderId === userId && o.status === 'pending')
-              .reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
-        const liquidBudget = remainingBudget;
-        const pct = initialBudget > 0 ? Math.min(100, Math.max(0, (liquidBudget / initialBudget) * 100)) : 0;
-        const barColor = pct > 50 ? '#10b981' : pct > 20 ? '#eab308' : '#ef4444';
-        const pctTextColor = pct > 50 ? 'text-emerald-400' : pct > 20 ? 'text-amber-400' : 'text-rose-400';
-        const availableColor = liquidBudget > 0 ? '#00b4d8' : '#ef4444';
-
-        const fmtM = (val) => {
-          const v = Math.abs(val || 0);
-          if (v >= 1000000) return `$${(v / 1000000).toFixed(2)}M`;
-          if (v >= 1000) return `$${(v / 1000).toFixed(0)}K`;
-          return `$${v}`;
-        };
-
-        return (
-          <div className="relative z-10 px-3 sm:px-6 py-3 sm:py-4 shrink-0 border-b border-white/[0.08]">
-            <div className="rounded-xl sm:rounded-2xl p-4 sm:p-5 bg-[#0c1017] border border-white/[0.08] shadow-xl relative overflow-hidden">
-              {/* Subtle top accent highlight */}
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#00b4d8]/40 to-transparent pointer-events-none" />
-
-              {/* Top row: team name + title */}
-              <div className="flex items-center justify-between mb-3.5">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                  {userProfile?.teamName || 'Mi Equipo'}
-                </span>
-                <span className="text-[11px] font-black text-[#00b4d8] uppercase tracking-wider flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-[#00b4d8]" /> Balance Financiero
-                </span>
-              </div>
-
-              {/* 4-KPI breakdown row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
-                <div className="bg-[#111722] p-2.5 sm:p-3 rounded-xl border border-white/[0.08] shadow-sm">
-                  <p className="text-xs sm:text-base font-black text-white leading-none tabular-nums">{fmtM(initialBudget)}</p>
-                  <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5 truncate">Presupuesto Inicial</p>
-                </div>
-                <div className="bg-[#111722] p-2.5 sm:p-3 rounded-xl border border-white/[0.08] shadow-sm">
-                  <p className={`text-xs sm:text-base font-black leading-none tabular-nums ${totalCartCost > 0 ? 'text-white' : 'text-slate-500'}`}>{fmtM(totalCartCost)}</p>
-                  <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-1.5 truncate">Gastado en Plantilla</p>
-                </div>
-                <div className="bg-[#111722] p-2.5 sm:p-3 rounded-xl border border-white/[0.08] shadow-sm">
-                  <p className={`text-xs sm:text-base font-black leading-none tabular-nums ${activeCommitted > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmtM(activeCommitted)}</p>
-                  <p className="text-[9px] sm:text-[10px] text-amber-400/80 uppercase font-bold tracking-wider mt-1.5 truncate">Comprometido</p>
-                </div>
-                <div className="bg-[#111722] p-2.5 sm:p-3 rounded-xl border border-[#00b4d8]/30 shadow-sm">
-                  <p className="text-xs sm:text-base font-black leading-none tabular-nums" style={{ color: availableColor }}>{fmtM(liquidBudget)}</p>
-                  <p className="text-[9px] sm:text-[10px] text-[#00b4d8] uppercase font-bold tracking-wider mt-1.5 truncate">Disponible Líquido</p>
-                </div>
-              </div>
-
-              {/* Hero: DISPONIBLE & bar */}
-              <div className="flex items-center justify-between text-xs mb-1.5 font-bold">
-                <span className="text-slate-400 text-[10px] uppercase tracking-wider">Margen Operativo Disponible</span>
-                <span className={pctTextColor}>{pct.toFixed(0)}% restante</span>
-              </div>
-              <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/[0.08]">
-                <div
-                  className="h-full rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${pct}%`, background: barColor, boxShadow: `0 0 8px ${barColor}50` }}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── Tabs (Segmented Control) ── */}
-      <div className="relative z-10 px-3 sm:px-6 py-2.5 shrink-0 bg-[#0c1017]/90 border-b border-white/[0.08]">
-        <div className="flex items-center gap-1.5 p-1 bg-[#111722] rounded-xl border border-white/[0.08] overflow-x-auto custom-scrollbar">
-          {[
-            { id: 'players', label: 'Plantilla', count: cart.length },
-            { id: 'offers', label: 'Recibidas', count: incomingOffers?.length || 0 },
-            { id: 'sent', label: 'Enviadas', count: sentOffers?.length || 0 },
-            { id: 'history', label: 'Historial', count: offerHistory?.length || 0 },
-            { id: 'stats', label: 'Gráficos', count: null }
-          ].map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  isActive
-                    ? 'bg-[#00b4d8] text-[#030712] shadow-sm font-black'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <span>{tab.label}</span>
-                {tab.count !== null && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    isActive
-                      ? 'bg-black/20 text-[#030712]'
-                      : 'bg-white/[0.06] text-slate-400'
-                  }`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Content ── */}
-      <div className="relative z-10 flex-grow min-h-0 overflow-y-auto px-3 sm:px-6 py-4 sm:py-5 custom-scrollbar">
-        {activeTab === 'players' && (
-          cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 rounded-2xl bg-[#0c1017]/60 border border-dashed border-white/[0.08] text-center p-8">
-              <div className="w-12 h-12 rounded-full bg-[#111722] border border-white/[0.08] flex items-center justify-center mb-3">
-                <ShoppingCart className="w-6 h-6 text-[#00b4d8]/60" />
-              </div>
-              <p className="text-sm font-bold text-white">Tu equipo está vacío</p>
-              <p className="text-xs text-slate-400 mt-1">Explora el mercado principal para fichar jugadores para tu plantilla</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center bg-[#111722] p-3 rounded-xl border border-white/[0.08]">
-                <h3 className="text-sm font-bold text-white">Tu Plantilla ({cart.length})</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-                {sortedCart.map(player => (
-                  <CartMiniPlayerCard
-                    key={player.Id}
-                    player={player}
-                    playerMap={playerMap}
-                    allPlayers={allPlayers}
-                    onRemove={() => onRemoveFromCart(player)}
-                    onCardClick={() => onPlayerClick(player)}
-                  />
-                ))}
-              </div>
-            </div>
-          )
-        )}
-
-        {activeTab === 'offers' && (
-          incomingOffers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 rounded-2xl bg-[#0c1017]/60 border border-dashed border-white/[0.08] text-center p-8">
-              <div className="w-12 h-12 rounded-full bg-[#111722] border border-white/[0.08] flex items-center justify-center mb-3">
-                <DollarSign className="w-6 h-6 text-[#00b4d8]/60" />
-              </div>
-              <p className="text-sm font-bold text-white">No tienes ofertas pendientes</p>
-              <p className="text-xs text-slate-400 mt-1">Cuando otros clubes envíen propuestas por tus jugadores aparecerán aquí</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {incomingOffers.map(offer => (
-                <NegotiationCard
-                  key={offer.id}
-                  offer={offer}
-                  allTeams={allTeams}
-                  playerMap={playerMap}
-                  allPlayers={allPlayers}
-                  userId={userId}
-                  userProfile={userProfile}
-                  isIncoming={true}
-                  isProcessing={isProcessing}
-                  counteringOfferId={counteringOfferId}
-                  counterAmount={counterAmount}
-                  setCounterAmount={setCounterAmount}
-                  setCounteringOfferId={setCounteringOfferId}
-                  onAccept={handleAcceptOffer}
-                  onReject={handleRejectOffer}
-                  onCounter={handleCounterOffer}
-                  onWithdraw={handleWithdrawOffer}
-                />
-              ))}
-            </div>
-          )
-        )}
-
-        {activeTab === 'sent' && (
-          sentOffers?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 rounded-2xl bg-[#0c1017]/60 border border-dashed border-white/[0.08] text-center p-8">
-              <div className="w-12 h-12 rounded-full bg-[#111722] border border-white/[0.08] flex items-center justify-center mb-3">
-                <DollarSign className="w-6 h-6 text-[#00b4d8]/60" />
-              </div>
-              <p className="text-sm font-bold text-white">No has enviado ofertas</p>
-              <p className="text-xs text-slate-400 mt-1">Inicia negociaciones con jugadores de otros equipos desde Otros Equipos o Mercado</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {sentOffers?.map(offer => (
-                <NegotiationCard
-                  key={offer.id}
-                  offer={offer}
-                  allTeams={allTeams}
-                  playerMap={playerMap}
-                  allPlayers={allPlayers}
-                  userId={userId}
-                  userProfile={userProfile}
-                  isIncoming={false}
-                  isProcessing={isProcessing}
-                  counteringOfferId={counteringOfferId}
-                  counterAmount={counterAmount}
-                  setCounterAmount={setCounterAmount}
-                  setCounteringOfferId={setCounteringOfferId}
-                  onAccept={handleAcceptOffer}
-                  onReject={handleRejectOffer}
-                  onCounter={handleCounterOffer}
-                  onWithdraw={handleWithdrawOffer}
-                />
-              ))}
-            </div>
-          )
-        )}
-
-        {activeTab === 'history' && (
-          offerHistory?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 rounded-2xl bg-[#0c1017]/60 border border-dashed border-white/[0.08] text-center p-8">
-              <div className="w-12 h-12 rounded-full bg-[#111722] border border-white/[0.08] flex items-center justify-center mb-3">
-                <History className="w-6 h-6 text-[#00b4d8]/60" />
-              </div>
-              <p className="text-sm font-bold text-white">Todavía no hay negociaciones cerradas</p>
-              <p className="text-xs text-slate-400 mt-1">El historial de ofertas aceptadas, rechazadas o retiradas se guardará aquí</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {offerHistory?.map(offer => (
-                <NegotiationCard
-                  key={offer.id}
-                  offer={offer}
-                  allTeams={allTeams}
-                  playerMap={playerMap}
-                  allPlayers={allPlayers}
-                  userId={userId}
-                  userProfile={userProfile}
-                  isHistory={true}
-                  isIncoming={offer.targetTeamId === userProfile?.uid}
-                  isProcessing={isProcessing}
-                  counteringOfferId={counteringOfferId}
-                  counterAmount={counterAmount}
-                  setCounterAmount={setCounterAmount}
-                  setCounteringOfferId={setCounteringOfferId}
-                  onAccept={handleAcceptOffer}
-                  onReject={handleRejectOffer}
-                  onCounter={handleCounterOffer}
-                  onWithdraw={handleWithdrawOffer}
-                />
-              ))}
-            </div>
-          )
-        )}
-
-        {activeTab === 'stats' && (
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <KpiCard title="OVR Media" value={statsData.avgOvr} icon={Activity} colorClass="text-[#00b4d8]" />
-              <KpiCard title="Edad Promedio" value={<>{statsData.avgAge}<span className="text-xs text-slate-400 font-normal"> años</span></>} icon={Calendar} colorClass="text-purple-400" />
-              <KpiCard title="Jugadores" value={statsData.totalPlayers} icon={Users} colorClass="text-emerald-400" />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="rounded-2xl p-5 bg-[#0c1017] border border-white/[0.08] shadow-lg flex flex-col">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-[#00b4d8]" /> Distribución Táctica
-                </h3>
-                <div className="flex-grow relative min-h-[220px]">
-                  <Doughnut data={statsData.positionChartData} options={doughnutOptions} />
-                </div>
-              </div>
-              <div className="rounded-2xl p-5 bg-[#0c1017] border border-white/[0.08] shadow-lg flex flex-col">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#00b4d8]" /> Nacionalidades
-                </h3>
-                <div className="flex-grow relative min-h-[220px]">
-                  <Bar data={statsData.countryChartData} options={chartOptions} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="flex-grow min-h-0 overflow-y-auto px-4 sm:px-6 py-4 space-y-5 custom-scrollbar">
+        {finances}
+        {tabList}
+        <div>{content}</div>
       </div>
     </div>
   );
 
-  if (isPage) return inner;
+
 
   return (
     <BaseModal

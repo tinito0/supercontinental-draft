@@ -198,15 +198,15 @@ export function LinkGoogleScreen({ auth, db, user, onLinked }) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#06080d] items-center justify-center p-6 text-gray-200">
-      <div className="absolute inset-0 bg-[#06080d] z-0">
-         <div className="absolute top-[10%] left-[20%] w-[50%] h-[50%] bg-[#00b4d8]/10 rounded-full blur-[120px] mix-blend-screen" />
+    <div className="flex flex-col min-h-screen bg-canvas items-center justify-center p-6 text-ink-2">
+      <div className="absolute inset-0 bg-canvas z-0">
+         <div className="absolute top-[10%] left-[20%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md bg-[#0c1017] rounded-3xl p-8 border border-white/[0.08] shadow-2xl text-center">
-        <img src="/logo.webp" alt="SCL Logo" className="w-24 h-24 object-contain mx-auto mb-6 drop-shadow-[0_0_15px_rgba(0,180,216,0.3)]" />
+      <div className="relative z-10 w-full max-w-md bg-surface rounded-2xl p-8 border border-line/[0.12] shadow-2xl text-center">
+        <img src="/logo.webp" alt="SCL Logo" className="w-24 h-24 object-contain mx-auto mb-6 drop-shadow-[0_0_15px_rgba(58, 102, 196,0.3)]" />
 
-        <h2 className="text-3xl font-black text-white mb-4 tracking-tight">Migración de Cuenta</h2>
+        <h2 className="text-3xl font-bold text-ink mb-4 tracking-tight">Migración de Cuenta</h2>
         
         <p className="text-blue-200/70 mb-8 leading-relaxed font-medium">
           Para continuar, vinculá tu cuenta de Google. De ahora en adelante vas a ingresar solo con Google.
@@ -214,15 +214,15 @@ export function LinkGoogleScreen({ auth, db, user, onLinked }) {
 
         {error && (
           <div className="mb-6 px-4 py-3 rounded-lg bg-red-950/40 border border-red-900/50 flex items-start text-left">
-            <AlertTriangle className="w-5 h-5 text-red-400 mr-3 shrink-0" />
-            <span className="text-red-200 text-sm font-medium">{error}</span>
+            <AlertTriangle className="w-5 h-5 text-danger-soft mr-3 shrink-0" />
+            <span className="text-danger-soft text-sm font-medium">{error}</span>
           </div>
         )}
 
         <button
           onClick={handleLinkGoogle}
           disabled={isLinking}
-          className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-white hover:bg-gray-100 text-gray-900 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-white hover:bg-slate-100 text-slate-900 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {isLinking ? (
             <>

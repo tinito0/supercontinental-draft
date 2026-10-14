@@ -25,12 +25,15 @@ import { useAuth } from './hooks/useAuth.js';
 import { usePesAccess } from './hooks/usePesAccess.js';
 import { useBudget } from './hooks/useBudget.js';
 import { useHoverPreview } from './hooks/useHoverPreview.js';
-import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
+import { useKeyboardShortcuts, isTyping } from './hooks/useKeyboardShortcuts.js';
 import { useScrollRestore } from './hooks/useScrollRestore.js';
 import { calculateSmartRecommendations } from './utils/recommendations.js';
 import { handleListenerError } from './utils/listenerErrorHandler.js';
 import { PlayerPreview } from './components/ui/PlayerPreview.jsx';
 import { KeyboardShortcutsHelp } from './components/ui/KeyboardShortcutsHelp.jsx';
+import { PageHeader } from './components/ui/PageHeader.jsx';
+import { Alert } from './components/ui/Alert.jsx';
+import { EmptyState } from './components/ui/EmptyState.jsx';
 
 // Lazy loading modals and heavy screens
 const LoginScreen = React.lazy(() => import('./screens/LoginScreen.jsx').then(m => ({ default: m.LoginScreen })));
@@ -141,10 +144,10 @@ const initialSort = { key: 'ovr', direction: 'desc' };
 
 function FirebaseError() {
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen p-10 font-sans text-lg bg-gray-900 text-white">
+    <div className="flex flex-col justify-center items-center min-h-screen p-10 font-sans text-lg bg-surface text-ink">
       <h1 className="text-4xl font-bold text-red-500 mb-4">Error de Configuración</h1>
-      <p className="text-gray-300 mb-6 text-center">No se pudo conectar a Firebase. Por favor, revisa que tus credenciales sean válidas.</p>
-      <pre className="bg-gray-800 p-4 rounded-lg border border-red-700 text-red-300 overflow-x-auto text-sm max-w-full">
+      <p className="text-ink-2 mb-6 text-center">No se pudo conectar a Firebase. Por favor, revisa que tus credenciales sean válidas.</p>
+      <pre className="bg-raised p-4 rounded-lg border border-red-700 text-danger-soft overflow-x-auto text-sm max-w-full">
         <strong>Mensaje del error:</strong> {firebaseInitializationError?.message || "Error desconocido."}
       </pre>
     </div>
@@ -153,8 +156,8 @@ function FirebaseError() {
 
 function LoadingScreen({ message }) {
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-gray-200 font-sans text-xl text-center p-5">
-      <div className="w-10 h-10 border-4 border-gray-700 border-t-blue-500 rounded-full animate-spin mb-5"></div>
+    <div className="flex flex-col justify-center items-center min-h-screen bg-surface text-ink-2 font-sans text-xl text-center p-5">
+      <div className="w-10 h-10 border-4 border-line/20 border-t-blue-500 rounded-full animate-spin mb-5"></div>
       {message || "Cargando..."}
     </div>
   );
@@ -164,13 +167,13 @@ const InfoPill = memo(function InfoPill({ label, value, colorClass = '', icon })
   return (
     <span
       className={`
-                bg-gray-700 text-white border border-gray-600 rounded-full px-3 py-1 text-sm font-medium 
+                bg-overlay text-ink border border-line/20 rounded-full px-3 py-1 text-sm font-medium 
                 flex items-center space-x-1 whitespace-nowrap shadow-sm
                 ${colorClass}
             `}
     >
       {icon}
-      {label && <span className="text-gray-400">{label}:</span>}
+      {label && <span className="text-ink-3">{label}:</span>}
       <span className="font-semibold">{value}</span>
     </span>
   );
@@ -182,11 +185,11 @@ const MiniPlayerCard = memo(function MiniPlayerCard({ player, countryMap, onRemo
   const countryFlagUrl = getFlagUrl(player.Country1);
 
   return (
-    <div className="flex items-center p-2 bg-gray-800 rounded-lg space-x-2 border border-gray-700">
+    <div className="flex items-center p-2 bg-raised rounded-lg space-x-2 border border-line/20">
       <button
         onClick={onCardClick}
         disabled={!onCardClick}
-        className="flex items-center space-x-2 flex-grow min-w-0 text-left transition disabled:cursor-default rounded-lg hover:enabled:bg-gray-700 p-1 -m-1"
+        className="flex items-center space-x-2 flex-grow min-w-0 text-left transition disabled:cursor-default rounded-lg hover:enabled:bg-overlay p-1 -m-1"
       >
         <img
           src={`/fotos_jugadores/${player.Id}.webp`}
@@ -201,23 +204,23 @@ const MiniPlayerCard = memo(function MiniPlayerCard({ player, countryMap, onRemo
         <div className="flex-grow min-w-0">
           <div className="flex items-center space-x-2">
             <img src={countryFlagUrl} alt="" className="w-4 h-3 rounded-sm" onError={(e) => { e.target.style.display = 'none'; }} />
-            <span className="text-sm font-semibold text-white truncate">{player.Name}</span>
+            <span className="text-sm font-semibold text-ink truncate">{player.Name}</span>
           </div>
           <div className="flex items-center space-x-2 mt-1">
             <span className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full font-bold text-xs ${ovrColorClass}`}>
               {player.OVR_CALCULADO}
             </span>
-            <span className={`text-xs font-bold text-gray-900 px-2 py-0.5 rounded-full ${posClass}`}>
+            <span className={`text-xs font-bold text-slate-900 px-2 py-0.5 rounded-full ${posClass}`}>
               {player.POS_NOMBRE}
             </span>
           </div>
         </div>
-        <span className="text-xs sm:text-sm font-bold text-green-400 w-16 text-right flex-shrink-0 pr-2">
+        <span className="text-xs sm:text-sm font-bold text-success-soft w-16 text-right flex-shrink-0 pr-2">
           {formatPriceShort(player.Precio)}
         </span>
       </button>
       {onRemove && (
-        <button onClick={onRemove} className="text-red-400 hover:text-red-500 transition p-1 rounded-full hover:bg-red-900/30 flex-shrink-0">
+        <button onClick={onRemove} className="text-danger-soft hover:text-red-500 transition p-1 rounded-full hover:bg-red-900/30 flex-shrink-0">
           <Trash2 className="w-5 h-5" />
         </button>
       )}
@@ -237,6 +240,7 @@ const pathToTab = {
   '/admin': 'Admin',
   '/tactics': 'Tactics',
   '/pes': 'PES',
+  '/tournament': 'Tournament',
 };
 const tabToPath = {
   'Overview': '/overview',
@@ -247,6 +251,7 @@ const tabToPath = {
   'Other Teams': '/other-teams',
   'Admin': '/admin',
   'PES': '/pes',
+  'Tournament': '/tournament',
 };
 
 const ALL_DETAILED_STAT_KEYS = Object.values(DETAILED_STAT_KEYS).flat();
@@ -557,6 +562,9 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        // Typing in a filter or search field must never close the view or navigate away:
+        // the first Escape only leaves the field.
+        if (isTyping(e.target)) return;
         if (isShortcutsHelpOpen) {
           setIsShortcutsHelpOpen(false);
         } else if (isNotificationPanelOpen) {
@@ -1235,7 +1243,7 @@ function App() {
               category: 'transfer',
               type: 'transfer',
               playerId: player.Id,
-              text: `⚽ ${lockData.teamName || 'Un rival'} fichó a ${player.Name} (${player.OVR_CALCULADO} OVR) por ${formatPriceShort(player.Precio)}.`,
+              text: `${lockData.teamName || 'Un rival'} fichó a ${player.Name} (${player.OVR_CALCULADO} OVR) por ${formatPriceShort(player.Precio)}.`,
               time: 'Fichaje en vivo',
               targetModal: 'transfers',
             });
@@ -1319,7 +1327,7 @@ function App() {
                 offerId: change.doc.id,
                 playerId: data.playerId,
                 targetTab: 'offers',
-                text: `🤝 TRASPASO: ${data.senderTeamName || 'Un rival'} ofrece ${formatPriceShort((data.status === 'countered' ? data.counterAmount : data.offerAmount) / 1000000)} por ${data.playerName}.${data.message ? ` "${data.message}"` : ''}`,
+                text: `Oferta de traspaso: ${data.senderTeamName || 'Un rival'} ofrece ${formatPriceShort((data.status === 'countered' ? data.counterAmount : data.offerAmount) / 1000000)} por ${data.playerName}.${data.message ? ` "${data.message}"` : ''}`,
                 time: 'Oferta recibida',
                 read: false,
               });
@@ -1335,7 +1343,7 @@ function App() {
                 offerId: change.doc.id,
                 playerId: data.playerId,
                 targetTab: 'sent',
-                text: `❌ ${data.rejectedBy || 'Un rival'} rechazó tu oferta por ${data.playerName}.`,
+                text: `${data.rejectedBy || 'Un rival'} rechazó tu oferta por ${data.playerName}.`,
                 time: 'Oferta rechazada',
                 read: false,
               });
@@ -1349,7 +1357,7 @@ function App() {
                 offerId: change.doc.id,
                 playerId: data.playerId,
                 targetTab: 'history',
-                text: `💰 Venta confirmada: ${data.playerName} fue transferido a ${data.senderTeamName || 'otro equipo'} por ${formatPriceShort((data.counterAmount || data.offerAmount || 0) / 1000000)}.`,
+                text: `Venta confirmada: ${data.playerName} fue transferido a ${data.senderTeamName || 'otro equipo'} por ${formatPriceShort((data.counterAmount || data.offerAmount || 0) / 1000000)}.`,
                 time: 'Traspaso completado',
                 read: false,
               });
@@ -1363,7 +1371,7 @@ function App() {
                 offerId: change.doc.id,
                 playerId: data.playerId,
                 targetTab: 'players',
-                text: `✅ ¡Traspaso aceptado! ${data.playerName} ahora está en tu equipo.`,
+                text: `Traspaso aceptado: ${data.playerName} ahora está en tu equipo.`,
                 time: 'Fichaje exitoso',
                 read: false,
               });
@@ -1377,7 +1385,7 @@ function App() {
                 offerId: change.doc.id,
                 playerId: data.playerId,
                 targetTab: 'sent',
-                text: `🔄 ${data.counterBy || 'Un rival'} te envió una contraoferta de ${formatPriceShort((data.counterAmount || 0) / 1000000)} por ${data.playerName}.`,
+                text: `${data.counterBy || 'Un rival'} te envió una contraoferta de ${formatPriceShort((data.counterAmount || 0) / 1000000)} por ${data.playerName}.`,
                 time: 'Contraoferta recibida',
                 read: false,
               });
@@ -1403,7 +1411,7 @@ function App() {
         id: 'system-low-budget',
         category: 'system',
         type: 'warning',
-        text: '⚠️ ¡Cuidado! Tu presupuesto es bajo (<10M).',
+        text: 'Tu presupuesto es bajo: quedan menos de $10M.',
         time: 'Finanzas',
       });
     }
@@ -1414,7 +1422,7 @@ function App() {
         id: 'system-market-closed',
         category: 'system',
         type: 'info',
-        text: '🔒 El mercado está cerrado actualmente.',
+        text: 'El mercado está cerrado actualmente.',
         time: 'Info',
       });
     }
@@ -1738,11 +1746,11 @@ function App() {
         return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando...</div>;
       const scorers = tournamentData.topScorers || [];
       return (
-        <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-[#06080d]'} p-8 font-sans`}>
+        <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-canvas'} p-8 font-sans`}>
           <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase mb-8 text-center drop-shadow-2xl">MÁXIMOS GOLEADORES</h2>
           <div className="max-w-[800px] mx-auto space-y-4">
             {scorers.map((p, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-[#0f172a]/80 p-5 rounded-2xl border border-white/10">
+              <div key={idx} className="flex items-center justify-between bg-surface/80 p-5 rounded-2xl border border-white/10">
                 <div className="flex items-center gap-5">
                   <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center font-black text-2xl text-slate-400">{idx + 1}</div>
                   <div>
@@ -1766,7 +1774,7 @@ function App() {
       return <div className="min-h-screen bg-black flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando SCL Data...</div>;
 
     return (
-      <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-[#06080d]'}`}>
+      <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-canvas'}`}>
         <Suspense fallback={null}>
           <TournamentModal
             isVisible={true}
@@ -1782,7 +1790,7 @@ function App() {
         </Suspense>
         <style>{`
             .lucide-x, .border-b button { display: none !important; } 
-            .flex.border-b.border-gray-700 { display: none !important; }
+            .flex.border-b.border-slate-700 { display: none !important; }
             ${isObsMode ? 'body, html { background: transparent !important; }' : ''}
         `}</style>
       </div>
@@ -1795,7 +1803,7 @@ function App() {
         return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
 
       return (
-        <div className="min-h-screen bg-[#06080d] text-gray-200">
+        <div className="min-h-screen bg-canvas text-slate-200">
           <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
             <TournamentModal
               isVisible={true}
@@ -1819,10 +1827,10 @@ function App() {
     }
 
     if (!tournamentData)
-      return <div className="min-h-screen bg-[#06080d] flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
+      return <div className="min-h-screen bg-canvas flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
 
     return (
-      <div className="min-h-screen bg-[#06080d] text-gray-200">
+      <div className="min-h-screen bg-canvas text-slate-200">
         <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
           <TournamentModal
             isVisible={true}
@@ -1900,7 +1908,7 @@ function App() {
           <style>{`
             body, html { background: transparent !important; }
             .lucide-x, .border-b button { display: none !important; }
-            .flex.border-b.border-gray-700 { display: none !important; }
+            .flex.border-b.border-slate-700 { display: none !important; }
           `}</style>
         </div>
       );
@@ -1992,10 +2000,10 @@ function App() {
         <div
           role="alert"
           aria-live="assertive"
-          className="fixed top-0 left-0 right-0 z-[999] bg-rose-600 text-white px-4 py-2 text-xs sm:text-sm font-bold flex items-center justify-between shadow-lg animate-in slide-in-from-top duration-300"
+          className="fixed top-0 left-0 right-0 z-[999] bg-danger text-ink px-4 py-2 text-sm font-semibold flex items-center justify-between gap-3 shadow-lg animate-in slide-in-from-top"
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-white animate-pulse" />
+            <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>Sin conexión a internet. Los cambios no se sincronizarán hasta restablecer la red.</span>
           </div>
           <button
@@ -2007,14 +2015,16 @@ function App() {
                 showStatusMessage('error', 'Aún sin conexión a internet.');
               }
             }}
-            className="ml-3 px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-black uppercase tracking-wider transition shrink-0 cursor-pointer"
+            type="button"
+            className="btn btn-sm bg-white/20 hover:bg-white/30 text-ink shrink-0"
           >
             Reintentar
           </button>
         </div>
       )}
 
-      <div className="flex h-[100dvh] w-full bg-[#06080d] text-gray-200 overflow-hidden font-sans">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[1000] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-accent focus:text-on-accent focus:font-semibold">Saltar al contenido</a>
+      <div className="flex h-[100dvh] w-full bg-canvas text-ink overflow-hidden font-sans">
 
         {/* SIDEBAR — ancho 0 cuando cerrada, 224px cuando abierta */}
         <LeftSidebar
@@ -2032,7 +2042,7 @@ function App() {
           initialBudget={userProfile?.budget}
         />
 
-        <div className="flex-1 flex flex-col overflow-hidden relative bg-[#06080d] transition-colors">
+        <div className="flex-1 flex flex-col overflow-hidden relative bg-canvas transition-colors">
           {/* TOP HEADER con hamburger */}
           <TopHeader
             userId={userId}
@@ -2040,6 +2050,7 @@ function App() {
             unreadCount={notifications.filter(notification => notification.read !== true).length}
             unreadChatCount={unreadChatCount}
             remainingBudget={remainingBudget}
+            initialBudget={userProfile?.budget}
             onNotificationClick={() => {
               setAreNotificationsWarmed(true);
               setIsNotificationPanelOpen(!isNotificationPanelOpen);
@@ -2062,7 +2073,7 @@ function App() {
           <div className="flex-1 overflow-hidden w-full flex relative">
 
             {/* CENTER VIEW - MARKETPLACE MULTIPLEXING */}
-            <div data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-8 flex flex-col bg-[#06080d] transition-colors" style={{ scrollbarColor: '#333 transparent' }} id="main-content">
+            <main data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7 flex flex-col bg-canvas" id="main-content" tabIndex={-1}>
               {/* VISTA RESUMEN / INICIO (SOFASCORE STYLE) */}
               {activeTab === 'Overview' && (
                 <div className="animate-in fade-in duration-200">
@@ -2085,6 +2096,8 @@ function App() {
 
                 {/* Header superior */}
                 <div className="shrink-0">
+                <PageHeader eyebrow="Mercado" title="Mercado de pases" className="mb-5"
+                  description="Buscá, compará y fichá jugadores. Los que tienen candado ya están en el carrito de otro club." />
                 <SearchBar
                   filters={filters}
                   setFilters={setFilters}
@@ -2101,38 +2114,22 @@ function App() {
                 />
 
                 {(playersLoadError || countriesLoadError) && (
-                  <div className="mb-4 space-y-2" role="alert" aria-live="assertive">
+                  <div className="mb-4 space-y-2">
                     {playersLoadError && (
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-sm font-semibold">
-                        <span>{playersLoadError}</span>
-                        <button
-                          type="button"
-                          onClick={retryPlayerCatalog}
-                          className="min-h-11 px-4 rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 transition"
-                        >
-                          Reintentar carga
-                        </button>
-                      </div>
+                      <Alert tone="danger" title="No se pudo cargar la base de jugadores"
+                        action={<button type="button" onClick={retryPlayerCatalog} className="btn btn-danger btn-sm">Reintentar</button>}>
+                        {playersLoadError}
+                      </Alert>
                     )}
-                    {countriesLoadError && (
-                      <div className="px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-sm font-semibold">
-                        {countriesLoadError}
-                      </div>
-                    )}
+                    {countriesLoadError && <Alert tone="warning">{countriesLoadError}</Alert>}
                   </div>
                 )}
 
                 {/* ── BUDGET WARNING BANNER ── */}
                 {budgetPercent <= 20 && budgetPercent > 0 && (
-                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-4 border transition-colors duration-300 ${budgetPercent <= 10
-                      ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                      : 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-                    }`}>
-                    <span className="text-lg">⚠️</span>
-                    <span className="text-sm font-bold">
-                      Te queda poco presupuesto: ${(remainingBudget / 1000000).toFixed(1)}M disponibles
-                    </span>
-                  </div>
+                  <Alert tone={budgetPercent <= 10 ? 'danger' : 'warning'} className="mb-4">
+                    Te queda menos del <span className="num">{budgetPercent <= 10 ? 10 : 20}%</span> del presupuesto: el saldo exacto está arriba, junto al escudo.
+                  </Alert>
                 )}
 
                 {smartRecommendations.length > 0 && (
@@ -2143,63 +2140,33 @@ function App() {
                   />
                 )}
                 {remainingBudget > 0 && remainingBudget < 1000000 && allPlayers.length > 0 && smartRecommendations.length === 0 && (
-                  <div className="mb-6 text-center py-4 px-6 bg-[#0c1017] rounded-2xl border border-white/[0.08] shadow-lg">
-                    <p className="text-sm text-slate-300 font-bold">Tu presupuesto no alcanza para más fichajes</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Libera jugadores o negocia ventas en Finanzas para ampliar tu saldo disponible</p>
-                  </div>
+                  <Alert tone="info" title="Tu presupuesto no alcanza para más fichajes" className="mb-5">
+                    Liberá jugadores o negociá ventas desde «Plantel y finanzas» para ampliar el saldo.
+                  </Alert>
                 )}
                 </div>
                 {/* Fin del header */}
 
                 <div className={isMobileViewport ? "mt-1 flex flex-col" : "flex-1 min-h-0 mt-1 flex flex-col"} data-app-tour="players" id="player-list">
                   {!hasLoadedPlayerDatabase && allPlayers.length === 0 ? (
-                    <div className="space-y-4 my-4 animate-pulse">
-                      <div className="flex items-center justify-between px-2 text-xs text-slate-400">
-                        <span>Cargando base de datos oficial PES 2021...</span>
-                        <div className="w-4 h-4 rounded-full border-2 border-sky-500/30 border-t-sky-500 animate-spin" />
-                      </div>
-                      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
-                        {[...Array(12)].map((_, i) => (
-                          <div key={i} className="h-44 rounded-2xl bg-[#0c1017] border border-white/5 p-3 flex flex-col justify-between">
-                            <div className="w-16 h-4 bg-white/5 rounded" />
-                            <div className="w-20 h-20 bg-white/5 rounded-xl mx-auto my-2" />
-                            <div className="space-y-1.5">
-                              <div className="w-full h-3 bg-white/5 rounded" />
-                              <div className="w-1/2 h-2.5 bg-white/5 rounded" />
-                            </div>
-                          </div>
-                        ))}
+                    <div className="space-y-4 my-4" role="status" aria-label="Cargando jugadores">
+                      <p className="text-xs text-ink-3">Cargando la base de datos de PES 2021…</p>
+                      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6" aria-hidden="true">
+                        {[...Array(12)].map((_, i) => <div key={i} className="skeleton h-44 rounded-2xl" />)}
                       </div>
                     </div>
                   ) : filteredPlayers.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-white/10 bg-[#0c1017] p-8 sm:p-14 text-center flex flex-col items-center justify-center my-6">
-                      <div className="w-16 h-16 rounded-2xl bg-[#00b4d8]/10 border border-[#00b4d8]/20 flex items-center justify-center text-[#00b4d8] mb-4">
-                        <Search className="w-8 h-8" />
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-black text-white">No se encontraron jugadores</h3>
-                      <p className="text-xs sm:text-sm text-slate-400 max-w-md mt-1.5">
-                        Ningún jugador coincide con los filtros aplicados o el término de búsqueda actual.
-                      </p>
+                    <EmptyState icon={Search} title="No se encontraron jugadores" className="my-6"
+                      description="Ningún jugador coincide con los filtros o la búsqueda actual.">
                       <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            resetFilters();
-                            setFilters(initialFilters);
-                          }}
-                          className="px-5 py-2.5 bg-[#00b4d8] hover:bg-[#38bdf8] text-[#030712] font-black text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer"
-                        >
-                          Restablecer todos los filtros
+                        <button type="button" onClick={() => { resetFilters(); setFilters(initialFilters); }} className="btn btn-primary">
+                          Restablecer filtros
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => openModalRoute('filters')}
-                          className="px-5 py-2.5 bg-[#111722] hover:bg-[#161f2e] text-slate-200 border border-white/10 font-bold text-xs rounded-xl transition active:scale-95 cursor-pointer"
-                        >
+                        <button type="button" onClick={() => openModalRoute('filters')} className="btn btn-secondary">
                           Ajustar filtros
                         </button>
                       </div>
-                    </div>
+                    </EmptyState>
                   ) : isMobileViewport ? (
                     <div className={viewMode === 'list'
                       ? 'space-y-2.5'
@@ -2258,9 +2225,9 @@ function App() {
                           <button
                             type="button"
                             onClick={handleLoadMore}
-                            className="px-6 py-2.5 bg-[#111722] hover:bg-[#151c2a] text-[#00b4d8] font-black text-xs rounded-xl border border-white/[0.08] hover:border-[#00b4d8]/40 shadow-md transition active:scale-95 flex items-center gap-2"
+                            className="btn btn-secondary"
                           >
-                            <span>Cargar más jugadores ({visiblePlayers.length} de {filteredPlayers.length})</span>
+                            Cargar más jugadores <span className="num text-ink-3">({visiblePlayers.length} de {filteredPlayers.length})</span>
                           </button>
                         </div>
                       )}
@@ -2394,16 +2361,30 @@ function App() {
                         handleOpenPlayerModal(player.Id);
                       }}
                       isPage={true}
-                      title="Otros Equipos"
-                      subtitle="Monitor de planteles rivales"
+                      title="Rivales"
+                      subtitle="Planteles e inversión de los otros clubes de la liga."
                     />
                   </div>
                 )}
                 {activeTab === 'PES' && hasPesAccess && (
                   <div className="animate-in fade-in duration-200 h-full w-full overflow-y-auto">
                     <Suspense fallback={null}>
-                      <PesWorkspaceScreen userId={userId} isAdmin={isAdmin} allTeams={allTeams} />
+                      <PesWorkspaceScreen userId={userId} isAdmin={isAdmin} allTeams={allTeams} appPlayers={allPlayers} />
                     </Suspense>
+                  </div>
+                )}
+                {activeTab === 'Tournament' && (
+                  <div className="h-full w-full">
+                    <TournamentModal
+                      isPage={true}
+                      isVisible={true}
+                      tournamentData={tournamentData}
+                      isAdmin={isAdmin}
+                      onUpdateTournament={handleUpdateTournament}
+                      allTeams={allTeams}
+                      allPlayers={allPlayers}
+                      userTeamName={userProfile?.teamName}
+                    />
                   </div>
                 )}
                 {activeTab === 'Admin' && isAdmin && (
@@ -2432,91 +2413,47 @@ function App() {
                   </div>
                 )}
               </Suspense>
-            </div> {/* End scrollable center pane */}
+            </main> {/* End scrollable center pane */}
 
             {/* RIGHT SIDEBAR - ACTIVITY PANEL */}
           </div> {/* End flex-1 row */}
         </div> {/* End flex-1 col */}
       </div> {/* End h-screen */}
       {compareList.length > 0 && (
-        <div className="fixed bottom-3 left-3 right-3 sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
-
-          {/* CONTENEDOR PRINCIPAL CON ESTILO PREMIUM */}
-          <div className="flex items-center justify-between gap-2 sm:gap-6 bg-gray-900/90 backdrop-blur-xl border border-blue-500/40 p-3 sm:p-4 sm:pr-6 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)]">
-
-            {/* ÁREA DE JUGADORES */}
-            <div className="flex items-center gap-4">
-
-              {/* JUGADOR 1 */}
-              <div className="relative group">
-                <img
-                  src={`/fotos_jugadores/${compareList[0].Id}.webp`}
-                  alt=""
-                  className="w-16 h-16 rounded-full border-2 border-blue-400 object-cover shadow-lg shadow-blue-500/20 bg-gray-800"
-                  onError={(e) => e.target.src = `https://placehold.co/64x64/374151/e0e0e0?text=${compareList[0].Name.substring(0, 1)}`}
-                />
-                <button
-                  onClick={() => handleRemoveCompareItem(compareList[0].Id)}
-                  className="absolute -top-2 -right-2 min-w-8 min-h-8 bg-red-500 text-white p-1 rounded-full hover:scale-110 transition shadow-sm border-2 border-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                  aria-label={`Quitar a ${compareList[0].Name} del comparador`}
-                >
-                  <X size={12} />
-                </button>
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-600 text-white whitespace-nowrap shadow-sm">
-                  {compareList[0].OVR_CALCULADO}
-                </div>
-              </div>
-
-              {/* SEPARADOR "VS" */}
-              <div className="flex flex-col items-center justify-center">
-                <div className="text-xs font-black text-gray-500 italic bg-gray-800/50 px-2 py-1 rounded">VS</div>
-              </div>
-
-              {/* JUGADOR 2 (O PLACEHOLDER) */}
-              {compareList[1] ? (
-                <div className="relative group animate-in zoom-in-50 duration-300">
-                  <img
-                    src={`/fotos_jugadores/${compareList[1].Id}.webp`}
-                    alt=""
-                    className="w-16 h-16 rounded-full border-2 border-red-400 object-cover shadow-lg shadow-red-500/20 bg-gray-800"
-                    onError={(e) => e.target.src = `https://placehold.co/64x64/374151/e0e0e0?text=${compareList[1].Name.substring(0, 1)}`}
-                  />
-                  <button
-                    onClick={() => handleRemoveCompareItem(compareList[1].Id)}
-                    className="absolute -top-2 -right-2 min-w-8 min-h-8 bg-red-500 text-white p-1 rounded-full hover:scale-110 transition shadow-sm border-2 border-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                    aria-label={`Quitar a ${compareList[1].Name} del comparador`}
-                  >
-                    <X size={12} />
-                  </button>
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-600 text-white whitespace-nowrap shadow-sm">
-                    {compareList[1].OVR_CALCULADO}
-                  </div>
-                </div>
-              ) : (
-                <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center bg-gray-800/50">
-                  <span className="text-2xl text-gray-600 font-bold">?</span>
-                </div>
-              )}
-            </div>
-
-            {/* DIVISOR VERTICAL */}
-            <div className="hidden sm:block h-10 w-px bg-gray-700 mx-2"></div>
-
-            {/* BOTÓN DE ACCIÓN GRANDE */}
-            <button
-              disabled={compareList.length < 2}
-              title={compareList.length < 2 ? 'Completa los datos requeridos primero' : undefined}
-              onClick={() => openModalRoute('compare')}
-              className={`
-                        min-h-11 flex items-center px-4 sm:px-6 py-3 rounded-xl font-bold text-white shadow-xl transition-all transform text-sm sm:text-base
-                        ${compareList.length < 2
-                  ? 'bg-gray-700 cursor-not-allowed opacity-50 grayscale'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:scale-105 hover:shadow-blue-500/40'
+        <div className="fixed bottom-3 left-3 right-3 sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 animate-in slide-in-from-bottom" role="region" aria-label="Comparador de jugadores">
+          <div className="panel flex items-center justify-between gap-3 sm:gap-5 p-3 sm:pl-4 sm:pr-3">
+            <div className="flex items-center gap-3">
+              {[0, 1].map(slot => {
+                const p = compareList[slot];
+                if (!p) {
+                  return (
+                    <span key={slot} className="w-14 h-14 rounded-xl border-2 border-dashed border-line/25 flex items-center justify-center text-ink-3 text-xs text-center leading-tight px-1">
+                      Elegí otro
+                    </span>
+                  );
                 }
-                    `}
-            >
-              <ArrowLeftRight className="w-5 h-5 mr-2" />
-              {compareList.length < 2 ? 'Elige otro...' : 'COMPARAR'}
+                return (
+                  <div key={p.Id} className="relative">
+                    <img src={`/fotos_jugadores/${p.Id}.webp`} alt="" width={56} height={56}
+                      className="w-14 h-14 rounded-xl object-cover object-top bg-raised border border-line/15"
+                      onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                    <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 rounded font-display num text-xs font-bold ${getStatAndOvrColorClass(p.OVR_CALCULADO)}`}>
+                      {p.OVR_CALCULADO}
+                    </span>
+                    <button type="button" onClick={() => handleRemoveCompareItem(p.Id)} aria-label={`Quitar a ${p.Name} del comparador`}
+                      className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-overlay border border-line/25 text-ink-2 hover:text-ink flex items-center justify-center">
+                      <X className="w-3.5 h-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="min-w-0 hidden sm:block">
+              <p className="text-sm font-semibold text-ink truncate max-w-[14rem]">{compareList.map(p => p.Name).join(' vs ')}</p>
+              <p className="text-xs text-ink-3">{compareList.length < 2 ? 'Elegí un segundo jugador para comparar.' : 'Listos para comparar.'}</p>
+            </div>
+            <button type="button" disabled={compareList.length < 2} onClick={() => openModalRoute('compare')} className="btn btn-primary min-h-11">
+              <ArrowLeftRight className="w-4 h-4" aria-hidden="true" />Comparar
             </button>
           </div>
         </div>
@@ -2748,22 +2685,17 @@ function App() {
 
       {/* BUDGET ALERT MODAL */}
       {showBudgetAlert && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowBudgetAlert(false)}>
-          <div className="bg-gray-900 border border-orange-500/30 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-90 duration-300" onClick={e => e.stopPropagation()}>
+        <div role="alertdialog" aria-modal="true" aria-labelledby="budget-alert-title" className="fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in" onClick={() => setShowBudgetAlert(false)}>
+          <div className="panel w-full sm:max-w-sm p-6 rounded-b-none sm:rounded-2xl animate-in slide-in-from-bottom sm:zoom-in-95" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-orange-400" />
-              </div>
-              <h3 className="text-lg font-black text-white">¡Atención!</h3>
+              <span className="w-11 h-11 rounded-xl bg-warning/[0.14] flex items-center justify-center text-warning-soft shrink-0">
+                <AlertTriangle className="w-5 h-5" aria-hidden="true" />
+              </span>
+              <h2 id="budget-alert-title" className="font-display text-xl font-bold text-ink">Presupuesto casi agotado</h2>
             </div>
-            <p className="text-gray-300 text-sm mb-2">Tu presupuesto está casi agotado.</p>
-            <p className="text-2xl font-black text-orange-400 mb-4">
-              Presupuesto restante: ${(remainingBudget / 1000000).toFixed(1)}M
-            </p>
-            <button
-              onClick={() => setShowBudgetAlert(false)}
-              className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-xl transition-colors uppercase tracking-wider text-sm"
-            >
+            <p className="text-sm text-ink-2">Te quedan</p>
+            <p className="font-display num text-4xl font-bold text-warning-soft leading-tight mb-5">${(remainingBudget / 1000000).toFixed(1)}M</p>
+            <button type="button" onClick={() => setShowBudgetAlert(false)} className="btn btn-primary w-full min-h-12">
               Entendido
             </button>
           </div>
@@ -2794,29 +2726,36 @@ function App() {
                 handleToastClick(toast);
               }
             }}
-            className="pointer-events-auto cursor-pointer bg-gray-900/95 backdrop-blur-xl border border-gray-700/60 hover:border-cyan-500/60 hover:bg-gray-800/95 transition-all rounded-xl p-3.5 shadow-2xl animate-in slide-in-from-right-10 fade-in duration-400 flex items-center gap-3 group active:scale-95"
+            className="pointer-events-auto cursor-pointer panel hover:border-line/30 transition-colors rounded-xl p-3 flex items-center gap-3 group animate-in slide-in-from-right"
             style={{ borderLeft: `4px solid ${toast.posColor}` }}
           >
-            <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-base shrink-0">🔒</div>
+            <img
+              src={`/fotos_jugadores/${toast.playerId}.webp`}
+              alt=""
+              width={40}
+              height={40}
+              className="w-10 h-10 rounded-lg object-cover bg-raised shrink-0"
+              onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+            />
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-gray-200 leading-snug">
-                <span className="font-black text-white">{toast.teamName}</span>{' '}fichó a{' '}
-                <span className="font-bold text-white">{toast.playerName}</span>
+              <p className="text-sm text-ink-2 leading-snug">
+                <span className="font-semibold text-ink">{toast.teamName}</span>{' '}fichó a{' '}
+                <span className="font-semibold text-ink">{toast.playerName}</span>
               </p>
-              <p className="text-[10px] text-gray-500 mt-0.5 font-bold uppercase tracking-wider">
-                {toast.ovr} OVR · {toast.pos}
+              <p className="text-xs text-ink-3 mt-0.5">
+                <span className="num">{toast.ovr}</span> OVR · {toast.pos}
               </p>
             </div>
-            <span className="text-[10px] font-black text-cyan-400 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
-              Ver →
-            </span>
+            <span className="text-xs font-semibold text-accent-soft shrink-0">Ver</span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setSigningToasts(prev => prev.filter(t => t.toastId !== toast.toastId));
               }}
-              className="w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-white/10 shrink-0"
+              type="button"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-white/10 shrink-0"
               title="Cerrar aviso"
+              aria-label="Cerrar aviso"
             >
               <X className="w-3.5 h-3.5" />
             </button>
