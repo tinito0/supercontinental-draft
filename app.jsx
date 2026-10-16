@@ -11,6 +11,7 @@ import { LinkGoogleScreen } from './screens/LinkGoogleScreen.jsx';
 import { MarketClosedBanner } from './components/MarketClosedBanner.jsx';
 import { PendingApprovalScreen } from './screens/PendingApprovalScreen.jsx';
 import { isTeamApproved } from './supabase/functions/_shared/membership.js';
+import { missedOfferNotifications } from './utils/missedEvents.js';
 import { InstallPopup } from './components/InstallPopup.jsx';
 import { ToastStack } from './components/ToastStack.jsx';
 import { NotificationsPanel } from './components/NotificationsPanel.jsx';
@@ -1307,7 +1308,9 @@ function App() {
                 offerId: change.doc.id,
                 playerId: data.playerId,
                 targetTab: 'history',
-                text: `Venta confirmada: ${data.playerName} fue transferido a ${data.senderTeamName || 'otro equipo'} por ${formatPriceShort((data.counterAmount || data.offerAmount || 0) / 1000000)}.`,
+                // The accepted amount is the last history entry (market function): counterAmount stays from an
+                // earlier counter after a new offer, so `counterAmount || offerAmount` showed a stale price.
+                text: `Venta confirmada: ${data.playerName} fue transferido a ${data.senderTeamName || 'otro equipo'} por ${formatPriceShort((data.history?.at(-1)?.amount ?? data.offerAmount ?? 0) / 1000000)}.`,
                 time: 'Traspaso completado',
                 read: false,
               });
@@ -1349,6 +1352,24 @@ function App() {
     );
     return () => unsub();
   }, [userId, addNotification, showStatusMessage]);
+
+  // "Desde tu última visita": the live notifications above skip the first snapshot, so what the other clubs did
+  // while this manager was away was never shown. Once offers and profile are loaded, it is rebuilt from the
+  // offers' history after profile.lastSeenAt (utils/missedEvents.js); opening the panel moves lastSeenAt.
+  const missedShownRef = useRef(false);
+  useEffect(() => {
+    if (missedShownRef.current || !userId || !userProfile || !offersInitializedRef.current) return;
+    missedShownRef.current = true;
+    const byId = new Map([...incomingOffers, ...sentOffers, ...offerHistory].map(offer => [offer.id, offer]));
+    missedOfferNotifications([...byId.values()], userId, Number(userProfile.lastSeenAt))
+      .reverse() // addNotification puts each one first: oldest first leaves the newest on top
+      .forEach(addNotification);
+  }, [userId, userProfile, incomingOffers, sentOffers, offerHistory, addNotification]);
+  useEffect(() => {
+    if (!isNotificationPanelOpen || !userId) return;
+    setDoc(getPrivateProfileRef(userId), { lastSeenAt: Date.now() }, { merge: true })
+      .catch(error => console.error('No se pudo guardar la última visita:', error));
+  }, [isNotificationPanelOpen, userId, getPrivateProfileRef]);
 
   useEffect(() => {
     if (!userProfile) return;
