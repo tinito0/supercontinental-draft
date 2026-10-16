@@ -11,6 +11,7 @@ import {
   normalizeFormationStates, resetForFormation, layoutForState, moveSlot, setFluid, copyBaseTo, resetState,
   serializeFormationStates, effectiveState, setSlotRole, applyFormationToState, formationKeyForState, TACTICAL_STATES,
   isGoalkeeperSlot,
+  formationSignature,
 } from '../utils/formationStates.js';
 import { roleUnavailableReason } from '../utils/positionRules.js';
 import { normalizeAdvancedInstructions, toggleInstruction, replaceInstruction } from '../utils/advancedInstructions.js';
@@ -398,6 +399,7 @@ const initialFormationState = { lineup: {}, holdingPlayer: null };
 // Espera tras el último cambio antes de guardar solo (una ráfaga de cambios = una escritura).
 const AUTOSAVE_DELAY_MS = 700;
 
+
 // Además de sacar jugadores que ya no están en el cart (eso ya lo hacía SANITIZE),
 // esto fuerza unicidad: si el mismo playerId aparece en más de un slot (rastro de
 // datos viejos, de ANTES de que existiera este reducer, guardados en Firestore
@@ -544,7 +546,23 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     };
   }, []);
 
-  // Cargar datos solo al abrir la pizarra (evita que los snapshots de Firestore sobreescriban el estado mientras se edita)
+  // The saved board as it is in the profile document. Applied when the board opens, and again when another
+  // device changes it while nothing is pending here (see the effect after the autosave).
+  const appliedProfileRef = useRef(null);
+  const applyProfile = useCallback((profile) => {
+    appliedProfileRef.current = formationSignature(profile);
+    const formationKey = profile.formation || '4-3-3';
+    setFormationStates(normalizeFormationStates(profile.formationStates, formationKey, FORMATIONS[formationKey]));
+    setAdvanced(normalizeAdvancedInstructions(profile.advancedInstructions));
+    dispatchFormation({ type: 'LOAD', payload: { lineup: profile.lineup ? { ...profile.lineup } : {} } });
+    setDorsals(profile.dorsals ? { ...profile.dorsals } : {});
+    setSetPieces(profile.setPieces ? { ...profile.setPieces } : {});
+    setTactics(profile.tactics ? { ...DEFAULT_TACTICS, ...profile.tactics } : DEFAULT_TACTICS);
+    setAvailability(profile.availability ? { ...profile.availability } : {});
+    setMatchBench(Array.isArray(profile.matchBench) ? profile.matchBench.map(String) : []);
+  }, []);
+
+  // Cargar datos al abrir la pizarra
   useEffect(() => {
     if (!isVisible && !isPage) {
       hasLoadedRef.current = false;
@@ -553,19 +571,10 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
     if (!hasLoadedRef.current && userProfile) {
       hasLoadedRef.current = true;
-      const formationKey = userProfile.formation || '4-3-3';
-      setFormationStates(normalizeFormationStates(userProfile.formationStates, formationKey, FORMATIONS[formationKey]));
       setActiveState('base');
-      setAdvanced(normalizeAdvancedInstructions(userProfile.advancedInstructions));
-      const rawLineup = userProfile.lineup ? { ...userProfile.lineup } : {};
-      dispatchFormation({ type: 'LOAD', payload: { lineup: rawLineup } });
-      setDorsals(userProfile.dorsals ? { ...userProfile.dorsals } : {});
-      setSetPieces(userProfile.setPieces ? { ...userProfile.setPieces } : {});
-      setTactics(userProfile.tactics ? { ...DEFAULT_TACTICS, ...userProfile.tactics } : DEFAULT_TACTICS);
-      setAvailability(userProfile.availability ? { ...userProfile.availability } : {});
-      setMatchBench(Array.isArray(userProfile.matchBench) ? userProfile.matchBench.map(String) : []);
+      applyProfile(userProfile);
     }
-  }, [isVisible, isPage, userProfile]);
+  }, [isVisible, isPage, userProfile, applyProfile]);
 
   // Utilidad pura: resolución robusta de ID para evitar falsos filtros vacíos
   const sanitizeLineup = useCallback((sourceLineup) => {
@@ -776,6 +785,8 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       batch.set(publicRef, saveData, writeOptions);
 
       await batch.commit();
+      // What this device saved comes back in the profile snapshot: it is not a remote change.
+      appliedProfileRef.current = formationSignature(saveData);
       
       setSaveIndicator('saved');
       if (saveIndicatorTimerRef.current) clearTimeout(saveIndicatorTimerRef.current);
@@ -881,6 +892,16 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     autoSaveTimerRef.current = null;
     handleSaveLineup();
   }, [handleSaveLineup]);
+
+  // Another device (or tab) saved the board: take its version while this one has nothing pending (no autosave
+  // waiting, no save in flight, no player in hand). Before, the board loaded once, and the next autosave here
+  // overwrote the other device's changes with this stale copy. Our own saves come back identical and are skipped.
+  useEffect(() => {
+    if (!hasLoadedRef.current || !userProfile) return;
+    if (autoSaveTimerRef.current || pendingAutoSaveRef.current || isSaving || holdingPlayer) return;
+    if (formationSignature(userProfile) === appliedProfileRef.current) return;
+    applyProfile(userProfile);
+  }, [userProfile, isSaving, holdingPlayer, applyProfile]);
 
   // ── Share URL with popover ──
   const [shareUrl, setShareUrl] = useState('');

@@ -240,6 +240,25 @@ export function applyFormationToState(states, stateId, formationKey, formations)
 }
 
 /** Value saved in Firestore (plain JSON, slot keys as strings). */
+const FORMATION_FIELDS = ['formation', 'formationStates', 'advancedInstructions', 'lineup', 'dorsals', 'setPieces', 'tactics', 'availability', 'matchBench'];
+
+const stableJson = value => {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+};
+
+/**
+ * The saved board fields of a profile as one comparable string, independent of key order (Firestore can return a
+ * map's keys in another order than they were written). FormationModal uses it to tell another device's changes
+ * from the echo of its own save.
+ */
+export function formationSignature(profile) {
+  return stableJson(FORMATION_FIELDS.map(key => profile?.[key] ?? null));
+}
+
 export function serializeFormationStates(states) {
   const positions = {}, roles = {};
   for (const id of STATE_IDS) {

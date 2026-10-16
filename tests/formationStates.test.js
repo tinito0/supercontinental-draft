@@ -347,3 +347,17 @@ describe('Pitch drag and drop', () => {
     expect(root.props.children.flat().filter(c => c?.props?.index != null).every(s => !s.props.canMove)).toBe(true);
   });
 });
+
+describe('formationSignature', () => {
+  it('ignores key order, so the echo of a save is recognised as the same board', async () => {
+    const { formationSignature } = await import('../utils/formationStates.js');
+    const a = { formation: '4-3-3', lineup: { 0: '1', 1: '2' }, tactics: { a: 1, b: 2 } };
+    const b = { tactics: { b: 2, a: 1 }, lineup: { 1: '2', 0: '1' }, formation: '4-3-3', unrelated: 'x' };
+    expect(formationSignature(a)).toBe(formationSignature(b));
+  });
+
+  it('changes when another device moves a player', async () => {
+    const { formationSignature } = await import('../utils/formationStates.js');
+    expect(formationSignature({ lineup: { 0: '1' } })).not.toBe(formationSignature({ lineup: { 0: '2' } }));
+  });
+});
