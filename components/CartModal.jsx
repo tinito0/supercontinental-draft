@@ -3,7 +3,8 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import '../utils/chartSetup.js';
 import { X, ShoppingCart, DollarSign, ArrowRight, History, ClipboardList, Lock } from 'lucide-react';
 import { formatPriceShort, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
-import { DEFAULT_BUDGET } from '../utils/constants.js';
+import { DEFAULT_BUDGET, TRANSFER_FEE_RATE } from '../utils/constants.js';
+import { buildClubLedger } from '../utils/clubLedger.js';
 import { budgetMeter } from '../utils/budgetDisplay.js';
 import { isOfferExpired, offerTimeLeft } from '../supabase/functions/_shared/offerExpiry.js';
 import { formatTimeLeft } from '../utils/marketCountdown.js';
@@ -367,6 +368,11 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
 
   // --- LÓGICA DE ESTADÍSTICAS ---
+  const ledger = useMemo(
+    () => buildClubLedger({ squad: cart, offerHistory, userId: userId || userProfile?.uid, feeRate: TRANSFER_FEE_RATE }),
+    [cart, offerHistory, userId, userProfile?.uid],
+  );
+
   const statsData = useMemo(() => {
     const totalPlayers = cart.length;
     const avgOvr = totalPlayers > 0 ? Math.round(cart.reduce((acc, p) => acc + p.OVR_CALCULADO, 0) / totalPlayers) : 0;
@@ -464,7 +470,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     { id: 'offers', label: 'Recibidas', count: incomingOffers?.length || 0 },
     { id: 'sent', label: 'Enviadas', count: sentOffers?.length || 0 },
     { id: 'history', label: 'Historial', count: offerHistory?.length || 0 },
-    { id: 'stats', label: 'Gráficos' },
+    { id: 'stats', label: 'Finanzas' },
   ];
 
   const negotiationProps = {
@@ -540,6 +546,32 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
       {activeTab === 'stats' && (
         <div className="space-y-6">
+          <section className="panel-flat p-5" aria-labelledby="cart-ledger">
+            <h3 id="cart-ledger" className="eyebrow mb-4">Movimientos de la temporada</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Stat label="Fichajes" value={fmtM(ledger.totals.spentOnSignings)} hint={`${ledger.signings.length} jugadores`} size="sm" />
+              <Stat label="Compras" value={fmtM(ledger.totals.spentOnPurchases)} hint={`${ledger.purchases.length} traspasos`} size="sm" />
+              <Stat label="Ventas (neto)" value={fmtM(ledger.totals.receivedFromSales)} hint={`comisión ${fmtM(ledger.totals.fees)}`} size="sm" />
+              <Stat label="Balance" value={fmtM(ledger.totals.net)} tone={ledger.totals.net < 0 ? 'danger' : 'accent'} size="sm" />
+            </div>
+            {(ledger.purchases.length > 0 || ledger.sales.length > 0) && (
+              <ul className="mt-4 divide-y divide-line/[0.08] text-sm">
+                {ledger.purchases.map(row => (
+                  <li key={`buy-${row.id}`} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 truncate text-ink-2">Compra · <span className="text-ink">{row.name}</span>{row.club ? ` de ${row.club}` : ''}</span>
+                    <span className="num font-semibold text-danger-soft shrink-0">-{fmtM(row.amount)}</span>
+                  </li>
+                ))}
+                {ledger.sales.map(row => (
+                  <li key={`sale-${row.id}`} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 truncate text-ink-2">Venta · <span className="text-ink">{row.name}</span>{row.club ? ` a ${row.club}` : ''}</span>
+                    <span className="num font-semibold text-success-soft shrink-0">+{fmtM(row.net)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 text-xs text-ink-3">Los fichajes cuentan a precio de catálogo; las ventas, después de la comisión de la liga. El presupuesto disponible es el de arriba.</p>
+          </section>
           <div className="grid grid-cols-3 gap-6">
             <Stat label="Media del plantel" value={statsData.avgOvr} tone="accent" size="sm" />
             <Stat label="Edad promedio" value={statsData.avgAge} hint="años" size="sm" />
