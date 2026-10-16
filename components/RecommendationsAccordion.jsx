@@ -83,7 +83,7 @@ export const RecommendationsAccordion = memo(function RecommendationsAccordion({
 
       {isExpanded && (
         <div id="recommendations-shelf" ref={scrollContainerRef}
-          className="flex gap-3 overflow-x-auto px-4 sm:px-5 pb-4 snap-x custom-scrollbar">
+          className="flex gap-3 overflow-x-auto px-4 sm:px-5 pb-4 snap-x custom-scrollbar animate-in fade-in">
           {recommendations.map(player => {
             const ovr = player.OVR_CALCULADO || 0;
             const fit = FIT_CONFIG[player._fit] || FIT_CONFIG.FIT;

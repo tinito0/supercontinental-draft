@@ -95,6 +95,7 @@ import {
   Trash2,
   AlertTriangle,
   ArrowLeftRight,
+  Loader2,
 } from 'lucide-react';
 
 
@@ -1617,7 +1618,7 @@ function App() {
     // OBS Goleadores view
     if (viewParam === 'goleadores' && !isObsMode) {
       if (!tournamentData)
-        return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando...</div>;
+        return <div role="status" className="min-h-screen bg-transparent flex items-center justify-center gap-2 text-white font-bold tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando...</div>;
       const scorers = tournamentData.topScorers || [];
       return (
         <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-canvas'} p-8 font-sans`}>
@@ -1645,7 +1646,7 @@ function App() {
     const effectiveTab = tournamentParam === 'copa-plata' ? 'repechaje' : targetView;
 
     if (!tournamentData)
-      return <div className="min-h-screen bg-black flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando SCL Data...</div>;
+      return <div role="status" className="min-h-screen bg-black flex items-center justify-center gap-2 text-white font-bold tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando SCL Data...</div>;
 
     return (
       <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-canvas'}`}>
@@ -1679,7 +1680,7 @@ function App() {
     }
 
     if (!tournamentData)
-      return <div className="min-h-screen bg-canvas flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
+      return <div role="status" className="min-h-screen bg-canvas flex items-center justify-center gap-2 text-white font-bold tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando Torneo...</div>;
 
     return (
       <div className="min-h-screen bg-canvas text-slate-200">
@@ -1758,7 +1759,7 @@ function App() {
 
     if (tournamentOverlayTab) {
       if (!tournamentData) {
-        return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando torneo...</div>;
+        return <div role="status" className="min-h-screen bg-transparent flex items-center justify-center gap-2 text-white font-bold tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando torneo...</div>;
       }
 
       return (
@@ -2089,8 +2090,10 @@ function App() {
         </div> {/* End flex-1 col */}
       </div> {/* End h-screen */}
       {compareList.length > 0 && (
-        <div className="fixed bottom-3 left-3 right-3 sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 animate-in slide-in-from-bottom" role="region" aria-label="Comparador de jugadores">
-          <div className="panel flex items-center justify-between gap-3 sm:gap-5 p-3 sm:pl-4 sm:pr-3">
+        <div className="fixed bottom-3 left-3 right-3 sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50" role="region" aria-label="Comparador de jugadores">
+          {/* The entry animation sits on the panel: on the wrapper its transform replaced the -translate-x-1/2
+              centring for the first 180 ms, so the tray slid in sideways. */}
+          <div className="panel flex items-center justify-between gap-3 sm:gap-5 p-3 sm:pl-4 sm:pr-3 animate-in slide-in-from-bottom">
             <div className="flex items-center gap-3">
               {[0, 1].map(slot => {
                 const p = compareList[slot];
@@ -2102,7 +2105,7 @@ function App() {
                   );
                 }
                 return (
-                  <div key={p.Id} className="relative">
+                  <div key={p.Id} className="relative animate-in zoom-in-90">
                     <img src={`/fotos_jugadores/${p.Id}.webp`} alt="" width={56} height={56}
                       className="w-14 h-14 rounded-xl object-cover object-top bg-raised border border-line/15"
                       onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />

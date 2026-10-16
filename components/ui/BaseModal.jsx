@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useExitAnimation } from '../../hooks/usePresence.js';
 import { X } from 'lucide-react';
 import { isTyping } from '../../hooks/useKeyboardShortcuts.js';
 
@@ -110,7 +111,16 @@ export function BaseModal({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  // Exit: a dialog whose isOpen turns false stays mounted with data-closing while it animates out. Focus, the
+  // dialog stack and the page scroll are released at once (the effect above), and the leaving copy is inert.
+  // Callers that unmount the whole component (route modals rendered with &&) still close at once.
+  const [isMounted, setIsMounted] = useState(isOpen);
+  if (isOpen && !isMounted) setIsMounted(true);
+  const isClosing = isMounted && !isOpen;
+  const backdropRef = useRef(null);
+  useExitAnimation(backdropRef, isClosing, () => setIsMounted(false));
+
+  if (!isMounted) return null;
 
   const sizeClass = SIZE_MAP[size] || SIZE_MAP.md;
 
@@ -119,13 +129,16 @@ export function BaseModal({
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel || (typeof title === 'string' ? title : 'Ventana emergente')}
-      className="fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in"
-      onClick={onClose}
+      ref={backdropRef}
+      className="modal-backdrop fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in"
+      data-closing={isClosing ? '' : undefined}
+      inert={isClosing ? '' : undefined}
+      onClick={isClosing ? undefined : onClose}
     >
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={`bg-surface border border-line/[0.14] rounded-t-2xl sm:rounded-2xl w-full shadow-lg flex flex-col overflow-hidden max-h-[94dvh] sm:max-h-[92dvh] max-sm:pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom sm:zoom-in-95 ${sizeClass} ${className}`}
+        className={`modal-panel bg-surface border border-line/[0.14] rounded-t-2xl sm:rounded-2xl w-full shadow-lg flex flex-col overflow-hidden max-h-[94dvh] sm:max-h-[92dvh] max-sm:pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom sm:zoom-in-95 ${sizeClass} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

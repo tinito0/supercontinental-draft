@@ -99,10 +99,9 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
 
   return (
     <article
-      className={`group rounded-xl p-3.5 border border-line/[0.12] border-l-[3px] ${borderLeftTone} transition-all duration-200 bg-surface shadow-sm hover:shadow ${
+      className={`group rounded-xl p-3.5 border border-line/[0.12] border-l-[3px] ${borderLeftTone} transition-shadow duration-base bg-surface shadow-sm hover:shadow ${
         isReleased ? 'opacity-60 line-through' : ''
       }`}
-      style={isReleased ? { animation: 'transferFeedFadeOut 5s ease-out forwards' } : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex items-center gap-2.5">
@@ -330,13 +329,6 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
         </div>
       </div>
 
-      <style>{`
-        @keyframes transferFeedFadeOut {
-          0% { opacity: 0.6; max-height: 200px; }
-          80% { opacity: 0.15; max-height: 200px; }
-          100% { opacity: 0; max-height: 0; padding: 0; margin: 0; border: none; overflow: hidden; }
-        }
-      `}</style>
     </div>
   );
 });

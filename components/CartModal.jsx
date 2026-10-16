@@ -137,6 +137,20 @@ const NegotiationCard = memo(function NegotiationCard({
   const targetName = getOfferTargetName(offer, allTeams);
   const activeAmount = getOfferAmount(offer);
   const busyTitle = isProcessing ? 'Hay una operación en curso' : undefined;
+  // When the other club answers (counter, re-offer, rejection) the card glows once, so the change is noticed
+  // while reading another offer. Restarting a CSS animation needs the class removed and a reflow in between.
+  const cardRef = useRef(null);
+  const previousStateRef = useRef(`${offer.status}:${activeAmount}`);
+  useEffect(() => {
+    const state = `${offer.status}:${activeAmount}`;
+    if (previousStateRef.current === state) return;
+    previousStateRef.current = state;
+    const el = cardRef.current;
+    if (!el) return;
+    el.classList.remove('row-flash');
+    void el.offsetWidth;
+    el.classList.add('row-flash');
+  }, [offer.status, activeAmount]);
   const transferData = {
     ...offer,
     price: (activeAmount || 0) / 1000000,
@@ -150,7 +164,7 @@ const NegotiationCard = memo(function NegotiationCard({
   };
 
   return (
-    <article className="panel-flat p-4 sm:p-5" aria-label={`Negociación por ${offer.playerName}`}>
+    <article ref={cardRef} className="panel-flat p-4 sm:p-5" aria-label={`Negociación por ${offer.playerName}`}>
       {offer.status === 'accepted' ? (
         <TransferPlayerCard transfer={transferData} player={livePlayer} allTeams={allTeams} compact />
       ) : (

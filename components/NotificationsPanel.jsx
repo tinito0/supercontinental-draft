@@ -88,7 +88,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
     <div
       role="region"
       aria-label="Panel de notificaciones"
-      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-surface border border-line/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3"
+      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-surface border border-line/20 rounded-2xl shadow-xl z-50 overflow-hidden origin-top-right animate-in fade-in slide-in-from-top-3"
     >
       <div className="flex justify-between items-center p-3.5 border-b border-line/20 bg-surface/60">
         <div className="flex items-center gap-2">

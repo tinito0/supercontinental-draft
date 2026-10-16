@@ -264,7 +264,7 @@ export const TeamsModal = memo(function TeamsModal({
             </div>
 
             {!isCollapsed && (
-              <div id={panelId} className="border-t border-line/[0.08] px-3 sm:px-5 py-4 space-y-5">
+              <div id={panelId} className="border-t border-line/[0.08] px-3 sm:px-5 py-4 space-y-5 animate-in fade-in">
                 {team.players.length === 0 ? (
                   <p className="py-4 text-center text-sm text-ink-3">Este club todavía no fichó jugadores.</p>
                 ) : displayedPlayers.length === 0 ? (

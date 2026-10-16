@@ -61,7 +61,7 @@ function FilterSection({ title, description, defaultOpen = true, children }) {
         </span>
         <ChevronDown className={`w-5 h-5 text-ink-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
-      {isOpen && <div className="pt-4">{children}</div>}
+      {isOpen && <div className="pt-4 animate-in fade-in">{children}</div>}
     </section>
   );
 }
@@ -142,8 +142,7 @@ export const FiltrosModal = memo(function FiltrosModal({
   // Enter in a field applies the filters; it never submits anything else or closes the dialog by itself.
   const onFieldKeyDown = e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); };
 
-  if (!isVisible) return null;
-
+  // No early return while hidden: BaseModal needs isOpen to go false to play its exit.
   const footer = (
     <div className="w-full flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pb-[env(safe-area-inset-bottom)]">
       <button type="button" onClick={resetFilters} className="btn btn-ghost text-danger-soft hover:text-danger-soft">

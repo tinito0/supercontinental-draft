@@ -390,6 +390,31 @@
   from { text-shadow: 0 0 14px rgb(var(--c-accent-soft) / 0.95); color: rgb(var(--c-accent-soft)); }
 }
 
+/* Salida de BaseModal (components/ui/BaseModal.jsx): el fondo se funde; la hoja baja 8 px en celular y el
+   diálogo se achica apenas en pantallas grandes. Más corta que la entrada. */
+.modal-backdrop[data-closing] {
+  animation: app-fade-out var(--dur-fast) var(--ease-in) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-in) both;
+  pointer-events: none;
+}
+.modal-backdrop[data-closing] .modal-panel {
+  --exit-ty: 8px;
+  animation: app-exit var(--dur-fast) var(--ease-in) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-in) both;
+}
+@media (min-width: 640px) {
+  .modal-backdrop[data-closing] .modal-panel { --exit-ty: 0; --exit-scale: 0.98; }
+}
+
+/* Destello de una tarjeta cuyo contenido cambió en vivo (negociación en CartModal): un anillo que se apaga. */
+.row-flash {
+  animation: row-flash var(--dur-flash) var(--ease-out);
+  --animation-reduced: row-flash var(--dur-flash) var(--ease-out);
+}
+@keyframes row-flash {
+  from { box-shadow: 0 0 0 2px rgb(var(--c-accent-soft) / 0.85); }
+}
+
 /* Spinners: con movimiento reducido siguen girando, lento, para que se vea que algo está en curso. */
 .animate-spin { --animation-reduced: spin 2.4s linear infinite; }
 
@@ -620,7 +645,9 @@
   width: 0;
   min-width: 0;
   box-shadow: none;
-  transition: width 280ms ease-in-out, min-width 280ms ease-in-out, background-color 200ms ease;
+  /* El ancho cambia de una vez en escritorio: animarlo recalculaba el layout de todo el contenido (y la grilla
+     virtualizada del mercado) durante 280 ms. En celular la barra se desliza con transform (abajo). */
+  transition: background-color var(--dur-base) ease;
 }
 
 .sidebar--open {

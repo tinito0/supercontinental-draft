@@ -31,8 +31,7 @@ export const SuggestionsModal = memo(function SuggestionsModal({ isVisible, onCl
     setIsSending(false);
   };
 
-  if (!isVisible) return null;
-
+  // No early return while hidden: BaseModal needs isOpen to go false to play its exit.
   return (
     <BaseModal
       isOpen={isVisible}
