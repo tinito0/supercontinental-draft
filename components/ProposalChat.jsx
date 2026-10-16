@@ -28,6 +28,7 @@ export const ProposalChat = memo(function ProposalChat({
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef(null);
@@ -71,6 +72,7 @@ export const ProposalChat = memo(function ProposalChat({
     if (!trimmed || isSending || isClosed) return;
 
     setIsSending(true);
+    setSendError('');
     try {
       const messagesRef = collection(db, `artifacts/${APP_ID}/public/data/offers/${offerId}/messages`);
       await addDoc(messagesRef, {
@@ -84,6 +86,10 @@ export const ProposalChat = memo(function ProposalChat({
       setText('');
     } catch (err) {
       console.error('Error sending negotiation message:', err);
+      // Before, a failed send was only logged: the text stayed in the box with no explanation.
+      setSendError(err?.code === 'permission-denied'
+        ? 'No se pudo enviar: la negociación ya está cerrada o no participás en ella.'
+        : 'No se pudo enviar el mensaje. Revisá la conexión y probá de nuevo.');
     } finally {
       setIsSending(false);
     }
@@ -186,7 +192,7 @@ export const ProposalChat = memo(function ProposalChat({
               <input
                 type="text"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => { setText(e.target.value); if (sendError) setSendError(''); }}
                 placeholder="Escribí un mensaje..."
                 aria-label="Escribir mensaje de negociación"
                 maxLength={400}
@@ -203,6 +209,9 @@ export const ProposalChat = memo(function ProposalChat({
                 <Send className="w-3 h-3" />
               </button>
             </form>
+          )}
+          {sendError && !isClosed && (
+            <p role="alert" className="pt-1 text-[11px] font-medium text-danger-soft">{sendError}</p>
           )}
         </div>
       )}

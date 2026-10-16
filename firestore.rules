@@ -6,6 +6,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isShortText(value, max) {
+      return value is string && value.size() <= max;
+    }
+
     function isAdmin() {
       return isAuth() && (
         request.auth.uid == "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3" ||
@@ -114,22 +118,46 @@ service cloud.firestore {
             || (from == 'countered' && isSeller && to == 'withdrawn' && amountsKept);
         }
 
+        // Chat de la negociación: solo los dos clubes de la oferta, mientras sigue abierta, con texto corto.
+        // Antes cualquier manager podía escribir en cualquier oferta, sin límite de largo.
         match /messages/{messageId} {
           allow read: if isAuth();
-          allow create: if isAuth() && (request.resource.data.senderId == request.auth.uid || isAdmin());
+          allow create: if isAuth() && (isAdmin() || (
+            request.resource.data.senderId == request.auth.uid
+            && request.auth.uid in [negotiation().senderId, negotiation().targetTeamId]
+            && negotiation().status in ['pending', 'countered']
+            && request.resource.data.keys().hasOnly(['senderId', 'senderTeamName', 'senderTeamLogo', 'text', 'createdAt', 'createdAtIso'])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 500
+            && isShortText(request.resource.data.get('senderTeamName', ''), 80)
+            && isShortText(request.resource.data.get('senderTeamLogo', ''), 1000)
+          ));
           allow update, delete: if isAdmin();
+
+          function negotiation() {
+            return get(/databases/$(database)/documents/artifacts/$(appId)/public/data/offers/$(offerId)).data;
+          }
         }
       }
 
       // Manager chat
+      // Solo managers con sesión (antes era legible sin iniciar sesión). Un mensaje puede ser solo un GIF: el texto
+      // vacío se rechazaba aunque el chat permitía mandarlo.
       match /public/data/manager_chat/{messageId} {
-        allow read: if true;
+        allow read: if isAuth();
         allow create: if isAuth()
           && request.resource.data.senderId == request.auth.uid
           && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 1000;
+          && request.resource.data.text.size() <= 1000
+          && isGifUrl(request.resource.data.get('gifUrl', ''))
+          && (request.resource.data.text.size() > 0 || request.resource.data.get('gifUrl', '') != '')
+          && isShortText(request.resource.data.get('senderTeamName', ''), 80);
         allow update, delete: if isAdmin();
+
+        function isGifUrl(url) {
+          return url == '' || (url is string && url.size() <= 600 && url.matches('https://[^ ]+'));
+        }
       }
 
       // Formaciones compartidas: cualquier persona puede verlas, pero sólo su autor

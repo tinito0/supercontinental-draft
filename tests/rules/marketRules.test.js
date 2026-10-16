@@ -5,7 +5,7 @@ import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, deleteDoc, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, writeBatch, collection, serverTimestamp, addDoc, getDocs } from 'firebase/firestore';
 import { DEFAULT_BUDGET, TRANSFER_FEE_RATE } from '../../utils/constants.js';
 
 const APP = 'scl-draft-2025';
@@ -210,6 +210,45 @@ describe('transfer offers', () => {
     await assertFails(acceptBatch(as('seller'), 'seller').commit());
     await env.withSecurityRulesDisabled(ctx => updateDoc(offer(ctx.firestore()), { status: 'countered', counterAmount: 11500000 }));
     await assertFails(acceptBatch(as('buyer'), 'buyer', { amount: 11500000 }).commit());
+  });
+});
+
+describe('negotiation chat', () => {
+  const message = (db, fields = {}) => addDoc(collection(db, `${base}/public/data/offers/o1/messages`), {
+    senderId: 'buyer', senderTeamName: 'buyer', senderTeamLogo: '', text: 'Hola', createdAtIso: 'x', ...fields,
+  });
+
+  it('only the two clubs of the offer write, with short text', async () => {
+    await assertSucceeds(message(as('buyer')));
+    await assertSucceeds(message(as('seller'), { senderId: 'seller', senderTeamName: 'seller' }));
+    await assertFails(message(as('mallory'), { senderId: 'mallory' }));
+    await assertFails(message(as('buyer'), { senderId: 'seller' }));
+    await assertFails(message(as('buyer'), { text: '' }));
+    await assertFails(message(as('buyer'), { text: 'x'.repeat(501) }));
+    await assertFails(message(as('buyer'), { extra: true }));
+  });
+
+  it('closes when the offer is no longer open', async () => {
+    await env.withSecurityRulesDisabled(ctx => updateDoc(offer(ctx.firestore()), { status: 'rejected' }));
+    await assertFails(message(as('buyer')));
+  });
+});
+
+describe('manager chat', () => {
+  const chat = (db, fields = {}) => addDoc(collection(db, `${base}/public/data/manager_chat`), {
+    senderId: 'buyer', senderTeamName: 'buyer', text: 'Hola', gifUrl: '', ...fields,
+  });
+
+  it('accepts a message that is only a GIF, over https', async () => {
+    await assertSucceeds(chat(as('buyer'), { text: '', gifUrl: 'https://media.giphy.com/media/x/giphy.gif' }));
+    await assertFails(chat(as('buyer'), { text: '', gifUrl: '' }));
+    await assertFails(chat(as('buyer'), { text: '', gifUrl: 'javascript:alert(1)' }));
+    await assertFails(chat(as('buyer'), { gifUrl: 'http://example.com/a.gif' }));
+  });
+
+  it('is read only by signed-in managers', async () => {
+    await assertSucceeds(getDocs(collection(as('buyer'), `${base}/public/data/manager_chat`)));
+    await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(), `${base}/public/data/manager_chat`)));
   });
 });
 
