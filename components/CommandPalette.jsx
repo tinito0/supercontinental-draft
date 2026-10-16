@@ -34,8 +34,8 @@ export function CommandPalette({
     { id: 'action-market', title: 'Ir al Mercado', icon: <Zap className="w-4 h-4" />, action: () => setActiveTab('market') },
     { id: 'action-club', title: 'Ir a Mi Club', icon: <Zap className="w-4 h-4" />, action: () => setActiveTab('my_club') },
     { id: 'action-formation', title: 'Ir a Formación', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('formation') },
-    { id: 'action-tournament', title: 'Ver Torneo', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('tournament') },
-    { id: 'action-filters', title: 'Abrir Filtros', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('filtros') },
+    { id: 'action-tournament', title: 'Ver Torneo', icon: <Zap className="w-4 h-4" />, action: () => setActiveTab('Tournament') },
+    { id: 'action-filters', title: 'Abrir Filtros', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('filters') },
     { id: 'action-chat', title: 'Chat de Managers', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('chat') }
   ], [setActiveTab, openModalRoute]);
 

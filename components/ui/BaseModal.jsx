@@ -6,6 +6,9 @@ import { isTyping } from '../../hooks/useKeyboardShortcuts.js';
 // one Escape used to close both (every dialog listens on window).
 const openDialogs = [];
 
+/** True while any BaseModal is open. The app's global Escape listener leaves Escape to it (app.jsx). */
+export const hasOpenBaseModal = () => openDialogs.length > 0;
+
 const SIZE_MAP = {
   sm: 'max-w-md',
   md: 'max-w-lg',

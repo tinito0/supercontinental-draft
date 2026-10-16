@@ -6,9 +6,9 @@
     "semantic_hash": "d19519173a07fb61cf804a1984b537c5"
   },
   "app.jsx": {
-    "mtime": 1792141200.6210067,
-    "seen": 1792141655.7566226,
-    "ast_hash": "53d49254557e0832639750cc83a7fb77",
+    "mtime": 1792173953.4134676,
+    "seen": 1792174177.9920979,
+    "ast_hash": "ee37aaeb689cf901df0e326ace853fb4",
     "semantic_hash": ""
   },
   "components/AdminModal.jsx": {
@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "components/CartModal.jsx": {
-    "mtime": 1792140281.3077233,
-    "seen": 1792140439.701898,
-    "ast_hash": "763c34f188f651952bb8f45a8c3d2c66",
+    "mtime": 1792173885.2039452,
+    "seen": 1792174177.9924083,
+    "ast_hash": "dec9cb16eeaf7eaa7eeac23d417c0f8f",
     "semantic_hash": ""
   },
   "components/CommandPalette.jsx": {
@@ -36,9 +36,9 @@
     "semantic_hash": "bdacde4e969f545e5d57889ccd0c9e3c"
   },
   "components/ComparisonModal.jsx": {
-    "mtime": 1792105554.4170096,
-    "seen": 1792140439.7020788,
-    "ast_hash": "f31397ff5e6cca515f36d82a4a981598",
+    "mtime": 1792173985.0712245,
+    "seen": 1792174177.992576,
+    "ast_hash": "40bc85d8af184630be88b16503d13da7",
     "semantic_hash": ""
   },
   "components/ErrorBoundary.jsx": {
@@ -108,9 +108,9 @@
     "semantic_hash": ""
   },
   "components/PlayerModal.jsx": {
-    "mtime": 1792141402.8756545,
-    "seen": 1792141655.7592807,
-    "ast_hash": "82b0de8b1e8cbbcc92f265d448839e16",
+    "mtime": 1792173813.4064374,
+    "seen": 1792174177.994198,
+    "ast_hash": "6c59beae0ef47e20b7e4c3af18c2cbbc",
     "semantic_hash": ""
   },
   "components/ProposalChat.jsx": {
@@ -198,9 +198,9 @@
     "semantic_hash": "d00528ab4c7f79c79e1554ead6ce98d5"
   },
   "components/admin/GeneralAdminSection.jsx": {
-    "mtime": 1792141200.6301618,
-    "seen": 1792141655.7616773,
-    "ast_hash": "43db061b836b3c24b2d6b85502f0925f",
+    "mtime": 1792174117.9136276,
+    "seen": 1792174177.996594,
+    "ast_hash": "495eb50d2b8237f5af604b844d1923a0",
     "semantic_hash": ""
   },
   "components/admin/OverlayAdminSection.jsx": {
@@ -843,12 +843,6 @@
     "mtime": 1792106580.2909377,
     "seen": 1792140439.7272158,
     "ast_hash": "3f242d671c320b78aeae11df745e9352",
-    "semantic_hash": ""
-  },
-  "screens/MaintenanceScreen.jsx": {
-    "mtime": 1792141205.976837,
-    "seen": 1792141655.7865143,
-    "ast_hash": "ac028550a88fc00bf7e47f68c1da0490",
     "semantic_hash": ""
   },
   "screens/PesWorkspaceScreen.jsx": {
@@ -1494,9 +1488,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1792104431.3349974,
-    "seen": 1792104841.9432297,
-    "ast_hash": "b9b362844c023d764c3b1d413d5155f2",
+    "mtime": 1792173953.5423307,
+    "seen": 1792174178.050759,
+    "ast_hash": "4d414311bbb0f2a28e5ffb0a25d99e87",
     "semantic_hash": ""
   },
   "components/temp.txt": {
@@ -1545,12 +1539,6 @@
     "mtime": 1762846304.1485355,
     "seen": 1791993335.49295,
     "ast_hash": "52578d70e4ecb44f477c631e5f7f9ef6",
-    "semantic_hash": ""
-  },
-  "scripts/credenciales.txt": {
-    "mtime": 1762983509.2228868,
-    "seen": 1791993335.4929516,
-    "ast_hash": "eaef18fa01c78129ad57cb62601d71f6",
     "semantic_hash": ""
   },
   "scripts/id_pais_limpio.txt": {
@@ -263958,9 +263946,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1792092625.3587003,
-    "seen": 1792092742.6783197,
-    "ast_hash": "c07e401d8f30879c1ca887f73e8e47f6",
+    "mtime": 1792173964.4191594,
+    "seen": 1792174178.0504243,
+    "ast_hash": "18e82c88de8fa606e734781de79bd9c9",
     "semantic_hash": ""
   },
   "tests/rules/marketRules.test.js": {
@@ -264090,9 +264078,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/market.js": {
-    "mtime": 1792140621.5009136,
-    "seen": 1792141655.7908504,
-    "ast_hash": "662e5ea1f62c4bb30a1cc58fa53653a2",
+    "mtime": 1792173758.4693103,
+    "seen": 1792174178.0280704,
+    "ast_hash": "94739825a371152486255852f96b9018",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/marketConstants.js": {
@@ -264120,9 +264108,9 @@
     "semantic_hash": ""
   },
   "tests/rules/marketFunction.test.js": {
-    "mtime": 1792092357.1741364,
-    "seen": 1792092742.666301,
-    "ast_hash": "4320ac7f6d0c7762e9be761b42be12af",
+    "mtime": 1792173758.4693103,
+    "seen": 1792174178.0369682,
+    "ast_hash": "35070417396cb4d847b8e922b864e182",
     "semantic_hash": ""
   },
   "docs/AUDITORIA-2026-10-14.md": {
@@ -264171,12 +264159,6 @@
     "mtime": 1792015311.6362011,
     "seen": 1792015740.9399738,
     "ast_hash": "ac274198dfa58f390c6ea24fbd28a28f",
-    "semantic_hash": ""
-  },
-  "supabase/.temp/linked-project.json": {
-    "mtime": 1792011946.4416928,
-    "seen": 1792015740.9523969,
-    "ast_hash": "da008ae34ba7e23d96a74e3ff350d3d4",
     "semantic_hash": ""
   },
   "tests/positionRules.test.js": {
@@ -264732,15 +264714,33 @@
     "semantic_hash": ""
   },
   "docs/ANIMACIONES-2026-10-16.md": {
-    "mtime": 1792141527.6633942,
-    "seen": 1792141655.8159122,
-    "ast_hash": "c67bbc057a7797722d22b37a2acfb7c5",
+    "mtime": 1792143168.0731573,
+    "seen": 1792174178.051101,
+    "ast_hash": "af518469edb8fdcd502ab7c8fb1480f8",
     "semantic_hash": ""
   },
   "tests/pes/teamWorkspaceRender.test.jsx": {
     "mtime": 1792142479.8365514,
     "seen": 1792142682.6038702,
     "ast_hash": "b96308a62e42125f0b7aed8826e63196",
+    "semantic_hash": ""
+  },
+  "components/MarketClosedBanner.jsx": {
+    "mtime": 1792173853.926783,
+    "seen": 1792174177.9934702,
+    "ast_hash": "79b62d07b7c057b697e7239fa714900f",
+    "semantic_hash": ""
+  },
+  "tests/marketCountdown.test.js": {
+    "mtime": 1792173834.5279498,
+    "seen": 1792174178.0315568,
+    "ast_hash": "45f09411665b1840a1d3ebdb5a61d34f",
+    "semantic_hash": ""
+  },
+  "utils/marketCountdown.js": {
+    "mtime": 1792173833.472093,
+    "seen": 1792174178.0405395,
+    "ast_hash": "c95de07e209bcaa1b0292aaa99aafbe2",
     "semantic_hash": ""
   }
 }

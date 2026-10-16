@@ -159,6 +159,18 @@ describe('hooks/useKeyboardShortcuts', () => {
     expect(event.preventDefault).toHaveBeenCalled();
   });
 
+  it('ignores single-key shortcuts while a modal dialog is open (WCAG 2.1.4)', () => {
+    const setActiveTab = vi.fn();
+    const toggleCart = vi.fn();
+    global.document.querySelector = selector => (selector === '[aria-modal="true"]' ? {} : null);
+    runHook({ setActiveTab, toggleCart });
+
+    triggerKey({ key: 'm' });
+    triggerKey({ key: 'c' });
+    expect(setActiveTab).not.toHaveBeenCalled();
+    expect(toggleCart).not.toHaveBeenCalled();
+  });
+
   it('triggers O shortcut to navigate to Overview', () => {
     const setActiveTab = vi.fn();
     runHook({ setActiveTab });

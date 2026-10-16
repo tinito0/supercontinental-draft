@@ -27,6 +27,7 @@ import { useSquadSync } from './hooks/useSquadSync.js';
 import { isMarketOpen as isMarketOpenFor } from './supabase/functions/_shared/market.js';
 import { parseOpenTime } from './supabase/functions/_shared/marketTime.js';
 import { useKeyboardShortcuts, isTyping } from './hooks/useKeyboardShortcuts.js';
+import { hasOpenBaseModal } from './components/ui/BaseModal.jsx';
 import { useScrollRestore } from './hooks/useScrollRestore.js';
 import { useStoredChoice } from './hooks/useStoredChoice.js';
 import { calculateSmartRecommendations } from './utils/recommendations.js';
@@ -572,6 +573,9 @@ function App() {
         // Typing in a filter or search field must never close the view or navigate away:
         // the first Escape only leaves the field.
         if (isTyping(e.target)) return;
+        // An open BaseModal owns Escape (components/ui/BaseModal.jsx): its onClose may ask to keep unsaved
+        // changes, and closing the route here as well ignored a cancelled confirmation.
+        if (hasOpenBaseModal()) return;
         if (isShortcutsHelpOpen) {
           setIsShortcutsHelpOpen(false);
         } else if (isNotificationPanelOpen) {
@@ -787,7 +791,8 @@ function App() {
 
     // 7. Torneo y Partidos
     if (notification.category === 'tournament' || notification.type === 'tournament' || notification.type === 'match_result') {
-      openModalRoute('tournament');
+      // The tournament tab, for everyone: /modal/tournament is the admin editor and rendered nothing for managers.
+      navigate('/tournament');
       return;
     }
 
@@ -2313,10 +2318,7 @@ function App() {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         allPlayers={allPlayers}
-        onSelectPlayer={(id) => {
-          handleOpenPlayerModal(id);
-          openModalRoute('player');
-        }}
+        onSelectPlayer={(id) => handleOpenPlayerModal(id)}
         setActiveTab={setActiveTab}
         openModalRoute={openModalRoute}
       />
