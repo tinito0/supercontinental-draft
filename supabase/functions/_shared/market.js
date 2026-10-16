@@ -31,6 +31,7 @@ export function marketPaths(appId) {
     offers: `${base}/public/data/offers`,
     offer: offerId => `${base}/public/data/offers/${offerId}`,
     cart: (uid, playerId) => `${base}/users/${uid}/cart/${playerId}`,
+    cartCollection: uid => `${base}/users/${uid}/cart`,
     transfers: `${base}/public/data/transfers`,
     transfer: transferId => `${base}/public/data/transfers/${transferId}`,
   };
@@ -319,8 +320,57 @@ export async function releasePlayer({ tx, appId, user, playerId, now = new Date(
   return { playerId: numericId };
 }
 
+/**
+ * Moves an old email/password account's club to the Google account of the same manager, in one transaction:
+ * profile, public team, player locks, cart, offers and transfers. The caller is the old account (its token
+ * authorises the request); the Google account proves itself with its own ID token (newUser, verified by the
+ * Edge Function). Used by screens/LinkGoogleScreen.jsx when that Google account already exists as a separate
+ * Firebase user, so linking it in the browser fails (auth/credential-already-in-use).
+ */
+export async function migrateAccount({ tx, appId, user, newUser, now = new Date() }) {
+  const paths = marketPaths(appId);
+  const oldUid = user.uid;
+  const newUid = newUser?.uid;
+  if (!newUid || newUid === oldUid) throw new MarketError('Cuenta de Google inválida para migrar.');
+  if (newUser.provider !== 'google.com') throw new MarketError('La cuenta nueva tiene que ser de Google.');
+
+  const [oldProfile, oldTeam, newProfile, newTeam, locks, cart, sent, received, bought, sold] = await Promise.all([
+    tx.get(paths.profile(oldUid)), tx.get(paths.team(oldUid)), tx.get(paths.profile(newUid)), tx.get(paths.team(newUid)),
+    tx.query(paths.locks, [['lockedBy', '==', oldUid]]),
+    tx.query(paths.cartCollection(oldUid), []),
+    tx.query(paths.offers, [['senderId', '==', oldUid]]),
+    tx.query(paths.offers, [['targetTeamId', '==', oldUid]]),
+    tx.query(paths.transfers, [['teamId', '==', oldUid]]),
+    tx.query(paths.transfers, [['fromTeamId', '==', oldUid]]),
+  ]);
+  if (!oldProfile || !oldTeam) throw new MarketError('La cuenta anterior no tiene un equipo para migrar.', 404);
+  if (oldProfile.data.migratedTo) throw new MarketError('Este equipo ya fue migrado a otra cuenta.', 409);
+  if (newProfile || newTeam) {
+    throw new MarketError('Esa cuenta de Google ya tiene su propio equipo. Pedile al administrador que lo resuelva.', 409);
+  }
+
+  const at = now.toISOString();
+  const providers = Array.from(new Set([...(oldProfile.data.providers || []), 'google.com']));
+  tx.create(paths.profile(newUid), { ...oldProfile.data, userId: newUid, providers: ['google.com'], migratedFrom: oldUid, migratedAt: at });
+  tx.create(paths.team(newUid), { ...oldTeam.data, userId: newUid, rosterUpdatedAt: at });
+  // The old profile stays as a marker: an email login of the old account is told to use Google (hooks/useAuth.js).
+  tx.update(paths.profile(oldUid), { migratedTo: newUid, providers, migratedAt: at });
+  tx.delete(paths.team(oldUid));
+  locks.forEach(lock => tx.update(paths.lock(lock.id), { lockedBy: newUid }));
+  cart.forEach(row => {
+    tx.create(paths.cart(newUid, row.id), row.data);
+    tx.delete(paths.cart(oldUid, row.id));
+  });
+  sent.forEach(offer => tx.update(paths.offer(offer.id), { senderId: newUid }));
+  received.forEach(offer => tx.update(paths.offer(offer.id), { targetTeamId: newUid }));
+  bought.forEach(entry => tx.update(paths.transfer(entry.id), { teamId: newUid }));
+  sold.forEach(entry => tx.update(paths.transfer(entry.id), { fromTeamId: newUid }));
+
+  return { from: oldUid, to: newUid, players: locks.length, offers: sent.length + received.length };
+}
+
 /** Entry point shared by the Edge Function and the tests. */
-export async function handleMarketAction({ firestore, appId, catalog, user, body, now = new Date() }) {
+export async function handleMarketAction({ firestore, appId, catalog, user, body, now = new Date(), verifyIdToken }) {
   const action = body?.action;
   if (action === 'sign') {
     const playerId = body.playerId;
@@ -340,6 +390,18 @@ export async function handleMarketAction({ firestore, appId, catalog, user, body
     const offerId = body.offerId;
     if (typeof offerId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(offerId)) throw new MarketError('Oferta inválida.');
     return firestore.runTransaction(tx => acceptOffer({ tx, appId, catalog, user, offerId, now }));
+  }
+  if (action === 'migrateAccount') {
+    if (typeof body.newIdToken !== 'string' || !body.newIdToken || typeof verifyIdToken !== 'function') {
+      throw new MarketError('Falta la sesión de la cuenta de Google.');
+    }
+    let newUser;
+    try {
+      newUser = await verifyIdToken(body.newIdToken);
+    } catch {
+      throw new MarketError('La sesión de la cuenta de Google no es válida. Volvé a intentarlo.', 401);
+    }
+    return firestore.runTransaction(tx => migrateAccount({ tx, appId, user, newUser, now }));
   }
   throw new MarketError('Acción desconocida.');
 }

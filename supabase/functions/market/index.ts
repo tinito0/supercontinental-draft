@@ -70,7 +70,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const result = await handleMarketAction({ firestore, appId: APP_ID, catalog, user, body });
+    // migrateAccount: the Google account proves itself with its own token (screens/LinkGoogleScreen.jsx).
+    const verifyIdToken = async (idToken: string) => {
+      const { uid, claims } = await verifyFirebaseIdToken(idToken, { projectId, jwtVerify, keySet });
+      return { uid, provider: (claims?.firebase as { sign_in_provider?: string } | undefined)?.sign_in_provider };
+    };
+    const result = await handleMarketAction({ firestore, appId: APP_ID, catalog, user, body, verifyIdToken });
     return reply(origin, 200, { ok: true, result });
   } catch (error) {
     if (error instanceof MarketError) return reply(origin, error.status, { ok: false, error: error.message });

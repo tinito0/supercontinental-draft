@@ -40,3 +40,5 @@ export async function callMarket(action, payload = {}) {
 export const signPlayer = ({ playerId, isFranchise = false }) => callMarket('sign', { playerId, isFranchise });
 export const acceptOffer = ({ offerId }) => callMarket('acceptOffer', { offerId });
 export const releasePlayer = ({ playerId }) => callMarket('release', { playerId });
+/** Moves the signed-in (old email) account's club to the Google account whose ID token is given. */
+export const migrateAccount = ({ newIdToken }) => callMarket('migrateAccount', { newIdToken });

@@ -25,7 +25,13 @@ const firestore = createFirestore({
   baseUrl: `http://${process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080'}/v1`,
   getAccessToken: async () => 'owner',
 });
-const call = (uid, body, { isAdmin = false } = {}) => handleMarketAction({ firestore, appId: APP, catalog, user: { uid, isAdmin }, body });
+// Fake verifier for migrateAccount: the token "google:<uid>" is a Google sign-in of <uid>, anything else a password one.
+const verifyIdToken = async token => {
+  const [provider, uid] = String(token).split(':');
+  if (!uid) throw new Error('bad token');
+  return { uid, provider: provider === 'google' ? 'google.com' : 'password' };
+};
+const call = (uid, body, { isAdmin = false } = {}) => handleMarketAction({ firestore, appId: APP, catalog, user: { uid, isAdmin }, body, verifyIdToken });
 const sign = (uid, playerId, isFranchise = false) => call(uid, { action: 'sign', playerId, isFranchise });
 const accept = (uid, offerId = 'o1') => call(uid, { action: 'acceptOffer', offerId });
 
@@ -259,6 +265,36 @@ describe('release', () => {
     await setMarket('closed');
     await expectMarketError(release('seller'), /mercado está cerrado/);
     expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'seller' });
+  });
+});
+
+describe('migrateAccount (old email account → Google account)', () => {
+  const migrate = (oldUid, newIdToken) => call(oldUid, { action: 'migrateAccount', newIdToken });
+
+  it('moves profile, team, locks, cart, offers and transfers to the Google account', async () => {
+    await seed(async db => {
+      await setDoc(doc(db, `${base}/users/seller/cart/7511`), { Id: 7511, Precio: 10, isFranchise: false });
+      await setDoc(doc(db, `${base}/public/data/transfers/t1`), { playerId: 7511, teamId: 'seller', type: 'signing' });
+    });
+    await expect(migrate('seller', 'google:gseller')).resolves.toMatchObject({ from: 'seller', to: 'gseller', players: 1 });
+
+    expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'gseller' });
+    expect(await read(`${base}/public/data/teams/gseller`)).toMatchObject({ teamName: 'Team seller', userId: 'gseller', budget: BUDGET });
+    expect(await read(`${base}/public/data/teams/seller`)).toBeNull();
+    expect(await read(`${base}/users/gseller/profile/data`)).toMatchObject({ teamName: 'Team seller', providers: ['google.com'], migratedFrom: 'seller' });
+    expect(await read(`${base}/users/seller/profile/data`)).toMatchObject({ migratedTo: 'gseller' });
+    expect(await read(`${base}/users/gseller/cart/7511`)).toMatchObject({ Id: 7511 });
+    expect(await read(`${base}/users/seller/cart/7511`)).toBeNull();
+    expect(await read(`${base}/public/data/offers/o1`)).toMatchObject({ targetTeamId: 'gseller', senderId: 'buyer' });
+    expect(await read(`${base}/public/data/transfers/t1`)).toMatchObject({ teamId: 'gseller' });
+  });
+
+  it('refuses a non-Google account, an account that already has a team, and a second migration', async () => {
+    await expectMarketError(migrate('seller', 'password:other'), /Google/);
+    await expectMarketError(migrate('seller', 'google:buyer'), /ya tiene su propio equipo/);
+    await expectMarketError(migrate('seller', 'nonsense'), /no es válida/);
+    await migrate('seller', 'google:gseller');
+    await expectMarketError(migrate('seller', 'google:other'), /no tiene un equipo|ya fue migrado/);
   });
 });
 

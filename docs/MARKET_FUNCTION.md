@@ -30,6 +30,10 @@ Qué hace el servidor y qué sigue en el navegador:
   - aceptar ofertas (lock, presupuestos, plantillas, carrito del vendedor, oferta, feed; cierra las demás ofertas
     por ese jugador; respeta el estado del mercado). Nombres, escudos y datos del jugador salen de los equipos y
     del catálogo, no de la oferta.
+  - migrar una cuenta vieja (email) a la cuenta de Google del mismo manager cuando esa cuenta de Google ya
+    existe por separado (`migrateAccount`): perfil, equipo, locks, carrito, ofertas y traspasos en una
+    transacción. La cuenta vieja autoriza el pedido y la de Google prueba que es suya con su propio token
+    (`screens/LinkGoogleScreen.jsx`, con una instancia secundaria de Firebase).
 - **Navegador (validado por reglas):** enviar/rechazar/contraofertar/retirar ofertas por turnos (montos enteros
   positivos), formación, carrito privado. El carrito es una copia: `hooks/useSquadSync.js` lo alinea con los
   locks, y el presupuesto y las exportaciones salen de los locks (`_shared/budget.js`, compartido con la app).
