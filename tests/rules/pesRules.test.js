@@ -154,6 +154,19 @@ describe('Super Admin', () => {
   });
 });
 
+describe('validation record (meta/validation)', () => {
+  const validation = (db, fields = {}) => setDoc(doc(db, `${base}/pes_workspaces/league/meta/validation`), {
+    passed: true, errors: 0, warnings: 0, preexisting: 0, checkedAt: 'x', ...fields,
+  });
+
+  it('any PES role records its own validation, with the result fields only', async () => {
+    await assertSucceeds(validation(as('draft'), { checkedBy: 'draft' }));
+    await assertFails(validation(as('draft'), { checkedBy: 'super' }));
+    await assertFails(validation(as('draft'), { checkedBy: 'draft', note: 'x' }));
+    await assertFails(deleteDoc(doc(as('draft'), `${base}/pes_workspaces/league/meta/validation`)));
+  });
+});
+
 describe('deleting a workspace (Editor PES → Fuentes → Eliminar espacio)', () => {
   const seedWorkspaceChildren = () => env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();

@@ -368,10 +368,14 @@ service cloud.firestore {
           allow delete: if isPesSuper();
         }
 
-        // Última validación (cualquier rol la puede refrescar).
+        // Última validación: cualquier rol la puede refrescar, a su nombre y solo con los campos del resultado
+        // (antes un rol de solo lectura podía escribir cualquier cosa). Se borra junto con el espacio.
         match /meta/{docId} {
           allow read: if hasPesRole();
-          allow write: if hasPesRole();
+          allow create, update: if hasPesRole()
+            && request.resource.data.checkedBy == request.auth.uid
+            && request.resource.data.keys().hasOnly(['passed', 'errors', 'warnings', 'preexisting', 'checkedAt', 'checkedBy']);
+          allow delete: if isPesSuper();
         }
       }
     }
