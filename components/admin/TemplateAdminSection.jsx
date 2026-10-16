@@ -3,6 +3,7 @@ import { RefreshCw, Search, X, ClipboardList, Download, Package, Loader2 } from 
 import { FORMATIONS } from '../../utils/constants.js';
 import { layoutForState, normalizeFormationStates } from '../../utils/formationStates.js';
 import { loadDraftTeams } from '../../services/draftTeamsService.js';
+import { draftExportReport } from '../../utils/draftExportReport.js';
 
 export const TemplateAdminSection = memo(function TemplateAdminSection({
   showStatusMessage,
@@ -232,6 +233,10 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
     doc.save(`Plantilla_${team.name.replace(/\s+/g, '_')}_Tactico.pdf`);
   };
 
+  // Before exporting: what each team would lose or get guessed (utils/draftExportReport.js).
+  const exportReport = useMemo(() => draftExportReport(teamsData), [teamsData]);
+  const teamsWithIssues = exportReport.filter(report => report.errors.length || report.warnings.length);
+
   const filteredTeamsData = useMemo(() => {
     if (!searchTerm.trim()) return teamsData;
     const term = searchTerm.toLowerCase().trim();
@@ -258,11 +263,35 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
           className="w-full bg-canvas border border-line/[0.12] rounded-xl pl-9 pr-8 py-2.5 text-xs text-ink placeholder-slate-500 outline-none focus:border-accent/50"
         />
         {searchTerm && (
-          <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink">
-            <X size={14} />
+          <button type="button" onClick={() => setSearchTerm('')} aria-label="Borrar búsqueda" className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink">
+            <X size={14} aria-hidden="true" />
           </button>
         )}
       </div>
+
+      {!isLoading && teamsData.length > 0 && (
+        <details className="panel-flat p-4" open={teamsWithIssues.some(report => report.errors.length)}>
+          <summary className="cursor-pointer min-h-10 flex items-center text-sm font-semibold text-ink">
+            Revisión antes de exportar:{' '}
+            {teamsWithIssues.length === 0
+              ? <span className="ml-1 text-success-soft">todos los equipos están completos</span>
+              : <span className="ml-1 text-warning-soft"><span className="num">{teamsWithIssues.length}</span> equipo(s) con avisos</span>}
+          </summary>
+          {teamsWithIssues.length > 0 && (
+            <ul className="mt-3 space-y-3 text-xs">
+              {teamsWithIssues.map(report => (
+                <li key={report.id}>
+                  <p className="font-semibold text-ink">{report.name}</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {report.errors.map(text => <li key={text} className="text-danger-soft">✕ {text}</li>)}
+                    {report.warnings.map(text => <li key={text} className="text-ink-2">• {text}</li>)}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </details>
+      )}
 
       {isLoading ? (
         <div className="text-center p-8">
