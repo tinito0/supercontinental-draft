@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { RefreshCw, Search, X, Users, Edit2, Crown, Trash2, Upload, Save, KeyRound } from 'lucide-react';
+import { RefreshCw, Search, X, Users, Edit2, Crown, Trash2, Upload, Save, KeyRound, UserCheck } from 'lucide-react';
 import { getDocs, query, collection, getDoc, writeBatch, doc, setDoc, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { DEFAULT_LOGO, APP_ID } from '../../utils/constants.js';
@@ -12,6 +12,7 @@ import { renameTeamInTournament } from '../../utils/tournamentRename.js';
 
 const ACCESS_FILTERS = [
   { id: 'all', label: 'Todos' },
+  { id: 'pending', label: 'Pendientes de aprobación' },
   { id: 'early', label: 'Con acceso anticipado' },
   { id: 'regular', label: 'Sin acceso anticipado' },
 ];
@@ -84,6 +85,22 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
     [teams, searchTerm, accessFilter],
   );
   const earlyAccessCount = teams.filter(team => team.inWhitelist).length;
+  const pendingCount = teams.filter(team => team.pendingApproval).length;
+
+  // Membership: a new sign-in cannot sign, make offers or chat until approved here (rules and market function).
+  // Rejecting someone is deleting their team (the trash button).
+  const handleApprove = async (team) => {
+    setTogglingUid(team.uid);
+    try {
+      await setDoc(getPublicTeamRef(team.uid), { approved: true }, { merge: true });
+      setTeams(prev => prev.map(row => (row.uid === team.uid ? { ...row, pendingApproval: false } : row)));
+      showStatusMessage('success', `${team.teamName} ya es parte de la liga.`);
+    } catch (err) {
+      console.error(err);
+      showStatusMessage('error', 'No se pudo aprobar el equipo.');
+    }
+    setTogglingUid('');
+  };
 
   // La whitelist (teams/{uid}.inWhitelist) deja usar el mercado aunque esté cerrado o programado (app.jsx → isMarketOpen).
   const handleToggleAccess = async (team) => {
@@ -315,6 +332,7 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
         </div>
         <p className="text-xs text-ink-3 px-1">
           Mostrando <span className="num">{filteredTeams.length}</span> de <span className="num">{teams.length}</span> · Acceso anticipado: <span className="num">{earlyAccessCount}</span>
+          {pendingCount > 0 && <> · <span className="font-semibold text-warning-soft">Pendientes de aprobación: <span className="num">{pendingCount}</span></span></>}
         </p>
       </div>
 
@@ -346,6 +364,7 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                     {team.email && <span className="text-xs text-ink-2 truncate max-w-[220px]">{team.email}</span>}
                     <span className="text-[10px] text-ink-3 font-mono" title={team.uid}>ID: {team.uid.substring(0, 8)}</span>
                     {team.inWhitelist && <span className="text-[11px] font-semibold text-success-soft">Acceso anticipado</span>}
+                    {team.pendingApproval && <span className="text-[11px] font-semibold text-warning-soft">Pendiente de aprobación</span>}
                   </div>
                 </div>
                 {/* Stats */}
@@ -361,6 +380,12 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                 </div>
                 {/* Actions */}
                 <div className="flex items-center gap-1 ml-auto opacity-80 group-hover:opacity-100 transition flex-shrink-0">
+                  {team.pendingApproval && (
+                    <button type="button" onClick={() => handleApprove(team)} disabled={togglingUid === team.uid}
+                      className="btn btn-success btn-sm" title="Aprobar: puede fichar, ofertar y usar el chat">
+                      <UserCheck size={16} aria-hidden="true" />Aprobar
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleToggleAccess(team)}

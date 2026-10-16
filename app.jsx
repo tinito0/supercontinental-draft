@@ -9,6 +9,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, db, storage, firebaseInitializationError } from './config/firebase.js';
 import { LinkGoogleScreen } from './screens/LinkGoogleScreen.jsx';
 import { MarketClosedBanner } from './components/MarketClosedBanner.jsx';
+import { PendingApprovalScreen } from './screens/PendingApprovalScreen.jsx';
+import { isTeamApproved } from './supabase/functions/_shared/membership.js';
 import { InstallPopup } from './components/InstallPopup.jsx';
 import { ToastStack } from './components/ToastStack.jsx';
 import { NotificationsPanel } from './components/NotificationsPanel.jsx';
@@ -1808,6 +1810,12 @@ function App() {
 
   if (!userProfile) {
     return <LoadingScreen message="Cargando perfil de usuario..." error={appError} />;
+  }
+
+  // A new account waits for the admin (supabase/functions/_shared/membership.js). The team listener updates
+  // allTeams when it is approved, which lets the app through without a reload.
+  if (!isAdmin && allTeams?.[userId] && !isTeamApproved(allTeams[userId])) {
+    return <PendingApprovalScreen teamName={userProfile?.teamName} onLogout={handleLogout} />;
   }
 
   return (

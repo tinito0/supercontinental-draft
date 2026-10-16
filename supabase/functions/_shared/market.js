@@ -8,6 +8,7 @@ import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from './franchise.js';
 import { toUnits, spentOnLocks, committedInOffers } from './budget.js';
 import { parseOpenTime } from './marketTime.js';
 import { isOfferExpired } from './offerExpiry.js';
+import { isTeamApproved, PENDING_APPROVAL_MESSAGE } from './membership.js';
 
 export class MarketError extends Error {
   constructor(message, status = 400) {
@@ -84,6 +85,7 @@ export async function signPlayer({ tx, appId, catalog, user, playerId, isFranchi
     tx.get(paths.market), tx.get(paths.team(user.uid)), tx.get(paths.profile(user.uid)), tx.get(paths.lock(lockId)),
   ]);
   if (!team || !profile) throw new MarketError('Tu equipo no está configurado. Volvé a iniciar sesión.', 409);
+  if (!user.isAdmin && !isTeamApproved(team.data)) throw new MarketError(PENDING_APPROVAL_MESSAGE, 403);
   const marketStatus = market?.data || { status: 'closed' };
 
   if (!isMarketOpen(marketStatus, team.data, user.isAdmin, now)) {
@@ -165,6 +167,9 @@ export async function acceptOffer({ tx, appId, catalog, user, offerId, now = new
   ]);
   if (!sellerTeam) throw new MarketError('Equipo vendedor no encontrado.', 404);
   if (!buyerTeam) throw new MarketError('Equipo comprador no encontrado.', 404);
+  if (!user.isAdmin && (!isTeamApproved(buyerTeam.data) || !isTeamApproved(sellerTeam.data))) {
+    throw new MarketError('Uno de los dos equipos todavía no fue aprobado por el administrador de la liga.', 403);
+  }
   const accepterTeam = accepterId === buyerId ? buyerTeam : sellerTeam;
   if (!isMarketOpen(market?.data || { status: 'closed' }, accepterTeam.data, user.isAdmin, now)) {
     throw new MarketError('El mercado está cerrado.', 403);

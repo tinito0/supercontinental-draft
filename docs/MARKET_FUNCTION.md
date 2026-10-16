@@ -37,6 +37,9 @@ Qué hace el servidor y qué sigue en el navegador:
   (`expiresAtMs`, `_shared/offerExpiry.js`). Una oferta pendiente vencida no retiene plata del comprador y el
   servidor no la acepta; las reglas exigen un vencimiento de unas 48 h en cada turno. Las ofertas anteriores, sin
   `expiresAtMs`, no vencen.
+- **Aprobación de equipos:** una cuenta nueva crea su equipo con `approved: false` y no ficha, no oferta ni
+  escribe en el chat hasta que el admin la aprueba (Admin → Equipos → Aprobar). Los equipos anteriores no tienen
+  el campo y cuentan como aprobados (`_shared/membership.js`, mismas reglas en `firestore.rules`).
 - **Mercado cerrado:** la app sigue usable (tácticas, torneo, chat); fichar, ofertar, aceptar y liberar esperan a
   que abra (`MarketClosedBanner`, mismas reglas que el servidor).
 - **Hora de apertura programada:** `config/market.openTime` es un instante ISO; los valores viejos sin zona se

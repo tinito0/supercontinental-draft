@@ -48,3 +48,16 @@ describe('toLocalDateTimeInput', () => {
     expect(toLocalDateTimeInput(new Date(2026, 0, 5, 9, 7))).toBe('2026-01-05T09:07');
   });
 });
+
+describe('membership approval', () => {
+  it('marks only teams explicitly waiting for approval; older teams count as approved', async () => {
+    const { isTeamApproved } = await import('../supabase/functions/_shared/membership.js');
+    const { filterAdminTeams } = await import('../utils/adminTeams.js');
+    expect(isTeamApproved({})).toBe(true);
+    expect(isTeamApproved({ approved: true })).toBe(true);
+    expect(isTeamApproved({ approved: false })).toBe(false);
+    const rows = [mergeAdminTeamProfile('a', { approved: false }), mergeAdminTeamProfile('b', {})];
+    expect(rows.map(row => row.pendingApproval)).toEqual([true, false]);
+    expect(filterAdminTeams(rows, { access: 'pending' }).map(row => row.uid)).toEqual(['a']);
+  });
+});

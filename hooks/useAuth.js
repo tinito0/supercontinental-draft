@@ -121,7 +121,9 @@ export function useAuth({
             userId: uid,
             logoUrl: profileData.logoUrl,
             budget: profileData.budget,
-            inWhitelist: false
+            inWhitelist: false,
+            // A new sign-in waits for the admin to approve it (supabase/functions/_shared/membership.js).
+            approved: false,
           });
           await batch.commit();
 
@@ -162,7 +164,9 @@ export function useAuth({
               userId: uid,
               logoUrl: profileData.logoUrl || DEFAULT_LOGO,
               budget: profileData.budget,
-              inWhitelist: false
+              inWhitelist: false,
+              // A team the admin deleted comes back pending, like a new sign-in.
+              approved: false,
             }, { merge: true });
           } else {
             const publicBudget = Number(publicTeamSnap.data().budget);

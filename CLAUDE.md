@@ -51,7 +51,9 @@ Screens and heavy modals are `React.lazy`; a `vite:preloadError` reloads the pag
 - `APP_ID` comes from `utils/constants.js`, not from the Firebase config.
 - `services/draftTeamsService.js` is the single team loader used by both PES exports. Reuse it; do not add another.
 
-**Auth/roles:** Firebase Auth (email/password + Google, with a legacy-account linking flow). App admin is a
+**Auth/roles:** Firebase Auth (email/password + Google, with a legacy-account linking flow). A new account's team
+starts with `approved: false` and waits on `PendingApprovalScreen` until the admin approves it; teams without the
+field count as approved (`supabase/functions/_shared/membership.js`, enforced by the market function and rules). App admin is a
 profile flag (`isAdmin`/`role: 'admin'`) in `hooks/useAuth.js`. In `firestore.rules` it is a hardcoded UID or an `admin`
 claim. PES roles (super_admin / draft admin / kit manager) are checked three times: `pes/permissions.js`
 `authorize()`, `firestore.rules`, and Supabase Storage policies (`supabase/storage-policies.sql`).

@@ -39,6 +39,13 @@ service cloud.firestore {
       function lockPath(playerId) {
         return /databases/$(database)/documents/artifacts/$(appId)/public/data/player_locks/$(playerId);
       }
+      // Membresía (supabase/functions/_shared/membership.js): un equipo nuevo nace con approved: false y no
+      // oferta ni escribe en el chat hasta que el admin lo aprueba. Los equipos anteriores no tienen el campo
+      // y cuentan como aprobados.
+      function isApprovedManager() {
+        return exists(teamPath(request.auth.uid))
+          && get(teamPath(request.auth.uid)).data.get('approved', true) == true;
+      }
 
       // Player locks: los crea, mueve y libera el servidor (liberar cierra las ofertas abiertas por el
       // jugador; desde el navegador quedaban reteniendo el dinero de los compradores).
@@ -55,13 +62,14 @@ service cloud.firestore {
           isAdmin() || (
             request.auth.uid == teamId
             && request.resource.data.get('inWhitelist', false) == false
+            && request.resource.data.get('approved', true) == false
             && (request.resource.data.budget == defaultBudget()
               || request.resource.data.budget == get(profilePath(teamId)).data.budget)
           )
         );
         allow update: if isAuth() && (
           isAdmin()
-          || (request.auth.uid == teamId && !changedKeys().hasAny(['budget', 'inWhitelist', 'userId', 'marketUpdatedAt']))
+          || (request.auth.uid == teamId && !changedKeys().hasAny(['budget', 'inWhitelist', 'userId', 'marketUpdatedAt', 'approved']))
         );
         allow delete: if isAdmin();
       }
@@ -80,6 +88,7 @@ service cloud.firestore {
           isAdmin() || (
             request.resource.data.senderId == request.auth.uid
             && request.resource.data.targetTeamId != request.auth.uid
+            && isApprovedManager()
             && request.resource.data.status == 'pending'
             && isMoney(request.resource.data.offerAmount)
             && isFreshExpiry(request.resource.data.expiresAtMs)
@@ -158,6 +167,7 @@ service cloud.firestore {
         allow read: if isAuth();
         allow create: if isAuth()
           && request.resource.data.senderId == request.auth.uid
+          && isApprovedManager()
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 1000
           && isGifUrl(request.resource.data.get('gifUrl', ''))

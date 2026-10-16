@@ -195,6 +195,15 @@ describe('acceptOffer', () => {
   });
 });
 
+describe('membership approval', () => {
+  it('a team waiting for approval cannot sign, and cannot sell or buy through an offer', async () => {
+    await seed(db => updateDoc(doc(db, `${base}/public/data/teams/mallory`), { approved: false }));
+    await expectMarketError(sign('mallory', 9100), /aprobado/);
+    await seed(db => updateDoc(doc(db, `${base}/public/data/teams/buyer`), { approved: false }));
+    await expectMarketError(accept('seller'), /aprobado/);
+  });
+});
+
 describe('acceptOffer: market state and names', () => {
   it('refuses to accept while the market is closed for the accepting team', async () => {
     await setMarket('closed');

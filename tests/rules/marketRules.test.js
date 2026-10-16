@@ -96,7 +96,26 @@ describe('public team documents', () => {
     const db = as('newbie');
     await assertFails(setDoc(team(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET * 10, inWhitelist: false }));
     await assertFails(setDoc(team(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET, inWhitelist: true }));
-    await assertSucceeds(setDoc(team(db, 'newbie'), { teamName: 'n', userId: 'newbie', logoUrl: '', budget: BUDGET, inWhitelist: false }));
+    await assertSucceeds(setDoc(team(db, 'newbie'), { teamName: 'n', userId: 'newbie', logoUrl: '', budget: BUDGET, inWhitelist: false, approved: false }));
+  });
+
+  it('a new team waits for approval: it cannot create itself approved or approve itself', async () => {
+    const db = as('newbie');
+    await assertFails(setDoc(team(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET, inWhitelist: false }));
+    await assertFails(setDoc(team(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET, inWhitelist: false, approved: true }));
+    await assertSucceeds(setDoc(team(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET, inWhitelist: false, approved: false }));
+    await assertFails(updateDoc(team(db, 'newbie'), { approved: true }));
+  });
+
+  it('a team waiting for approval cannot make offers or write in the chat', async () => {
+    await env.withSecurityRulesDisabled(ctx => updateDoc(team(ctx.firestore(), 'mallory'), { approved: false }));
+    const db = as('mallory');
+    await assertFails(setDoc(doc(db, `${base}/public/data/offers/pending-team`), {
+      playerId: PLAYER, senderId: 'mallory', targetTeamId: 'seller', offerAmount: 10500000, status: 'pending', history: [], expiresAtMs: turn(),
+    }));
+    await assertFails(addDoc(collection(db, `${base}/public/data/manager_chat`), { senderId: 'mallory', senderTeamName: 'm', text: 'hola', gifUrl: '' }));
+    await env.withSecurityRulesDisabled(ctx => updateDoc(team(ctx.firestore(), 'mallory'), { approved: true }));
+    await assertSucceeds(addDoc(collection(db, `${base}/public/data/manager_chat`), { senderId: 'mallory', senderTeamName: 'm', text: 'hola', gifUrl: '' }));
   });
 });
 

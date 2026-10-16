@@ -17,6 +17,8 @@ export function mergeAdminTeamProfile(uid, publicData = {}, privateData = {}) {
     country: pub.country || priv.country || 204,
     manualStats: pub.manualStats || {},
     inWhitelist: Boolean(pub.inWhitelist),
+    // A new sign-in waits for approval (supabase/functions/_shared/membership.js); older teams have no field.
+    pendingApproval: pub.approved === false,
     email: priv.email || '',
   };
 }
@@ -45,10 +47,11 @@ export function validateLogoFile(file) {
   return null;
 }
 
-/** Búsqueda (nombre, email o uid) + filtro por acceso anticipado al mercado ('all' | 'early' | 'regular'). */
+/** Búsqueda (nombre, email o uid) + filtro ('all' | 'pending' | 'early' | 'regular'). */
 export function filterAdminTeams(rows, { query = '', access = 'all' } = {}) {
   const term = String(query).trim().toLowerCase();
   return rows.filter(row => {
+    if (access === 'pending' && !row.pendingApproval) return false;
     if (access === 'early' && !row.inWhitelist) return false;
     if (access === 'regular' && row.inWhitelist) return false;
     if (!term) return true;
