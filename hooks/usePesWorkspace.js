@@ -271,8 +271,14 @@ export function usePesWorkspace({ userId, isAdmin }) {
       const alreadySaved = new Set(savedOps.map(o => o.clientId).filter(Boolean));
       const pending = captured.filter(d => !alreadySaved.has(d.clientId));
       for (const op of pending) {
-        if (op.asset?.sha256) {
+        if (!op.asset?.sha256) continue;
+        try {
           await uploadTexture(activeId, op.asset.sha256, assetStore.current.get(op.asset.sha256), op.ext);
+        } catch (error) {
+          // One texture the storage refuses (too large, wrong type) used to block every save with a generic error.
+          // Name the draft so it can be discarded and the rest saved.
+          const position = captured.indexOf(op) + 1;
+          throw new Error(`No se pudo subir la textura del cambio n.º ${position} sin guardar (${error.message}). Descartá ese cambio en «Sin guardar» y volvé a guardar el resto.`, { cause: error });
         }
       }
       await saveOps(activeId, pending, actor);
