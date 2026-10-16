@@ -1,6 +1,21 @@
 // v2: catálogo compacto (jugadores.compact.json). Al activar se borra la caché v1 con el JSON de ~60 MB.
 const CACHE_NAME = 'players-db-v2';
-const STATIC_CACHE = 'scl-static-v1';
+// v2: fotos en su propia caché con tope, y sin el HTML que el hosting devuelve (200) para una foto que no existe:
+// la v1 lo guardaba como si fuera la foto. Al activar se borran las cachés anteriores.
+const STATIC_CACHE = 'scl-static-v2';
+const PHOTO_CACHE = 'scl-photos-v1';
+// Topes: cada deploy agrega JS/CSS con hash nuevo y cada jugador visto una foto; sin tope crecían para siempre.
+const MAX_STATIC_ENTRIES = 300;
+const MAX_PHOTO_ENTRIES = 2500;
+
+/** Deletes the oldest entries beyond maxEntries (cache.keys() keeps insertion order). */
+async function trimCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - maxEntries)).map(key => cache.delete(key)));
+}
+
+const isImage = response => (response.headers.get('Content-Type') || '').startsWith('image/');
 
 // Assets to precache on install (excluding jugadores.json — it's too large for precache,
 // we handle it with a CacheFirst runtime strategy)
@@ -25,7 +40,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys => {
       return Promise.all(
-        keys.filter(key => key !== CACHE_NAME && key !== STATIC_CACHE)
+        keys.filter(key => key !== CACHE_NAME && key !== STATIC_CACHE && key !== PHOTO_CACHE)
           .map(key => caches.delete(key))
       );
     }).then(() => self.clients.claim())
@@ -107,15 +122,20 @@ self.addEventListener('fetch', (event) => {
   // fetch completo de nuevo, contribuyendo a inflar el conteo de requests.
   if (parsedUrl.pathname.includes('/fotos_jugadores/')) {
     event.respondWith(
-      caches.open(STATIC_CACHE).then(async (cache) => {
+      caches.open(PHOTO_CACHE).then(async (cache) => {
         const cached = await cache.match(event.request);
         if (cached) return cached;
         try {
-          const response = await fetch(event.request);
-          // Se cachea tanto el 200 (foto real) como el 404 (no existe) — en los
-          // dos casos, la respuesta para ESE jugador puntual no va a cambiar.
+          const fetched = await fetch(event.request);
+          // A missing photo comes back as the app's index.html with a 200 (the hosting rewrite): that is a 404
+          // for the <img>, not a photo to keep.
+          const response = fetched.ok && !isImage(fetched)
+            ? new Response(null, { status: 404, statusText: 'Not Found (no photo)' })
+            : fetched;
+          // Se cachea tanto la foto real como el 404 (no existe): para ESE jugador no va a cambiar.
           if (response.ok || response.status === 404) {
             cache.put(event.request, response.clone());
+            event.waitUntil(trimCache(PHOTO_CACHE, MAX_PHOTO_ENTRIES));
           }
           return response;
         } catch (err) {
@@ -142,7 +162,11 @@ self.addEventListener('fetch', (event) => {
       // Cache successful GET responses for static assets
       if (response.ok && event.request.method === 'GET' && parsedUrl.origin === self.location.origin) {
         const clone = response.clone();
-        caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
+        event.waitUntil(
+          caches.open(STATIC_CACHE)
+            .then(cache => cache.put(event.request, clone))
+            .then(() => trimCache(STATIC_CACHE, MAX_STATIC_ENTRIES))
+        );
       }
       return response;
     }).catch(() =>

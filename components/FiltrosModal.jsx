@@ -71,7 +71,6 @@ export const FiltrosModal = memo(function FiltrosModal({
   onClose,
   filters,
   setFilters,
-  applyFilters,
   resetFilters,
   uniquePositions,
   sortedCountries,
@@ -148,7 +147,7 @@ export const FiltrosModal = memo(function FiltrosModal({
       <button type="button" onClick={resetFilters} className="btn btn-ghost text-danger-soft hover:text-danger-soft">
         <RotateCcw className="w-4 h-4" aria-hidden="true" />Limpiar filtros
       </button>
-      <button type="button" onClick={() => { applyFilters(); onClose(); }} className="btn btn-primary min-h-12 sm:px-8">
+      <button type="button" onClick={onClose} className="btn btn-primary min-h-12 sm:px-8">
         <Search className="w-4 h-4" aria-hidden="true" />
         {typeof resultCount === 'number'
           ? <>Ver <span className="num">{resultCount.toLocaleString('es-AR')}</span> {resultCount === 1 ? 'jugador' : 'jugadores'}</>

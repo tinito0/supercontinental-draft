@@ -33,7 +33,7 @@ There is no linter or type checker; plain JS/JSX, ES modules. Env vars: copy `.e
 | App shell | `app.jsx` (~2,900 lines) | routing, Firestore subscriptions, market logic, modal wiring. Widest blast radius in the repo |
 | Screens | `screens/` | Landing, Login, LinkGoogle, TeamScreen, FormationViewScreen, PesWorkspaceScreen. A closed market is read-only (`MarketClosedBanner`), not a screen |
 | Components | `components/` | feature modals at top level; `ui/` primitives; `admin/`, `tournament/`, `formation/`, `pes/` |
-| Hooks | `hooks/` | `useAuth`, `useFirebaseData` (listeners), `useBudget`, `useRemoteConflict`, `usePesWorkspace`, … |
+| Hooks | `hooks/` | `useAuth`, `useFirebaseData` (listeners), `useBudget`, `useSquadSync`, `usePresence`, `usePesWorkspace`, … |
 | Services | `services/`, `config/` | `firebase.js` (Auth, Firestore with persistent multi-tab cache, Storage), `supabase.js` |
 | Pure helpers | `utils/` | `constants.js` (positions, formations, `APP_ID`), `helpers.js`, `formationStates.js`, `pesExport.js`, … |
 | PES engine | `pes/` | pure, no React, no Firebase: `core` → `formats/pes2021` → `operations.js`, `kits/`, `draftTransfer.js` |
@@ -112,7 +112,6 @@ per browser). Never store binaries in Firestore or localStorage.
 - The public landing (`screens/LandingPage.jsx` + `components/landing/`) shows hardcoded sample players and the
   league's channels (from its Linktree, `leagueLinks.js`). `tests/landingSampleData.test.js` fails when the samples
   drift from `public/jugadores.json` or `utils/pesExport.js`; update `sampleData.js` after regenerating the market.
-- Stray files exist (`components/temp.txt`, `components/test.txt`, `components/replace.js`, `scripts/Untitled-1.py`).
-  Don't treat them as live code.
+- `scripts/Untitled-1.py` is an unrelated personal script, not part of the app.
 - A knowledge graph lives in `graphify-out/`. Query it before broad searches (`graphify query "<q>"`) and run
   `graphify update .` after code changes. It misses string-path Firestore coupling, `.sql`, rules and CSS.

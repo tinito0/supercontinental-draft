@@ -1079,9 +1079,6 @@ function App() {
     return sorted;
   }, [allPlayers, filters, sortConfig, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName]);
 
-  // Mantener una función "applyFilters" vacía por si algún componente hijo la pide
-  const applyFilters = useCallback(() => { }, []);
-
   const resetFilters = useCallback(() => {
     setFilters(prev => ({ ...initialFilters, name: prev.name }));
   }, []);
@@ -2178,7 +2175,6 @@ function App() {
         onClose={() => closeModalRoute(setIsFiltrosModalVisible)}
         filters={filters}
         setFilters={setFilters}
-        applyFilters={applyFilters}
         resetFilters={resetFilters}
         uniquePositions={uniquePositions}
         sortedCountries={sortedCountries}
