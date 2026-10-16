@@ -4,6 +4,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { db } from '../config/firebase.js';
 import { APP_ID, DEFAULT_LOGO, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
 export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamName, targetTeamId, senderId, senderTeamName, senderTeamLogo, remainingBudget }) => {
   const [offerAmount, setOfferAmount] = useState('');
@@ -144,7 +145,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                     src={`/fotos_jugadores/${player.Id}.webp`}
                     alt={player.Name}
                     className="w-12 h-12 rounded-lg object-cover bg-raised border border-line/20"
-                    onError={(e) => { e.target.src = `https://placehold.co/56x56/111/333?text=${player.Name?.[0] || '?'}`; }}
+                    onError={(e) => { e.target.src = playerPlaceholder(player.Name?.[0] || '?'); }}
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-ink truncate">{player.Name}</p>

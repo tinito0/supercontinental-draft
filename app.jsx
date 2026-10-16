@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, memo, useRef, Suspense } from 'react';
-import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID, FRANCHISE_MIN_AGE, FRANCHISE_MIN_OVR, FRANCHISE_MAX_OVR } from './utils/constants.js';
-import { formatPriceShort, normalizarString, processPlayersData, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
-import { PlayerCard } from './components/PlayerCard.jsx';
-import { RecommendationsAccordion } from './components/RecommendationsAccordion.jsx';
+import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID } from './utils/constants.js';
+import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from './supabase/functions/_shared/franchise.js';
+import { formatPriceShort, normalizarString, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
+import { fetchRawPlayers, buildMarketPlayers } from './utils/playerCatalog.js';
 import { LeftSidebar } from './components/LeftSidebar.jsx';
 import { TopHeader } from './components/TopHeader.jsx';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -10,30 +10,31 @@ import { auth, db, storage, firebaseInitializationError } from './config/firebas
 import { LinkGoogleScreen } from './screens/LinkGoogleScreen.jsx';
 import { MaintenanceScreen } from './screens/MaintenanceScreen.jsx';
 import { InstallPopup } from './components/InstallPopup.jsx';
-import { StatusAlert } from './components/StatusAlert.jsx';
+import { ToastStack } from './components/ToastStack.jsx';
 import { NotificationsPanel } from './components/NotificationsPanel.jsx';
-import { SearchBar } from './components/SearchBar.jsx';
-import { PlayerListItem } from './components/PlayerListItem.jsx';
-import { VirtualizedPlayerList, VirtualizedPlayerGrid } from './components/VirtualizedPlayers.jsx';
 import { BroadcastOverlay, DEFAULT_BROADCAST_OVERLAY } from './components/BroadcastOverlay.jsx';
 import { normalizeTournamentView } from './utils/tournamentViews.js';
+import { getMatchesWithNewResults } from './components/tournament/tournamentEngine.js';
 import { getMentionedTeamIds, hasTransferIntent } from './utils/managerChatUtils.js';
 import { makePrefetchable, schedulePrefetchOnIdle } from './utils/prefetch.js';
+import { readSessionHint, writeSessionHint } from './utils/sessionHint.js';
 import { OverviewTab } from './components/OverviewTab.jsx';
 import { useFirebaseData } from './hooks/useFirebaseData.js';
 import { useAuth } from './hooks/useAuth.js';
 import { usePesAccess } from './hooks/usePesAccess.js';
 import { useBudget } from './hooks/useBudget.js';
-import { useHoverPreview } from './hooks/useHoverPreview.js';
+import { useSquadSync } from './hooks/useSquadSync.js';
+import { isMarketOpen as isMarketOpenFor } from './supabase/functions/_shared/market.js';
+import { parseOpenTime } from './supabase/functions/_shared/marketTime.js';
 import { useKeyboardShortcuts, isTyping } from './hooks/useKeyboardShortcuts.js';
 import { useScrollRestore } from './hooks/useScrollRestore.js';
+import { useStoredChoice } from './hooks/useStoredChoice.js';
 import { calculateSmartRecommendations } from './utils/recommendations.js';
 import { handleListenerError } from './utils/listenerErrorHandler.js';
-import { PlayerPreview } from './components/ui/PlayerPreview.jsx';
 import { KeyboardShortcutsHelp } from './components/ui/KeyboardShortcutsHelp.jsx';
-import { PageHeader } from './components/ui/PageHeader.jsx';
 import { Alert } from './components/ui/Alert.jsx';
-import { EmptyState } from './components/ui/EmptyState.jsx';
+import { MarketplaceView } from './components/marketplace/MarketplaceView.jsx';
+import { playerPlaceholder } from './utils/playerPlaceholder.js';
 
 // Lazy loading modals and heavy screens
 const LoginScreen = React.lazy(() => import('./screens/LoginScreen.jsx').then(m => ({ default: m.LoginScreen })));
@@ -93,7 +94,6 @@ import {
   Trash2,
   AlertTriangle,
   ArrowLeftRight,
-  Search,
 } from 'lucide-react';
 
 
@@ -109,7 +109,6 @@ import {
   onSnapshot,
   collection,
   writeBatch,
-  runTransaction,
   addDoc,
   getDocs,
   serverTimestamp,
@@ -120,6 +119,8 @@ import {
   orderBy,
   limit
 } from "firebase/firestore";
+import { signPlayer as signPlayerOnServer, releasePlayer as releasePlayerOnServer, loadMarketClient } from './services/marketService.js';
+const prefetchMarketClient = makePrefetchable('market-client', loadMarketClient);
 
 const initialDetailedStats = Object.values(DETAILED_STAT_KEYS).flat().reduce((acc, stat) => {
   acc[`${stat}Min`] = '';
@@ -154,10 +155,24 @@ function FirebaseError() {
   );
 }
 
-function LoadingScreen({ message }) {
+function LoadingScreen({ message, error }) {
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface p-5">
+        <Alert
+          tone="danger"
+          title="No se pudo conectar"
+          className="w-full max-w-md"
+          action={<button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>Reintentar</button>}
+        >
+          {error}
+        </Alert>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-surface text-ink-2 font-sans text-xl text-center p-5">
-      <div className="w-10 h-10 border-4 border-line/20 border-t-blue-500 rounded-full animate-spin mb-5"></div>
+      <div className="w-10 h-10 border-4 border-line/20 border-t-accent rounded-full animate-spin mb-5"></div>
       {message || "Cargando..."}
     </div>
   );
@@ -198,7 +213,7 @@ const MiniPlayerCard = memo(function MiniPlayerCard({ player, countryMap, onRemo
           className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full flex-shrink-0"
           onError={(e) => {
             e.target.onerror = null;
-            e.target.src = `https://placehold.co/40x40/374151/e0e0e0?text=${player.Name.substring(0, 1)}`;
+            e.target.src = playerPlaceholder(player.Name.substring(0, 1));
           }}
         />
         <div className="flex-grow min-w-0">
@@ -270,7 +285,6 @@ function App() {
   // tabToPath at module scope — see above App()
   const setActiveTab = (tab) => navigate(tabToPath[tab] ?? '/overview');
 
-  const hoverPreview = useHoverPreview(400);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     // Default closed on mobile, respect localStorage on desktop
@@ -304,27 +318,14 @@ function App() {
   const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [playersLoadError, setPlayersLoadError] = useState('');
   const [countriesLoadError, setCountriesLoadError] = useState('');
-  const [contadorMsg, setContadorMsg] = useState("Cargando jugadores...");
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
   });
-  // Franja de celular chico (<=480px) — `.market-player-card-shell` en index.css
-  // tiene una CUARTA regla responsive específica para esta franja (achica la card
-  // a un tope de 154px), separada de la base "mobile" (238px) que cubre 481-767px.
-  const [isSmallMobileViewport, setIsSmallMobileViewport] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth <= 480;
-  });
-  // Se usa junto con isMobileViewport para calcular cuántas columnas le pasamos al
-  // Grid virtualizado — replica los mismos breakpoints (md=768, xl=1280) que antes
-  // tenía `gridColumnClass` en Tailwind, pero como número (react-window lo necesita).
-  const [isXlViewport, setIsXlViewport] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth >= 1280;
-  });
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' o 'list'
-  const [gridColumns, setGridColumns] = useState(6);
+  // Vista del mercado ('grid' | 'list') y densidad de la cuadrícula ('comfortable' | 'compact'): preferencia
+  // de este navegador. Las columnas salen del ancho real de la lista (utils/marketGrid.js).
+  const [viewMode, setViewMode] = useStoredChoice('market_view', ['grid', 'list']);
+  const [gridDensity, setGridDensity] = useStoredChoice('market_density', ['comfortable', 'compact']);
   const [isLoading, setIsLoading] = useState(true);
   const [tournamentData, setTournamentData] = useState(null);
   const [broadcastOverlayData, setBroadcastOverlayData] = useState(DEFAULT_BROADCAST_OVERLAY);
@@ -386,6 +387,10 @@ function App() {
   }, []);
   useEffect(() => () => {
     if (statusMessageTimeoutRef.current) clearTimeout(statusMessageTimeoutRef.current);
+  }, []);
+  const closeStatusMessage = useCallback(() => setStatusMessage({ type: '', text: '' }), []);
+  const dismissSigningToast = useCallback(toastId => {
+    setSigningToasts(prev => prev.filter(t => t.toastId !== toastId));
   }, []);
   const [compareList, setCompareList] = useState([]);
   const [isComparisonModalVisible, setIsComparisonModalVisible] = useState(false);
@@ -454,7 +459,6 @@ function App() {
   const getPrivateCartCollectionRef = useCallback((uid) => collection(db, `artifacts/${APP_ID}/users/${uid}/cart`), []);
   const getPrivateCartDocRef = useCallback((uid, playerId) => doc(db, `artifacts/${APP_ID}/users/${uid}/cart`, String(playerId)), []);
   const getPublicLocksCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/player_locks`), []);
-  const getPublicLockDocRef = useCallback((playerId) => doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(playerId)), []);
   const getPublicTeamsCollectionRef = useCallback(() => collection(db, `artifacts/${APP_ID}/public/data/teams`), []);
   const getMarketStatusDocRef = useCallback(() => doc(db, `artifacts/${APP_ID}/public/data/config`, 'market'), []);
   const getBroadcastOverlayDocRef = useCallback(() => doc(db, `artifacts/${APP_ID}/public/data/broadcast`, 'overlay'), []);
@@ -470,6 +474,7 @@ function App() {
     isAdmin,
     isAuthReady,
     needsGoogleLinking,
+    setNeedsGoogleLinking,
     authError,
     setAuthError,
     marketStatus,
@@ -503,6 +508,10 @@ function App() {
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   // Router-level redirects: keep public routes clean and return logged-out users to landing.
+  useEffect(() => {
+    if (isAuthReady) writeSessionHint(Boolean(user));
+  }, [isAuthReady, user]);
+
   useEffect(() => {
     if (!isAuthReady) return;
 
@@ -551,8 +560,6 @@ function App() {
   useEffect(() => {
     const handleResize = () => {
       setIsMobileViewport(window.innerWidth < 768);
-      setIsSmallMobileViewport(window.innerWidth <= 480);
-      setIsXlViewport(window.innerWidth >= 1280);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -620,6 +627,7 @@ function App() {
       prefetchTeamsModal,
       prefetchFormationModal,
       prefetchFiltrosModal,
+      prefetchMarketClient,
     ]);
   }, [hasLoadedPlayerDatabase]);
 
@@ -667,8 +675,34 @@ function App() {
   }, []);
 
 
-  const { cart, playerLocks, isLocksLoaded, allTeams, userProfile } = useFirebaseData(
+  const { cart, isCartSynced, playerLocks, isLocksLoaded, isLocksSynced, allTeams, isTeamsLoaded, userProfile } = useFirebaseData(
     userId, isAuthReady, getPrivateCartCollectionRef, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, getPrivateProfileRef, setAppError, setIsLoading, showStatusMessage);
+
+  const playerById = useMemo(() => {
+    const map = new Map();
+    allPlayers.forEach((player) => {
+      map.set(String(player.Id), player);
+    });
+    return map;
+  }, [allPlayers]);
+
+  // player_locks manda: el carrito privado, el presupuesto del perfil y la plantilla pública se alinean con él.
+  const { needsCatalog: squadNeedsCatalog } = useSquadSync({
+    userId, userProfile, cart, isCartSynced, playerLocks, isLocksSynced, allTeams, playerById,
+    getPrivateCartDocRef, getPrivateProfileRef, getPublicTeamRef,
+  });
+
+  // Mercado programado: re-renderizar en el momento de apertura (antes la pantalla de mantenimiento
+  // seguía hasta que otra cosa cambiara). setTimeout acepta hasta ~24,8 días; más lejos, se reprograma.
+  const [, setMarketClock] = useState(0);
+  const scheduledOpenAt = marketStatus?.status === 'scheduled' ? parseOpenTime(marketStatus.openTime)?.getTime() : null;
+  useEffect(() => {
+    if (!scheduledOpenAt) return undefined;
+    const wait = scheduledOpenAt - Date.now();
+    if (wait <= 0) return undefined;
+    const timer = setTimeout(() => setMarketClock(tick => tick + 1), Math.min(wait + 500, 2147483000));
+    return () => clearTimeout(timer);
+  }, [scheduledOpenAt]);
   const shouldLoadPlayerDatabase = useMemo(() => {
     if (isSpecialMode || location.pathname.startsWith('/overlay') || location.pathname.startsWith('/team/') || location.pathname.startsWith('/tactics/view/')) {
       return false;
@@ -676,8 +710,9 @@ function App() {
     if (location.pathname === '/' || location.pathname === '/login') return false;
     const tabsThatNeedPlayers = new Set(['Marketplace', 'My Team', 'Tactics', 'Scouting', 'Other Teams']);
     const modalsThatNeedPlayers = new Set(['filters', 'cart', 'teams', 'compare']);
-    return tabsThatNeedPlayers.has(activeTab) || modalsThatNeedPlayers.has(modalRoute) || Boolean(selectedPlayerId) || compareList.length > 0;
-  }, [activeTab, compareList.length, isSpecialMode, location.pathname, modalRoute, selectedPlayerId]);
+    return tabsThatNeedPlayers.has(activeTab) || modalsThatNeedPlayers.has(modalRoute) || Boolean(selectedPlayerId) || compareList.length > 0
+      || squadNeedsCatalog;
+  }, [activeTab, compareList.length, isSpecialMode, location.pathname, modalRoute, selectedPlayerId, squadNeedsCatalog]);
 
   const dismissedNotifIdsRef = useRef(new Set(
     (() => {
@@ -793,7 +828,6 @@ function App() {
     setAllPlayers([]);
     setCountryMap({});
     setHasLoadedPlayerDatabase(false);
-    setContadorMsg('Reintentando cargar jugadores...');
     setCatalogReloadKey(previous => previous + 1);
   }, []);
 
@@ -801,36 +835,16 @@ function App() {
     if (!shouldLoadPlayerDatabase || hasLoadedPlayerDatabase) return;
     let isCancelled = false;
 
-    fetch('/jugadores.json')
-      .then((res) => {
-        if (!res.ok) throw new Error(`Catálogo no disponible (${res.status})`);
-        return res.json();
-      })
+    // Catálogo compacto (utils/playerCatalog.js): ~9 MB en vez de ~60 MB y una sola pasada para filtrar
+    // glitcheados y normalizar (mismo filtro que el catálogo del servidor, scripts/build-market-catalog.mjs).
+    fetchRawPlayers()
       .then((data) => {
         if (isCancelled) return;
         if (!Array.isArray(data) || data.length === 0) {
           throw new Error('El catálogo no contiene jugadores.');
         }
         setPlayersLoadError('');
-        // PASO 1: Primero limpiamos los jugadores con bugs (stats imposibles) usando la data cruda
-        const cleanPlayers = data.filter(p => {
-          const statsDeCampo = ['Finishing', 'DefensiveAwareness', 'Speed', 'BallControl', 'LowPass'];
-          // Verificamos si tiene stats "glitcheadas" (todo 80 o todo 40)
-          const esBug80 = statsDeCampo.every(key => Number(p[key]) === 80);
-          const esBug40 = statsDeCampo.every(key => Number(p[key]) === 40);
-
-          // Si es un bug, lo sacamos (return false)
-          if (esBug80 || esBug40) return false;
-          return true;
-        });
-
-        // PASO 2: AHORA procesamos los datos limpios para agregar 'searchableName' y arreglar números
-        // Esto es vital para que la búsqueda y los filtros funcionen en el celular
-        const optimizedData = processPlayersData(cleanPlayers);
-
-        // PASO 3: Guardamos la versión final UNA SOLA VEZ
-        setAllPlayers(optimizedData);
-        setContadorMsg("Usa los filtros para encontrar jugadores.");
+        setAllPlayers(buildMarketPlayers(data));
         setHasLoadedPlayerDatabase(true);
       })
       .catch((err) => {
@@ -838,7 +852,6 @@ function App() {
         console.error("Error cargando jugadores.json:", err);
         setAllPlayers([]);
         setPlayersLoadError('No se pudo cargar la base de jugadores. Revisá tu conexión e intentá nuevamente.');
-        setContadorMsg("No se pudieron cargar jugadores.");
       });
 
     fetch('/paises.json')
@@ -902,12 +915,19 @@ function App() {
 
 
 
+  // Devuelve si se guardó: TournamentModal solo sale del modo edición cuando es true.
   const handleUpdateTournament = async (newData) => {
-    if (!isAdmin) return;
+    if (!isAdmin) return false;
     try {
-      await setDoc(getTournamentDocRef(), newData, { merge: true });
-      const completedMatches = (newData.matches || []).filter(match => match.status === 'completed' && match.id);
-      await Promise.all(completedMatches.map(match => setDoc(
+      // Torneo y noticias en un solo batch: antes, si fallaba una noticia, el torneo quedaba guardado, el
+      // aviso decía que no, y al reintentar ya no había resultados "nuevos", así que la noticia no salía nunca.
+      const batch = writeBatch(db);
+      // mergeFields reemplaza cada campo de nivel superior entero (bracket, league, matches…): con merge: true
+      // los mapas se fusionan en profundidad y una clave borrada en el editor nunca se borraba en Firestore.
+      batch.set(getTournamentDocRef(), newData, { mergeFields: Object.keys(newData) });
+      // Noticias solo de resultados nuevos o corregidos; antes cada guardado republicaba todos los partidos.
+      const changedResults = getMatchesWithNewResults(tournamentData?.matches, newData.matches);
+      changedResults.forEach(match => batch.set(
         doc(db, `artifacts/${APP_ID}/public/data/news`, `match-${match.id}`),
         {
           type: 'match_result',
@@ -921,22 +941,28 @@ function App() {
           publishedAt: serverTimestamp(),
         },
         { merge: true }
-      )));
+      ));
+      await batch.commit();
       showStatusMessage('success', 'Torneo actualizado correctamente.');
+      return true;
     } catch (e) {
       console.error(e);
-      showStatusMessage('error', 'Error al guardar datos del torneo.');
+      showStatusMessage('error', 'No se pudo guardar el torneo. Tus cambios siguen en pantalla; probá de nuevo.');
+      return false;
     }
   };
 
-  const handleUpdateBroadcastOverlay = async (newData) => {
-    if (!isAdmin) return;
+  // Devuelve si se guardó. `successMessage` permite un aviso específico (p. ej. "partido al aire").
+  const handleUpdateBroadcastOverlay = async (newData, successMessage = 'Overlay OBS actualizado.') => {
+    if (!isAdmin) return false;
     try {
       await setDoc(getBroadcastOverlayDocRef(), newData, { merge: true });
-      showStatusMessage('success', 'Overlay OBS actualizado.');
+      showStatusMessage('success', successMessage);
+      return true;
     } catch (e) {
       console.error(e);
       showStatusMessage('error', 'Error al guardar overlay OBS.');
+      return false;
     }
   };
 
@@ -984,8 +1010,7 @@ function App() {
 
     players = players.filter(p => {
       if (marketStatus.status === 'FranchiseMarket') {
-        const isFranchiseEligible = p.Age >= FRANCHISE_MIN_AGE && p.OVR_CALCULADO >= FRANCHISE_MIN_OVR && p.OVR_CALCULADO <= FRANCHISE_MAX_OVR;
-        if (!isFranchiseEligible) return false;
+        if (!isFranchiseEligible(p)) return false;
       }
 
       if (f.region) {
@@ -1042,74 +1067,8 @@ function App() {
     return sorted;
   }, [allPlayers, filters, sortConfig, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName]);
 
-  const pageSize = isMobileViewport ? 16 : 64;
-  const [displayCount, setDisplayCount] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 768 ? 16 : 48));
-
-  // Reset displayCount on filter, search or sort change
-  useEffect(() => {
-    setDisplayCount(pageSize);
-  }, [filters, debouncedName, sortConfig, pageSize]);
-
-  const visiblePlayers = useMemo(() => {
-    return filteredPlayers.slice(0, displayCount);
-  }, [filteredPlayers, displayCount]);
-
-  const handleLoadMore = useCallback(() => {
-    setDisplayCount(prev => {
-      if (prev >= filteredPlayers.length) return prev;
-      return Math.min(prev + (isMobileViewport ? 16 : 64), filteredPlayers.length);
-    });
-  }, [isMobileViewport, filteredPlayers.length]);
-
-  const mobileSentinelRef = useRef(null);
-
-  useEffect(() => {
-    if (!isMobileViewport || visiblePlayers.length >= filteredPlayers.length) return;
-    const sentinel = mobileSentinelRef.current;
-
-    // Usar IntersectionObserver nativo de alta eficiencia con umbral suave
-    if (sentinel && typeof IntersectionObserver !== 'undefined') {
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting) {
-          handleLoadMore();
-        }
-      }, { rootMargin: '120px' });
-      observer.observe(sentinel);
-      return () => observer.disconnect();
-    }
-
-    // Fallback optimizado con requestAnimationFrame solo si IntersectionObserver no existe
-    let ticking = false;
-    const scrollContainer = document.getElementById('main-content') || window;
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const el = document.getElementById('main-content');
-          if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 600) {
-            handleLoadMore();
-          }
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [isMobileViewport, visiblePlayers.length, filteredPlayers.length, handleLoadMore]);
-
   // Mantener una función "applyFilters" vacía por si algún componente hijo la pide
   const applyFilters = useCallback(() => { }, []);
-
-  // Mensaje de contador
-  useEffect(() => {
-    if (filteredPlayers.length === 0) setContadorMsg("No se encontraron jugadores.");
-    else if (visiblePlayers.length < filteredPlayers.length) {
-      setContadorMsg(`Mostrando ${visiblePlayers.length} de ${filteredPlayers.length} encontrados (${allPlayers.length} total).`);
-    } else {
-      setContadorMsg(`Mostrando ${filteredPlayers.length} de ${allPlayers.length} jugadores.`);
-    }
-  }, [visiblePlayers.length, filteredPlayers.length, allPlayers.length]);
 
   const resetFilters = useCallback(() => {
     setFilters(prev => ({ ...initialFilters, name: prev.name }));
@@ -1125,8 +1084,16 @@ function App() {
     });
   }, [cart, playerLocks, userId]);
 
+  // Precio en millones para el presupuesto: el del catálogo (igual que el servidor) si ya cargó; si no, el
+  // que quedó en la copia del carrito.
+  const priceOfPlayer = useCallback((playerId) => {
+    if (allPlayers.length) return playerById.get(String(playerId))?.Precio ?? 0;
+    return cart.find(player => String(player.Id) === String(playerId))?.Precio ?? 0;
+  }, [allPlayers.length, playerById, cart]);
+
   // Hook desacoplado de Finanzas y Presupuesto (Fase 2)
   const {
+    budgetBase,
     totalCartCost,
     committedInOffers,
     remainingBudget,
@@ -1135,18 +1102,13 @@ function App() {
     setShowBudgetAlert,
   } = useBudget({
     userProfile,
-    ownedCart,
+    baseBudget: allTeams?.[userId]?.budget,
+    playerLocks,
     userId,
     sentOffers,
+    priceOf: priceOfPlayer,
+    pricesKnown: !squadNeedsCatalog,
   });
-
-  const playerById = useMemo(() => {
-    const map = new Map();
-    allPlayers.forEach((player) => {
-      map.set(String(player.Id), player);
-    });
-    return map;
-  }, [allPlayers]);
 
   const wishlistSet = useMemo(() => {
     return new Set(userProfile?.wishlist || []);
@@ -1156,29 +1118,6 @@ function App() {
     return new Set(compareList.map(player => player.Id));
   }, [compareList]);
 
-  // Antes esto devolvía una clase de Tailwind (para un <div className="grid ...">).
-  // Ahora el Grid virtualizado necesita el número de columnas directamente — se
-  // replican los mismos breakpoints (md=768, xl=1280) que tenía la clase original.
-  const gridColumnCount = useMemo(() => {
-    switch (gridColumns) {
-      case 2: return 2;
-      case 3: return 3;
-      case 4: return isMobileViewport ? 3 : 4;
-      default: return isXlViewport ? 6 : isMobileViewport ? 3 : 4;
-    }
-  }, [gridColumns, isMobileViewport, isXlViewport]);
-
-  // El alto de `.market-player-card-shell` en index.css cambia en 4 franjas (no 3
-  // como se asumió la primera vez) — esto le dice al Grid virtualizado qué tope usar
-  // en cada caso, para que la fila no le quede corta (recorta la card) ni de más
-  // (deja un hueco vacío entre filas, que es justo lo que pasaba en celulares chicos:
-  // ahí la card real mide hasta 154px pero la fila se calculaba con 238px).
-  const gridCardMaxHeight = useMemo(() => {
-    if (isXlViewport) return 278;        // >=1280px
-    if (!isMobileViewport) return 252;   // 768-1279px (md)
-    if (isSmallMobileViewport) return 154; // <=480px
-    return 238;                          // 481-767px (mobile base)
-  }, [isMobileViewport, isSmallMobileViewport, isXlViewport]);
 
   // --- ACTIVITY FEED: Detectar fichajes en tiempo real ---
   const isLocksInitializedRef = useRef(false);
@@ -1544,9 +1483,8 @@ function App() {
         showStatusMessage('error', 'Ya has utilizado tu ficha de Jugador Franquicia esta temporada.');
         return false;
       }
-      const isFranchiseEligible = player.Age >= FRANCHISE_MIN_AGE && player.OVR_CALCULADO >= FRANCHISE_MIN_OVR && player.OVR_CALCULADO <= FRANCHISE_MAX_OVR;
-      if (!isFranchiseEligible) {
-        showStatusMessage('error', `El jugador no cumple los requisitos de Jugador Franquicia (Edad ≥ ${FRANCHISE_MIN_AGE} y OVR ${FRANCHISE_MIN_OVR}-${FRANCHISE_MAX_OVR}).`);
+      if (!isFranchiseEligible(player)) {
+        showStatusMessage('error', `El jugador no cumple los requisitos de Jugador Franquicia (${FRANCHISE_RULE_TEXT}).`);
         return false;
       }
     }
@@ -1562,120 +1500,40 @@ function App() {
       return false;
     }
 
-    const lockRef = getPublicLockDocRef(player.Id);
-    const cartRef = getPrivateCartDocRef(userId, player.Id);
-
-    let attempts = 0;
-    const maxAttempts = 3;
-    let lastError;
     showStatusMessage('loading', `Fichando a ${player.Name}...`);
 
-    while (attempts < maxAttempts) {
-      try {
-        await runTransaction(db, async (transaction) => {
-          const lockSnap = await transaction.get(lockRef);
-          if (lockSnap.exists()) {
-            const lockData = lockSnap.data();
-            if (lockData.lockedBy !== userId) {
-              throw new Error(`Jugador bloqueado por ${lockData.teamName}.`);
-            }
-          }
-
-          const profileRef = isFranchise ? getPrivateProfileRef(userId) : null;
-          if (isFranchise) {
-            const profileSnap = await transaction.get(profileRef);
-            if (profileSnap.exists() && profileSnap.data().franchisePlayerUsed) {
-              throw new Error('Ya has utilizado tu ficha de Jugador Franquicia esta temporada.');
-            }
-          }
-
-          transaction.set(lockRef, {
-            lockedBy: userId,
-            teamName: userProfile.teamName,
-            lockedAt: new Date().toISOString(),
-            isFranchise: isFranchise || false
-          });
-
-          transaction.set(cartRef, { ...player, isFranchise: isFranchise || false });
-
-          if (isFranchise) {
-            transaction.update(profileRef, {
-              franchisePlayerUsed: true,
-              franchisePlayerId: player.Id
-            });
-          }
-
-          // Registrar en Feed de Fichajes
-          const transferRef = doc(collection(db, `artifacts/${APP_ID}/public/data/transfers`));
-          transaction.set(transferRef, {
-            playerId: player.Id,
-            playerName: player.Name,
-            teamId: userId,
-            teamName: userProfile.teamName,
-            price: isFranchise ? 0 : player.Precio,
-            isFranchise: isFranchise || false,
-            timestamp: serverTimestamp()
-          });
-        });
-
-        showStatusMessage('success', `¡${player.Name} fichado exitosamente!`);
-        return true;
-
-      } catch (e) {
-        lastError = e;
-        if (e.code === 'permission-denied') {
-          console.warn(`Permiso denegado al intentar fichar. Reintentando (${attempts + 1}/${maxAttempts})...`);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          attempts++;
-        } else {
-          break; // Break if it's not a permission error
-        }
-      }
+    try {
+      // El servidor valida precio, presupuesto, mercado y franquicia, y escribe lock, perfil y feed.
+      await signPlayerOnServer({ playerId: player.Id, isFranchise: Boolean(isFranchise) });
+    } catch (e) {
+      console.error('Error al fichar: ', e);
+      showStatusMessage('error', e?.message || 'No se pudo añadir al jugador.');
+      return false;
     }
 
-    console.error("Error en la transacción de compra: ", lastError);
-    const errorMessage = lastError.code === 'permission-denied'
-      ? 'Error de permisos con el servidor al fichar. Reintenta en unos instantes.'
-      : (lastError.message || 'No se pudo añadir al jugador.');
-    showStatusMessage('error', errorMessage);
-    return false;
-  }, [userId, userProfile, remainingBudget, playerLocks, getPublicLockDocRef, getPrivateCartDocRef, db, showStatusMessage]);
+    // La copia privada del carrito la crea useSquadSync cuando llega el lock: escribirla antes la dejaría
+    // sin lock un instante y la sincronización la borraría.
+    showStatusMessage('success', `¡${player.Name} fichado exitosamente!`);
+    return true;
+  }, [userId, userProfile, remainingBudget, playerLocks, marketStatus, showStatusMessage]);
 
-  const handleRemoveFromCart = useCallback(async (player) => {
+  const handleRemoveFromCart = useCallback(async (player, { confirmed: alreadyConfirmed = false } = {}) => {
     if (!userId || !player) return;
 
-    const confirmed = window.confirm(`¿Estás seguro de que deseas liberar a ${player.Name || 'este jugador'} de tu equipo? Su bloqueo quedará disponible para otros managers.`);
+    const confirmed = alreadyConfirmed || window.confirm(`¿Estás seguro de que deseas liberar a ${player.Name || 'este jugador'} de tu equipo? Su bloqueo quedará disponible para otros managers.`);
     if (!confirmed) return;
-
-    const lockRef = getPublicLockDocRef(player.Id);
-    const cartRef = getPrivateCartDocRef(userId, player.Id);
 
     try {
       showStatusMessage('loading', `Liberando a ${player.Name}...`);
-      const batch = writeBatch(db);
-      batch.delete(lockRef);
-      batch.delete(cartRef);
-      await batch.commit();
-
-      // Also remove from transfer feed so it disappears for everyone
-      try {
-        const transfersRef = collection(db, `artifacts/${APP_ID}/public/data/transfers`);
-        const q = query(transfersRef, where('playerId', '==', player.Id), where('teamId', '==', userId));
-        const snap = await getDocs(q);
-        const deleteBatch = writeBatch(db);
-        snap.docs.forEach(d => deleteBatch.delete(d.ref));
-        if (!snap.empty) await deleteBatch.commit();
-      } catch (feedErr) {
-        // Non-critical — feed cleanup failure shouldn't block release
-        console.warn('Transfer feed cleanup failed:', feedErr);
-      }
-
+      // El servidor borra lock, carrito, el fichaje del feed y la plantilla pública, y cierra las ofertas
+      // abiertas por el jugador (antes quedaban reteniendo el dinero de los compradores).
+      await releasePlayerOnServer({ playerId: player.Id });
       showStatusMessage('success', `${player.Name} eliminado de tu equipo.`);
     } catch (e) {
-      console.error("Error al eliminar del carrito: ", e);
-      showStatusMessage('error', 'No se pudo eliminar al jugador.');
+      console.error('Error al liberar al jugador: ', e);
+      showStatusMessage('error', e?.message || 'No se pudo liberar al jugador.');
     }
-  }, [userId, getPublicLockDocRef, getPrivateCartDocRef, showStatusMessage]);
+  }, [userId, showStatusMessage]);
 
   const handleOpenPlayerFromCart = (player) => {
     handleOpenPlayerModal(player.Id);
@@ -1786,6 +1644,7 @@ function App() {
             allPlayers={allPlayers}
             initialTab={effectiveTab}
             userTeamName={userProfile?.teamName}
+            isBroadcast={isObsMode}
           />
         </Suspense>
         <style>{`
@@ -1797,31 +1656,8 @@ function App() {
     );
   }
 
+  // /torneo?mode=obs no llega acá: el bloque isSpecialMode de arriba ya resuelve todo ?mode=obs.
   if (location.pathname.startsWith('/torneo')) {
-    if (isObsMode) {
-      if (!tournamentData)
-        return <div className="min-h-screen bg-transparent flex items-center justify-center text-white font-bold tracking-widest uppercase animate-pulse">Cargando Torneo...</div>;
-
-      return (
-        <div className="min-h-screen bg-canvas text-slate-200">
-          <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
-            <TournamentModal
-              isVisible={true}
-              onClose={() => { navigate('/marketplace'); }}
-              tournamentData={tournamentData}
-              isAdmin={false}
-              onUpdateTournament={handleUpdateTournament}
-              allTeams={allTeams}
-              allPlayers={allPlayers}
-              initialTab={initialTab}
-              isPage={true}
-              userTeamName={userProfile?.teamName}
-            />
-          </Suspense>
-        </div>
-      );
-    }
-
     if (!isAuthReady) {
       return <LoadingScreen message="Cargando torneo..." />;
     }
@@ -1869,6 +1705,25 @@ function App() {
 
   const isPublicAuthRoute = location.pathname === '/' || location.pathname === '/login';
 
+  // Landing y login se dibujan sin esperar a Firebase Auth cuando no había sesión (utils/sessionHint.js).
+  if (isPublicAuthRoute && (isAuthReady || !readSessionHint())) {
+    if (user) return <LoadingScreen message="Entrando..." />;
+    return (
+      <Suspense fallback={<LoadingScreen message={location.pathname === '/' ? "Cargando inicio..." : "Cargando login..."} />}>
+        {location.pathname === '/' ? (
+          <LandingPage onEnter={() => navigate('/login')} />
+        ) : (
+          <LoginScreen
+            auth={auth}
+            db={db}
+            externalError={authError}
+            onBackToLanding={() => navigate('/')}
+          />
+        )}
+      </Suspense>
+    );
+  }
+
   if (!isAuthReady) {
     return <LoadingScreen message="Conectando al servidor..." />;
   }
@@ -1903,13 +1758,10 @@ function App() {
               allPlayers={allPlayers}
               initialTab={tournamentOverlayTab}
               userTeamName={userProfile?.teamName}
+              isBroadcast={true}
             />
           </Suspense>
-          <style>{`
-            body, html { background: transparent !important; }
-            .lucide-x, .border-b button { display: none !important; }
-            .flex.border-b.border-slate-700 { display: none !important; }
-          `}</style>
+          <style>{`body, html { background: transparent !important; }`}</style>
         </div>
       );
     }
@@ -1924,30 +1776,13 @@ function App() {
     );
   }
 
-  if (isPublicAuthRoute) {
-    if (user) return <LoadingScreen message="Entrando..." />;
-    return (
-      <Suspense fallback={<LoadingScreen message={location.pathname === '/' ? "Cargando inicio..." : "Cargando login..."} />}>
-        {location.pathname === '/' ? (
-          <LandingPage onEnter={() => navigate('/login')} />
-        ) : (
-          <LoginScreen
-            auth={auth}
-            db={db}
-            externalError={authError}
-            onBackToLanding={() => navigate('/')}
-          />
-        )}
-      </Suspense>
-    );
-  }
 
   if (!user) {
     return <LoadingScreen message="Volviendo al inicio..." />;
   }
 
   if (isLoading || marketStatus.status === 'loading') {
-    return <LoadingScreen message="Conectando al servidor..." />;
+    return <LoadingScreen message="Conectando al servidor..." error={appError} />;
   }
 
   if (needsGoogleLinking) {
@@ -1955,23 +1790,11 @@ function App() {
   }
 
   if (!userProfile) {
-    return <LoadingScreen message="Cargando perfil de usuario..." />;
+    return <LoadingScreen message="Cargando perfil de usuario..." error={appError} />;
   }
 
-  const isMarketOpen = () => {
-    if (isAdmin) return true;
-
-    const team = allTeams[userId];
-    if (team?.inWhitelist) return true;
-
-    if (marketStatus.status === 'open' || marketStatus.status === 'FranchiseMarket') return true;
-    if (marketStatus.status === 'scheduled' && marketStatus.openTime) {
-      return new Date() > new Date(marketStatus.openTime);
-    }
-    return false;
-  };
-
-  if (!isMarketOpen()) {
+  // Misma regla que el servidor (supabase/functions/_shared/market.js).
+  if (!isMarketOpenFor(marketStatus, allTeams[userId], isAdmin)) {
     return (
       <>
         <MaintenanceScreen
@@ -2073,10 +1896,10 @@ function App() {
           <div className="flex-1 overflow-hidden w-full flex relative">
 
             {/* CENTER VIEW - MARKETPLACE MULTIPLEXING */}
-            <main data-app-tour="main" className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7 flex flex-col bg-canvas" id="main-content" tabIndex={-1}>
+            <main data-app-tour="main" className={`flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7 flex flex-col bg-canvas ${compareList.length > 0 ? 'pb-32 lg:pb-32' : ''}`} id="main-content" tabIndex={-1}>
               {/* VISTA RESUMEN / INICIO (SOFASCORE STYLE) */}
               {activeTab === 'Overview' && (
-                <div className="animate-in fade-in duration-200">
+                <div className="animate-in fade-in">
                   <OverviewTab
                     userProfile={userProfile}
                     remainingBudget={remainingBudget}
@@ -2091,202 +1914,46 @@ function App() {
                 </div>
               )}
 
-              {/* Render content based on active tab, for now Marketplace is the main functional view */}
-              <div data-app-tour="marketplace" className={`${activeTab === 'Marketplace' ? (isMobileViewport ? 'flex flex-col' : 'flex-1 min-h-0 flex flex-col') : 'hidden'} animate-in fade-in duration-200`}>
-
-                {/* Header superior */}
-                <div className="shrink-0">
-                <PageHeader eyebrow="Mercado" title="Mercado de pases" className="mb-5"
-                  description="Buscá, compará y fichá jugadores. Los que tienen candado ya están en el carrito de otro club." />
-                <SearchBar
-                  filters={filters}
-                  setFilters={setFilters}
-                  resetFilters={resetFilters}
-                  setIsFiltrosModalVisible={(value) => value ? openModalRoute('filters') : closeModalRoute(setIsFiltrosModalVisible)}
-                  sortConfig={sortConfig}
-                  setSortConfig={setSortConfig}
-                  viewMode={viewMode}
-                  setViewMode={setViewMode}
-                  gridColumns={gridColumns}
-                  setGridColumns={setGridColumns}
-                  resultCount={isMobileViewport ? visiblePlayers.length : filteredPlayers.length}
-                  totalCount={filteredPlayers.length}
-                />
-
-                {(playersLoadError || countriesLoadError) && (
-                  <div className="mb-4 space-y-2">
-                    {playersLoadError && (
-                      <Alert tone="danger" title="No se pudo cargar la base de jugadores"
-                        action={<button type="button" onClick={retryPlayerCatalog} className="btn btn-danger btn-sm">Reintentar</button>}>
-                        {playersLoadError}
-                      </Alert>
-                    )}
-                    {countriesLoadError && <Alert tone="warning">{countriesLoadError}</Alert>}
-                  </div>
-                )}
-
-                {/* ── BUDGET WARNING BANNER ── */}
-                {budgetPercent <= 20 && budgetPercent > 0 && (
-                  <Alert tone={budgetPercent <= 10 ? 'danger' : 'warning'} className="mb-4">
-                    Te queda menos del <span className="num">{budgetPercent <= 10 ? 10 : 20}%</span> del presupuesto: el saldo exacto está arriba, junto al escudo.
-                  </Alert>
-                )}
-
-                {smartRecommendations.length > 0 && (
-                  <RecommendationsAccordion
-                    recommendations={smartRecommendations}
-                    remainingBudget={remainingBudget}
-                    onSelectPlayer={handleOpenPlayerModal}
-                  />
-                )}
-                {remainingBudget > 0 && remainingBudget < 1000000 && allPlayers.length > 0 && smartRecommendations.length === 0 && (
-                  <Alert tone="info" title="Tu presupuesto no alcanza para más fichajes" className="mb-5">
-                    Liberá jugadores o negociá ventas desde «Plantel y finanzas» para ampliar el saldo.
-                  </Alert>
-                )}
-                </div>
-                {/* Fin del header */}
-
-                <div className={isMobileViewport ? "mt-1 flex flex-col" : "flex-1 min-h-0 mt-1 flex flex-col"} data-app-tour="players" id="player-list">
-                  {!hasLoadedPlayerDatabase && allPlayers.length === 0 ? (
-                    <div className="space-y-4 my-4" role="status" aria-label="Cargando jugadores">
-                      <p className="text-xs text-ink-3">Cargando la base de datos de PES 2021…</p>
-                      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6" aria-hidden="true">
-                        {[...Array(12)].map((_, i) => <div key={i} className="skeleton h-44 rounded-2xl" />)}
-                      </div>
-                    </div>
-                  ) : filteredPlayers.length === 0 ? (
-                    <EmptyState icon={Search} title="No se encontraron jugadores" className="my-6"
-                      description="Ningún jugador coincide con los filtros o la búsqueda actual.">
-                      <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
-                        <button type="button" onClick={() => { resetFilters(); setFilters(initialFilters); }} className="btn btn-primary">
-                          Restablecer filtros
-                        </button>
-                        <button type="button" onClick={() => openModalRoute('filters')} className="btn btn-secondary">
-                          Ajustar filtros
-                        </button>
-                      </div>
-                    </EmptyState>
-                  ) : isMobileViewport ? (
-                    <div className={viewMode === 'list'
-                      ? 'space-y-2.5'
-                      : `grid gap-3 sm:gap-4 ${
-                          gridColumns === 2
-                            ? 'grid-cols-2'
-                            : gridColumns === 3
-                              ? 'grid-cols-3'
-                              : gridColumns === 4
-                                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'
-                                : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6'
-                        }`
-                    }>
-                      {visiblePlayers.map(player => {
-                        const isLocked = Boolean(playerLocks[player.Id] && playerLocks[player.Id]?.lockedBy !== userId);
-                        const isInMyCart = Boolean(playerLocks[player.Id]?.lockedBy === userId);
-                        const lockedTeam = isLocked && allTeams ? allTeams[playerLocks[player.Id]?.lockedBy] : null;
-
-                        return viewMode === 'list' ? (
-                          <div key={player.Id} className="player-list-item-shell">
-                            <PlayerListItem
-                              player={player}
-                              countryMap={countryMap}
-                              onSelectPlayer={handleOpenPlayerModal}
-                              isInMyCart={isInMyCart}
-                              isLockedByOther={isLocked}
-                              lockedTeamName={isLocked ? playerLocks[player.Id]?.teamName : null}
-                              lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
-                              isWishlisted={wishlistSet.has(player.Id)}
-                              onToggleWishlist={toggleWishlist}
-                              onCompare={handleToggleCompare}
-                              isComparing={comparingIdsSet.has(player.Id)}
-                            />
-                          </div>
-                        ) : (
-                          <div key={player.Id} className="market-player-card-shell">
-                            <PlayerCard
-                              player={player}
-                              countryMap={countryMap}
-                              onSelectPlayer={handleOpenPlayerModal}
-                              isInMyCart={isInMyCart}
-                              isLockedByOther={isLocked}
-                              lockedTeamName={isLocked ? playerLocks[player.Id]?.teamName : null}
-                              lockedTeamLogo={lockedTeam ? lockedTeam.logoUrl : null}
-                              isWishlisted={wishlistSet.has(player.Id)}
-                              onToggleWishlist={toggleWishlist}
-                              onCompare={handleToggleCompare}
-                              isComparing={comparingIdsSet.has(player.Id)}
-                            />
-                          </div>
-                        );
-                      })}
-                      {visiblePlayers.length < filteredPlayers.length && (
-                        <div className="col-span-full py-4 flex flex-col items-center justify-center gap-2">
-                          <div ref={mobileSentinelRef} className="h-6 w-full pointer-events-none" />
-                          <button
-                            type="button"
-                            onClick={handleLoadMore}
-                            className="btn btn-secondary"
-                          >
-                            Cargar más jugadores <span className="num text-ink-3">({visiblePlayers.length} de {filteredPlayers.length})</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex-1 min-h-0">
-                      {viewMode === 'list' ? (
-                        <VirtualizedPlayerList
-                          players={filteredPlayers}
-                          playerLocks={playerLocks}
-                          userId={userId}
-                          allTeams={allTeams}
-                          countryMap={countryMap}
-                          wishlistSet={wishlistSet}
-                          comparingIdsSet={comparingIdsSet}
-                          onSelectPlayer={handleOpenPlayerModal}
-                          onToggleWishlist={toggleWishlist}
-                          onCompare={handleToggleCompare}
-                          overscanCount={6}
-                          onPlayerMouseEnter={!isMobileViewport ? hoverPreview.show : undefined}
-                          onPlayerMouseLeave={!isMobileViewport ? hoverPreview.hide : undefined}
-                        />
-                      ) : (
-                        <VirtualizedPlayerGrid
-                          players={filteredPlayers}
-                          columnCount={gridColumnCount}
-                          playerLocks={playerLocks}
-                          userId={userId}
-                          allTeams={allTeams}
-                          countryMap={countryMap}
-                          wishlistSet={wishlistSet}
-                          comparingIdsSet={comparingIdsSet}
-                          onSelectPlayer={handleOpenPlayerModal}
-                          onToggleWishlist={toggleWishlist}
-                          onCompare={handleToggleCompare}
-                          overscanCount={2}
-                          cardMaxHeight={gridCardMaxHeight}
-                          onPlayerMouseEnter={!isMobileViewport ? hoverPreview.show : undefined}
-                          onPlayerMouseLeave={!isMobileViewport ? hoverPreview.hide : undefined}
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
-                {!isMobileViewport && (
-                  <PlayerPreview
-                    player={hoverPreview.player}
-                    isVisible={hoverPreview.isVisible}
-                    position={hoverPreview.position}
-                    onOpenProfile={handleOpenPlayerModal}
-                  />
-                )}
-              </div> {/* End Marketplace Container*/}
+              <MarketplaceView
+                isActive={activeTab === 'Marketplace'}
+                isMobileViewport={isMobileViewport}
+                filters={filters}
+                setFilters={setFilters}
+                resetFilters={resetFilters}
+                onClearSearchAndFilters={() => setFilters(initialFilters)}
+                onOpenFilters={() => openModalRoute('filters')}
+                sortConfig={sortConfig}
+                setSortConfig={setSortConfig}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                density={gridDensity}
+                setDensity={setGridDensity}
+                players={filteredPlayers}
+                isCatalogLoading={!hasLoadedPlayerDatabase && allPlayers.length === 0}
+                playersLoadError={playersLoadError}
+                countriesLoadError={countriesLoadError}
+                onRetryCatalog={retryPlayerCatalog}
+                budgetPercent={budgetPercent}
+                recommendations={smartRecommendations}
+                showBudgetExhausted={remainingBudget > 0 && remainingBudget < 1000000 && allPlayers.length > 0 && smartRecommendations.length === 0}
+                isFranchiseMarket={marketStatus.status === 'FranchiseMarket'}
+                hasUsedFranchise={Boolean(userProfile?.franchisePlayerUsed)}
+                franchisePlayerName={userProfile?.franchisePlayerId ? playerById.get(String(userProfile.franchisePlayerId))?.Name : null}
+                playerLocks={playerLocks}
+                userId={userId}
+                allTeams={allTeams}
+                wishlistSet={wishlistSet}
+                comparingIdsSet={comparingIdsSet}
+                onSelectPlayer={handleOpenPlayerModal}
+                onToggleWishlist={toggleWishlist}
+                onCompare={handleToggleCompare}
+              />
 
 
               {/* VISTAS MODULARES EN LUGAR DE PLACEHOLDERS */}
               <Suspense fallback={null}>
                 {activeTab === 'My Team' && (
-                  <div className="animate-in fade-in duration-200 h-full w-full">
+                  <div className="animate-in fade-in h-full w-full">
                     <CartModal
                       isVisible={true}
                       onClose={() => setActiveTab('Overview')}
@@ -2295,6 +1962,9 @@ function App() {
                       onRemoveFromCart={handleRemoveFromCart}
                       userProfile={userProfile}
                       userId={userId}
+                      isSquadLoading={!isCartSynced && ownedCart.length === 0}
+                      budgetBase={budgetBase}
+                      budgetPercent={budgetPercent}
                       totalCartCost={totalCartCost}
                       remainingBudget={remainingBudget}
                       committedInOffers={committedInOffers}
@@ -2312,7 +1982,7 @@ function App() {
                   </div>
                 )}
                 {activeTab === 'Tactics' && (
-                  <div className="animate-in fade-in duration-200 h-full w-full">
+                  <div className="animate-in fade-in h-full w-full">
                     <FormationModal
                       isVisible={true}
                       onClose={() => navigate('/my-team')}
@@ -2328,7 +1998,7 @@ function App() {
                   </div>
                 )}
                 {activeTab === 'Scouting' && (
-                  <div className="animate-in fade-in duration-200 h-full w-full">
+                  <div className="animate-in fade-in h-full w-full">
                     <ScoutAssignmentsPanel
                       db={db}
                       userId={userId}
@@ -2349,11 +2019,13 @@ function App() {
                   </div>
                 )}
                 {activeTab === 'Other Teams' && (
-                  <div className="animate-in fade-in duration-200 h-full w-full">
+                  <div className="animate-in fade-in h-full w-full">
                     <TeamsModal
                       isVisible={true}
                       onClose={() => setActiveTab('Marketplace')}
                       allTeams={allTeams}
+                      currentUserId={userId}
+                      isLoading={!isTeamsLoaded || !isLocksLoaded || !hasLoadedPlayerDatabase}
                       playerLocks={playerLocks}
                       allPlayers={allPlayers}
                       countryMap={countryMap}
@@ -2367,7 +2039,7 @@ function App() {
                   </div>
                 )}
                 {activeTab === 'PES' && hasPesAccess && (
-                  <div className="animate-in fade-in duration-200 h-full w-full overflow-y-auto">
+                  <div className="animate-in fade-in h-full w-full overflow-y-auto">
                     <Suspense fallback={null}>
                       <PesWorkspaceScreen userId={userId} isAdmin={isAdmin} allTeams={allTeams} appPlayers={allPlayers} />
                     </Suspense>
@@ -2388,7 +2060,7 @@ function App() {
                   </div>
                 )}
                 {activeTab === 'Admin' && isAdmin && (
-                  <div className="animate-in fade-in duration-200 h-full w-full">
+                  <div className="animate-in fade-in h-full w-full">
                     <AdminModal
                       isVisible={true}
                       isPage={true}
@@ -2408,6 +2080,8 @@ function App() {
                       storage={storage}
                       db={db}
                       showStatusMessage={showStatusMessage}
+                      tournamentData={tournamentData}
+                      onUpdateTournament={handleUpdateTournament}
                       onOpenTournamentModal={() => setIsTournamentModalVisible(true)}
                     />
                   </div>
@@ -2486,6 +2160,7 @@ function App() {
         userId={userId}
         getSavedFiltersCollectionRef={getSavedFiltersCollectionRef}
         showStatusMessage={showStatusMessage}
+        resultCount={filteredPlayers.length}
       />
 
       <PlayerModal
@@ -2529,6 +2204,9 @@ function App() {
           onRemoveFromCart={handleRemoveFromCart}
           userProfile={userProfile}
           userId={userId}
+          isSquadLoading={!isCartSynced && ownedCart.length === 0}
+          budgetBase={budgetBase}
+          budgetPercent={budgetPercent}
           totalCartCost={totalCartCost}
           remainingBudget={remainingBudget}
           committedInOffers={committedInOffers}
@@ -2546,6 +2224,8 @@ function App() {
         isVisible={isTeamsModalVisible || modalRoute === 'teams'}
         onClose={() => closeModalRoute(setIsTeamsModalVisible)}
         allTeams={allTeams}
+        currentUserId={userId}
+        isLoading={!isTeamsLoaded || !isLocksLoaded || !hasLoadedPlayerDatabase}
         playerLocks={playerLocks}
         allPlayers={allPlayers}
         countryMap={countryMap}
@@ -2608,7 +2288,7 @@ function App() {
         <FormationModal
           isVisible={true}
           onClose={() => closeModalRoute(setIsFormationModalVisible)}
-          cart={cart}
+          cart={ownedCart}
           userProfile={userProfile}
           userId={userId}
           getPrivateProfileRef={getPrivateProfileRef}
@@ -2702,159 +2382,17 @@ function App() {
         </div>
       )}
 
-      {/* STATUS ALERT — global feedback messages */}
-      {statusMessage.text && (
-        <StatusAlert
-          type={statusMessage.type}
-          message={statusMessage.text}
-          onClose={() => setStatusMessage({ type: '', text: '' })}
-        />
-      )}
-
-      {/* SIGNING TOASTS — live transfer activity */}
-      <div className="fixed bottom-6 right-6 z-[120] flex flex-col gap-3 pointer-events-none" style={{ maxWidth: '380px' }}>
-        {signingToasts.map(toast => (
-          <div
-            key={toast.toastId}
-            role="button"
-            tabIndex={0}
-            aria-label={`Ver fichaje: ${toast.teamName} fichó a ${toast.playerName}`}
-            onClick={() => handleToastClick(toast)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleToastClick(toast);
-              }
-            }}
-            className="pointer-events-auto cursor-pointer panel hover:border-line/30 transition-colors rounded-xl p-3 flex items-center gap-3 group animate-in slide-in-from-right"
-            style={{ borderLeft: `4px solid ${toast.posColor}` }}
-          >
-            <img
-              src={`/fotos_jugadores/${toast.playerId}.webp`}
-              alt=""
-              width={40}
-              height={40}
-              className="w-10 h-10 rounded-lg object-cover bg-raised shrink-0"
-              onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm text-ink-2 leading-snug">
-                <span className="font-semibold text-ink">{toast.teamName}</span>{' '}fichó a{' '}
-                <span className="font-semibold text-ink">{toast.playerName}</span>
-              </p>
-              <p className="text-xs text-ink-3 mt-0.5">
-                <span className="num">{toast.ovr}</span> OVR · {toast.pos}
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-accent-soft shrink-0">Ver</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSigningToasts(prev => prev.filter(t => t.toastId !== toast.toastId));
-              }}
-              type="button"
-              className="w-8 h-8 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-white/10 shrink-0"
-              title="Cerrar aviso"
-              aria-label="Cerrar aviso"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ))}
-      </div>
+      {/* TOASTS — global feedback and rivals' signings, one stack */}
+      <ToastStack
+        statusMessage={statusMessage}
+        onCloseStatus={closeStatusMessage}
+        signingToasts={signingToasts}
+        onOpenSigning={handleToastClick}
+        onDismissSigning={dismissSigningToast}
+        isAboveTray={compareList.length > 0}
+      />
     </>
   );
-
-  // Auto-sync: Sincronizar cart privado cuando playerLocks asigna o quita jugadores (ej. traspasos aceptados)
-  useEffect(() => {
-    if (!userId || !playerLocks) return;
-
-    // 1. Si un jugador está bloqueado por este usuario pero aún no está en su cart privado, añadirlo
-    // (Requiere allPlayers para datos completos del jugador)
-    if (allPlayers?.length) {
-      Object.entries(playerLocks).forEach(([playerId, lock]) => {
-        if (lock.lockedBy === userId && !cart.some(p => String(p.Id) === String(playerId))) {
-          const fullPlayer = playerById.get(String(playerId));
-          if (fullPlayer) {
-            setDoc(getPrivateCartDocRef(userId, playerId), { ...fullPlayer, isFranchise: Boolean(lock.isFranchise) })
-              .catch(err => console.error('Error auto-sync agregando a cart:', err));
-          }
-        }
-      });
-    }
-
-    // 2. Si un jugador está en el cart privado pero playerLocks indica que pertenece a otro usuario, removerlo
-    // (NO requiere allPlayers — funciona siempre que haya locks y cart)
-    cart.forEach(p => {
-      const lock = playerLocks[String(p.Id)];
-      if (lock && lock.lockedBy && lock.lockedBy !== userId) {
-        deleteDoc(getPrivateCartDocRef(userId, p.Id))
-          .catch(err => console.error('Error auto-sync removiendo de cart:', err));
-      }
-    });
-
-    // 3. Sincronizar presupuesto de perfil si difiere del presupuesto público (actualizado por traspasos)
-    // (NO requiere allPlayers)
-    const publicBudget = Number(allTeams?.[userId]?.budget);
-    const privateBudget = Number(userProfile?.budget);
-    if (!isNaN(publicBudget) && userProfile && publicBudget !== privateBudget) {
-      setDoc(getPrivateProfileRef(userId), { budget: publicBudget }, { merge: true })
-        .catch(err => console.error('Error auto-sync actualizando presupuesto de perfil:', err));
-    }
-  }, [playerLocks, cart, allTeams, userProfile, userId, allPlayers, playerById, getPrivateCartDocRef, getPrivateProfileRef]);
-
-  // Keep a compact, public squad snapshot so the public team board can show
-  // both the XI and the substitutes without exposing the private cart.
-  // IMPORTANT: roster = union(cart, playerLocks owned by userId) to avoid
-  // overwriting a roster that was just updated by a transfer transaction
-  // before the private cart auto-sync had a chance to propagate.
-  useEffect(() => {
-    if (!userId || !userProfile) return;
-
-    const cartIds = new Set(cart.map(p => String(p.Id)));
-
-    // Include players locked by this user that are not yet in the local cart
-    // (race window between transaction commit and cart onSnapshot delivery)
-    const lockedNotInCart = playerLocks
-      ? Object.entries(playerLocks)
-          .filter(([pid, lock]) => lock.lockedBy === userId && !cartIds.has(String(pid)))
-          .map(([pid, lock]) => {
-            const p = playerById?.get(String(pid));
-            return p ? {
-              Id: String(p.Id),
-              Name: p.Name || 'Jugador',
-              POS_NOMBRE: p.POS_NOMBRE || '',
-              OVR_CALCULADO: Number(p.OVR_CALCULADO) || 0,
-              dorsal: userProfile.dorsals?.[pid] || '',
-              available: userProfile.availability?.[pid] !== false,
-            } : null;
-          })
-          .filter(Boolean)
-      : [];
-
-    // Only include cart players still owned by this user according to playerLocks
-    // (Prevents overwriting a clean roster written by a transfer transaction)
-    const ownedCartPlayers = cart.filter(player => {
-      const lock = playerLocks?.[String(player.Id)];
-      // Keep if: no lock info, no lockedBy, or lockedBy is this user
-      return !lock || !lock.lockedBy || lock.lockedBy === userId;
-    });
-
-    const roster = [
-      ...ownedCartPlayers.map(player => ({
-        Id: String(player.Id),
-        Name: player.Name || 'Jugador',
-        POS_NOMBRE: player.POS_NOMBRE || '',
-        OVR_CALCULADO: Number(player.OVR_CALCULADO) || 0,
-        dorsal: userProfile.dorsals?.[player.Id] || '',
-        available: userProfile.availability?.[player.Id] !== false,
-      })),
-      ...lockedNotInCart,
-    ];
-
-    setDoc(getPublicTeamRef(userId), { roster, rosterUpdatedAt: new Date().toISOString() }, { merge: true })
-      .catch(error => console.error('Error sincronizando plantilla pública:', error));
-  }, [cart, playerLocks, playerById, getPublicTeamRef, userId, userProfile]);
 }
 
 export default firebaseInitializationError ? FirebaseError : App; 

@@ -3,6 +3,18 @@ import { CalendarDays, Trash2, Goal, Star, Check } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { TournamentActionButton, TournamentPanel, TournamentSectionTitle } from '../TournamentUI.jsx';
 import { TeamSelect } from './TournamentTeamsContext.jsx';
+import { hasScore } from '../../utils/bracketModel.js';
+
+// El motor (tournamentEngine.js) lee "Nombre" o "Nombre x2" separados por coma; un minuto ("23'") quedaría
+// como parte del nombre y partiría al goleador en dos filas.
+const SCORERS_HINT = 'Separá con comas; "x2" para dobletes. Ej.: Haaland x2, Foden';
+
+const EDIT_FIELDS = [
+  { field: 'homeGoals', label: 'Goles local', placeholder: 'Haaland x2, Foden' },
+  { field: 'awayGoals', label: 'Goles visitante', placeholder: 'Mbappé, Vini Jr.' },
+  { field: 'homeAssists', label: 'Asistencias local', placeholder: 'De Bruyne x2' },
+  { field: 'awayAssists', label: 'Asistencias visitante', placeholder: 'Bellingham' },
+];
 
 export const MatchCenter = memo(function MatchCenter({
   matches,
@@ -11,6 +23,7 @@ export const MatchCenter = memo(function MatchCenter({
   onAdd,
   onRemove,
   getTeamLogo,
+  isObsMode = false,
 }) {
   const [selectedRound, setSelectedRound] = useState('all');
 
@@ -49,7 +62,8 @@ export const MatchCenter = memo(function MatchCenter({
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 py-4">
       <TournamentSectionTitle title="CENTRO DE PARTIDOS" subtitle="AGENDA Y RESULTADOS EN VIVO" />
 
-      {/* Selector de Jornadas estilo SofaScore */}
+      {/* Selector de Jornadas estilo SofaScore (no en OBS: ahí nadie puede tocarlo) */}
+      {!isObsMode && (
       <div className="flex items-center justify-between gap-3 mt-4 mb-5 flex-wrap">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full custom-scrollbar -mx-2 px-2">
           <button
@@ -85,6 +99,7 @@ export const MatchCenter = memo(function MatchCenter({
           </TournamentActionButton>
         )}
       </div>
+      )}
 
       {orderedMatches.length === 0 ? (
         <TournamentPanel title="Próximos partidos" icon={CalendarDays} compact>
@@ -113,6 +128,8 @@ export const MatchCenter = memo(function MatchCenter({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {matchesInRound.map(match => {
                   const isCompleted = match.status === 'completed';
+                  // Finalizado sin los dos marcadores: el motor no lo cuenta en la tabla, avisarlo al editar.
+                  const isMissingScore = isCompleted && (!hasScore(match.homeScore) || !hasScore(match.awayScore));
                   const homeScore = Number(match.homeScore) || 0;
                   const awayScore = Number(match.awayScore) || 0;
                   const homeWon = isCompleted && homeScore > awayScore;
@@ -251,9 +268,11 @@ export const MatchCenter = memo(function MatchCenter({
                       {/* Goalscorers & Meta */}
                       <div className="mt-2.5 pt-2 border-t border-line/[0.08] text-[11px] text-ink-3 flex flex-wrap items-center justify-between gap-2">
                         {match.homeGoals || match.awayGoals ? (
-                          <div className="flex items-center gap-1.5 truncate text-ink-2">
+                          <div className="flex items-center gap-1.5 min-w-0 text-ink-2">
                             <Goal className="w-3.5 h-3.5 shrink-0" aria-label="Goles" />
-                            <span className="truncate">{match.homeGoals || match.awayGoals}</span>
+                            <span className="truncate" title={[match.homeGoals, match.awayGoals].filter(Boolean).join(' · ')}>
+                              {[match.homeGoals, match.awayGoals].filter(Boolean).join(' · ')}
+                            </span>
                           </div>
                         ) : (
                           <span className="italic text-[10px] text-ink-3">Sin goles registrados</span>
@@ -273,6 +292,11 @@ export const MatchCenter = memo(function MatchCenter({
                       </div>
 
                       {/* Formulario de Edición */}
+                      {isEditing && isMissingScore && (
+                        <p role="alert" className="mt-2 text-[11px] text-warning-soft">
+                          Marcado como finalizado sin marcador completo: no suma a la tabla hasta cargar los dos resultados.
+                        </p>
+                      )}
                       {isEditing && (
                         <div className="mt-3 pt-3 border-t border-line/[0.12] grid grid-cols-2 gap-2 text-xs">
                           <div>
@@ -314,24 +338,18 @@ export const MatchCenter = memo(function MatchCenter({
                               className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
                             />
                           </div>
-                          <div className="col-span-2">
-                            <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">Goles Local</label>
-                            <input
-                              value={match.homeGoals || ''}
-                              onChange={event => onUpdate(match.id, 'homeGoals', event.target.value)}
-                              placeholder="Ej. Haaland 23', Foden 65'"
-                              className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">Goles Visitante</label>
-                            <input
-                              value={match.awayGoals || ''}
-                              onChange={event => onUpdate(match.id, 'awayGoals', event.target.value)}
-                              placeholder="Ej. Mbappé 45', Vini 89'"
-                              className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
-                            />
-                          </div>
+                          {EDIT_FIELDS.map(({ field, label, placeholder }) => (
+                            <label key={field} className="block">
+                              <span className="text-[10px] text-ink-3 font-bold uppercase block mb-1">{label}</span>
+                              <input
+                                value={match[field] || ''}
+                                onChange={event => onUpdate(match.id, field, event.target.value)}
+                                placeholder={placeholder}
+                                className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
+                              />
+                            </label>
+                          ))}
+                          <p className="col-span-2 text-[10px] text-ink-3">{SCORERS_HINT}</p>
                         </div>
                       )}
                     </article>

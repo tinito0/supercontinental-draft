@@ -4,8 +4,19 @@ import { writeBatch, addDoc, collection, doc, setDoc } from 'firebase/firestore'
 import { Pitch } from './Pitch.jsx';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Tabs } from './ui/Tabs.jsx';
+import { Alert } from './ui/Alert.jsx';
 import { FORMATIONS, APP_ID, DEFAULT_LOGO, DEFAULT_TACTICS } from '../utils/constants.js';
 import { getPosColorClass, formatPriceShort } from '../utils/helpers.js';
+import {
+  normalizeFormationStates, resetForFormation, layoutForState, moveSlot, setFluid, copyBaseTo, resetState,
+  serializeFormationStates, effectiveState, setSlotRole, applyFormationToState, formationKeyForState, TACTICAL_STATES,
+  isGoalkeeperSlot,
+} from '../utils/formationStates.js';
+import { roleUnavailableReason } from '../utils/positionRules.js';
+import { normalizeAdvancedInstructions, toggleInstruction, replaceInstruction } from '../utils/advancedInstructions.js';
+import { TacticalStateBar } from './formation/TacticalStateBar.jsx';
+import { AdvancedInstructionsPanel } from './formation/AdvancedInstructionsPanel.jsx';
+import { PositionPicker } from './formation/PositionPicker.jsx';
 
 export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange }) => (
   <div className={`flex items-center justify-between gap-2 p-2 w-full rounded-lg border transition-colors ${isSelected ? 'bg-accent/15 border-accent/60' : 'bg-raised border-line/[0.12] hover:border-line/30'}`}>
@@ -46,7 +57,8 @@ export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, do
 
 export const TacticsPanel = memo(function TacticsPanel({
   tactics,
-  onTacticsChange
+  onTacticsChange,
+  children,
 }) {
   const currentTactics = { ...DEFAULT_TACTICS, ...(tactics || {}) };
 
@@ -188,6 +200,7 @@ export const TacticsPanel = memo(function TacticsPanel({
               </div>
               {field.type === 'select' ? (
                 <select
+                  aria-label={field.label}
                   value={currentTactics[field.key] ?? field.options[0].value}
                   onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
                   className="select min-h-9 text-sm"
@@ -200,6 +213,7 @@ export const TacticsPanel = memo(function TacticsPanel({
                 <div className="space-y-1 pt-1">
                   <input
                     type="range"
+                    aria-label={field.label}
                     min={field.min}
                     max={field.max}
                     value={currentTactics[field.key] ?? field.min}
@@ -233,6 +247,7 @@ export const TacticsPanel = memo(function TacticsPanel({
               </div>
               {field.type === 'select' ? (
                 <select
+                  aria-label={field.label}
                   value={currentTactics[field.key] ?? field.options[0].value}
                   onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
                   className="select min-h-9 text-sm"
@@ -245,6 +260,7 @@ export const TacticsPanel = memo(function TacticsPanel({
                 <div className="space-y-1 pt-1">
                   <input
                     type="range"
+                    aria-label={field.label}
                     min={field.min}
                     max={field.max}
                     value={currentTactics[field.key] ?? field.min}
@@ -261,6 +277,7 @@ export const TacticsPanel = memo(function TacticsPanel({
           ))}
         </div>
       </div>
+      {children}
     </div>
   );
 });
@@ -353,6 +370,7 @@ export const RolesPanel = memo(function RolesPanel({
               </span>
             </div>
             <select
+              aria-label={label}
               value={currentValue}
               onChange={(e) => onSetPieceChange(key, e.target.value)}
               className="select min-h-9 text-sm"
@@ -377,6 +395,8 @@ export const RolesPanel = memo(function RolesPanel({
 // en Strict Mode— y cada re-invocación volvía a escribir el mismo jugador en el lineup,
 // terminando con el mismo playerId pisado en varios slots a la vez).
 const initialFormationState = { lineup: {}, holdingPlayer: null };
+// Espera tras el último cambio antes de guardar solo (una ráfaga de cambios = una escritura).
+const AUTOSAVE_DELAY_MS = 700;
 
 // Además de sacar jugadores que ya no están en el cart (eso ya lo hacía SANITIZE),
 // esto fuerza unicidad: si el mismo playerId aparece en más de un slot (rastro de
@@ -418,6 +438,16 @@ function formationReducer(state, action) {
       const deduped = dedupeLineup(cleaned);
       if (JSON.stringify(deduped) === JSON.stringify(state.lineup)) return state; // sin cambios, misma referencia
       return { ...state, lineup: deduped };
+    }
+
+    case 'CANCEL_HOLD': {
+      const held = state.holdingPlayer;
+      if (!held) return state;
+      // A player lifted from a slot is out of the lineup while held: put him back if his slot is still free.
+      if (held.from === 'slot' && state.lineup[held.fromSlotIndex] == null) {
+        return { lineup: dedupeLineup({ ...state.lineup, [held.fromSlotIndex]: String(held.player.Id) }), holdingPlayer: null };
+      }
+      return { ...state, holdingPlayer: null };
     }
 
     case 'PICK_FROM_LIST': {
@@ -472,7 +502,6 @@ function formationReducer(state, action) {
 // --- COMPONENTE PRINCIPAL ---
 
 export const FormationModal = memo(function FormationModal({ isVisible, isPage, onClose, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db }) {
-  const [selectedFormation, setSelectedFormation] = useState('4-3-3');
   const [{ lineup, holdingPlayer }, dispatchFormation] = useReducer(formationReducer, initialFormationState);
   const [dorsals, setDorsals] = useState({});
   const [availability, setAvailability] = useState({});
@@ -487,11 +516,24 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const [showSharePopover, setShowSharePopover] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const pitchRef = useRef(null);
-  const sharePopoverRef = useRef(null);
   const shareTimeoutRef = useRef(null);
 
   const [setPieces, setSetPieces] = useState(() => userProfile?.setPieces ? { ...userProfile.setPieces } : {});
   const [tactics, setTactics] = useState(() => userProfile?.tactics ? { ...DEFAULT_TACTICS, ...userProfile.tactics } : DEFAULT_TACTICS);
+  // Inicio de partido / Con pelota / Sin pelota: per-state marker positions (utils/formationStates.js)
+  const [formationStates, setFormationStates] = useState(() => {
+    const key = userProfile?.formation || '4-3-3';
+    return normalizeFormationStates(userProfile?.formationStates, key, FORMATIONS[key]);
+  });
+  // The team's formation lives in formationStates only (one source of truth: the selector, the pitch and the save
+  // can never disagree about which formation the positions belong to).
+  const selectedFormation = formationStates.formation;
+  const [activeState, setActiveState] = useState('base');
+  // "Cambiar posiciones": tapping a marker picks it for a role change instead of picking up the player.
+  const [roleMode, setRoleMode] = useState(false);
+  const [roleSlot, setRoleSlot] = useState(null);
+  const [roleNotice, setRoleNotice] = useState(null);
+  const [advanced, setAdvanced] = useState(() => normalizeAdvancedInstructions(userProfile?.advancedInstructions));
   const [sidebarTab, setSidebarTab] = useState('players'); // 'players' | 'roles' | 'tactics'
 
   // Cleanup timers on unmount
@@ -511,7 +553,10 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
     if (!hasLoadedRef.current && userProfile) {
       hasLoadedRef.current = true;
-      setSelectedFormation(userProfile.formation || '4-3-3');
+      const formationKey = userProfile.formation || '4-3-3';
+      setFormationStates(normalizeFormationStates(userProfile.formationStates, formationKey, FORMATIONS[formationKey]));
+      setActiveState('base');
+      setAdvanced(normalizeAdvancedInstructions(userProfile.advancedInstructions));
       const rawLineup = userProfile.lineup ? { ...userProfile.lineup } : {};
       dispatchFormation({ type: 'LOAD', payload: { lineup: rawLineup } });
       setDorsals(userProfile.dorsals ? { ...userProfile.dorsals } : {});
@@ -536,7 +581,8 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
 
   const starterPlayers = useMemo(() => {
     const clean = sanitizeLineup(lineup);
-    const currentLayout = (FORMATIONS[selectedFormation] || FORMATIONS['4-3-3']).layout || [];
+    // Roles as played at kick-off (Inicio de partido), which is what the set-piece panel and the exports use.
+    const currentLayout = layoutForState(FORMATIONS[selectedFormation] || FORMATIONS['4-3-3'], formationStates, 'base');
     const list = [];
     currentLayout.forEach((slot, index) => {
       const pId = clean[index];
@@ -548,7 +594,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       }
     });
     return list;
-  }, [lineup, selectedFormation, cart, sanitizeLineup]);
+  }, [lineup, selectedFormation, formationStates, cart, sanitizeLineup]);
 
   useEffect(() => {
     if (!cart?.length || (!isVisible && !isPage)) return;
@@ -588,6 +634,90 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     });
   }, []);
 
+  // Every edit of a state or instruction is saved right away, like lineup and strategy changes.
+  // A starter held in hand is out of the lineup until placed: every edit that autosaves puts him back first
+  // (CANCEL_HOLD is batched with the edit, so the save sees the full lineup).
+  const handleSlotMove = useCallback((index, position) => {
+    dispatchFormation({ type: 'CANCEL_HOLD' });
+    pendingAutoSaveRef.current = true;
+    setFormationStates(prev => moveSlot(prev, activeState, index, position, FORMATIONS[selectedFormation] || FORMATIONS['4-3-3']));
+  }, [activeState, selectedFormation]);
+
+  const handleFluidChange = useCallback(on => {
+    dispatchFormation({ type: 'CANCEL_HOLD' });
+    pendingAutoSaveRef.current = true;
+    setFormationStates(prev => setFluid(prev, on));
+    setActiveState(on ? 'withBall' : 'base');
+  }, []);
+
+  const handleStateSelect = useCallback(id => {
+    setActiveState(prev => (effectiveState(formationStates, id) === id ? id : prev));
+  }, [formationStates]);
+
+  const handleCopyBase = useCallback(() => {
+    dispatchFormation({ type: 'CANCEL_HOLD' });
+    pendingAutoSaveRef.current = true;
+    setFormationStates(prev => copyBaseTo(prev, activeState));
+  }, [activeState]);
+
+  const handleResetState = useCallback(() => {
+    dispatchFormation({ type: 'CANCEL_HOLD' });
+    pendingAutoSaveRef.current = true;
+    setFormationStates(prev => resetState(prev, effectiveState(prev, activeState)));
+  }, [activeState]);
+
+  // A formation chosen in the left panel applies to the state being edited (Inicio = the team's formation;
+  // Con pelota / Sin pelota = only that state). The lineup is kept: the same players move to the new shape.
+  const handleFormationChange = useCallback(key => {
+    dispatchFormation({ type: 'CANCEL_HOLD' });
+    pendingAutoSaveRef.current = true;
+    setFormationStates(prev => applyFormationToState(prev, activeState, key, FORMATIONS));
+  }, [activeState]);
+
+  const handleRoleModeChange = useCallback(on => {
+    setRoleMode(on);
+    setRoleSlot(null);
+    setRoleNotice(null);
+    if (on) dispatchFormation({ type: 'CANCEL_HOLD' }); // a player in hand goes back where he was
+  }, []);
+
+  const handleRoleSlotClick = useCallback(index => {
+    const slot = FORMATIONS[selectedFormation]?.layout?.[index];
+    if (!slot) return;
+    if (isGoalkeeperSlot(slot)) {
+      setRoleSlot(null);
+      setRoleNotice('El arquero siempre juega de PT: su posición no cambia.');
+      return;
+    }
+    setRoleNotice(null);
+    setRoleSlot(prev => (prev === index ? null : index));
+  }, [selectedFormation]);
+
+  const handleRoleChange = useCallback(role => {
+    if (roleSlot == null) return;
+    const formationDef = FORMATIONS[selectedFormation] || FORMATIONS['4-3-3'];
+    const at = layoutForState(formationDef, formationStates, activeState)[roleSlot];
+    const reason = roleUnavailableReason(role, at);
+    if (reason) { setRoleNotice(reason); return; }
+    setRoleNotice(null);
+    if (at.pos === role) return;
+    pendingAutoSaveRef.current = true;
+    setFormationStates(prev => setSlotRole(prev, activeState, roleSlot, role, formationDef));
+  }, [roleSlot, selectedFormation, formationStates, activeState]);
+
+  const handleInstructionToggle = useCallback((side, code) => {
+    setAdvanced(prev => {
+      const { next, rejected } = toggleInstruction(prev, side, code);
+      if (!rejected) pendingAutoSaveRef.current = true;
+      return rejected ? prev : next;
+    });
+  }, []);
+
+  const handleInstructionReplace = useCallback((side, index, code) => {
+    pendingAutoSaveRef.current = true;
+    setAdvanced(prev => replaceInstruction(prev, side, index, code));
+  }, []);
+
   const handleSaveLineup = useCallback(async (overrideLineup, overrideFormation, overrideSetPieces, overrideTactics) => {
     // Determinar si overrideLineup es un objeto lineup real o un SyntheticEvent de React
     const isLineupObject = Boolean(
@@ -625,18 +755,25 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         .map(player => String(player.Id ?? player.id ?? player.playerId ?? ''))
         .filter(id => id && !validSavedIds.has(id));
 
+      // Positions belong to a formation shape: if the shape differs they are not saved with it.
+      const statesToSave = formationStates.formation === formationToSave ? formationStates : resetForFormation(formationStates, formationToSave);
       const saveData = {
         formation: formationToSave,
         lineup: lineupToSave,
         dorsals: dorsalsToSave,
         setPieces: setPiecesToSave,
         tactics: tacticsToSave,
+        formationStates: serializeFormationStates(statesToSave),
+        advancedInstructions: normalizeAdvancedInstructions(advanced),
         availability,
         matchBench: benchToSave
       };
 
-      batch.set(profileRef, saveData, { merge: true });
-      batch.set(publicRef, saveData, { merge: true });
+      // Cada campo se reemplaza entero: con merge:true los mapas anidados se fusionan y una
+      // posición, titular o dorsal quitado nunca se borraba del documento.
+      const writeOptions = { mergeFields: Object.keys(saveData) };
+      batch.set(profileRef, saveData, writeOptions);
+      batch.set(publicRef, saveData, writeOptions);
 
       await batch.commit();
       
@@ -662,18 +799,34 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     } finally {
       setIsSaving(false);
     }
-  }, [sanitizeLineup, lineup, selectedFormation, dorsals, setPieces, tactics, availability, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db, isPage, onClose]);
+  }, [sanitizeLineup, lineup, selectedFormation, dorsals, setPieces, tactics, formationStates, advanced, availability, cart, userProfile, userId, getPrivateProfileRef, getPublicTeamRef, showStatusMessage, db, isPage, onClose]);
 
   const handleDorsalChange = useCallback((playerId, value) => {
     if (!/^\d*$/.test(value)) return;
-    setDorsals(prev => ({ ...prev, [playerId]: value }));
+    // Pendiente sólo si cambia: una marca sin cambio de estado quedaba colgada y la próxima
+    // actualización (p. ej. al cargar el perfil) disparaba una escritura de más.
+    setDorsals(prev => {
+      if ((prev[playerId] ?? '') === value) return prev;
+      pendingAutoSaveRef.current = true;
+      return { ...prev, [playerId]: value };
+    });
   }, []);
 
   const handleAvailabilityChange = useCallback((playerId, isAvailable) => {
-    setAvailability(prev => ({ ...prev, [playerId]: isAvailable }));
+    setAvailability(prev => {
+      if ((prev[playerId] !== false) === isAvailable) return prev;
+      pendingAutoSaveRef.current = true;
+      return { ...prev, [playerId]: isAvailable };
+    });
   }, []);
 
   const currentFormation = FORMATIONS[selectedFormation];
+  // The pitch shows the selected tactical state: the formation's slots at that state's stored positions.
+  const shownState = effectiveState(formationStates, activeState);
+  const stateFormation = useMemo(() => (currentFormation ? { ...currentFormation, layout: layoutForState(currentFormation, formationStates, shownState) } : currentFormation), [currentFormation, formationStates, shownState]);
+  const shownStateLabel = TACTICAL_STATES.find(st => st.id === shownState)?.label;
+  // Edits of the shown state (moved markers and changed roles): what "Restablecer" can undo.
+  const movedCount = Object.keys(formationStates.positions[shownState] || {}).length + Object.keys(formationStates.roles?.[shownState] || {}).length;
   // Derive available players from assigned slots — enforce uniqueness
   const assignedIds = useMemo(() => {
     const ids = new Set();
@@ -700,13 +853,34 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     dispatchFormation({ type: 'CLICK_SLOT', payload: { index, cart } });
   }, [cart, holdingPlayer]);
 
-  // Auto-guardado tras una colocación o cambio de pateador/estrategia
+  // Auto-guardado tras una colocación, un movimiento, un cambio de pateador/estrategia, dorsal o disponibilidad.
+  // Con debounce: una ráfaga de cambios (flechas del teclado, tipear un dorsal) es una sola escritura. Lo que
+  // quede pendiente al cerrar la pizarra se guarda al desmontar.
+  const autoSaveTimerRef = useRef(null);
+  const saveLatestRef = useRef(null);
+  useEffect(() => {
+    saveLatestRef.current = () => handleSaveLineup(lineup, selectedFormation, setPieces, tactics);
+  });
   useEffect(() => {
     if (!pendingAutoSaveRef.current) return;
     pendingAutoSaveRef.current = false;
-    handleSaveLineup(lineup, selectedFormation, setPieces, tactics);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lineup, selectedFormation, setPieces, tactics]);
+    clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
+      saveLatestRef.current?.();
+    }, AUTOSAVE_DELAY_MS);
+  }, [lineup, selectedFormation, setPieces, tactics, formationStates, advanced, dorsals, availability]);
+  useEffect(() => () => {
+    if (!autoSaveTimerRef.current) return;
+    clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = null;
+    saveLatestRef.current?.();
+  }, []);
+  const handleManualSave = useCallback(() => {
+    clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = null;
+    handleSaveLineup();
+  }, [handleSaveLineup]);
 
   // ── Share URL with popover ──
   const [shareUrl, setShareUrl] = useState('');
@@ -743,7 +917,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       const currentFormation = FORMATIONS[selectedFormation];
       const cleanLineup = sanitizeLineup(lineup);
       if (currentFormation?.layout) {
-        currentFormation.layout.forEach((slot, index) => {
+        layoutForState(currentFormation, formationStates, 'base').forEach((slot, index) => {
           const playerId = cleanLineup[index];
           if (playerId) {
             const player = cart.find(p => String(p.Id) === playerId);
@@ -779,6 +953,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         logoUrl: userProfile?.logoUrl || DEFAULT_LOGO,
         formationKey: selectedFormation,
         formationName: currentFormation?.name || selectedFormation,
+        formationStates: serializeFormationStates(formationStates.formation === selectedFormation ? formationStates : resetForFormation(formationStates, selectedFormation)),
         slots: slotsWithNames,
         bench,
         isPublic: true,
@@ -818,11 +993,12 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     }, 3000);
   };
 
-  // Close popover on outside click
+  // Close popover on outside click. The desktop and phone layouts are both mounted (one hidden by CSS), so "inside"
+  // is any share area, not one ref: a single ref pointed at the hidden copy and a press on "Copiar" closed the popover.
   useEffect(() => {
     if (!showSharePopover) return;
     const handleClickOutside = (e) => {
-      if (sharePopoverRef.current && !sharePopoverRef.current.contains(e.target)) {
+      if (!e.target.closest?.('[data-share-area]')) {
         setShowSharePopover(false);
         setShareCopied(false);
       }
@@ -834,18 +1010,54 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   if (!isVisible && !isPage) return null;
 
   /* ── Shared sub-components ── */
+  const formationSelectLabel = shownState === 'base' ? 'Formación' : `Formación de ${shownStateLabel}`;
+  const renderFormationSelect = (id, className = '') => (
+    <select id={id} value={formationKeyForState(formationStates, shownState)} onChange={(e) => handleFormationChange(e.target.value)}
+      aria-label={formationSelectLabel} className={`select font-semibold ${className}`}>
+      {Object.keys(FORMATIONS).map(key => <option key={key} value={key}>{FORMATIONS[key].name}</option>)}
+    </select>
+  );
+  const SharePopover = showSharePopover && (
+    <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] lg:left-0 lg:w-auto panel p-3 z-50 animate-in fade-in slide-in-from-top">
+      <div className="flex items-center gap-2 mb-2">
+        <input
+          type="text"
+          readOnly
+          value={shareUrl}
+          aria-label="Enlace público de la alineación"
+          className="input flex-1 min-h-9 text-xs font-mono select-all"
+          onClick={(e) => e.target.select()}
+        />
+        <button
+          onClick={handleCopyAgain}
+          type="button"
+          className="btn btn-primary btn-sm shrink-0"
+        >
+          <Copy className="w-3.5 h-3.5" aria-hidden="true" /> Copiar
+        </button>
+      </div>
+      {shareCopied && (
+        <div className="flex items-center gap-1.5 text-success-soft text-xs font-semibold" role="status">
+          <Check className="w-3.5 h-3.5" aria-hidden="true" /> Enlace copiado al portapapeles
+        </div>
+      )}
+    </div>
+  );
+  const saveIcon = isSaving ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Save className="w-4 h-4" aria-hidden="true" />;
+  const busyTitle = isSaving ? 'Hay una operación en curso' : undefined;
+
   const ControlsBar = (
     <div className="p-3 lg:p-4 space-y-3 shrink-0 border-b border-line/[0.08]">
-      <select value={selectedFormation} onChange={(e) => { setSelectedFormation(e.target.value); dispatchFormation({ type: 'RESET' }); }}
-        aria-label="Formación" className="select font-semibold">
-        {Object.keys(FORMATIONS).map(key => <option key={key} value={key}>{FORMATIONS[key].name}</option>)}
-      </select>
-      <button onClick={() => handleSaveLineup()} disabled={isSaving} title={isSaving ? 'Hay una operación en curso' : undefined}
+      {shownState !== 'base' && (
+        <label htmlFor="formation-select" className="field-label">Formación de «{shownStateLabel}»</label>
+      )}
+      {renderFormationSelect('formation-select')}
+      <button onClick={handleManualSave} disabled={isSaving} title={busyTitle}
         type="button" className="btn btn-primary w-full">
-        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Save className="w-4 h-4" aria-hidden="true" />}{isSaving ? 'Guardando…' : 'Guardar alineación'}
+        {saveIcon}{isSaving ? 'Guardando…' : 'Guardar alineación'}
       </button>
       <p className="text-center text-xs text-ink-3"><span className="num">{availablePlayers.length}</span> suplentes · van al banco automáticamente</p>
-      <div className="relative" ref={sharePopoverRef}>
+      <div className="relative" data-share-area>
         <button onClick={handleShareURL} disabled={isSharing} title={isSharing ? 'Hay una operación en curso' : undefined}
           type="button" className="btn btn-secondary w-full">
           {isSharing ? (
@@ -854,34 +1066,30 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
             <><Share2 className="w-4 h-4" aria-hidden="true" /> {shareCopied ? 'Enlace copiado' : 'Compartir enlace público'}</>
           )}
         </button>
+        {SharePopover}
+      </div>
+    </div>
+  );
 
-        {/* ── Share Popover ── */}
-        {showSharePopover && (
-          <div className="absolute left-0 right-0 top-full mt-2 panel p-3 z-50 animate-in fade-in slide-in-from-top">
-            <div className="flex items-center gap-2 mb-2">
-              <input
-                type="text"
-                readOnly
-                value={shareUrl}
-                aria-label="Enlace público de la alineación"
-                className="input flex-1 min-h-9 text-xs font-mono select-all"
-                onClick={(e) => e.target.select()}
-              />
-              <button
-                onClick={handleCopyAgain}
-                type="button"
-                className="btn btn-primary btn-sm shrink-0"
-              >
-                <Copy className="w-3.5 h-3.5" aria-hidden="true" /> Copiar
-              </button>
-            </div>
-            {shareCopied && (
-              <div className="flex items-center gap-1.5 text-success-soft text-xs font-semibold" role="status">
-                <Check className="w-3.5 h-3.5" aria-hidden="true" /> Enlace copiado al portapapeles
-              </div>
-            )}
-          </div>
-        )}
+  // Phones: one row above the pitch, so the pitch starts near the top of the screen. The bench count is on the
+  // "Banco" tab.
+  const CompactControlsBar = (
+    <div className="px-3 py-2 shrink-0 border-b border-line/[0.08]">
+      {shownState !== 'base' && (
+        <label htmlFor="formation-select-compact" className="field-label">Formación de «{shownStateLabel}»</label>
+      )}
+      <div className="flex items-center gap-2">
+        {renderFormationSelect('formation-select-compact', 'flex-1 min-w-0')}
+        <button onClick={handleManualSave} disabled={isSaving} title={busyTitle} type="button" className="btn btn-primary shrink-0">
+          {saveIcon}{isSaving ? 'Guardando…' : 'Guardar'}
+        </button>
+        <div className="relative shrink-0" data-share-area>
+          <button onClick={handleShareURL} disabled={isSharing} type="button" className="btn btn-secondary btn-icon"
+            aria-label={shareCopied ? 'Enlace copiado' : 'Compartir enlace público'} title="Compartir enlace público">
+            {isSharing ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Share2 className="w-4 h-4" aria-hidden="true" />}
+          </button>
+          {SharePopover}
+        </div>
       </div>
     </div>
   );
@@ -911,19 +1119,45 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   );
 
   const PitchView = (
-    <div className="flex-1 flex items-center justify-center p-2 lg:p-4 overflow-hidden">
-      <div style={{ aspectRatio: '3/4', height: '100%', maxHeight: '100%', maxWidth: '100%', position: 'relative' }}>
-        <Pitch
-          pitchRef={pitchRef}
-          formation={currentFormation}
-          lineup={lineup}
-          cart={cart}
-          holdingPlayer={holdingPlayer}
-          dorsals={dorsals}
-          onSlotClick={onSlotClick}
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <TacticalStateBar active={shownState} fluid={formationStates.fluid} onSelect={handleStateSelect} onFluidChange={handleFluidChange}
+        onCopyBase={handleCopyBase} onReset={handleResetState} movedCount={movedCount}
+        roleMode={roleMode} onRoleModeChange={handleRoleModeChange} />
+      {roleMode && roleSlot != null && stateFormation?.layout?.[roleSlot] && (
+        <PositionPicker
+          slot={stateFormation.layout[roleSlot]}
+          player={cart.find(p => String(p.Id) === String(lineup[roleSlot]))}
+          stateLabel={shownStateLabel}
+          notice={roleNotice}
+          onChange={handleRoleChange}
+          onClose={() => { setRoleSlot(null); setRoleNotice(null); }}
         />
+      )}
+      {roleMode && roleSlot == null && roleNotice && (
+        <Alert tone="warning" className="mx-2 lg:mx-4 mt-2">{roleNotice}</Alert>
+      )}
+      {/* Phones: the pitch takes the full width and the area scrolls (markers need room to be dragged);
+          desktop: the pitch fits the available height. */}
+      <div className="flex-1 min-h-0 flex items-start lg:items-center justify-center p-2 lg:p-4 overflow-y-auto lg:overflow-hidden">
+        <div className="relative w-full max-w-[28rem] lg:max-w-full lg:w-auto lg:h-full" style={{ aspectRatio: '3/4' }}>
+          <Pitch
+            pitchRef={pitchRef}
+            formation={stateFormation}
+            lineup={lineup}
+            cart={cart}
+            holdingPlayer={holdingPlayer}
+            dorsals={dorsals}
+            onSlotClick={roleMode ? handleRoleSlotClick : onSlotClick}
+            onSlotMove={handleSlotMove}
+            roleSlot={roleMode ? roleSlot : null}
+          />
+        </div>
       </div>
     </div>
+  );
+
+  const AdvancedSection = (
+    <AdvancedInstructionsPanel value={advanced} onToggle={handleInstructionToggle} onReplace={handleInstructionReplace} />
   );
 
   const content = (
@@ -969,7 +1203,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         <div className="lg:hidden shrink-0 px-3 py-2.5">
           <Tabs className="w-full [&>button]:flex-1 [&>button]:justify-center" label="Secciones de la pizarra" value={mobileTab} onChange={setMobileTab} tabs={[
             { id: 'pitch', label: 'Cancha', icon: Sliders },
-            { id: 'squad', label: 'Convocados', icon: Users, count: availablePlayers.length || null },
+            { id: 'squad', label: 'Banco', icon: Users, count: availablePlayers.length || null },
             { id: 'tactics', label: 'Estrategia', icon: Target },
           ]} />
         </div>
@@ -985,7 +1219,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
               
               <div className="px-3 pt-3 shrink-0">
                 <Tabs className="w-full [&>button]:flex-1 [&>button]:justify-center" label="Panel lateral" value={sidebarTab} onChange={setSidebarTab} tabs={[
-                  { id: 'players', label: 'Convocados', icon: Users },
+                  { id: 'players', label: 'Banco', icon: Users },
                   { id: 'roles', label: 'Balón parado', icon: Target },
                   { id: 'tactics', label: 'Táctica', icon: Sliders },
                 ]} />
@@ -1007,7 +1241,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                 <TacticsPanel
                   tactics={tactics}
                   onTacticsChange={handleTacticsChange}
-                />
+                >{AdvancedSection}</TacticsPanel>
               )}
             </div>
             {/* Right Panel: Pitch */}
@@ -1018,8 +1252,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           <div className="flex lg:hidden flex-col flex-grow overflow-hidden">
             {mobileTab === 'pitch' ? (
               <>
-                {/* Compact controls above pitch on mobile */}
-                {ControlsBar}
+                {CompactControlsBar}
                 {holdingPlayer && HoldingBanner}
                 {PitchView}
               </>
@@ -1040,7 +1273,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                   <TacticsPanel
                     tactics={tactics}
                     onTacticsChange={handleTacticsChange}
-                  />
+                  >{AdvancedSection}</TacticsPanel>
                 ) : (
                   <RolesPanel
                     starterPlayers={starterPlayers}
@@ -1069,6 +1302,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     <BaseModal
       isOpen={true}
       onClose={onClose}
+      ariaLabel="Pizarra táctica"
       size="2xl"
       showClose={false}
       className="!max-w-7xl !p-0 !bg-surface !h-[100dvh] sm:!h-[90vh]"

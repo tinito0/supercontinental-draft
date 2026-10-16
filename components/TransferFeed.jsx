@@ -4,6 +4,7 @@ import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestor
 import { APP_ID } from '../utils/constants.js';
 import { formatPriceShort } from '../utils/helpers.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
 function getTransferTime(timestamp) {
   return timestamp?.toDate
@@ -112,7 +113,7 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
               loading="lazy"
               className="w-full h-full object-cover object-top"
               onError={(event) => {
-                event.currentTarget.src = `https://placehold.co/48x48/111/333?text=${transfer.playerName?.charAt(0) || '?'}`;
+                event.currentTarget.src = playerPlaceholder(transfer.playerName?.charAt(0) || '?');
               }}
             />
           </div>
@@ -236,9 +237,9 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center sm:justify-end z-[70] animate-in fade-in duration-200" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center sm:justify-end z-[70] animate-in fade-in" onClick={onClose}>
       <div
-        className="w-full sm:max-w-md h-[100dvh] sm:h-full bg-surface flex flex-col shadow-2xl border-l border-line/20 animate-in slide-in-from-right duration-250"
+        className="w-full sm:max-w-md h-[100dvh] sm:h-full bg-surface flex flex-col shadow-2xl border-l border-line/20 animate-in slide-in-from-right"
         onClick={event => event.stopPropagation()}
       >
         {/* Header */}

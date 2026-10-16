@@ -117,9 +117,9 @@ export const FORMATIONS = {
       { pos: 'MCD', x: 50, y: 57 },
       { pos: 'MC',  x: 68, y: 42 },
       { pos: 'MC',  x: 32, y: 42 },
-      { pos: 'ED',  x: 82, y: 22 },
+      { pos: 'ED',  x: 82, y: 20 }, // y 20 = depth 35: in PES 2021 wingers start at depth 35 (utils/positionRules.js)
       { pos: 'DC',  x: 50, y: 10 },
-      { pos: 'EI',  x: 18, y: 22 },
+      { pos: 'EI',  x: 18, y: 20 },
     ]
   },
   '4-4-2': {
@@ -326,7 +326,7 @@ export const FORMATIONS = {
       { pos: 'MC', x: 70, y: 58 },
       { pos: 'MCD', x: 50, y: 58 },
       { pos: 'MC', x: 30, y: 58 },
-      { pos: 'SD', x: 50, y: 25 }, // Mediapunta/SD
+      { pos: 'SD', x: 50, y: 20 }, // SD: in PES 2021 a second striker starts at depth 35 (y 20); lower it is an MO
       { pos: 'DC', x: 50, y: 10 },
     ]
   },
@@ -405,7 +405,7 @@ export const Z_INDEX = {
 };
 
 export const FRANCHISE_MIN_AGE = 30;
-export const FRANCHISE_MIN_OVR = 82;
-export const FRANCHISE_MAX_OVR = 89;
+export const FRANCHISE_MIN_OVR = 81;
+export const FRANCHISE_MAX_OVR = 88;
 
 

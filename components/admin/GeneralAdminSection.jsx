@@ -3,6 +3,8 @@ import { Settings, Save, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react'
 import { onSnapshot, setDoc, getDocs, query, collection, doc } from 'firebase/firestore';
 import { APP_ID, DEFAULT_TACTICS } from '../../utils/constants.js';
 import { commitBatchOperations } from './commitBatchOperations.js';
+import { toLocalDateTimeInput } from '../../utils/helpers.js';
+import { parseOpenTime } from '../../supabase/functions/_shared/marketTime.js';
 
 export const GeneralAdminSection = memo(function GeneralAdminSection({
   getMarketStatusDocRef,
@@ -13,6 +15,8 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
 }) {
   const [marketStatus, setMarketStatus] = useState({ status: 'loading', openTime: null });
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [openTimeError, setOpenTimeError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [localStatus, setLocalStatus] = useState('loading');
   const [localOpenTime, setLocalOpenTime] = useState('');
@@ -22,27 +26,42 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
 
   useEffect(() => {
     const unsubscribe = onSnapshot(getMarketStatusDocRef(), (doc) => {
+      // openTime se guarda como instante ISO (toISOString) para que el servidor, que corre en UTC, abra a la
+      // misma hora que la app. El campo muestra ese instante en la hora local del admin.
       if (doc.exists()) {
         const data = doc.data();
         setMarketStatus(data);
         setLocalStatus(data.status);
-        setLocalOpenTime(data.status === 'scheduled' && data.openTime ? data.openTime : new Date().toISOString().substring(0, 16));
+        const savedOpenTime = data.status === 'scheduled' ? parseOpenTime(data.openTime) : null;
+        setLocalOpenTime(toLocalDateTimeInput(savedOpenTime || new Date()));
       } else {
         setMarketStatus({ status: 'closed', openTime: null });
         setLocalStatus('closed');
+        setLocalOpenTime(toLocalDateTimeInput(new Date()));
       }
+      setLoadError('');
+      setIsLoading(false);
+    }, (error) => {
+      // Sin este callback un error de permisos dejaba "Cargando configuración..." para siempre.
+      console.error(error);
+      setLoadError('No se pudo leer el estado del mercado. Revisá la conexión o tus permisos y recargá.');
       setIsLoading(false);
     });
     return () => unsubscribe();
   }, [getMarketStatusDocRef]);
 
   const handleSaveStatus = async () => {
+    if (localStatus === 'scheduled' && (!localOpenTime || Number.isNaN(new Date(localOpenTime).getTime()))) {
+      setOpenTimeError('Elegí la fecha y hora de apertura.');
+      return;
+    }
+    setOpenTimeError('');
     setIsSaving(true);
     showStatusMessage('loading', 'Actualizando el estado del mercado...');
     try {
       await setDoc(getMarketStatusDocRef(), {
         status: localStatus,
-        openTime: localStatus === 'scheduled' ? localOpenTime : null,
+        openTime: localStatus === 'scheduled' ? new Date(localOpenTime).toISOString() : null,
       });
       showStatusMessage('success', 'Estado actualizado.');
     } catch (e) {
@@ -160,6 +179,7 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
   };
 
   if (isLoading) return <div className="text-center text-ink-3 text-xs py-8">Cargando configuración...</div>;
+  if (loadError) return <div role="alert" className="rounded-xl border border-danger/30 bg-danger/[0.07] px-4 py-3 text-sm text-danger-soft">{loadError}</div>;
 
   return (
     <div className="space-y-8">
@@ -198,18 +218,22 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
 
         {localStatus === 'scheduled' && (
           <div className="mt-4 pl-2 animate-in fade-in slide-in-from-top-2">
-            <label className="text-xs text-ink-3 block mb-1 font-bold uppercase">Fecha de Apertura</label>
+            <label htmlFor="market-open-time" className="text-xs text-ink-3 block mb-1 font-bold uppercase">Fecha de Apertura (hora local)</label>
             <input
+              id="market-open-time"
               type="datetime-local"
               value={localOpenTime}
-              onChange={(e) => setLocalOpenTime(e.target.value)}
+              aria-invalid={openTimeError ? true : undefined}
+              onChange={(e) => { setLocalOpenTime(e.target.value); setOpenTimeError(''); }}
               className="w-full sm:w-auto px-4 py-2 bg-black/50 text-ink border border-line/[0.12] rounded-lg text-sm focus:border-accent outline-none"
             />
+            {openTimeError && <p className="field-error" role="alert">{openTimeError}</p>}
           </div>
         )}
 
         <div className="mt-6 pt-4 border-t border-line/[0.08] flex justify-end">
           <button
+            type="button"
             onClick={handleSaveStatus}
             disabled={isSaving}
             className="flex items-center px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-ink font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg transition disabled:opacity-50 active:scale-95"
@@ -244,14 +268,14 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
 
       {/* MODAL DOBLE CONFIRMACION RESET */}
       {isResetModalOpen && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setIsResetModalOpen(false)}>
-          <div className="bg-[#0d121c] rounded-2xl border border-danger/40 w-full max-w-lg shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => { if (!isSaving) setIsResetModalOpen(false); }}>
+          <div role="alertdialog" aria-modal="true" aria-labelledby="reset-dialog-title" className="bg-[#0d121c] rounded-2xl border border-danger/40 w-full max-w-lg shadow-2xl p-6 space-y-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 border-b border-danger/20 pb-3">
               <div className="p-2 bg-danger/20 rounded-xl text-danger-soft">
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-ink uppercase tracking-wide">Confirmación Crítica — Reseteo de Temporada</h3>
+                <h3 id="reset-dialog-title" className="text-base font-bold text-ink uppercase tracking-wide">Confirmación Crítica — Reseteo de Temporada</h3>
                 <p className="text-xs text-danger-soft font-semibold">Esta acción es irreversible y purga planteles de todos los clubes</p>
               </div>
             </div>
@@ -276,6 +300,7 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
                 value={resetConfirmInput}
                 onChange={(e) => setResetConfirmInput(e.target.value)}
                 placeholder="RESETEAR"
+                aria-label="Escribí RESETEAR para confirmar"
                 disabled={isSaving}
                 className="w-full px-4 py-2.5 bg-black/60 border border-danger/40 rounded-xl text-ink font-mono text-sm uppercase outline-none focus:border-red-400 disabled:opacity-50"
                 autoFocus
@@ -283,7 +308,7 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
             </div>
 
             {resetProgress.active && (
-              <div className="bg-red-950/40 border border-danger/30 rounded-xl p-3.5 space-y-2 animate-in fade-in duration-200" role="status" aria-live="polite">
+              <div className="bg-red-950/40 border border-danger/30 rounded-xl p-3.5 space-y-2 animate-in fade-in" role="status" aria-live="polite">
                 <div className="flex items-center justify-between text-xs font-bold text-danger-soft">
                   <span className="flex items-center gap-2 truncate pr-2">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-danger-soft shrink-0" />

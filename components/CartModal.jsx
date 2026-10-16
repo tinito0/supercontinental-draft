@@ -1,8 +1,10 @@
 import React, { useRef, useState, useEffect, useMemo, memo } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { X, ShoppingCart, DollarSign, ArrowRight, History, ClipboardList } from 'lucide-react';
+import '../utils/chartSetup.js';
+import { X, ShoppingCart, DollarSign, ArrowRight, History, ClipboardList, Lock } from 'lucide-react';
 import { formatPriceShort, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
 import { DEFAULT_BUDGET } from '../utils/constants.js';
+import { budgetMeter } from '../utils/budgetDisplay.js';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { ProposalChat } from './ProposalChat.jsx';
@@ -38,15 +40,26 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
         <p className="text-sm font-semibold text-ink truncate group-hover:text-accent-soft transition-colors">{player.Name}</p>
         <p className="mt-1 flex items-center gap-2 text-xs">
           <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
-          <span className="num text-ink-3">{formatPriceShort(precio)}</span>
+          {/* The franchise player costs nothing from the budget (hooks/useBudget.js), so no price for him. */}
+          {player.isFranchise
+            ? <span className="font-semibold text-accent-soft">Franquicia</span>
+            : <span className="num text-ink-3">{formatPriceShort(precio)}</span>}
         </p>
       </div>
       <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 pointer-events-none ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
-      <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        className="relative btn btn-ghost btn-icon btn-sm text-ink-3 hover:text-danger-soft"
-        title="Quitar del plantel" aria-label={`Quitar a ${player.Name} del plantel`}>
-        <X className="w-4 h-4" aria-hidden="true" />
-      </button>
+      {/* Un Jugador Franquicia no se libera (el servidor lo rechaza; el admin resetea la franquicia). */}
+      {player.isFranchise ? (
+        <span className="relative w-8 h-8 shrink-0 flex items-center justify-center text-accent-soft" title="El Jugador Franquicia no se puede liberar">
+          <Lock className="w-4 h-4" aria-hidden="true" />
+          <span className="sr-only">Jugador Franquicia: no se puede liberar</span>
+        </span>
+      ) : (
+        <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="relative btn btn-ghost btn-icon btn-sm text-ink-3 hover:text-danger-soft"
+          title="Quitar del plantel" aria-label={`Quitar a ${player.Name} del plantel`}>
+          <X className="w-4 h-4" aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 });
@@ -64,12 +77,13 @@ function getOfferStatusLabel(status) {
 
 const STATUS_TONE = { pending: 'text-warning-soft', countered: 'text-warning-soft', accepted: 'text-success-soft', rejected: 'text-danger-soft', withdrawn: 'text-ink-3' };
 
+// The live team name first: the names stored in the offer are written by its sender.
 function getOfferTargetName(offer, allTeams) {
-  return offer.targetTeamName || allTeams?.[offer.targetTeamId]?.teamName || 'Equipo rival';
+  return allTeams?.[offer.targetTeamId]?.teamName || offer.targetTeamName || 'Equipo rival';
 }
 
 function getOfferSenderName(offer, allTeams) {
-  return offer.senderTeamName || allTeams?.[offer.senderId]?.teamName || 'Equipo comprador';
+  return allTeams?.[offer.senderId]?.teamName || offer.senderTeamName || 'Equipo comprador';
 }
 
 const OfferTimeline = memo(function OfferTimeline({ offer }) {
@@ -204,7 +218,7 @@ const NegotiationCard = memo(function NegotiationCard({
   );
 });
 
-export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, onRemoveFromCart, userProfile, userId, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage }) {
+export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, isSquadLoading = false, onRemoveFromCart, userProfile, userId, budgetBase, budgetPercent, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingOfferRef = useRef(null);
@@ -235,14 +249,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     setIsProcessing(true);
     showStatusMessage?.('loading', `Aceptando la oferta por ${offer.playerName}...`);
     try {
-      await acceptTransferOffer({
-        db,
-        offer,
-        userId,
-        allPlayers,
-        playerMap,
-        allTeams,
-      });
+      await acceptTransferOffer({ offer, userId });
       showStatusMessage?.('success', `Traspaso confirmado: ${offer.playerName} ahora pertenece a ${getOfferSenderName(offer, allTeams)}.`);
 
     } catch (err) {
@@ -263,6 +270,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       await rejectTransferOffer({
         db,
         offer,
+        userId,
         teamName: userProfile?.teamName || 'Equipo',
       });
       showStatusMessage?.('success', `Oferta por ${offer.playerName} rechazada.`);
@@ -276,13 +284,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   const handleCounterOffer = async (offer) => {
     if (isProcessing || !counterAmount || isNaN(counterAmount)) return;
-    const livePlayer = allPlayers?.find(p => p.Id === offer.playerId);
+    const livePlayer = playerMap.get(String(offer.playerId));
     setIsProcessing(true);
     showStatusMessage?.('loading', `Enviando contraoferta por ${offer.playerName}...`);
     try {
       await counterTransferOffer({
         db,
         offer,
+        userId,
         counterAmountMillions: counterAmount,
         livePlayer,
         teamName: userProfile?.teamName || 'Equipo',
@@ -307,6 +316,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       await withdrawTransferOffer({
         db,
         offer,
+        userId,
         teamName: userProfile?.teamName || 'Equipo',
       });
       showStatusMessage?.('success', `Oferta por ${offer.playerName} retirada.`);
@@ -396,17 +406,21 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   if (!isVisible && !isPage) return null;
 
-  const initialBudget = userProfile?.budget || DEFAULT_BUDGET || 0;
+  // Same base as "Disponible" (useBudget): the profile copy of the budget goes stale after a transfer.
+  const { base: initialBudget, percent: budgetPct } = budgetMeter({
+    base: budgetBase, profileBudget: userProfile?.budget, defaultBudget: DEFAULT_BUDGET, remaining: remainingBudget, percent: budgetPercent,
+  });
   const activeCommitted = committedInOffers !== undefined
     ? committedInOffers
     : (sentOffers || []).filter(o => o.senderId === userId && o.status === 'pending').reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
-  const budgetPct = initialBudget > 0 ? Math.min(100, Math.max(0, (remainingBudget / initialBudget) * 100)) : 0;
-  const budgetTone = budgetPct > 50 ? 'bg-success' : budgetPct > 20 ? 'bg-warning' : 'bg-danger';
+  // One tone for the "Disponible" figure and its meter: accent, warning from 20% down (the budget alert's
+  // threshold, hooks/useBudget.js), danger once nothing is left.
+  const availableTone = remainingBudget <= 0 ? 'danger' : budgetPct <= 20 ? 'warning' : 'accent';
+  const meterTone = { danger: 'bg-danger', warning: 'bg-warning', accent: 'bg-accent' }[availableTone];
+  // Same format as every other price in the app ($12.50M). Keeps the sign: an overdrawn budget reads -$3.20M.
   const fmtM = (val) => {
-    const v = Math.abs(val || 0);
-    if (v >= 1000000) return `$${(v / 1000000).toFixed(2)}M`;
-    if (v >= 1000) return `$${(v / 1000).toFixed(0)}K`;
-    return `$${v}`;
+    const v = Number(val) || 0;
+    return v < 0 ? `-${formatPriceShort(-v / 1000000)}` : formatPriceShort(v / 1000000);
   };
 
   const tabs = [
@@ -425,13 +439,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const finances = (
     <section aria-label="Balance financiero" className="border-y border-line/[0.08] py-5">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
-        <Stat label="Presupuesto inicial" value={fmtM(initialBudget)} size="sm" />
-        <Stat label="Gastado en el plantel" value={fmtM(totalCartCost)} size="sm" />
-        <Stat label="Comprometido en ofertas" value={fmtM(activeCommitted)} size="sm" tone={activeCommitted > 0 ? 'warning' : 'default'} hint="Ofertas enviadas pendientes" />
-        <Stat label="Disponible" value={fmtM(remainingBudget)} size="sm" tone={remainingBudget > 0 ? 'accent' : 'danger'} hint={`${budgetPct.toFixed(0)}% del inicial`} />
+        {/* Short labels: each fits one line at 360px; the detail goes in the hint. */}
+        <Stat label="Presupuesto" value={fmtM(initialBudget)} size="sm" hint="Cambia con los traspasos" />
+        <Stat label="Gastado" value={fmtM(totalCartCost)} size="sm" hint="En el plantel" />
+        <Stat label="En ofertas" value={fmtM(activeCommitted)} size="sm" tone={activeCommitted > 0 ? 'warning' : 'default'} hint="Enviadas, pendientes" />
+        <Stat label="Disponible" value={fmtM(remainingBudget)} size="sm" tone={availableTone} hint={`${budgetPct.toFixed(0)}% del presupuesto`} />
       </div>
       <div className="mt-4 h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(budgetPct)} aria-label="Presupuesto disponible">
-        <div className={`h-full rounded-full transition-[width] duration-500 ${budgetTone}`} style={{ width: `${budgetPct}%` }} />
+        <div className={`h-full rounded-full transition-[width] duration-500 ${meterTone}`} style={{ width: `${budgetPct}%` }} />
       </div>
     </section>
   );
@@ -439,7 +454,11 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const content = (
     <>
       {activeTab === 'players' && (
-        cart.length === 0 ? (
+        isSquadLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5" role="status" aria-label="Cargando el plantel">
+            {Array.from({ length: 8 }, (_, i) => <div key={i} className="skeleton h-[70px] rounded-xl" />)}
+          </div>
+        ) : cart.length === 0 ? (
           <EmptyState icon={ShoppingCart} title="Tu plantel está vacío" description="Explorá el mercado para fichar jugadores." />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">

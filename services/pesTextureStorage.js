@@ -31,12 +31,20 @@ async function ensureFreshToken() {
   claimsRefreshed = true;
 }
 
-async function upload(path, bytes, action) {
+/**
+ * Uploads to a content-addressed path. When the path already exists, `isStoredValid()` checks that the stored
+ * file really has that content: the insert policy only checks the path, so a file uploaded first with the
+ * wrong content would otherwise be taken as "already shared" and fail every download.
+ */
+async function upload(path, bytes, action, isStoredValid) {
   const client = requireClient();
   await ensureFreshToken();
   const { error } = await client.storage.from(TEXTURE_BUCKET).upload(path, bytes, { contentType: 'application/octet-stream', upsert: false });
-  // Content-addressed path already present: same content, nothing to do.
-  if (error && !/exists|duplicate|409/i.test(`${error.message} ${error.statusCode ?? ''}`)) throw explain(error, action);
+  if (!error) return;
+  if (!/exists|duplicate|409/i.test(`${error.message} ${error.statusCode ?? ''}`)) throw explain(error, action);
+  if (isStoredValid && !(await isStoredValid().catch(() => false))) {
+    throw new Error(`${action}: en el almacenamiento compartido ya hay un archivo en ${path} con otro contenido. Un Super Admin tiene que borrarlo (Supabase → Storage) para poder subirlo de nuevo.`);
+  }
 }
 
 async function download(path, action) {
@@ -52,7 +60,11 @@ async function download(path, action) {
 
 export async function uploadTexture(workspaceId, sha256, bytes, ext) {
   if (await sha256Hex(bytes) !== sha256) throw new Error('El hash de la textura no coincide; no se sube.');
-  await upload(texturePath(workspaceId, sha256, ext), bytes, 'Subida de textura');
+  const path = texturePath(workspaceId, sha256, ext);
+  await upload(path, bytes, 'Subida de textura', async () => {
+    const stored = await download(path, 'Verificación de textura compartida');
+    return Boolean(stored) && await sha256Hex(stored) === sha256;
+  });
 }
 
 export async function downloadTexture(workspaceId, sha256, ext) {
@@ -66,6 +78,31 @@ export async function downloadTexture(workspaceId, sha256, ext) {
 export async function uploadSource(workspaceId, source) {
   if (await sourceSha(source.record) !== source.sha256) throw new Error('El hash de la fuente no coincide; no se sube.');
   await upload(sourcePath(workspaceId, source.sha256, source.kind), packSource(source.record), 'Subida de la base compartida');
+}
+
+const LIST_PAGE = 100;
+
+async function listFiles(client, folder) {
+  const names = [];
+  for (let offset = 0; ; offset += LIST_PAGE) {
+    const { data, error } = await client.storage.from(TEXTURE_BUCKET).list(folder, { limit: LIST_PAGE, offset });
+    if (error) throw explain(error, 'Listado de archivos compartidos');
+    // Folders come back as entries without id (e.g. "sources" inside the workspace folder).
+    names.push(...data.filter(entry => entry.id).map(entry => `${folder}/${entry.name}`));
+    if (data.length < LIST_PAGE) return names;
+  }
+}
+
+/** Deletes every shared file of a workspace (textures and sources). Super Admin only (bucket policy). */
+export async function deleteWorkspaceFiles(workspaceId) {
+  const client = requireClient();
+  await ensureFreshToken();
+  const paths = [...await listFiles(client, workspaceId), ...await listFiles(client, `${workspaceId}/sources`)];
+  for (let i = 0; i < paths.length; i += LIST_PAGE) {
+    const { error } = await client.storage.from(TEXTURE_BUCKET).remove(paths.slice(i, i + LIST_PAGE));
+    if (error) throw explain(error, 'Borrado de archivos compartidos');
+  }
+  return paths.length;
 }
 
 /** Downloads and verifies a shared source; returns the record IndexedDB stores, or null if absent. */

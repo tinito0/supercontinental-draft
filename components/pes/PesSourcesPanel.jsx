@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
-import { FolderOpen, FileUp, Database, Plus, RefreshCw, CloudUpload } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { FolderOpen, FileUp, Database, Plus, RefreshCw, CloudUpload, Trash2 } from 'lucide-react';
 import { Card, Button, Pill, ErrorText } from './PesUi.jsx';
 
 const KIND_LABEL = { pesdb: 'Base pesdb (BIN)', edit: 'EDIT00000000', kits: 'Kit-server (Sider)' };
+
+/** "101, 102 377" → [101, 102, 377]; throws on anything that is not a team id (before: "abc" saved NaN). */
+function parseLeagueIds(text) {
+  const parts = text.split(/[\s,;]+/).filter(Boolean);
+  const invalid = parts.filter(part => !/^\d+$/.test(part));
+  if (invalid.length) throw new Error(`No son IDs de equipo: ${invalid.join(', ')}.`);
+  return [...new Set(parts.map(Number))];
+}
 
 function SourceSummary({ s, missing }) {
   const detail = s.kind === 'pesdb' ? `${Object.keys(s.files || {}).length} archivos` : s.kind === 'kits' ? `${s.configs} kits · ${s.teams} equipos` : `${(s.size / 1048576).toFixed(1)} MB`;
@@ -14,6 +22,36 @@ function SourceSummary({ s, missing }) {
       <span className="text-ink-3">{detail}</span>
       <code className="text-[10px] text-ink-3" title={s.sha256}>{s.sha256.slice(0, 12)}…</code>
     </li>
+  );
+}
+
+/** Irreversible for everyone: asks to type the workspace name before deleting. */
+function DeleteWorkspace({ workspace, busy, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState('');
+  if (!open) {
+    return (
+      <Button variant="danger" disabled={busy} onClick={() => { setTyped(''); setOpen(true); }}>
+        <Trash2 className="w-3.5 h-3.5" />Eliminar espacio
+      </Button>
+    );
+  }
+  const matches = typed.trim() === workspace.name;
+  return (
+    <div role="alertdialog" aria-label="Confirmar eliminación del espacio" className="space-y-2 rounded-xl border border-danger/30 bg-danger/[0.07] p-3">
+      <p className="text-xs text-ink-2">
+        Se borra para todos: el historial de cambios, las exportaciones y los archivos compartidos en Supabase.
+        No se puede deshacer. Escribí <span className="font-bold text-ink">{workspace.name}</span> para confirmar.
+      </p>
+      <input value={typed} onChange={e => setTyped(e.target.value)} className="input min-h-9 w-full" aria-label="Nombre del espacio a eliminar" autoFocus />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="danger" disabled={!matches || busy} title={matches ? undefined : 'Escribí el nombre exacto del espacio'}
+          onClick={async () => { await onDelete(workspace); setOpen(false); }}>
+          <Trash2 className="w-3.5 h-3.5" />Eliminar definitivamente
+        </Button>
+        <Button disabled={busy} onClick={() => setOpen(false)}>Cancelar</Button>
+      </div>
+    </div>
   );
 }
 
@@ -44,7 +82,31 @@ export function PesSourcesPanel({ pes }) {
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [league, setLeague] = useState('');
+  // The field starts with the saved league (it started empty, and "Guardar" then opened every team).
+  const savedLeague = (wsDoc?.leagueTeamIds || []).join(', ');
+  useEffect(() => { setLeague(savedLeague); }, [wsDoc?.id, savedLeague]);
+  const [wsError, setWsError] = useState(null);
+  const [wsNotice, setWsNotice] = useState(null);
   const canManage = caps.has('workspace.manage');
+  const isBusy = Boolean(pes.busy);
+
+  const refresh = async () => {
+    setWsError(null);
+    setWsNotice(null);
+    try {
+      await pes.refreshAll();
+      setWsNotice('Actualizado: lista de espacios, cambios y copia de trabajo recargados.');
+    } catch (e) { setWsError(e); }
+  };
+
+  const remove = async workspace => {
+    setWsError(null);
+    setWsNotice(null);
+    try {
+      const { warnings } = await pes.removeWorkspace(workspace.id);
+      setWsNotice([`Se eliminó «${workspace.name}».`, ...warnings].join(' '));
+    } catch (e) { setWsError(e); }
+  };
 
   const handleFiles = async files => {
     setError(null);
@@ -69,7 +131,7 @@ export function PesSourcesPanel({ pes }) {
   const create = async () => {
     setError(null);
     try {
-      const ids = league.split(/[\s,;]+/).filter(Boolean).map(Number);
+      const ids = parseLeagueIds(league);
       await pes.createFromSources(name.trim() || 'Espacio PES', pending, ids);
       setPending([]);
     } catch (e) { setError(e); }
@@ -81,12 +143,26 @@ export function PesSourcesPanel({ pes }) {
   };
 
   const saveLeague = async () => {
-    try { await pes.setLeagueTeams(league.split(/[\s,;]+/).filter(Boolean).map(Number)); setNotice('Equipos de la liga guardados.'); } catch (e) { setError(e); }
+    setError(null);
+    try {
+      const ids = parseLeagueIds(league);
+      // Vacío abre todos los equipos a los Kit Managers: que sea a propósito.
+      if (!ids.length && (wsDoc?.leagueTeamIds || []).length
+        && !window.confirm('Sin IDs, los Kit Managers van a poder editar los kits de TODOS los equipos. ¿Guardar así?')) return;
+      await pes.setLeagueTeams(ids);
+      setNotice('Equipos de la liga guardados.');
+    } catch (e) { setError(e); }
   };
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card title="Espacio de trabajo" actions={<Button onClick={() => pes.refreshWorkspaces()}><RefreshCw className="w-3.5 h-3.5" />Actualizar</Button>}>
+      <Card title="Espacio de trabajo" actions={(
+        <Button disabled={isBusy} onClick={refresh} title={isBusy ? pes.busy : 'Recargar la lista, los cambios y la copia de trabajo'}>
+          <RefreshCw className={`w-3.5 h-3.5 ${pes.busy === 'Actualizando…' ? 'animate-spin' : ''}`} aria-hidden="true" />Actualizar
+        </Button>
+      )}>
+        {wsNotice && <p role="status" className="text-xs text-accent-soft mb-3">{wsNotice}</p>}
+        {wsError && <div className="mb-3"><ErrorText error={wsError} /></div>}
         {workspaces.length === 0 && <p className="text-xs text-ink-3">Todavía no hay espacios de trabajo.</p>}
         <ul className="space-y-1">
           {workspaces.map(w => (
@@ -106,9 +182,14 @@ export function PesSourcesPanel({ pes }) {
             {missing.some(m => m.stored) && <p className="text-xs text-warning-soft">No se pudo descargar la base compartida. Revisá tu conexión y que tu usuario tenga rol (npm run pes:claims) y volvé a entrar.</p>}
             {missing.some(m => !m.stored) && <p className="text-xs text-warning-soft">Hay fuentes que el Super Admin todavía no compartió.{canManage ? ' Si las tenés en este navegador, tocá «Compartir fuentes».' : ''}</p>}
             {canManage && (wsDoc.sources || []).some(x => !x.stored) && (
-              <Button variant="primary" disabled={Boolean(pes.busy)} onClick={async () => { setError(null); try { await pes.shareSources(); } catch (e) { setError(e); } }}>
+              <Button variant="primary" disabled={isBusy} onClick={async () => { setError(null); try { await pes.shareSources(); } catch (e) { setError(e); } }}>
                 <CloudUpload className="w-3.5 h-3.5" />Compartir fuentes
               </Button>
+            )}
+            {canManage && (
+              <div className="pt-3 mt-3 border-t border-line/10">
+                <DeleteWorkspace workspace={wsDoc} busy={isBusy} onDelete={remove} />
+              </div>
             )}
           </div>
         )}

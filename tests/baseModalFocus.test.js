@@ -59,32 +59,44 @@ function fakeElement(tagName, label) {
 
 describe('BaseModal focus while typing in a dialog field', () => {
   let listeners;
+  let captureListeners;
+  let runtimes;
   let closeButton;
   let filterInput;
   let trigger;
 
   beforeEach(() => {
     listeners = {};
+    captureListeners = {};
+    runtimes = [];
     closeButton = fakeElement('BUTTON', 'Cerrar');
     filterInput = fakeElement('INPUT', 'Buscar país');
     trigger = fakeElement('BUTTON', 'Filtros');
     global.HTMLElement = Object;
     global.document = { activeElement: trigger, body: { style: { overflow: '' } } };
     global.window = {
-      addEventListener: (type, fn) => { (listeners[type] ||= []).push(fn); },
-      removeEventListener: (type, fn) => { listeners[type] = (listeners[type] || []).filter(h => h !== fn); },
+      addEventListener: (type, fn, capture) => { ((capture ? captureListeners : listeners)[type] ||= []).push(fn); },
+      removeEventListener: (type, fn, capture) => {
+        const map = capture ? captureListeners : listeners;
+        map[type] = (map[type] || []).filter(h => h !== fn);
+      },
     };
   });
 
   afterEach(() => {
+    // Unmount every dialog (React would run these cleanups): BaseModal keeps a module-level dialog stack.
+    runtimes.forEach(runtime => runtime.slots.forEach(slot => slot?.cleanup?.()));
     delete global.document;
     delete global.window;
     delete global.HTMLElement;
   });
 
+  // Like the browser: window capture listeners first; stopPropagation keeps the bubble listeners from running.
   const press = (key, target) => {
-    const event = { key, target, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, preventDefault: vi.fn() };
-    (listeners.keydown || []).forEach(h => h(event));
+    let isStopped = false;
+    const event = { key, target, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, preventDefault: vi.fn(), stopPropagation: () => { isStopped = true; } };
+    [...(captureListeners.keydown || [])].forEach(h => h(event));
+    if (!isStopped) [...(listeners.keydown || [])].forEach(h => h(event));
     return event;
   };
 
@@ -95,6 +107,7 @@ describe('BaseModal focus while typing in a dialog field', () => {
 
   function mountWithDialog(onClose) {
     const runtime = createRuntime();
+    runtimes.push(runtime);
     // Pre-seed the dialog ref (BaseModal's first hook) with a fake dialog: [X button, filter input].
     runtime.slots[0] = { current: { querySelectorAll: () => [closeButton, filterInput], focus: vi.fn() } };
     openDialog(runtime, onClose);
@@ -135,6 +148,28 @@ describe('BaseModal focus while typing in a dialog field', () => {
     closeButton.focus();
     press('Escape', closeButton);
     expect(latest).toHaveBeenCalledTimes(1);
+  });
+
+  it('with a confirmation stacked over a sheet, Escape closes only the top dialog, and nothing else hears it', () => {
+    const closeSheet = vi.fn();
+    const closeConfirm = vi.fn();
+    const globalEscape = vi.fn(); // app.jsx also listens to Escape on window to close the player sheet
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') globalEscape(); });
+    mountWithDialog(closeSheet);
+    const confirm = mountWithDialog(closeConfirm);
+    closeButton.focus();
+
+    press('Escape', closeButton);
+    expect(closeConfirm).toHaveBeenCalledTimes(1);
+    expect(closeSheet).not.toHaveBeenCalled();
+    expect(globalEscape).not.toHaveBeenCalled();
+
+    // The confirmation unmounts; the next Escape closes the sheet (single dialog: unchanged behaviour).
+    confirm.slots.forEach(slot => slot?.cleanup?.());
+    confirm.slots.length = 0;
+    press('Escape', closeButton);
+    expect(closeSheet).toHaveBeenCalledTimes(1);
+    expect(globalEscape).toHaveBeenCalledTimes(1);
   });
 
   it('typed letters never reach the global navigation shortcuts while the field keeps the focus', () => {

@@ -75,3 +75,16 @@ dist/
 
 # PES 2021: game files, EDIT (contains Steam ID) and third-party tools; never commit
 vendor/
+
+# Generado desde public/jugadores.json en dev/build (scripts/build-players-compact.mjs)
+public/jugadores.compact.json
+
+# Supabase CLI temp files
+supabase/.temp/
+# graphify: cache and dated snapshots are regenerated; graph.json, manifest and the report are kept
+graphify-out/cache/
+graphify-out/2026-*/
+graphify-out/graph.html
+graphify-out/.graphify_labels.pending.json
+# Old credentials file (no longer used; also untracked)
+scripts/credenciales.txt

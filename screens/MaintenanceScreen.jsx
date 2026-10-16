@@ -1,12 +1,13 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Lock, LogOut, MessageSquarePlus } from 'lucide-react';
+import { parseOpenTime } from '../supabase/functions/_shared/marketTime.js';
 
 export const MaintenanceScreen = memo(function MaintenanceScreen({ marketStatus, onLogout, onSuggestionsClick }) {
   const [openTime, setOpenTime] = useState(null);
 
   useEffect(() => {
-    if (marketStatus.status === 'scheduled' && marketStatus.openTime) {
-      const date = new Date(marketStatus.openTime);
+    const date = marketStatus.status === 'scheduled' ? parseOpenTime(marketStatus.openTime) : null;
+    if (date) {
       setOpenTime(date.toLocaleString('es-ES', {
         weekday: 'long',
         day: 'numeric',
@@ -28,7 +29,7 @@ export const MaintenanceScreen = memo(function MaintenanceScreen({ marketStatus,
 
         {/* ICONO CENTRAL ANIMADO */}
         <div className="relative inline-block mb-8">
-          <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-20 animate-pulse-slow rounded-full"></div>
+          <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-20 rounded-full"></div>
           <div className="relative bg-raised p-6 rounded-full border border-warning/30 shadow-inner">
             <Lock className="w-16 h-16 text-yellow-500" />
           </div>

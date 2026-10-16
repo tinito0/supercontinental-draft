@@ -1,50 +1,70 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { getDocs, query } from 'firebase/firestore';
+import { MessageSquarePlus, RefreshCw } from 'lucide-react';
+import { EmptyState } from '../ui/EmptyState.jsx';
 
 export const SuggestionsAdminSection = memo(function SuggestionsAdminSection({ getSuggestionsCollectionRef, showStatusMessage }) {
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      setIsLoading(true);
-      try {
-        const suggestionsQuery = query(getSuggestionsCollectionRef());
-        const snapshot = await getDocs(suggestionsQuery);
-        const suggestionList = snapshot.docs.map(doc => ({
-          id: doc.id, ...doc.data(), timestamp: doc.data().timestamp?.toDate()
-        })).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        setSuggestions(suggestionList);
-      } catch (error) {
-        console.error(error); showStatusMessage('error', 'Error al cargar sugerencias.');
-      }
-      setIsLoading(false);
-    };
-    fetchSuggestions();
+  // Se lee bajo demanda (no hay listener): "Actualizar" trae las sugerencias nuevas sin recargar la página.
+  const fetchSuggestions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const snapshot = await getDocs(query(getSuggestionsCollectionRef()));
+      const suggestionList = snapshot.docs.map(doc => ({
+        id: doc.id, ...doc.data(), timestamp: doc.data().timestamp?.toDate(),
+      })).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      setSuggestions(suggestionList);
+      setHasLoaded(true);
+    } catch (error) {
+      console.error(error);
+      showStatusMessage('error', 'Error al cargar sugerencias.');
+    }
+    setIsLoading(false);
   }, [getSuggestionsCollectionRef, showStatusMessage]);
 
-  if (isLoading) return <div className="text-center p-8"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div></div>;
+  useEffect(() => { fetchSuggestions(); }, [fetchSuggestions]);
+
+  if (isLoading && !hasLoaded) {
+    return (
+      <div className="space-y-2" aria-busy="true" aria-label="Cargando sugerencias">
+        {[0, 1, 2].map(i => <div key={i} className="skeleton h-24 rounded-xl" />)}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <p className="text-xs text-ink-3">
+          Sugerencias enviadas por los equipos desde el buzón. <span className="num">{suggestions.length}</span> en total.
+        </p>
+        <button type="button" onClick={fetchSuggestions} disabled={isLoading} className="btn btn-ghost btn-sm self-end sm:self-auto">
+          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} aria-hidden="true" />
+          {isLoading ? 'Actualizando…' : 'Actualizar'}
+        </button>
+      </div>
       {suggestions.length === 0 ? (
-        <p className="text-ink-3 italic text-center py-8">Bandeja de entrada vacía.</p>
+        <EmptyState icon={MessageSquarePlus} title="Buzón vacío" description="Cuando un equipo mande una sugerencia aparece acá." />
       ) : (
-        suggestions.map(sug => (
-          <div key={sug.id} className="bg-raised/40 p-4 rounded-xl border border-line/15 hover:border-line/20 transition shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                <span className="font-bold text-ink text-sm">{sug.teamName || 'Anónimo'}</span>
-                <span className="text-xs text-ink-3 font-mono">({sug.userId?.substring(0, 5)}...)</span>
+        <ul className="space-y-3">
+          {suggestions.map(sug => (
+            <li key={sug.id} className="bg-raised/40 p-4 rounded-xl border border-line/15">
+              <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-semibold text-ink text-sm truncate">{sug.teamName || 'Anónimo'}</span>
+                  {sug.userId && <span className="text-xs text-ink-3 font-mono" title={sug.userId}>({sug.userId.substring(0, 5)}…)</span>}
+                </div>
+                <span className="text-xs text-ink-3">
+                  {sug.timestamp ? sug.timestamp.toLocaleString('es-AR') : 'Sin fecha'}
+                </span>
               </div>
-              <span className="text-[10px] text-ink-3 uppercase font-bold tracking-wide bg-surface/50 px-2 py-1 rounded">
-                {sug.timestamp ? sug.timestamp.toLocaleString('es-ES') : '-'}
-              </span>
-            </div>
-            <p className="text-ink-2 text-sm leading-relaxed bg-surface/30 p-3 rounded-lg border border-line/15">{sug.text}</p>
-          </div>
-        ))
+              <p className="text-ink-2 text-sm leading-relaxed whitespace-pre-wrap break-words">{sug.text}</p>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

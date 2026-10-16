@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Trophy, Star } from 'lucide-react';
 import { TournamentSectionTitle } from '../TournamentUI.jsx';
+import { playerPlaceholder } from '../../utils/playerPlaceholder.js';
 
 export const StatsView = memo(function StatsView({
   localData,
@@ -39,12 +40,12 @@ export const StatsView = memo(function StatsView({
                     {/* Foto del jugador con mini escudo del club */}
                     <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-black/40 border border-line/[0.12] shrink-0 shadow-sm">
                       <img
-                        src={photoUrl || `https://placehold.co/32x32/111/555?text=${(player.name || '?').substring(0, 1)}`}
+                        src={photoUrl || playerPlaceholder((player.name || '?').substring(0, 1))}
                         alt={player.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = `https://placehold.co/32x32/111/555?text=${(player.name || '?').substring(0, 1)}`;
+                          e.target.src = playerPlaceholder((player.name || '?').substring(0, 1));
                         }}
                       />
                       {player.team && (
@@ -108,12 +109,12 @@ export const StatsView = memo(function StatsView({
                     {/* Foto del jugador con mini escudo del club */}
                     <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-black/40 border border-line/[0.12] shrink-0 shadow-sm">
                       <img
-                        src={photoUrl || `https://placehold.co/32x32/111/555?text=${(player.name || '?').substring(0, 1)}`}
+                        src={photoUrl || playerPlaceholder((player.name || '?').substring(0, 1))}
                         alt={player.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = `https://placehold.co/32x32/111/555?text=${(player.name || '?').substring(0, 1)}`;
+                          e.target.src = playerPlaceholder((player.name || '?').substring(0, 1));
                         }}
                       />
                       {player.team && (

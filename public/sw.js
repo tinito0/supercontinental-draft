@@ -1,4 +1,5 @@
-const CACHE_NAME = 'players-db-v1';
+// v2: catálogo compacto (jugadores.compact.json). Al activar se borra la caché v1 con el JSON de ~60 MB.
+const CACHE_NAME = 'players-db-v2';
 const STATIC_CACHE = 'scl-static-v1';
 
 // Assets to precache on install (excluding jugadores.json — it's too large for precache,
@@ -48,8 +49,8 @@ self.addEventListener('fetch', (event) => {
 
   const parsedUrl = new URL(url);
 
-  // jugadores.json — CacheFirst (serve from cache, update in background)
-  if (parsedUrl.pathname.endsWith('/jugadores.json')) {
+  // Catálogo de jugadores (compacto o el JSON original de respaldo) — CacheFirst, se actualiza en segundo plano
+  if (parsedUrl.pathname.endsWith('/jugadores.compact.json') || parsedUrl.pathname.endsWith('/jugadores.json')) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
         const cached = await cache.match(event.request);

@@ -7,7 +7,46 @@ import {
   generateCoachCsv,
   generateFormationCsv,
   generateAppearancesCsv,
+  alignStarters,
 } from '../utils/pesExport.js';
+import { FORMATIONS } from '../utils/constants.js';
+
+// Formation.csv maps formation slot k to Roster player k: starters must stay aligned to slots. Synthetic data.
+describe('alignStarters', () => {
+  const layout = FORMATIONS['4-3-3'].layout;
+  const squad = Array.from({ length: 14 }, (_, i) => ({ Id: 100 + i, Name: `P${i}` }));
+  const fullLineup = Object.fromEntries(layout.map((_, i) => [i, 100 + i]));
+
+  it('keeps each starter in its own slot when the lineup is complete', () => {
+    const { starters, subs, filledSlots } = alignStarters(layout, fullLineup, squad);
+    expect(starters.map(p => p.Id)).toEqual(layout.map((_, i) => 100 + i));
+    expect(subs.map(p => p.Id)).toEqual([111, 112, 113]);
+    expect(filledSlots).toEqual([]);
+  });
+
+  it('does not shift later starters when a slot is empty or its player was sold', () => {
+    const lineup = { ...fullLineup, 2: undefined, 6: 999 }; // slot 2 empty, slot 6 sold
+    const { starters, filledSlots } = alignStarters(layout, lineup, squad);
+    expect(starters).toHaveLength(11);
+    expect(starters[3].Id).toBe(103); // was moved to slot 2 before the fix
+    expect(starters[10].Id).toBe(110);
+    expect(filledSlots.map(f => [f.slot, f.pos, f.player.Id])).toEqual([[2, 'DFC', 102], [6, 'MC', 106]]);
+  });
+
+  it('never uses the same player twice', () => {
+    const { starters } = alignStarters(layout, { ...fullLineup, 1: 100 }, squad);
+    expect(new Set(starters.map(p => p.Id)).size).toBe(11);
+  });
+});
+
+describe('CSV text cells', () => {
+  it('a team or coach name with ";" or a newline cannot shift columns', () => {
+    const team = generateTeamCsv(103, 'Club; Atlético\nNorte').split('\n')[1].split(';');
+    expect(team[1]).toBe('Club Atlético Norte');
+    const coach = generateCoachCsv(103, 'DT;X').split('\n')[1].split(';');
+    expect(coach[1]).toBe('DT X');
+  });
+});
 
 describe('utils/pesExport', () => {
   beforeEach(() => {

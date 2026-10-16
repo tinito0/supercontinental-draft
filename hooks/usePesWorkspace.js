@@ -3,11 +3,13 @@
 // Supabase Storage (shared sources and textures, so every user works on the same files).
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  fetchPesRole, listWorkspaces, createWorkspace, updateWorkspace, subscribeWorkspace, subscribeOps,
+  fetchPesRole, listWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace, subscribeWorkspace, subscribeOps,
   saveOps, discardOp, recordExport, listExports, saveValidation,
 } from '../services/pesWorkspaceService.js';
-import { uploadTexture, downloadTexture, uploadSource, downloadSource } from '../services/pesTextureStorage.js';
-import { getSource, putSource, getDraft, putDraft, clearDraft, getAsset, putAsset } from '../pes/storage/localStore.js';
+import { uploadTexture, downloadTexture, uploadSource, downloadSource, deleteWorkspaceFiles } from '../services/pesTextureStorage.js';
+import {
+  getSource, putSource, deleteSource, getDraft, putDraft, clearDraft, getAsset, putAsset, resetLocalStore,
+} from '../pes/storage/localStore.js';
 import { classifyFiles, readSources, buildWorkspace, restoreWorkingCopy } from '../pes/session.js';
 import { applyOperations } from '../pes/operations.js';
 import { validateWorkspace } from '../pes/validator.js';
@@ -121,6 +123,51 @@ export function usePesWorkspace({ userId, isAdmin }) {
   /** Rebuilds the working copy (e.g. after the missing sources were loaded on this machine). */
   const reload = useCallback(() => setRebuildKey(k => k + 1), []);
 
+  /**
+   * "Actualizar": reconnects the local database, reloads the workspace list, the drafts and exports
+   * of the active workspace, and rebuilds its working copy from the sources.
+   */
+  const refreshAll = useCallback(async () => {
+    setBusy('Actualizando…');
+    try {
+      await resetLocalStore();
+      const list = canRead ? await listWorkspaces() : [];
+      setWorkspaces(list);
+      if (!activeId) return;
+      if (!list.some(w => w.id === activeId)) { selectWorkspace(null); return; }
+      setDrafts(await getDraft(activeId));
+      setExportsList(await listExports(activeId).catch(() => []));
+      setRebuildKey(k => k + 1);
+    } finally { setBusy(null); }
+  }, [canRead, activeId, selectWorkspace]);
+
+  /**
+   * Deletes a workspace for everyone (Super Admin): its shared files in Supabase, its history in
+   * Firestore, and this browser's drafts and local copies of sources no other workspace uses.
+   * Returns warnings for the parts that could not be cleaned (the workspace is deleted anyway).
+   */
+  const removeWorkspace = useCallback(async id => {
+    const target = workspaces.find(w => w.id === id) || (wsDoc?.id === id ? wsDoc : null);
+    const warnings = [];
+    if (activeId === id) { selectWorkspace(null); setDrafts([]); }
+    setBusy('Eliminando el espacio de trabajo…');
+    try {
+      try {
+        await deleteWorkspaceFiles(id);
+      } catch (e) {
+        warnings.push(`No se pudieron borrar los archivos compartidos en Supabase: ${e.message}`);
+      }
+      await deleteWorkspace(id);
+      await clearDraft(id).catch(() => {});
+      const stillUsed = new Set(workspaces.filter(w => w.id !== id).flatMap(w => (w.sources || []).map(s => s.sha256)));
+      for (const source of target?.sources || []) {
+        if (!stillUsed.has(source.sha256)) await deleteSource(source.sha256).catch(() => {});
+      }
+      setWorkspaces(await listWorkspaces());
+      return { warnings };
+    } finally { setBusy(null); }
+  }, [workspaces, wsDoc, activeId, selectWorkspace]);
+
   /** Reads files, validates them and stores the originals locally (never overwritten). */
   const importFiles = useCallback(async fileList => {
     setBusy('Leyendo archivos…');
@@ -186,13 +233,20 @@ export function usePesWorkspace({ userId, isAdmin }) {
     const ws = engineState.ws;
     if (!ws) throw new Error('No hay un espacio de trabajo cargado.');
     const applied = applyOperations(ws, ops, actor);
-    const next = [...drafts, ...applied.map(op => ({ ...op, clientId: crypto.randomUUID(), actorUid: userId, actorRole: actor.role, draftAt: new Date().toISOString() }))];
-    await putDraft(activeId, next);
+    // From draftsRef, not this render's `drafts`: two applies before a re-render (a color drag, Enter then
+    // blur) must both stay, or the working copy holds a change that no draft records.
+    const next = [...draftsRef.current, ...applied.map(op => ({ ...op, clientId: crypto.randomUUID(), actorUid: userId, actorRole: actor.role, draftAt: new Date().toISOString() }))];
+    draftsRef.current = next;
     setDrafts(next);
     setEngineState(s => ({ ...s, version: s.version + 1 }));
     setValidation(null);
+    try {
+      await putDraft(activeId, next);
+    } catch (e) {
+      throw new Error(`El cambio se aplicó, pero este navegador no pudo guardar el borrador (${e?.message || 'almacenamiento no disponible'}): guardá los cambios antes de recargar.`);
+    }
     return applied;
-  }, [engineState.ws, actor, drafts, activeId, userId]);
+  }, [engineState.ws, actor, activeId, userId]);
 
   /** Registers texture bytes so a kit.texture.set operation can reference them. */
   const registerAsset = useCallback(async bytes => {
@@ -203,26 +257,40 @@ export function usePesWorkspace({ userId, isAdmin }) {
   }, []);
 
   const saveDrafts = useCallback(async () => {
-    if (!drafts.length) return;
+    const captured = draftsRef.current;
+    if (!captured.length) return;
+    // A draft that no longer applies would go to everyone's shared history broken.
+    const capturedIds = new Set(captured.map(d => d.clientId));
+    const failing = engineState.failures.filter(f => capturedIds.has(f.op?.clientId));
+    if (failing.length) {
+      throw new Error(`${failing.length} cambio(s) sin guardar no se pueden aplicar sobre las fuentes actuales. Descartalos antes de guardar.`);
+    }
     setBusy('Guardando cambios…');
     try {
-      for (const op of drafts) {
+      // Drafts already in the history (a previous save that stopped half way) are not saved twice.
+      const alreadySaved = new Set(savedOps.map(o => o.clientId).filter(Boolean));
+      const pending = captured.filter(d => !alreadySaved.has(d.clientId));
+      for (const op of pending) {
         if (op.asset?.sha256) {
           await uploadTexture(activeId, op.asset.sha256, assetStore.current.get(op.asset.sha256), op.ext);
         }
       }
-      await saveOps(activeId, drafts, actor);
-      await clearDraft(activeId);
-      setDrafts([]); // the saved-ops subscription rebuilds the working copy
+      await saveOps(activeId, pending, actor);
+      // Keep what was applied while saving (the panels stay editable): only the captured drafts are done.
+      const remaining = draftsRef.current.filter(d => !capturedIds.has(d.clientId));
+      if (remaining.length) await putDraft(activeId, remaining); else await clearDraft(activeId);
+      draftsRef.current = remaining;
+      setDrafts(remaining); // the saved-ops subscription rebuilds the working copy
     } finally { setBusy(null); }
-  }, [drafts, activeId, actor, userId]);
+  }, [engineState.failures, savedOps, activeId, actor]);
 
   const discardDrafts = useCallback(async (indexes = null) => {
-    const next = indexes ? drafts.filter((_, i) => !indexes.includes(i)) : [];
+    const next = indexes ? draftsRef.current.filter((_, i) => !indexes.includes(i)) : [];
+    draftsRef.current = next;
     await putDraft(activeId, next);
     setDrafts(next);
     setRebuildKey(k => k + 1);
-  }, [drafts, activeId]);
+  }, [activeId]);
 
   const discardSaved = useCallback(opId => discardOp(activeId, opId, userId), [activeId, userId]);
 
@@ -253,5 +321,6 @@ export function usePesWorkspace({ userId, isAdmin }) {
     loading: engineState.loading, loadingMessage: engineState.loadingMessage, error: engineState.error,
     selectWorkspace, reload, importFiles, createFromSources, replaceSource, shareSources, setDraftMap, setLeagueTeams,
     apply, registerAsset, saveDrafts, discardDrafts, discardSaved, runValidation, exportZip, refreshWorkspaces,
+    refreshAll, removeWorkspace,
   };
 }

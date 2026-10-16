@@ -2,7 +2,9 @@ import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, RotateCcw, Save, Search, SlidersHorizontal, X } from 'lucide-react';
 import { addDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
+import { getActiveFilterChips, isInvertedRange } from '../utils/marketFilters.js';
 import { BaseModal } from './ui/BaseModal.jsx';
+import { ActiveFilterChips } from './marketplace/ActiveFilterChips.jsx';
 
 // Label colours a manager can give a saved filter (stored by id in Firestore; ids must not change).
 const filterColors = [
@@ -14,29 +16,11 @@ const filterColors = [
   { id: 'yellow', dot: 'bg-yellow-400', label: 'Amarillo' },
 ];
 
-const fieldLabels = {
-  ovrMin: 'OVR mín', ovrMax: 'OVR máx', ageMin: 'Edad mín', ageMax: 'Edad máx', priceMin: 'Precio mín', priceMax: 'Precio máx',
-  pos: 'Posición', foot: 'Pie', country: 'País', region: 'Región', playingStyle: 'Estilo',
-};
-
 const RANGES = [
   ['Media (OVR)', 'ovrMin', 'ovrMax', '0', '99'],
   ['Edad', 'ageMin', 'ageMax', '15', '45'],
   ['Precio ($M)', 'priceMin', 'priceMax', 'Mín', 'Máx'],
 ];
-
-export function getActiveFilters(filters) {
-  const active = [];
-  Object.entries(fieldLabels).forEach(([key, label]) => { if (filters[key]) active.push(`${label}: ${filters[key]}`); });
-  Object.entries(filters.grupos || {}).forEach(([group, enabled]) => { if (enabled) active.push(group); });
-  Object.entries(filters.skills || {}).forEach(([skill, enabled]) => { if (enabled) active.push(PLAYER_SKILLS_MAP[skill] || skill); });
-  Object.values(DETAILED_STAT_KEYS).forEach(stats => stats.forEach(stat => {
-    const min = filters[`${stat}Min`];
-    const max = filters[`${stat}Max`];
-    if (min || max) active.push(`${STAT_NAMES_MAP[stat] || stat}: ${min || '0'}–${max || '99'}`);
-  }));
-  return active;
-}
 
 const ToggleButton = memo(function ToggleButton({ label, value, onToggle, isChecked }) {
   return (
@@ -49,14 +33,18 @@ const ToggleButton = memo(function ToggleButton({ label, value, onToggle, isChec
 });
 
 function RangeInputs({ label, minKey, maxKey, minPlaceholder, maxPlaceholder, filters, onChange }) {
+  const isInverted = isInvertedRange(filters[minKey], filters[maxKey]);
+  const errorId = `${minKey}-error`;
+  const invalidProps = isInverted ? { 'aria-invalid': true, 'aria-describedby': errorId } : {};
   return (
     <fieldset>
       <legend className="field-label">{label}</legend>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <input type="number" inputMode="numeric" aria-label={`${label} mínimo`} placeholder={minPlaceholder} value={filters[minKey]} onChange={e => onChange(minKey, e.target.value)} className="input num" />
+        <input type="number" inputMode="numeric" min="0" aria-label={`${label} mínimo`} placeholder={minPlaceholder} value={filters[minKey]} onChange={e => onChange(minKey, e.target.value)} className="input num" {...invalidProps} />
         <span className="text-ink-3" aria-hidden="true">–</span>
-        <input type="number" inputMode="numeric" aria-label={`${label} máximo`} placeholder={maxPlaceholder} value={filters[maxKey]} onChange={e => onChange(maxKey, e.target.value)} className="input num" />
+        <input type="number" inputMode="numeric" min="0" aria-label={`${label} máximo`} placeholder={maxPlaceholder} value={filters[maxKey]} onChange={e => onChange(maxKey, e.target.value)} className="input num" {...invalidProps} />
       </div>
+      {isInverted && <p id={errorId} className="field-error">El mínimo es mayor que el máximo: no va a haber resultados.</p>}
     </fieldset>
   );
 }
@@ -91,13 +79,15 @@ export const FiltrosModal = memo(function FiltrosModal({
   userId,
   getSavedFiltersCollectionRef,
   showStatusMessage,
+  resultCount,
 }) {
   const [savedFilters, setSavedFilters] = useState([]);
   const [newFilterName, setNewFilterName] = useState('');
   const [selectedColor, setSelectedColor] = useState('cyan');
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const savingFilterRef = useRef(false);
-  const activeFilters = useMemo(() => getActiveFilters(filters), [filters]);
+  const activeChips = useMemo(() => getActiveFilterChips(filters), [filters]);
 
   useEffect(() => {
     if (!isVisible || !userId) return undefined;
@@ -134,9 +124,8 @@ export const FiltrosModal = memo(function FiltrosModal({
     }
   };
 
-  const handleDeleteFilter = async (filterRef, event) => {
-    event.stopPropagation();
-    if (!window.confirm('¿Eliminar este filtro?')) return;
+  const handleDeleteFilter = async (filterRef) => {
+    setPendingDeleteId(null);
     try {
       await deleteDoc(filterRef);
       showStatusMessage('success', 'Filtro eliminado.');
@@ -158,10 +147,13 @@ export const FiltrosModal = memo(function FiltrosModal({
   const footer = (
     <div className="w-full flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pb-[env(safe-area-inset-bottom)]">
       <button type="button" onClick={resetFilters} className="btn btn-ghost text-danger-soft hover:text-danger-soft">
-        <RotateCcw className="w-4 h-4" aria-hidden="true" />Limpiar todo
+        <RotateCcw className="w-4 h-4" aria-hidden="true" />Limpiar filtros
       </button>
       <button type="button" onClick={() => { applyFilters(); onClose(); }} className="btn btn-primary min-h-12 sm:px-8">
-        <Search className="w-4 h-4" aria-hidden="true" />Ver resultados
+        <Search className="w-4 h-4" aria-hidden="true" />
+        {typeof resultCount === 'number'
+          ? <>Ver <span className="num">{resultCount.toLocaleString('es-AR')}</span> {resultCount === 1 ? 'jugador' : 'jugadores'}</>
+          : 'Ver resultados'}
       </button>
     </div>
   );
@@ -172,18 +164,14 @@ export const FiltrosModal = memo(function FiltrosModal({
       onClose={onClose}
       size="2xl"
       title="Filtros"
-      subtitle={activeFilters.length ? `${activeFilters.length} filtro(s) activo(s)` : 'Sin filtros aplicados'}
+      subtitle={activeChips.length ? `${activeChips.length} ${activeChips.length === 1 ? 'filtro activo' : 'filtros activos'}` : 'Sin filtros aplicados'}
       icon={SlidersHorizontal}
       footer={footer}
       className="h-[94dvh] sm:h-[88dvh]"
       contentClassName="p-4 sm:p-6"
     >
       <div className="space-y-6" onKeyDown={onFieldKeyDown}>
-        {activeFilters.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5" aria-label="Filtros activos">
-            {activeFilters.map(item => <li key={item} className="chip">{item}</li>)}
-          </ul>
-        )}
+        <ActiveFilterChips chips={activeChips} setFilters={setFilters} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <section className="lg:col-span-5 space-y-4" aria-labelledby="filters-ranges">
@@ -295,10 +283,17 @@ export const FiltrosModal = memo(function FiltrosModal({
                       onClick={() => { setFilters(f.config); showStatusMessage('success', `Filtro "${f.name}" cargado.`); }}>
                       {f.name}
                     </button>
-                    <button type="button" onClick={(event) => handleDeleteFilter(f.ref, event)} aria-label={`Eliminar el filtro ${f.name}`}
-                      className="w-8 h-8 rounded-md flex items-center justify-center text-ink-3 hover:text-ink hover:bg-white/10">
-                      <X className="w-3.5 h-3.5" aria-hidden="true" />
-                    </button>
+                    {pendingDeleteId === f.id ? (
+                      <>
+                        <button type="button" onClick={() => handleDeleteFilter(f.ref)} className="btn btn-danger btn-sm">Eliminar</button>
+                        <button type="button" onClick={() => setPendingDeleteId(null)} className="btn btn-ghost btn-sm">Cancelar</button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => setPendingDeleteId(f.id)} aria-label={`Eliminar el filtro ${f.name}`}
+                        className="w-8 h-8 rounded-md flex items-center justify-center text-ink-3 hover:text-ink hover:bg-white/10">
+                        <X className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                    )}
                   </span>
                 );
               })}

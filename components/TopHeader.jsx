@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { Bell, Menu, MessageSquareText, ArrowLeftRight, Keyboard } from 'lucide-react';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { formatPriceShort } from '../utils/helpers.js';
@@ -8,18 +8,34 @@ import { auth } from '../config/firebase.js';
 
 const iconBtn = 'relative flex items-center justify-center w-11 h-11 rounded-lg text-ink-3 hover:text-ink hover:bg-white/[0.06] transition-colors';
 
+/** After the budget first shows, changes within this window are the initial load settling, not a user action. */
+const BUDGET_SETTLE_MS = 2000;
+
 /** Club budget: the one place the remaining budget is shown in the app chrome. */
 function BudgetMeter({ remaining, initial }) {
   const pct = initial > 0 ? Math.max(0, Math.min(100, (remaining / initial) * 100)) : null;
   const tone = pct == null || pct > 50 ? 'bg-success' : pct > 20 ? 'bg-warning' : 'bg-danger';
   const text = pct == null || pct > 20 ? 'text-ink' : 'text-danger-soft';
+  // The figure glows once each time it changes after the first value (a signing, a release, an accepted offer), so
+  // the action and its effect on the money read together. Remounting the span replays the animation.
+  // Values that settle right after loading (locks and prices arriving) do not glow.
+  const previousRef = useRef(remaining);
+  const mountedAtRef = useRef(null);
+  const [changeCount, setChangeCount] = useState(0);
+  useEffect(() => { mountedAtRef.current = Date.now(); }, []);
+  useEffect(() => {
+    if (previousRef.current === remaining) return;
+    previousRef.current = remaining;
+    if (Date.now() - (mountedAtRef.current ?? Date.now()) < BUDGET_SETTLE_MS) return;
+    setChangeCount(count => count + 1);
+  }, [remaining]);
   return (
     <div data-app-tour="budget" className="flex flex-col items-end justify-center min-w-0 px-1 sm:px-2" title={pct != null ? `${pct.toFixed(0)}% del presupuesto inicial` : undefined}>
       <span className="sr-only sm:not-sr-only sm:block text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3 leading-none">Presupuesto<span className="sr-only">: </span></span>
-      <span className={`font-display num text-lg sm:text-xl font-bold leading-none sm:mt-1 ${text}`}>{formatPriceShort(remaining / 1000000)}</span>
+      <span key={changeCount} className={`font-display num text-lg sm:text-xl font-bold leading-none sm:mt-1 ${text} ${changeCount > 0 ? 'value-flash' : ''}`}>{formatPriceShort(remaining / 1000000)}</span>
       {pct != null && (
         <span className="mt-1 h-[3px] w-14 sm:w-20 rounded-full bg-white/10 overflow-hidden" aria-hidden="true">
-          <span className={`block h-full rounded-full ${tone}`} style={{ width: `${pct}%` }} />
+          <span className={`block h-full rounded-full transition-[width] duration-move ease-out ${tone}`} style={{ width: `${pct}%` }} />
         </span>
       )}
     </div>

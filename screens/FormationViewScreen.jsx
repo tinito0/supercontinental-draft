@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { Pitch } from '../components/Pitch.jsx';
 import { FORMATIONS, APP_ID } from '../utils/constants.js';
+import { layoutForState, normalizeFormationStates } from '../utils/formationStates.js';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 
 export default function FormationViewScreen() {
@@ -78,8 +79,10 @@ export default function FormationViewScreen() {
     );
   }
 
-  const { teamName, logoUrl, formationKey, slots, bench = [], createdAt } = formationData;
-  const formation = FORMATIONS[formationKey] || FORMATIONS['4-3-3'];
+  const { teamName, logoUrl, formationKey, slots, bench = [], createdAt, formationStates } = formationData;
+  const key = FORMATIONS[formationKey] ? formationKey : '4-3-3';
+  // Snapshots made after the tactical states existed carry the moved markers of the starting formation.
+  const formation = { ...FORMATIONS[key], layout: layoutForState(FORMATIONS[key], normalizeFormationStates(formationStates, key, FORMATIONS[key]), 'base') };
   const validSlots = Object.fromEntries(
     Object.entries(slots || {}).filter(([, slotData]) => {
       const name = String(slotData?.name || '').trim().toLowerCase();

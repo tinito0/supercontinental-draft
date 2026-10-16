@@ -59,6 +59,11 @@ export function parseKitPack(compressed) {
   return { get, has: n => map.has(n), names: () => [...map.keys()] };
 }
 
+/** Mesh of one collar model exactly as numbered (no nearest fallback), for the collar picker. */
+export function collarModel(pack, n) {
+  return pack.get(`collar_${String(Number(n) || 0).padStart(3, '0')}`);
+}
+
 function collarName(pack, n) {
   const v = Number(n) || 0;
   for (const c of [v, v - 1, v + 1]) {
@@ -71,23 +76,31 @@ function collarName(pack, n) {
 /**
  * Picks the model parts of a kit from its config.txt values.
  * @param {(key: string) => string|null} value config getter
- * @param {{ sleeve?: 'short'|'long', socks?: 'long'|'middle'|'short', tuck?: 'out'|'in', captain?: boolean, goalkeeper?: boolean }} view
+ * @param {{ sleeve?: 'short'|'long', socks?: 'long'|'middle'|'short', tuck?: 'out'|'in', captain?: boolean, goalkeeper?: boolean,
+ *           collar?: number|null, undershirtOnly?: boolean }} view
+ *   collar: collar model to show (resolveKitRender: Collar, WinterCollar or a previewed one); default config Collar.
+ *   undershirtOnly: LongSleevesType=187, long sleeves are the undershirt under the short-sleeved shirt.
  * @returns {{ parts: {k: string, m: object}[], collar: string|null, collarExact: boolean }}
  */
 export function selectKitParts(pack, value, view = {}) {
   const g = k => String(value(k) ?? '').trim();
   const tight = g('TightKit') === '1', kappa = g('ShortSleevesModel') === '2', gk = Boolean(view.goalkeeper);
   const tuck = view.tuck === 'in' ? 'in' : 'out', socks = view.socks || 'long';
-  const long = view.sleeve === 'long' || gk;
+  const undershirt = !gk && view.sleeve === 'long' && Boolean(view.undershirtOnly);
+  const long = (view.sleeve === 'long' && !undershirt) || gk;
   const sleeve = gk ? `sleeve_gk${tight ? '_tight' : ''}` : `sleeve_${long ? 'long' : 'short'}${tight ? '_tight' : ''}${kappa ? '_kappa' : ''}`;
   const shorts = `pants_${String(Number(g('ShortsModel')) || 1).padStart(3, '0')}`;
-  const col = collarName(pack, g('Collar'));
+  const col = collarName(pack, view.collar ?? g('Collar'));
   const want = [
     ['shirt', `shirt_${tuck}${tight ? '_tight' : ''}`],
     ['sleeve', sleeve + (view.captain ? '_cap' : '')],
     ['shorts', pack.has(shorts) ? shorts : 'pants_001'],
     ['socks', `socks_${socks}`],
     ['collar', col?.name],
+    // Long undershirt under the short sleeve: the long-sleeve mesh, drawn in UndershirtColor without the kit
+    // texture; the short sleeve is drawn in front of it (polygon offset in the renderer). The pack's
+    // `arm_long` mesh is not used: it is not placed on this body (checked in the browser).
+    ['undershirt', undershirt ? `sleeve_long${tight ? '_tight' : ''}${kappa ? '_kappa' : ''}` : null],
   ];
   const parts = [];
   for (const [k, n] of want) {

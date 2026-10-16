@@ -1,0 +1,225 @@
+/* Bracket de transmisión (OBS). Todo se dimensiona con --u = min(ancho/1920, alto/1080) en px reales
+   (lo calcula BroadcastBracket.jsx midiendo el contenedor). En 1920×1080, 1u = 1px. Los max() son pisos
+   de legibilidad para fuentes chicas: nunca se encoge el texto por debajo de eso. */
+
+.bb-root {
+  --u: 1px;
+  --bb-tone: 252 211 77;          /* oro (warning-soft) */
+  --bb-tone-strong: 245 158 11;   /* oro (warning) */
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink));
+  font-family: Barlow, ui-sans-serif, system-ui, sans-serif;
+  padding: calc(var(--u) * 40) calc(var(--u) * 56) calc(var(--u) * 44);
+}
+.bb-root[data-tone='silver'] {
+  --bb-tone: 203 213 225;         /* plata */
+  --bb-tone-strong: 148 163 184;
+}
+
+/* Encabezado: competición, copa y estado */
+.bb-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: calc(var(--u) * 32);
+  flex-shrink: 0;
+  padding-bottom: calc(var(--u) * 22);
+  margin-bottom: calc(var(--u) * 18);
+  border-bottom: max(1px, calc(var(--u) * 2)) solid rgb(var(--c-line) / 0.14);
+}
+.bb-brand { display: flex; align-items: center; gap: calc(var(--u) * 22); min-width: 0; }
+.bb-logo { width: max(40px, calc(var(--u) * 76)); height: max(40px, calc(var(--u) * 76)); object-fit: contain; flex-shrink: 0; }
+.bb-eyebrow {
+  font-size: max(12px, calc(var(--u) * 20));
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgb(var(--c-ink-2));
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 12);
+}
+.bb-eyebrow::before {
+  content: '';
+  width: calc(var(--u) * 28);
+  height: max(2px, calc(var(--u) * 3));
+  background: rgb(var(--c-crest-lavender));
+}
+.bb-title {
+  font-family: 'Barlow Condensed', Barlow, ui-sans-serif, sans-serif;
+  font-size: max(28px, calc(var(--u) * 64));
+  line-height: 1;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgb(var(--bb-tone));
+  margin-top: calc(var(--u) * 6);
+  white-space: nowrap;
+}
+.bb-status { text-align: right; flex-shrink: 0; }
+.bb-status-label {
+  font-size: max(11px, calc(var(--u) * 17));
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(var(--c-ink-3));
+}
+.bb-status-value {
+  font-family: 'Barlow Condensed', Barlow, ui-sans-serif, sans-serif;
+  font-size: max(18px, calc(var(--u) * 36));
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bb-status-value.is-champion { color: rgb(var(--bb-tone)); }
+
+/* Grilla */
+.bb-board { flex: 1 1 auto; min-height: 0; }
+.bb-round-label {
+  text-align: center;
+  font-size: max(12px, calc(var(--u) * 19));
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--c-ink-3));
+  padding-bottom: calc(var(--u) * 8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bb-round-label.is-final { color: rgb(var(--bb-tone)); }
+
+/* Tarjeta de partido */
+.bb-slot { position: relative; width: 100%; max-width: var(--bb-card-width, 100%); }
+.bb-card {
+  width: 100%;
+  background: rgb(var(--c-surface));
+  border: max(1px, calc(var(--u) * 2)) solid rgb(var(--c-line) / 0.16);
+  border-radius: max(8px, calc(var(--u) * 12));
+  overflow: hidden;
+  box-shadow: 0 calc(var(--u) * 10) calc(var(--u) * 28) rgb(0 0 0 / 0.35);
+}
+.bb-card.is-final {
+  border-color: rgb(var(--bb-tone-strong) / 0.85);
+  box-shadow: 0 0 0 max(1px, calc(var(--u) * 2)) rgb(var(--bb-tone-strong) / 0.25), 0 calc(var(--u) * 10) calc(var(--u) * 28) rgb(0 0 0 / 0.35);
+}
+.bb-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--u) * 10);
+  height: max(24px, calc(var(--u) * 36));
+  padding: 0 calc(var(--u) * 16);
+  background: rgb(var(--c-raised));
+  border-bottom: 1px solid rgb(var(--c-line) / 0.1);
+  font-size: max(11px, calc(var(--u) * 15));
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(var(--c-ink-3));
+}
+.bb-card.is-final .bb-card-head { color: rgb(var(--bb-tone)); }
+.bb-card-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bb-card-state { flex-shrink: 0; font-weight: 700; }
+.bb-card-state.is-done { color: rgb(var(--c-success-soft)); }
+
+.bb-team {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 14);
+  height: max(36px, calc(var(--u) * 64));
+  padding: 0 calc(var(--u) * 10) 0 calc(var(--u) * 16);
+}
+.bb-team + .bb-team { border-top: 1px solid rgb(var(--c-line) / 0.08); }
+.bb-seed {
+  width: max(18px, calc(var(--u) * 30));
+  flex-shrink: 0;
+  font-size: max(11px, calc(var(--u) * 16));
+  font-weight: 600;
+  color: rgb(var(--c-ink-3));
+  font-variant-numeric: tabular-nums;
+}
+.bb-crest { width: max(22px, calc(var(--u) * 40)); height: max(22px, calc(var(--u) * 40)); object-fit: contain; flex-shrink: 0; }
+.bb-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: max(15px, calc(var(--u) * 26));
+  font-weight: 600;
+  line-height: 1.1;
+  color: rgb(var(--c-ink-2));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bb-name.is-empty { color: rgb(var(--c-ink-3)); font-weight: 500; font-style: italic; }
+.bb-team.is-winner .bb-name { color: rgb(var(--c-ink)); font-weight: 700; }
+.bb-team.is-loser .bb-name { color: rgb(var(--c-ink-3)); }
+.bb-score {
+  flex-shrink: 0;
+  min-width: max(30px, calc(var(--u) * 54));
+  height: max(28px, calc(var(--u) * 48));
+  padding: 0 calc(var(--u) * 8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: max(6px, calc(var(--u) * 8));
+  background: rgb(var(--c-raised));
+  font-family: 'Barlow Condensed', Barlow, ui-sans-serif, sans-serif;
+  font-size: max(18px, calc(var(--u) * 34));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--c-ink-2));
+}
+.bb-score.is-empty { color: rgb(var(--c-ink-3)); background: transparent; }
+.bb-team.is-winner .bb-score { background: rgb(var(--c-accent)); color: rgb(var(--c-on-accent)); }
+.bb-card.is-final .bb-team.is-winner .bb-score { background: rgb(var(--bb-tone-strong)); color: rgb(var(--c-canvas)); }
+.bb-team.is-loser .bb-score { color: rgb(var(--c-ink-3)); }
+
+/* Rótulos encima / debajo de la final (absolutos: no corren el centro de la tarjeta) */
+.bb-final-tag,
+.bb-champion {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 10);
+  white-space: nowrap;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.bb-final-tag {
+  bottom: 100%;
+  margin-bottom: calc(var(--u) * 16);
+  padding: calc(var(--u) * 8) calc(var(--u) * 20);
+  border-radius: 999px;
+  border: max(1px, calc(var(--u) * 2)) solid rgb(var(--bb-tone-strong) / 0.6);
+  background: rgb(var(--bb-tone-strong) / 0.14);
+  color: rgb(var(--bb-tone));
+  font-size: max(12px, calc(var(--u) * 20));
+  letter-spacing: 0.12em;
+}
+.bb-champion {
+  top: 100%;
+  margin-top: calc(var(--u) * 18);
+  flex-direction: column;
+  gap: calc(var(--u) * 2);
+  text-align: center;
+}
+.bb-champion small {
+  font-size: max(11px, calc(var(--u) * 16));
+  letter-spacing: 0.16em;
+  color: rgb(var(--c-ink-3));
+}
+.bb-champion strong {
+  font-family: 'Barlow Condensed', Barlow, ui-sans-serif, sans-serif;
+  font-size: max(20px, calc(var(--u) * 40));
+  line-height: 1;
+  color: rgb(var(--bb-tone));
+}
+.bb-icon { width: max(14px, calc(var(--u) * 22)); height: max(14px, calc(var(--u) * 22)); flex-shrink: 0; }

@@ -4,8 +4,11 @@ import { collection, doc, getDoc, getDocs, limit, orderBy, query } from 'firebas
 import { db } from '../config/firebase.js';
 import { Pitch } from '../components/Pitch.jsx';
 import { FORMATIONS, DEFAULT_LOGO, APP_ID } from '../utils/constants.js';
+import { layoutForState, normalizeFormationStates } from '../utils/formationStates.js';
 import { Shield, Trophy, Users, ArrowLeft, RefreshCw, WifiOff, Award, TrendingUp, Activity } from 'lucide-react';
 import { processPlayersData, formatPriceShort, getStatAndOvrColorClass } from '../utils/helpers.js';
+import { fetchRawPlayers } from '../utils/playerCatalog.js';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
 /* ── Umbrales dinámicos de color OVR consistentes con el mercado ── */
 const OVR_COLOR_THRESHOLDS = [
@@ -178,9 +181,7 @@ export default function TeamScreen() {
         const allTargetIds = Array.from(new Set([...lockedPlayerIds, ...lineupIds, ...rosterIds, ...benchIds]));
 
         if (allTargetIds.length > 0) {
-          const resp = await fetch('/jugadores.json');
-          const rawPlayers = await resp.json();
-          const allPlayers = processPlayersData(rawPlayers || []);
+          const allPlayers = processPlayersData(await fetchRawPlayers());
           const playerMap = new Map();
           allPlayers.forEach(p => {
             if (p && p.Id != null) playerMap.set(String(p.Id), p);
@@ -275,7 +276,12 @@ export default function TeamScreen() {
     );
   }
 
-  const currentFormation = FORMATIONS[teamData?.formation] || FORMATIONS['4-3-3'];
+  // The starting formation as the team saved it (moved markers included); legacy teams use the plain layout.
+  const formationKey = FORMATIONS[teamData?.formation] ? teamData.formation : '4-3-3';
+  const currentFormation = {
+    ...FORMATIONS[formationKey],
+    layout: layoutForState(FORMATIONS[formationKey], normalizeFormationStates(teamData?.formationStates, formationKey, FORMATIONS[formationKey]), 'base'),
+  };
   const validPlayerIds = new Set((cartPlayers || []).map(player => String(player.Id)));
   const publicLineup = Object.fromEntries(
     Object.entries(teamData?.lineup || {}).filter(([, playerId]) => validPlayerIds.has(String(playerId)))
@@ -508,7 +514,7 @@ export default function TeamScreen() {
                         className="w-11 h-11 rounded-lg object-cover bg-slate-950 border border-line/20"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = `https://placehold.co/44x44/111/444?text=${player.Name?.[0] || '?'}`;
+                          e.target.src = playerPlaceholder(player.Name?.[0] || '?');
                         }}
                       />
                       {dorsal && (

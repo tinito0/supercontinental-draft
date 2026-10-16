@@ -2,6 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { isTyping } from '../../hooks/useKeyboardShortcuts.js';
 
+// Open dialogs, oldest first. Only the top one reacts to Escape/Tab: with a confirmation open over a sheet,
+// one Escape used to close both (every dialog listens on window).
+const openDialogs = [];
+
 const SIZE_MAP = {
   sm: 'max-w-md',
   md: 'max-w-lg',
@@ -37,12 +41,16 @@ export function BaseModal({
   useEffect(() => {
     if (!isOpen) return;
 
+    const dialogToken = {};
+    openDialogs.push(dialogToken);
+    const isTopDialog = () => openDialogs[openDialogs.length - 1] === dialogToken;
     const previouslyFocused = document.activeElement;
     const getFocusableElements = () => dialogRef.current?.querySelectorAll(
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
     ) || [];
 
     const handleKeyDown = (e) => {
+      if (!isTopDialog()) return;
       if (e.key === 'Escape') {
         // Escape inside a field leaves the field first; it never closes the dialog while typing.
         if (isTyping(e.target)) {
@@ -73,15 +81,28 @@ export function BaseModal({
       }
     };
 
+    // A dialog stacked over another (a confirmation over a sheet) takes Escape first, in the capture phase,
+    // and stops it: otherwise the dialog below and the app's global Escape listener would close too.
+    const handleStackedEscape = (e) => {
+      if (e.key !== 'Escape' || openDialogs.length < 2 || !isTopDialog() || isTyping(e.target)) return;
+      e.stopPropagation();
+      e.preventDefault();
+      onCloseRef.current?.();
+    };
+
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleStackedEscape, true);
     const firstFocusable = getFocusableElements()[0];
     (firstFocusable || dialogRef.current)?.focus();
 
     return () => {
+      const index = openDialogs.indexOf(dialogToken);
+      if (index !== -1) openDialogs.splice(index, 1);
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleStackedEscape, true);
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     };
   }, [isOpen]);
@@ -101,7 +122,7 @@ export function BaseModal({
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={`bg-surface border border-line/[0.14] rounded-t-2xl sm:rounded-2xl w-full shadow-lg flex flex-col overflow-hidden max-h-[94dvh] sm:max-h-[92dvh] animate-in slide-in-from-bottom sm:zoom-in-95 ${sizeClass} ${className}`}
+        className={`bg-surface border border-line/[0.14] rounded-t-2xl sm:rounded-2xl w-full shadow-lg flex flex-col overflow-hidden max-h-[94dvh] sm:max-h-[92dvh] max-sm:pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom sm:zoom-in-95 ${sizeClass} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -138,7 +159,7 @@ export function BaseModal({
         )}
 
         {/* Content */}
-        <div className={`p-5 overflow-y-auto custom-scrollbar flex-1 min-h-0 ${contentClassName}`}>
+        <div className={`p-5 overflow-y-auto overscroll-contain custom-scrollbar flex-1 min-h-0 ${contentClassName}`}>
           {children}
         </div>
 

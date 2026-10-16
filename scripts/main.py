@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 import math
 import json
@@ -171,45 +172,37 @@ PLAYER_SKILLS_COLUMNS = list(PLAYER_SKILLS_MAP.keys())
 
 
 # =============================================================================
-# LÓGICA DE VALORACIÓN DE JUGADORES
-# Calibrada para Supercontinental PES 2021:
-#   - Mbappé (OVR 91) ≈ 95M
-#   - Plantel competitivo de 21 jugadores (OVR prom ~79) ≈ 440M
-#   - Jugador OVR 70 común ≈ 3-9M según edad/pos/rep
-#   - Jugador OVR 65 mediocre ≈ 1-3M
+# LÓGICA DE VALORACIÓN DE JUGADORES — TEMPORADA 3
+#
+#   precio = ancla(OVR) × edad × posición × meta_posición
+#
+# - ancla(OVR): se calibra para que la mediana de cada OVR quede igual a la de
+#   la fórmula T2 (acuerdo de la reunión: misma escala de precios). Lo que cambia
+#   es el reparto entre jugadores del mismo OVR, no el nivel general.
+# - Sin reputación: la fama no juega en PES.
+# - Edad casi plana: la T3 dura una temporada y la edad no cambia stats.
+# - meta_posición: el OVR se calcula con pesos distintos por posición (ver
+#   r/WEPES, "How PES 2021 calculates Overall Rating"). El modificador compara a
+#   cada jugador contra los de su misma posición y OVR en tres cosas:
+#     A. Núcleo: las stats que más pesan en el OVR de su puesto.
+#     B. Puntos ciegos: stats que ese OVR casi no pesa y en cancha importan.
+#        Nunca repiten el núcleo (al extremo no se le cobra el ritmo: su OVR
+#        ya lo paga).
+#     C. Habilidades clave de su puesto.
+# - Debajo de OVR 66 rige un piso escalonado fijo.
 # =============================================================================
 
-# Factor base calibrado: 0.003986 × (ovr − 60)^2.8
-# El exponente 2.8 (en vez del antiguo cubo sobre ovr-40) suaviza la curva
-# media y mantiene la diferenciación correcta en los OVR altos.
-FACTOR_BASE = 0.003986
+# --- Fórmula T2 (se conserva como referencia de escala y para el control) ---
+FACTOR_BASE_T2 = 0.003986
 
 
-def calcular_valor_base(ovr):
-    """
-    Retorna el valor base en millones para un OVR dado.
-    Usa una potencia de 2.8 sobre (ovr - 60) para una curva
-    más gradual que el antiguo (ovr - 40)^3.
-    El piso es OVR 65 — todo lo que esté debajo usa la base de OVR 65.
-    """
+def calcular_valor_base_t2(ovr: int) -> float:
+    """Valor base T2 en millones: 0.003986 × (ovr − 60)^2.8, con piso en OVR 65."""
     ovr_efectivo = max(int(ovr), 65)
-    return FACTOR_BASE * ((ovr_efectivo - 60) ** 2.8)
+    return FACTOR_BASE_T2 * ((ovr_efectivo - 60) ** 2.8)
 
 
-def calcular_modificador_edad(edad):
-    """
-    Modificador de edad con rangos suaves (diferencia máxima: 23%).
-    Prime (25-29) vale un poco más; ocaso (34+) un poco menos.
-    No penaliza brutalmente a veteranos como el sistema anterior.
-
-    Rangos:
-      ≤ 20  → 0.90  (muy joven, todavía crudo)
-      21-24 → 1.00  (desarrollándose)
-      25-29 → 1.08  (prime físico)
-      30-32 → 1.00  (veterano capaz)
-      33-35 → 0.92  (bajando)
-      36+   → 0.85  (ocaso)
-    """
+def calcular_modificador_edad_t2(edad: int) -> float:
     e = int(edad)
     if e <= 20: return 0.90
     if e <= 24: return 1.00
@@ -219,12 +212,16 @@ def calcular_modificador_edad(edad):
     return 0.85
 
 
-def calcular_modificador_posicion(posicion):
-    """
-    El gol se paga, pero con spread más ajustado que antes (1.15 vs 0.97).
-    Spread reducido respecto al sistema anterior (1.20 vs 0.95) para que
-    la posición no distorsione demasiado frente al OVR.
-    """
+def calcular_modificador_reputacion_t2(reputacion: int) -> float:
+    try:
+        rep = max(1, min(8, int(reputacion)))
+        return 1.0 + (rep - 1) * 0.04
+    except (ValueError, TypeError):
+        return 1.0
+
+
+def calcular_modificador_posicion(posicion: str) -> float:
+    """El gol se paga: igual que en T2."""
     if posicion in ['DC', 'EI', 'ED', 'SD']: return 1.15
     if posicion in ['MO', 'MI', 'MD']:        return 1.10
     if posicion in ['MC', 'MCD']:             return 1.05
@@ -233,40 +230,201 @@ def calcular_modificador_posicion(posicion):
     return 1.0
 
 
-def calcular_modificador_reputacion(reputacion):
-    """
-    Rep 1 = 1.00× (base limpia, sin inflación artificial).
-    Rep 8 = 1.28× (28% de premium por fama — Mbappé sigue siendo Mbappé).
-    Fórmula: 1.0 + (rep - 1) * 0.04
-    Corrección del bug anterior donde rep=1 daba 1.08× en vez de 1.00×.
-    """
+def calcular_precio_t2(jugador) -> float:
+    """Precio con la fórmula T2 (base × edad × posición × reputación)."""
     try:
-        rep = max(1, min(8, int(reputacion)))
-        return 1.0 + (rep - 1) * 0.04
-    except (ValueError, TypeError):
-        return 1.0
-
-
-def calcular_precio_final(jugador):
-    """
-    Precio final en millones (M), redondeado a 2 decimales.
-    precio = base(ovr) × mod_edad × mod_posicion × mod_reputacion
-    """
-    try:
-        ovr       = int(jugador['OVR_CALCULADO'])
-        edad      = int(jugador['Age'])
-        posicion  = jugador['POS_NOMBRE']
-        reputacion = int(jugador['Reputation'])
-
-        precio = (
-            calcular_valor_base(ovr)
-            * calcular_modificador_edad(edad)
-            * calcular_modificador_posicion(posicion)
-            * calcular_modificador_reputacion(reputacion)
+        return round(
+            calcular_valor_base_t2(int(jugador['OVR_CALCULADO']))
+            * calcular_modificador_edad_t2(int(jugador['Age']))
+            * calcular_modificador_posicion(jugador['POS_NOMBRE'])
+            * calcular_modificador_reputacion_t2(int(jugador['Reputation'])),
+            2,
         )
-        return round(precio, 2)
-    except Exception:
+    except (KeyError, ValueError, TypeError):
         return 0
+
+
+# --- Fórmula T3 ---
+
+OVR_MINIMO_CURVA = 66
+# Escalonado y siempre por debajo del más barato de OVR 66 (~$0,6M).
+PISO_PRECIO_BAJO = {60: 0.30, 61: 0.34, 62: 0.38, 63: 0.42, 64: 0.47, 65: 0.52}
+PISO_PRECIO_MINIMO = 0.30  # OVR < 60
+
+
+def calcular_modificador_edad(edad: int) -> float:
+    """Edad casi plana (0,97-1,02): en una temporada la edad no cambia los stats."""
+    e = int(edad)
+    if e <= 20: return 0.97
+    if e <= 29: return 1.02
+    if e <= 32: return 1.00
+    return 0.97
+
+
+# A. Núcleo: stats que más pesan en el OVR de cada puesto, con su peso (% del
+#    total) según la reconstrucción del post (pesdb, ~14.700 jugadores). Para
+#    EI/ED y MI/MD se usan los pesos enteros de la fórmula real que publicó el
+#    autor en los comentarios.
+NUCLEO_POR_POSICION: dict[str, dict[str, int]] = {
+    'PT':  {'GKReach': 21, 'GKAwareness': 21, 'GKReflexes': 14, 'GKCatching': 13, 'GKClearing': 13},
+    'DFC': {'DefensiveAwareness': 12, 'PhysicalContact': 10, 'Jump': 10, 'Heading': 10, 'BallWinning': 9},
+    'LI':  {'DefensiveAwareness': 8, 'Stamina': 8, 'Speed': 7, 'Acceleration': 7, 'LoftedPass': 7},
+    'LD':  {'Speed': 8, 'Stamina': 8, 'DefensiveAwareness': 8, 'LoftedPass': 7, 'BallControl': 7},
+    'MCD': {'BallControl': 10, 'LoftedPass': 9, 'LowPass': 8, 'Stamina': 8, 'Curl': 7},
+    'MC':  {'BallControl': 11, 'LowPass': 11, 'LoftedPass': 10, 'Stamina': 9, 'Dribbling': 7},
+    'MI':  {'Speed': 24, 'Acceleration': 21, 'Dribbling': 17, 'BallControl': 15, 'Stamina': 13},
+    'MD':  {'Speed': 24, 'Acceleration': 21, 'Dribbling': 17, 'BallControl': 15, 'Stamina': 13},
+    'MO':  {'BallControl': 11, 'LowPass': 10, 'Finishing': 8, 'Dribbling': 8, 'LoftedPass': 8},
+    'EI':  {'BallControl': 19, 'OffensiveAwareness': 17, 'Dribbling': 15, 'Speed': 15, 'Acceleration': 15},
+    'ED':  {'BallControl': 19, 'OffensiveAwareness': 17, 'Dribbling': 15, 'Speed': 15, 'Acceleration': 15},
+    'SD':  {'Acceleration': 9, 'LowPass': 8, 'BallControl': 8, 'Finishing': 7, 'Dribbling': 7},
+    'DC':  {'Finishing': 14, 'OffensiveAwareness': 14, 'BallControl': 10, 'PhysicalContact': 6, 'TightPossession': 5},
+}
+
+# B. Puntos ciegos: lo que el OVR de ese puesto casi no pesa y en cancha importa.
+PUNTOS_CIEGOS_POR_POSICION: dict[str, tuple[str, ...]] = {
+    'PT':  ('Height',),
+    'DFC': ('Speed', 'Acceleration', 'Height'),
+    'LI':  ('BallWinning', 'LowPass'),
+    'LD':  ('BallWinning', 'LowPass'),
+    'MCD': ('DefensiveAwareness', 'BallWinning', 'PhysicalContact'),
+    'MC':  ('BallWinning', 'PhysicalContact', 'Acceleration'),
+    'MI':  ('LowPass', 'LoftedPass'),
+    'MD':  ('LowPass', 'LoftedPass'),
+    'MO':  ('Acceleration', 'Balance', 'TightPossession'),
+    'EI':  ('Finishing', 'Balance'),
+    'ED':  ('Finishing', 'Balance'),
+    'SD':  ('OffensiveAwareness', 'Balance'),
+    'DC':  ('Speed', 'Acceleration', 'Heading'),
+}
+
+# C. Habilidades clave por puesto (columnas de PLAYER_SKILLS_MAP).
+HABILIDADES_POR_POSICION: dict[str, tuple[str, ...]] = {
+    'PT':  ('GKPenaltySaver', 'GKLongThrow'),
+    'DFC': ('Interception', 'ManMarking', 'HeadingSpecial', 'AcrobaticClear'),
+    'LI':  ('PinpointCrossing', 'EarlyCross', 'Interception', 'TrackBack'),
+    'LD':  ('PinpointCrossing', 'EarlyCross', 'Interception', 'TrackBack'),
+    'MCD': ('Interception', 'ManMarking', 'TrackBack', 'WeightedPass'),
+    'MC':  ('ThroughPassing', 'WeightedPass', 'OneTouchPass', 'LongBallExpert'),
+    'MI':  ('PinpointCrossing', 'EarlyCross', 'DoubleTouch', 'TrackBack'),
+    'MD':  ('PinpointCrossing', 'EarlyCross', 'DoubleTouch', 'TrackBack'),
+    'MO':  ('ThroughPassing', 'OneTouchPass', 'LongRanger', 'DoubleTouch'),
+    'EI':  ('DoubleTouch', 'CutBehindAndTurn', 'FirstTimeShot', 'PinpointCrossing'),
+    'ED':  ('DoubleTouch', 'CutBehindAndTurn', 'FirstTimeShot', 'PinpointCrossing'),
+    'SD':  ('FirstTimeShot', 'OneTouchPass', 'DoubleTouch', 'AcrobaticFinishing'),
+    'DC':  ('FirstTimeShot', 'AcrobaticFinishing', 'HeadingSpecial', 'OneTouchPass'),
+}
+
+# Cuánto mueve cada parte el precio (fracción) y sus topes.
+NUCLEO_POR_DESVIO, NUCLEO_MIN, NUCLEO_MAX = 0.03, -0.05, 0.06
+CIEGOS_POR_DESVIO, CIEGOS_MIN, CIEGOS_MAX = 0.03, -0.04, 0.06
+HABILIDAD_BONUS, HABILIDADES_MAX = 0.02, 0.06
+META_MIN, META_MAX = 0.92, 1.14
+# Pares = misma posición y misma franja de 2 puntos de OVR (82-83, 84-85, …).
+ANCHO_FRANJA_OVR = 2
+
+
+def _columnas_numericas(df: pd.DataFrame, columnas: set[str]) -> pd.DataFrame:
+    """Copia numérica de las columnas pedidas; las que falten valen 0."""
+    return pd.DataFrame(
+        {c: pd.to_numeric(df[c], errors='coerce') if c in df.columns else 0.0 for c in columnas},
+        index=df.index,
+    ).fillna(0.0)
+
+
+def _puntaje_por_posicion(df: pd.DataFrame, stats: pd.DataFrame,
+                          tabla: dict[str, dict[str, float]]) -> pd.Series:
+    """Promedio ponderado de las stats de la tabla, según la posición de cada jugador."""
+    puntaje = pd.Series(np.nan, index=df.index)
+    for posicion, pesos in tabla.items():
+        mascara = df['POS_NOMBRE'] == posicion
+        if not mascara.any():
+            continue
+        w = np.array(list(pesos.values()), dtype=float)
+        puntaje[mascara] = stats.loc[mascara, list(pesos)].to_numpy(dtype=float) @ w / w.sum()
+    return puntaje
+
+
+def _desvios_contra_pares(puntaje: pd.Series, df: pd.DataFrame) -> pd.Series:
+    """Cuántos desvíos está cada jugador por encima o debajo de sus pares (0 si no hay con quién comparar)."""
+    grupos = puntaje.groupby([df['POS_NOMBRE'], df['OVR_CALCULADO'] // ANCHO_FRANJA_OVR])
+    media = grupos.transform('mean')
+    desvio = grupos.transform(lambda s: s.std(ddof=0)).replace(0, np.nan)
+    return ((puntaje - media) / desvio).fillna(0.0)
+
+
+def calcular_modificadores_meta(df: pd.DataFrame) -> pd.Series:
+    """Multiplicador meta por posición (A núcleo + B puntos ciegos + C habilidades), acotado a META_MIN-META_MAX."""
+    columnas = {s for pesos in NUCLEO_POR_POSICION.values() for s in pesos}
+    columnas |= {s for lista in PUNTOS_CIEGOS_POR_POSICION.values() for s in lista}
+    stats = _columnas_numericas(df, columnas)
+
+    nucleo = _puntaje_por_posicion(df, stats, NUCLEO_POR_POSICION)
+    ciegos = _puntaje_por_posicion(
+        df, stats, {pos: dict.fromkeys(lista, 1.0) for pos, lista in PUNTOS_CIEGOS_POR_POSICION.items()}
+    )
+    ajuste_nucleo = (_desvios_contra_pares(nucleo, df) * NUCLEO_POR_DESVIO).clip(NUCLEO_MIN, NUCLEO_MAX)
+    ajuste_ciegos = (_desvios_contra_pares(ciegos, df) * CIEGOS_POR_DESVIO).clip(CIEGOS_MIN, CIEGOS_MAX)
+
+    cantidad_habilidades = pd.Series(0, index=df.index)
+    for posicion, habilidades in HABILIDADES_POR_POSICION.items():
+        mascara = df['POS_NOMBRE'] == posicion
+        presentes = [h for h in habilidades if h in df.columns]
+        if mascara.any() and presentes:
+            cantidad_habilidades[mascara] = df.loc[mascara, presentes].astype(bool).sum(axis=1)
+    ajuste_habilidades = (cantidad_habilidades * HABILIDAD_BONUS).clip(upper=HABILIDADES_MAX)
+
+    meta = (1.0 + ajuste_nucleo + ajuste_ciegos + ajuste_habilidades).clip(META_MIN, META_MAX)
+    # Posiciones sin tabla (p. ej. 'Desconocido') quedan neutras.
+    return meta.where(df['POS_NOMBRE'].isin(NUCLEO_POR_POSICION), 1.0)
+
+
+def calcular_precios(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """
+    Devuelve (precio_t3, precio_t2, meta) en millones, redondeados a 2 decimales.
+    El ancla de cada OVR iguala la mediana T3 a la mediana T2 de ese OVR.
+    """
+    ovr = df['OVR_CALCULADO'].astype(int)
+    precio_t2 = df.apply(calcular_precio_t2, axis=1)
+    meta = calcular_modificadores_meta(df)
+    modificadores = (
+        pd.to_numeric(df['Age'], errors='coerce').fillna(25).astype(int).map(calcular_modificador_edad)
+        * df['POS_NOMBRE'].map(calcular_modificador_posicion)
+        * meta
+    )
+
+    en_curva = ovr >= OVR_MINIMO_CURVA
+    # Un precio T2 de 0 (dato inválido) no debe correr la mediana de su OVR.
+    referencia = en_curva & (precio_t2 > 0)
+    ancla = (
+        precio_t2[referencia].groupby(ovr[referencia]).median()
+        / modificadores[referencia].groupby(ovr[referencia]).median()
+    )
+    piso = ovr.map(lambda o: PISO_PRECIO_BAJO.get(o, PISO_PRECIO_MINIMO))
+    precio_t3 = (ovr.map(ancla) * modificadores).where(en_curva, piso).fillna(piso)
+    return precio_t3.round(2), precio_t2, meta.round(3)
+
+
+def imprimir_control_precios(df: pd.DataFrame, precio_t3: pd.Series,
+                             precio_t2: pd.Series, meta: pd.Series) -> None:
+    """Tabla de control antes→después por OVR y los cambios más grandes."""
+    ovr = df['OVR_CALCULADO'].astype(int)
+    print("\n-> Control de precios T2 → T3 (millones)")
+    print(f"   {'OVR':>3} {'jug':>5} | {'mediana':>15} | {'mínimo':>15} | {'máximo':>15}")
+    for valor in sorted(o for o in ovr.unique() if o >= 60):
+        a, b = precio_t2[ovr == valor], precio_t3[ovr == valor]
+        print(f"   {valor:>3} {len(a):>5} | {a.median():6.1f} → {b.median():6.1f} | "
+              f"{a.min():6.1f} → {b.min():6.1f} | {a.max():6.1f} → {b.max():6.1f}")
+    print(f"   Multiplicador meta: mín ×{meta.min():.3f} · mediana ×{meta.median():.3f} · máx ×{meta.max():.3f}")
+
+    relevantes = ovr >= 78
+    cambio = (precio_t3 - precio_t2)[relevantes]
+    mayores = cambio.abs().sort_values(ascending=False).index[:20]
+    print("\n-> Los 20 cambios más grandes (OVR ≥ 78)")
+    for i in mayores:
+        print(f"   {str(df.at[i, 'Name'])[:22]:22} {df.at[i, 'POS_NOMBRE']:>3} {ovr[i]:>3} "
+              f"meta ×{meta[i]:.2f} | {precio_t2[i]:6.1f} → {precio_t3[i]:6.1f}")
+
 
 
 # =============================================================================
@@ -438,13 +596,7 @@ def procesar_datos_para_json(lista_exclusion_txt):
             df[stat_radar] = 40
 
     # -------------------------------------------------------------------------
-    # 4. CÁLCULO DE PRECIO (NUEVA FÓRMULA)
-    # -------------------------------------------------------------------------
-    print("-> Calculando valor de mercado de jugadores...")
-    df['Precio'] = df.apply(calcular_precio_final, axis=1)
-
-    # -------------------------------------------------------------------------
-    # 5. HABILIDADES DE JUGADOR
+    # 4. HABILIDADES DE JUGADOR (antes del precio: el modificador meta las usa)
     # -------------------------------------------------------------------------
     print("-> Procesando habilidades de jugador...")
     for col in PLAYER_SKILLS_COLUMNS:
@@ -452,6 +604,14 @@ def procesar_datos_para_json(lista_exclusion_txt):
             df[col] = df[col].apply(lambda x: str(x).lower() == 'true')
         else:
             df[col] = False
+
+    # -------------------------------------------------------------------------
+    # 5. CÁLCULO DE PRECIO (FÓRMULA T3)
+    # -------------------------------------------------------------------------
+    print("-> Calculando valor de mercado de jugadores...")
+    precio_t3, precio_t2, meta = calcular_precios(df)
+    df['Precio'] = precio_t3
+    imprimir_control_precios(df, precio_t3, precio_t2, meta)
 
     # -------------------------------------------------------------------------
     # 6. PREPARACIÓN DEL JSON

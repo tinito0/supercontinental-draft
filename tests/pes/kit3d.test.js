@@ -46,40 +46,38 @@ describe('kit texture lookup order', () => {
     expect(parseSiderRoots(ini)).toEqual(['livecpk/UML_Database', 'livecpk/UML_Kits']);
   });
 
-  it('looks in the kit folder first, then every livecpk root', () => {
-    const c = textureCandidates('Bundesliga/Dortmund/p1/config.txt', 'u0126p1', ['livecpk/UML_Kits']);
-    expect(c.slice(0, 3)).toEqual([
-      'content/kit-server/Bundesliga/Dortmund/p1/u0126p1.ftex',
-      'content/kit-server/Bundesliga/Dortmund/p1/u0126p1.dds',
-      'livecpk/UML_Kits/Asset/model/character/uniform/texture/#windx11/u0126p1.ftex',
+  it('looks only in the kit folder of the kit-server (.ftex first), never in livecpk', () => {
+    expect(textureCandidates('Bundesliga/Dortmund/p1/config.txt', 'u0126p1')).toEqual([
+      'Bundesliga/Dortmund/p1/u0126p1.ftex',
+      'Bundesliga/Dortmund/p1/u0126p1.dds',
     ]);
-    expect(textureCandidates('a/b/config.txt', '../evil', [])).toEqual([]);
+    expect(textureCandidates('content/kit-server/Ligue 1/PSG/p1/config.txt', 'u0114p1_back')[0]).toBe('Ligue 1/PSG/p1/u0114p1_back.ftex');
+    expect(textureCandidates('a/b/config.txt', '../evil')).toEqual([]);
   });
 
-  it('falls back to livecpk packs that sider.ini does not list (kit textures in VRED_Kits)', async () => {
-    const TEX = 'Asset/model/character/uniform/texture/#windx11';
-    const file = (rel, text = '') => ({ name: rel.split('/').pop(), webkitRelativePath: `PES/${rel}`, arrayBuffer: async () => new TextEncoder().encode(text).buffer });
-    const reader = await readerFromFiles([
-      file('sider.ini', 'cpk.root = ".\\livecpk\\UML_Kits"\n'),
-      file(`livecpk/UML_Kits/${TEX}/other.ftex`, 'x'),
-      file(`livecpk/VRED_Kits/${TEX}/u4128p1.ftex`, 'kit'),
-      file('content/kit-server/2. Bundesliga/Bochum/p1/u4128p1_name.ftex', 'name'),
+  it('reads a chosen game folder or kit-server folder, matching paths case-insensitively', async () => {
+    const file = (rel, text = 'x') => ({ name: rel.split('/').pop(), webkitRelativePath: rel, arrayBuffer: async () => new TextEncoder().encode(text).buffer });
+    const game = await readerFromFiles([
+      file('PES/content/kit-server/map.txt', '114, "Ligue 1\PSG"'),
+      file('PES/content/kit-server/Ligue 1/PSG/p1/u0114p1_name.ftex', 'name'),
+      file('PES/livecpk/UML_Kits/Asset/model/character/uniform/texture/#windx11/u0114p1.ftex', 'kit'),
     ]);
-    expect(reader.roots).toEqual(['livecpk/UML_Kits']);
-    expect(reader.fallbackRoots).toEqual(['livecpk/VRED_Kits']);
-    const roots = [...reader.roots, ...reader.fallbackRoots];
-    const find = async name => {
-      for (const p of textureCandidates('2. Bundesliga/Bochum/p1/config.txt', name, roots)) if (await reader.read(p)) return p;
-      return null;
-    };
-    expect(await find('u4128p1')).toBe(`livecpk/VRED_Kits/${TEX}/u4128p1.ftex`);
-    expect(await find('u4128p1_name')).toBe('content/kit-server/2. Bundesliga/Bochum/p1/u4128p1_name.ftex');
+    expect(game.kind).toBe('game');
+    expect(new TextDecoder().decode(await game.readKit('ligue 1/psg/p1/U0114P1_NAME.ftex'))).toBe('name');
+    expect(await game.readKit('Ligue 1/PSG/p1/u0114p1.ftex')).toBeNull(); // only in livecpk: not searched
+    const ks = await readerFromFiles([file('kit-server/map.txt'), file('kit-server/Ligue 1/PSG/p1/u0114p1_leg.ftex', 'leg')]);
+    expect(ks.kind).toBe('kit-server');
+    expect(new TextDecoder().decode(await ks.readKit('Ligue 1/PSG/p1/u0114p1_leg.ftex'))).toBe('leg');
+    const other = await readerFromFiles([file('Pictures/a.png')]);
+    expect(other.kind).toBe('unknown');
+    expect(await other.readKit('x/y.ftex')).toBeNull();
   });
 
   it('lists the textures a kit needs from its config', () => {
     const cfg = parseKitConfig(SYNTHETIC_KIT_CONFIG);
     const files = kitTextureFiles(k => getKitValue(cfg, k));
     expect(files.nrm).toBe(`${files.kit}_nrm`);
-    expect(Object.keys(files)).toEqual(['kit', 'nrm', 'srm', 'name', 'back', 'chest', 'leg']);
+    expect(files.srm).toBe(`${files.kit}_srm`);
+    expect(Object.keys(files)).toEqual(['kit', 'srm', 'nrm', 'name', 'name_ex', 'back', 'chest', 'leg']);
   });
 });

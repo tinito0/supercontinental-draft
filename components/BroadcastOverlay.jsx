@@ -4,8 +4,11 @@ import { TOURNAMENT_THEME } from './TournamentUI.jsx';
 
 export const DEFAULT_BROADCAST_OVERLAY = {
   scene: 'live',
+  matchId: '',
   homeTeamId: '',
   awayTeamId: '',
+  homeTeamName: '',
+  awayTeamName: '',
   homeScore: '0',
   awayScore: '0',
   matchStatus: 'EN VIVO',
@@ -82,8 +85,9 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({
 }) {
   const data = { ...DEFAULT_BROADCAST_OVERLAY, ...(overlayData || {}) };
   const scene = forcedScene || data.scene || 'live';
-  const home = useMemo(() => getTeam(data.homeTeamId, allTeams, 'LOCAL'), [data.homeTeamId, allTeams]);
-  const away = useMemo(() => getTeam(data.awayTeamId, allTeams, 'VISITANTE'), [data.awayTeamId, allTeams]);
+  // homeTeamName/awayTeamName vienen del partido elegido en el panel: cubren clubes del torneo sin cuenta.
+  const home = useMemo(() => getTeam(data.homeTeamId, allTeams, data.homeTeamName || 'LOCAL'), [data.homeTeamId, data.homeTeamName, allTeams]);
+  const away = useMemo(() => getTeam(data.awayTeamId, allTeams, data.awayTeamName || 'VISITANTE'), [data.awayTeamId, data.awayTeamName, allTeams]);
   const isPanelScene = ['previa', 'descanso', 'final', 'tabla', 'bracket', 'goleadores'].includes(scene);
   const isFinal = scene === 'final' || data.matchStatus === 'FINAL';
   const theme = TOURNAMENT_THEME;

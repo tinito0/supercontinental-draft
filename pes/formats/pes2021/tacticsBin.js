@@ -24,27 +24,35 @@ export function readTeamTactics(tables, teamId) {
   }));
 }
 
-/** Throws before anything is written if the spec is not a valid strategy + formation. */
-export function validateTeamTactics({ strategy = {}, formation } = {}) {
+/** Throws before anything is written if the spec is not a valid strategy + formation (+ variants). */
+export function validateTeamTactics({ strategy = {}, formation, variants } = {}) {
   const fail = msg => { throw new PesValidationError('TACTICS', `Táctica: ${msg}`); };
   for (const [k, v] of Object.entries(strategy)) {
     const r = TACTICS_STRATEGY[k];
     if (!r) fail(`opción desconocida "${k}".`);
     if (!Number.isInteger(v) || v < r[0] || v > r[1]) fail(`${k} fuera de rango (${r[0]}–${r[1]}).`);
   }
-  if (formation) {
-    const { roles, pos } = formation;
+  const check = ({ roles, pos } = {}) => {
     if (!Array.isArray(roles) || roles.length !== SLOTS || !Array.isArray(pos) || pos.length !== SLOTS) fail('la formación necesita 11 puestos.');
     if (roles[0] !== 0) fail('el primer puesto debe ser el arquero.');
     roles.forEach((r, i) => { if (!Number.isInteger(r) || r < 0 || r > 12 || (i > 0 && r === 0)) fail(`puesto inválido (${r}).`); });
     pos.forEach(p => { if (!Array.isArray(p) || p.length !== 2 || !p.every(v => Number.isInteger(v) && v >= 0 && v <= 100)) fail('posición fuera de la cancha.'); });
+  };
+  if (formation) check(formation);
+  if (variants != null) {
+    if (!formation) fail('las variantes necesitan la formación base.');
+    if (!Array.isArray(variants) || variants.length !== FORMATIONS) fail(`hacen falta ${FORMATIONS} variantes de formación.`);
+    // Roles may differ per variant, as in the game's own data (see editDatabase.js validateSquadSpec).
+    variants.forEach(check);
   }
 }
 
 /**
- * Writes the same strategy and formation into every preset of a team (like pesExport's Formation.csv,
- * which repeats the app's S1 in every preset and formation).
- * @param {{ strategy?: Record<string, number>, formation?: { roles: number[], pos: number[][] } }} spec
+ * Writes the same strategy and formations into every preset of a team (like pesExport's Formation.csv,
+ * which repeats the app's S1 in every preset).
+ * @param {{ strategy?: Record<string, number>, formation?: { roles: number[], pos: number[][] },
+ *   variants?: { roles: number[], pos: number[][] }[] }} spec
+ *   variants: formations F1..F3 (base, with ball, without ball); default `formation` in the three.
  */
 export function writeTeamTactics(tables, teamId, spec) {
   if (!tables.tactics) throw new PesValidationError('NO_TABLE', 'Falta Tactics.bin.');
@@ -62,10 +70,10 @@ export function writeTeamTactics(tables, teamId, spec) {
     for (const [k, v] of Object.entries(spec.strategy || {})) tables.tactics.set(id, k, v);
     if (!spec.formation) continue;
     for (let f = 0; f < FORMATIONS; f++) for (let s = 0; s < SLOTS; s++) {
-      const key = formationRowKey(id, f, s);
-      tables.tacticsFormation.set(key, 'role', spec.formation.roles[s]);
-      tables.tacticsFormation.set(key, 'depth', spec.formation.pos[s][0]);
-      tables.tacticsFormation.set(key, 'lateral', spec.formation.pos[s][1]);
+      const key = formationRowKey(id, f, s), form = spec.variants?.[f] || spec.formation;
+      tables.tacticsFormation.set(key, 'role', form.roles[s]);
+      tables.tacticsFormation.set(key, 'depth', form.pos[s][0]);
+      tables.tacticsFormation.set(key, 'lateral', form.pos[s][1]);
     }
   }
   return { before, after: spec };

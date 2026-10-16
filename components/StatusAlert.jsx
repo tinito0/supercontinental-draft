@@ -1,10 +1,18 @@
 import React, { memo } from 'react';
 import { CheckCircle, AlertTriangle, Loader2, X } from 'lucide-react';
 
+// White text needs the -700 shades for green and amber (≈ 5:1); -600 was about 3.3:1.
+const TONES = {
+  loading: 'bg-accent-deep',
+  success: 'bg-green-700',
+  warning: 'bg-amber-700',
+  error: 'bg-red-600',
+};
+
+/** Global feedback message. Positioned and animated by ToastStack. */
 export const StatusAlert = memo(function StatusAlert({ type, message, onClose }) {
   const isLoading = type === 'loading';
   const isError = type === 'error';
-  const bgColor = isLoading ? 'bg-accent-deep' : type === 'success' ? 'bg-green-600' : type === 'warning' ? 'bg-amber-600' : 'bg-red-600';
   const Icon = isLoading ? Loader2 : type === 'success' ? CheckCircle : AlertTriangle;
 
   return (
@@ -12,10 +20,10 @@ export const StatusAlert = memo(function StatusAlert({ type, message, onClose })
       role={isError ? 'alert' : 'status'}
       aria-live={isError ? 'assertive' : 'polite'}
       aria-atomic="true"
-      className={`fixed bottom-4 right-4 max-w-[calc(100vw-2rem)] p-4 rounded-lg text-ink font-semibold shadow-2xl transition-opacity duration-300 flex items-center z-[120] ${bgColor}`}
+      className={`p-4 rounded-lg text-white font-semibold shadow-2xl flex items-center ${TONES[type] || TONES.error}`}
     >
       <Icon className={`w-5 h-5 mr-2 shrink-0 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
-      <span>{message}</span>
+      <span className="flex-1 min-w-0">{message}</span>
       <button
         type="button"
         onClick={onClose}

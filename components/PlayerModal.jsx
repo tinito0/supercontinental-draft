@@ -1,6 +1,7 @@
-import React, { memo, useState, useMemo, useEffect, useCallback } from 'react';
-import { X, Eye, MinusCircle, DollarSign, Sparkles, Lock, CheckCircle, ChevronRight, PieChart, Shield, Target, Zap, Activity, Trash2, AlertTriangle, Handshake, Crown } from 'lucide-react';
+import React, { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { X, Eye, MinusCircle, DollarSign, Lock, CheckCircle, ChevronRight, PieChart, Shield, Target, Zap, Activity, Trash2, AlertTriangle, Handshake, Crown } from 'lucide-react';
 import { Radar, Bar, Doughnut } from 'react-chartjs-2';
+import '../utils/chartSetup.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import {
   getPosColorClass,
@@ -9,8 +10,11 @@ import {
   formatPriceShort,
   getFlagUrl
 } from '../utils/helpers.js';
-import { STATS_JUGADOR_CAMPO, STATS_PORTERO, DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MAP, FRANCHISE_MIN_AGE, FRANCHISE_MIN_OVR, FRANCHISE_MAX_OVR } from '../utils/constants.js';
+import { STATS_JUGADOR_CAMPO, STATS_PORTERO, DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MAP } from '../utils/constants.js';
+import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from '../supabase/functions/_shared/franchise.js';
 import { TransferProposalModal } from './TransferProposalModal.jsx';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
+import { prefersReducedMotion } from '../utils/motion.js';
 
 const POSITIONS_LAYOUT = [
   { pos: 'DC',  col: 2, row: 1 },
@@ -246,6 +250,28 @@ export const getSimilarPlayers = (targetPlayer, allPlayers, limit = 4) => {
   return candidates.slice(0, limit);
 };
 
+const CONFETTI_COLORS = ['#4ade80', '#facc15', '#60a5fa', '#f472b6', '#a78bfa', '#fb923c'];
+const CONFETTI_COUNT = 30;
+
+/** Pieces that fall across the screen within the 2.5 s the celebration stays open (keyframes in index.css). */
+function buildConfetti() {
+  return Array.from({ length: CONFETTI_COUNT }, (_, i) => {
+    const size = 4 + Math.random() * 8;
+    return {
+      id: i,
+      style: {
+        width: `${size}px`,
+        height: `${size}px`,
+        background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+        left: `${Math.random() * 100}%`,
+        '--spin': `${360 + Math.random() * 360}deg`,
+        animationDuration: `${1.4 + Math.random()}s`,
+        animationDelay: `${Math.random() * 0.4}s`,
+      },
+    };
+  });
+}
+
 const CelebrationPopup = memo(function CelebrationPopup({ player, onDismiss }) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, 2500);
@@ -254,16 +280,17 @@ const CelebrationPopup = memo(function CelebrationPopup({ player, onDismiss }) {
 
   const posColorClass = getPosColorClass(player.POS_NOMBRE);
   const ovrColorClass = getStatAndOvrColorClass(player.OVR_CALCULADO);
+  const confetti = useMemo(() => (prefersReducedMotion() ? [] : buildConfetti()), []);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-300" onClick={onDismiss}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in" onClick={onDismiss}>
       <button onClick={onDismiss} className="absolute top-6 right-6 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-ink transition"><X size={24} /></button>
-      <div className="flex flex-col items-center gap-6 animate-in zoom-in-75 duration-500" onClick={e => e.stopPropagation()}>
+      <div className="flex flex-col items-center gap-6 animate-in zoom-in-75" onClick={e => e.stopPropagation()}>
         <div className="relative">
-          <div className="absolute inset-0 bg-green-500 rounded-full blur-3xl opacity-30 animate-pulse"></div>
+          <div className="absolute inset-0 bg-green-500 rounded-full blur-3xl opacity-30"></div>
           <img src={`/fotos_jugadores/${player.Id}.webp`} alt={player.Name}
             className="w-36 h-36 rounded-full object-cover border-4 border-green-500 shadow-2xl relative z-10"
-            onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/144x144/111/555?text=${player.Name.substring(0,1)}`; }} />
+            onError={(e) => { e.target.onerror = null; e.target.src = playerPlaceholder(player.Name.substring(0,1)); }} />
           <div className={`absolute -bottom-2 -right-2 w-14 h-14 flex items-center justify-center rounded-full font-bold text-2xl shadow-lg border-2 border-slate-900 z-20 !text-black ${ovrColorClass}`}>
             {player.OVR_CALCULADO}
           </div>
@@ -273,24 +300,16 @@ const CelebrationPopup = memo(function CelebrationPopup({ player, onDismiss }) {
           <div className="text-3xl font-bold text-ink uppercase tracking-wider">{player.Name}</div>
           <span className={`inline-block mt-3 px-4 py-1 rounded-full text-sm font-bold !text-black ${posColorClass}`}>{player.POS_NOMBRE}</span>
         </div>
-        {/* Confetti particles */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {Array.from({length: 30}).map((_, i) => (
-            <div key={i} className="absolute rounded-full" style={{
-              width: `${4 + Math.random() * 8}px`, height: `${4 + Math.random() * 8}px`,
-              background: ['#4ade80','#facc15','#60a5fa','#f472b6','#a78bfa','#fb923c'][i % 6],
-              left: `${Math.random() * 100}%`, top: `-5%`,
-              animation: `confettiFall ${1.5 + Math.random() * 2}s ${Math.random() * 0.5}s ease-in forwards`,
-            }} />
+      </div>
+      {/* Confetti over the whole screen, outside the zooming column (its transform would be the pieces' frame while
+          it animates). Built once per celebration: Math.random() in render re-rolled it on every render. */}
+      {confetti.length > 0 && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+          {confetti.map(piece => (
+            <div key={piece.id} className="confetti-piece" style={piece.style} />
           ))}
         </div>
-      </div>
-      <style>{`
-        @keyframes confettiFall {
-          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(110vh) rotate(\${360 + Math.random()*360}deg); opacity: 0; }
-        }
-      `}</style>
+      )}
     </div>
   );
 });
@@ -383,6 +402,9 @@ export const PlayerModal = memo(function PlayerModal({
   isFranchisePlayer
 }) {
   const [isSigning, setIsSigning] = useState(false);
+  // A second tap before the button re-renders as disabled must not send a second signing (the server answered 409
+  // after the first one succeeded).
+  const signingRef = useRef(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
@@ -397,16 +419,18 @@ export const PlayerModal = memo(function PlayerModal({
     setShowProposalModal(false);
   }, [player?.Id]);
 
-  const meetsFranchiseCriteria = player && player.Age >= FRANCHISE_MIN_AGE && player.OVR_CALCULADO >= FRANCHISE_MIN_OVR && player.OVR_CALCULADO <= FRANCHISE_MAX_OVR;
+  const meetsFranchiseCriteria = isFranchiseEligible(player);
   const isEligibleForFranchise = meetsFranchiseCriteria && !userProfile?.franchisePlayerUsed;
 
-  const [similarPlayers, setSimilarPlayers] = useState([]);
+  // null = still computing (skeleton); [] = computed, nothing similar (empty message).
+  const [similarPlayers, setSimilarPlayers] = useState(null);
 
   useEffect(() => {
     if (!player || !allPlayers?.length) {
-      setSimilarPlayers([]);
+      setSimilarPlayers(null);
       return;
     }
+    setSimilarPlayers(null);
     const timer = setTimeout(() => {
       setSimilarPlayers(getSimilarPlayers(player, allPlayers));
     }, 16);
@@ -430,19 +454,24 @@ export const PlayerModal = memo(function PlayerModal({
   const country2FlagUrl = hasCountry2 ? getFlagUrl(c2) : null;
   const country2Name = hasCountry2 ? (countryMap[c2] || '') : '';
 
+  // finally: a thrown error used to leave the button on "Procesando…" for good.
   const handleSign = async (isFranchise = false) => {
+    if (signingRef.current) return;
+    signingRef.current = true;
     setIsSigning(true);
-    const success = await onAddToCart(player, isFranchise);
-    if (success) {
-      setShowCelebration(true);
+    try {
+      const success = await onAddToCart(player, isFranchise);
+      if (success) setShowCelebration(true);
+    } finally {
+      signingRef.current = false;
+      setIsSigning(false);
     }
-    setIsSigning(false);
   };
 
   const handleRelease = async () => {
     setIsReleasing(true);
     try {
-      await onRemoveFromCart(player);
+      await onRemoveFromCart(player, { confirmed: true });
     } catch (e) { console.error(e); }
     setIsReleasing(false);
     setShowReleaseConfirm(false);
@@ -457,7 +486,6 @@ export const PlayerModal = memo(function PlayerModal({
       );
     }
 
-    const commonClasses = "flex items-center justify-center px-5 py-2.5 font-semibold rounded-lg transition-colors w-full sm:w-auto text-sm cursor-pointer";
 
     // Signed by current user -> show release button
     // In my cart
@@ -474,12 +502,9 @@ export const PlayerModal = memo(function PlayerModal({
         );
       }
       return (
-        <button
-          onClick={() => setShowReleaseConfirm(true)}
-          className={`${commonClasses} bg-rose-600 hover:bg-rose-500 text-ink`}
-        >
-          <Trash2 className="w-4 h-4 mr-2" />
-          Eliminar Fichaje
+        <button type="button" onClick={() => setShowReleaseConfirm(true)} className="btn btn-danger btn-lg w-full sm:w-auto">
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
+          Liberar jugador
         </button>
       );
     }
@@ -515,11 +540,8 @@ export const PlayerModal = memo(function PlayerModal({
             </div>
             <span className="text-ink text-sm font-bold">{lockedTeamName || 'Otro equipo'}</span>
           </div>
-          <button 
-            onClick={() => setShowProposalModal(true)}
-            className={`${commonClasses} bg-blue-600 hover:bg-blue-500 text-ink w-full sm:w-auto`}
-          >
-            <Handshake className="w-4 h-4 mr-2" /> Traspaso
+          <button type="button" onClick={() => setShowProposalModal(true)} className="btn btn-primary btn-lg w-full sm:w-auto">
+            <Handshake className="w-4 h-4" aria-hidden="true" /> Proponer traspaso
           </button>
         </div>
       );
@@ -547,13 +569,14 @@ export const PlayerModal = memo(function PlayerModal({
             <button
               onClick={() => handleSign(true)}
               disabled={isSigning}
-              className={`${commonClasses} ${isSigning ? 'bg-overlay text-ink-2 cursor-wait' : 'bg-amber-600 hover:bg-amber-500 text-ink'}`}
+              type="button"
+              className={`btn btn-primary btn-lg w-full sm:w-auto ${isSigning ? 'cursor-wait' : ''}`}
               title={isSigning ? 'Hay una operación en curso' : "Fichar gratis como jugador franquicia"}
             >
               {isSigning ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
               ) : (
-                <Sparkles className="w-4 h-4 mr-1.5" />
+                <Crown className="w-4 h-4" aria-hidden="true" />
               )}
               <span>{isSigning ? 'Procesando...' : 'Jugador Franquicia ($0)'}</span>
             </button>
@@ -562,8 +585,8 @@ export const PlayerModal = memo(function PlayerModal({
       } else if (meetsFranchiseCriteria && userProfile?.franchisePlayerUsed) {
         return (
           <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
-            <button disabled title="Ya has fichado a tu Jugador Franquicia esta temporada" className={`${commonClasses} bg-raised/80 text-ink-3 cursor-not-allowed border border-line/20`}>
-              <Lock className="w-4 h-4 mr-2 text-ink-3" />
+            <button type="button" disabled title="Ya has fichado a tu Jugador Franquicia esta temporada" className="btn btn-secondary btn-lg w-full sm:w-auto">
+              <Lock className="w-4 h-4" aria-hidden="true" />
               Cupo Utilizado
             </button>
             <span className="text-xs text-ink-3 text-center max-w-[200px]">
@@ -574,12 +597,12 @@ export const PlayerModal = memo(function PlayerModal({
       } else {
         return (
           <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
-            <button disabled title="El jugador no cumple los requisitos de franquicia" className={`${commonClasses} bg-raised/80 text-ink-3 cursor-not-allowed border border-line/20`}>
+            <button type="button" disabled title="El jugador no cumple los requisitos de franquicia" className="btn btn-secondary btn-lg w-full sm:w-auto">
               <DollarSign className="w-4 h-4 mr-2 text-ink-3" />
               Mercado Restringido
             </button>
             <span className="text-xs text-ink-3 text-center max-w-[200px]">
-              El jugador no cumple los requisitos (Edad ≥ {FRANCHISE_MIN_AGE} y OVR {FRANCHISE_MIN_OVR}-{FRANCHISE_MAX_OVR})
+              El jugador no cumple los requisitos ({FRANCHISE_RULE_TEXT})
             </span>
           </div>
         );
@@ -637,8 +660,8 @@ export const PlayerModal = memo(function PlayerModal({
       return (
         <div className="flex flex-col items-center gap-0 w-full sm:w-auto">
           <BudgetImpact />
-          <button disabled title="No tienes presupuesto suficiente para esta acción" className={`${commonClasses} bg-raised/80 text-ink-3 cursor-not-allowed border border-line/20`}>
-            <DollarSign className="w-4 h-4 mr-1.5 text-ink-3" />
+          <button type="button" disabled title="No tenés presupuesto suficiente para este fichaje" className="btn btn-secondary btn-lg w-full sm:w-auto">
+            <DollarSign className="w-4 h-4" aria-hidden="true" />
             Presupuesto Insuficiente
           </button>
         </div>
@@ -651,15 +674,12 @@ export const PlayerModal = memo(function PlayerModal({
         <button
           onClick={() => handleSign(false)}
           disabled={isSigning}
-          className={`${commonClasses} ${isSigning ? 'bg-overlay text-ink-2 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-500 text-ink'}`}
-          title={isSigning ? 'Hay una operación en curso' : `FICHAR por ${formatPriceShort(priceMillions)}`}
+          type="button"
+          className={`btn btn-primary btn-lg w-full sm:w-auto ${isSigning ? 'cursor-wait' : ''}`}
+          title={isSigning ? 'Hay una operación en curso' : `Fichar por ${formatPriceShort(priceMillions)}`}
         >
-          {isSigning ? (
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-          ) : (
-            <DollarSign className="w-4 h-4 mr-1" />
-          )}
-          <span>{isSigning ? 'Procesando...' : <>FICHAR <span className="ml-1 font-semibold opacity-90 tabular-nums">{formatPriceShort(priceMillions)}</span></>}</span>
+          {isSigning && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true"></div>}
+          <span>{isSigning ? 'Procesando…' : <>Fichar <span className="font-display num">{formatPriceShort(priceMillions)}</span></>}</span>
         </button>
       </div>
     );
@@ -669,25 +689,6 @@ export const PlayerModal = memo(function PlayerModal({
     <>
     {/* Celebration Popup */}
     {showCelebration && <CelebrationPopup player={player} onDismiss={handleDismissCelebration} />}
-    {/* Release Confirmation */}
-    {showReleaseConfirm && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setShowReleaseConfirm(false)}>
-        <div className="bg-raised border border-white/[0.1] rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-danger/15 flex items-center justify-center border border-danger/20"><AlertTriangle className="w-5 h-5 text-danger-soft" /></div>
-            <h3 className="text-base font-bold text-ink">Confirmar liberación</h3>
-          </div>
-          <p className="text-sm text-ink-2 mb-5">¿Seguro que querés liberar a <span className="font-bold text-ink">{player.Name}</span>?</p>
-          <div className="flex gap-2.5">
-            <button onClick={() => setShowReleaseConfirm(false)} className="flex-1 py-2 rounded-xl text-xs font-bold text-ink-2 bg-white/[0.06] hover:bg-white/[0.1] border border-line/[0.12] transition">Cancelar</button>
-            <button onClick={handleRelease} disabled={isReleasing} title={isReleasing ? 'Hay una operación en curso' : undefined} className="flex-1 py-2 rounded-xl text-xs font-bold text-ink bg-red-600 hover:bg-red-500 border border-red-400/30 transition disabled:opacity-50">
-              {isReleasing ? 'Liberando...' : 'Confirmar'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
     <BaseModal
       isOpen={true}
       onClose={onClose}
@@ -699,9 +700,10 @@ export const PlayerModal = memo(function PlayerModal({
       <div className="flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] relative">
         {/* Botón Cerrar */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50 p-2 rounded-lg bg-raised/80 hover:bg-overlay text-ink-3 hover:text-ink border border-line/20 transition-colors"
-          aria-label="Cerrar modal"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50 min-w-11 min-h-11 flex items-center justify-center rounded-lg bg-raised/80 hover:bg-overlay text-ink-3 hover:text-ink border border-line/20 transition-colors"
+          aria-label="Cerrar ficha del jugador"
         >
           <X size={20} />
         </button>
@@ -719,7 +721,7 @@ export const PlayerModal = memo(function PlayerModal({
                     src={`/fotos_jugadores/${player.Id}.webp`}
                     alt={player.Name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/128x128/111/555?text=${player.Name.substring(0, 1)}`; }}
+                    onError={(e) => { e.target.onerror = null; e.target.src = playerPlaceholder(player.Name.substring(0, 1)); }}
                   />
                 </div>
                 <div className={`absolute -bottom-2 -right-2 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg font-bold text-lg sm:text-xl border-2 border-slate-900 shadow-md z-20 tabular-nums !text-black ${getStatAndOvrColorClass(player.OVR_CALCULADO)}`}>
@@ -759,8 +761,15 @@ export const PlayerModal = memo(function PlayerModal({
                     <span className="text-xs text-ink-2 font-medium ml-1">{country1Name}</span>
                   </div>
 
-                  <span className="text-ink-2 text-xs font-medium flex items-center bg-raised px-3 py-1 rounded-md border border-line/20 tabular-nums">
-                    {player.Age} años <span className="mx-2 text-ink-3">·</span> {player.Height} cm <span className="mx-2 text-ink-3">·</span> {player.Foot} <span className="mx-2 text-ink-3">·</span> {player.Weight} kg
+                  {/* Cada dato es una unidad que no se parte ("27 años" no queda en dos renglones en celular). */}
+                  <span className="text-ink-2 text-xs font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5 bg-raised px-3 py-1 rounded-md border border-line/20 tabular-nums">
+                    <span className="whitespace-nowrap">{player.Age} años</span>
+                    <span className="text-ink-3" aria-hidden="true">·</span>
+                    <span className="whitespace-nowrap">{player.Height} cm</span>
+                    <span className="text-ink-3" aria-hidden="true">·</span>
+                    <span className="whitespace-nowrap">{player.Foot}</span>
+                    <span className="text-ink-3" aria-hidden="true">·</span>
+                    <span className="whitespace-nowrap">{player.Weight} kg</span>
                   </span>
                 </div>
               </div>
@@ -813,7 +822,9 @@ export const PlayerModal = memo(function PlayerModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              {similarPlayers.length === 0 ? (
+              {similarPlayers?.length === 0 ? (
+                <p className="col-span-full text-sm text-ink-3">No hay jugadores de perfil parecido en el catálogo.</p>
+              ) : similarPlayers === null ? (
                 [...Array(4)].map((_, i) => (
                   <div key={i} className="bg-raised rounded-xl p-3 border border-line/15 animate-pulse h-[106px] flex flex-col justify-between">
                     <div className="flex items-center gap-2.5">
@@ -831,10 +842,12 @@ export const PlayerModal = memo(function PlayerModal({
                   const ovrDiff = (simPlayer.OVR_CALCULADO || 0) - (player.OVR_CALCULADO || 0);
 
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={simPlayer.Id}
                       onClick={() => { onClose(); onPlayerSwitch(simPlayer); }}
-                      className="group bg-raised hover:bg-[#151d2c] rounded-xl p-3 border border-line/20 hover:border-line/20 transition-colors cursor-pointer shadow-sm flex flex-col justify-between"
+                      aria-label={`Ver ficha de ${simPlayer.Name}`}
+                      className="group text-left bg-raised hover:bg-overlay rounded-xl p-3 border border-line/[0.14] hover:border-line/30 transition-colors flex flex-col justify-between"
                     >
                       <div className="flex items-center gap-2.5 mb-2.5">
                         <div className="relative shrink-0">
@@ -842,7 +855,7 @@ export const PlayerModal = memo(function PlayerModal({
                             src={`/fotos_jugadores/${simPlayer.Id}.webp`}
                             alt={simPlayer.Name}
                             className="w-10 h-10 rounded-lg object-cover bg-canvas border border-line/20 transition-colors"
-                            onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/48x48/111/555?text=${simPlayer.Name.substring(0, 1)}`; }}
+                            onError={(e) => { e.target.onerror = null; e.target.src = playerPlaceholder(simPlayer.Name.substring(0, 1)); }}
                           />
                           <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold tabular-nums !text-black ${getStatAndOvrColorClass(simPlayer.OVR_CALCULADO)}`}>
                             {simPlayer.OVR_CALCULADO}
@@ -865,7 +878,7 @@ export const PlayerModal = memo(function PlayerModal({
                       </div>
 
                       <div className="pt-2 border-t border-line/15 flex items-center justify-between text-xs">
-                        <div className="text-success-soft font-semibold tabular-nums">
+                        <div className="font-display num text-sm font-semibold text-ink">
                           {formatPriceShort(simPlayer.Precio)}
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -877,7 +890,7 @@ export const PlayerModal = memo(function PlayerModal({
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })
               )}
@@ -885,6 +898,26 @@ export const PlayerModal = memo(function PlayerModal({
           </div>
         </div>
       </div>
+    </BaseModal>
+
+    {/* Release confirmation: a BaseModal stacked over the sheet (rendered after it, so it sits on top;
+        Escape closes only this one). */}
+    <BaseModal
+      isOpen={showReleaseConfirm}
+      onClose={() => setShowReleaseConfirm(false)}
+      size="sm"
+      title="Liberar jugador"
+      icon={AlertTriangle}
+      footer={(
+        <>
+          <button type="button" onClick={() => setShowReleaseConfirm(false)} className="btn btn-secondary">Cancelar</button>
+          <button type="button" onClick={handleRelease} disabled={isReleasing} title={isReleasing ? 'Hay una operación en curso' : undefined} className="btn btn-danger">
+            {isReleasing ? 'Liberando…' : 'Liberar'}
+          </button>
+        </>
+      )}
+    >
+      <p className="text-sm text-ink-2">¿Seguro que querés liberar a <span className="font-semibold text-ink">{player.Name}</span>?</p>
     </BaseModal>
       {showProposalModal && (
         <TransferProposalModal

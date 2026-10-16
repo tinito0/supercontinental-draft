@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Trophy } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { TeamSelect } from './TournamentTeamsContext.jsx';
+import { getMatchWinner, isMatchCompleted } from '../../utils/bracketModel.js';
 
 export const BracketFork = memo(function BracketFork({ height = 180, tone = 'slate' }) {
   const strokeColor = tone === 'gold' ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.18)';
@@ -31,10 +32,13 @@ export const MatchCard = memo(function MatchCard({
   titleOverride,
   seedA,
   seedB,
+  path,
 }) {
+  // `path` (ruta dentro de bracket) tiene prioridad sobre `stage` para guardar: lo usa el bracket compartido.
+  const updateTarget = path || stage;
   if (!match) {
     return (
-      <div className="w-[240px] sm:w-[260px] h-24 bg-surface/80 border border-dashed border-line/[0.12] flex flex-col items-center justify-center text-ink-3 font-medium text-xs rounded-xl p-3 shadow-sm">
+      <div className="w-full max-w-[260px] h-24 bg-surface/80 border border-dashed border-line/[0.12] flex flex-col items-center justify-center text-ink-3 font-medium text-xs rounded-xl p-3 shadow-sm">
         <span className="text-[11px] font-semibold text-ink-3">Por definir</span>
         <span className="text-[9px] text-ink-3 mt-0.5">Cruce pendiente</span>
       </div>
@@ -52,17 +56,14 @@ export const MatchCard = memo(function MatchCard({
     else if (stage === 'rep_final') cardTitle = 'GRAN FINAL PLATA';
   }
 
-  const hasScoreA = match.scoreA !== '' && match.scoreA !== undefined && match.scoreA !== null;
-  const hasScoreB = match.scoreB !== '' && match.scoreB !== undefined && match.scoreB !== null;
-  const isCompleted = hasScoreA && hasScoreB;
-  const numA = parseInt(match.scoreA) || 0;
-  const numB = parseInt(match.scoreB) || 0;
-  const teamAWon = isCompleted && numA > numB;
-  const teamBWon = isCompleted && numB > numA;
+  const isCompleted = isMatchCompleted(match);
+  const winner = getMatchWinner(match);
+  const teamAWon = winner === 'A';
+  const teamBWon = winner === 'B';
 
   return (
     <div
-      className={`w-[240px] sm:w-[260px] rounded-xl overflow-hidden bg-surface border transition-all duration-200 shadow-md ${
+      className={`w-full max-w-[260px] rounded-xl overflow-hidden bg-surface border transition-all duration-200 shadow-md ${
         isFinal
           ? 'border-warning/60 shadow-[0_0_24px_rgba(245,158,11,0.14)] ring-1 ring-amber-500/30'
           : 'border-line/[0.12] hover:border-white/[0.18]'
@@ -130,7 +131,8 @@ export const MatchCard = memo(function MatchCard({
                 {isEditing ? (
                   <TeamSelect
                     value={name}
-                    onChange={(value) => updateMatch(stage, index, key, value)}
+                    onChange={(value) => updateMatch(updateTarget, index, key, value)}
+                    aria-label={`${cardTitle}: ${key === 'teamA' ? 'equipo 1' : 'equipo 2'}`}
                     className="w-full px-2 py-0.5 text-xs font-semibold"
                   />
                 ) : (
@@ -152,8 +154,11 @@ export const MatchCard = memo(function MatchCard({
               {isEditing ? (
                 <input
                   type="number"
+                  min="0"
+                  inputMode="numeric"
                   value={score ?? ''}
-                  onChange={(e) => updateMatch(stage, index, scoreKey, e.target.value)}
+                  aria-label={`${cardTitle}: goles de ${name || (key === 'teamA' ? 'equipo 1' : 'equipo 2')}`}
+                  onChange={(e) => updateMatch(updateTarget, index, scoreKey, e.target.value)}
                   className="w-8 h-6 bg-surface text-center rounded text-ink text-xs border border-white/20 outline-none font-bold ml-2"
                 />
               ) : (

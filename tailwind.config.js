@@ -72,6 +72,17 @@ export default {
       maxWidth: {
         page: '1440px',
       },
+      // Motion tokens (index.css --dur-*, --ease-*). ease-in/out/in-out are redefined so every class uses the app's curves.
+      transitionDuration: {
+        fast: 'var(--dur-fast)',
+        base: 'var(--dur-base)',
+        move: 'var(--dur-move)',
+      },
+      transitionTimingFunction: {
+        out: 'var(--ease-out)',
+        in: 'var(--ease-in)',
+        'in-out': 'var(--ease-in-out)',
+      },
     },
   },
   plugins: [],

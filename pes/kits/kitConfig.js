@@ -5,8 +5,11 @@
 //   Key=Value<padding>; inline comment documenting the valid range
 // The parser keeps every line verbatim; serialization only replaces the value text of
 // edited keys, keeping padding, comments, order and line endings. Ranges are read from
-// the patch's own inline comments ("1 to 130", "0=Off, 1=On", "144, 151=..., 160").
+// the patch's own inline comments ("1 to 130", "0=Off, 1=On", "144, 151=..., 160"), but a key that Sider's
+// kserv.lua editor knows is validated with kserv.lua's range (kitConfigSchema.js): the comments are written by
+// Kit Studio and are wrong for some keys (ShortsNumberX "0 to 14", kserv.lua 0..31).
 import { PesValidationError } from '../core/errors.js';
+import { keyConstraint, satisfies, describeConstraint } from './kitConfigSchema.js';
 
 const KV_RE = /^(\s*)([A-Za-z0-9_]+)(\s*=\s*)([^;\r\n]*?)(\s*)(;.*)?$/;
 const COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
@@ -65,7 +68,9 @@ export function parseKitConfig(text) {
     const m = !trimmed.startsWith(';') && !trimmed.startsWith('#') ? raw.match(KV_RE) : null;
     if (m) {
       const [, indent, key, sep, value, pad, comment] = m;
-      lines.push({ type: 'kv', raw, indent, key, sep, value, pad, comment: comment || '', constraint: parseRangeComment(comment) });
+      const commentConstraint = parseRangeComment(comment);
+      // constraint: what the value is validated against; commentConstraint: what the line's comment says.
+      lines.push({ type: 'kv', raw, indent, key, sep, value, pad, comment: comment || '', constraint: keyConstraint(key, commentConstraint).constraint, commentConstraint });
       if (!keys.has(key)) keys.set(key, i);
     } else {
       lines.push({ type: 'other', raw });
@@ -97,8 +102,9 @@ export function validateKitValue(cfg, key, value) {
   if (!/^-?\d+$/.test(v)) throw new PesValidationError('TYPE', `Kit: "${key}" debe ser un número entero.`, { key, value: v });
   const n = Number(v);
   const c = cfg.lines[i].constraint;
-  if (c?.type === 'range' && (n < c.min || n > c.max)) throw new PesValidationError('OUT_OF_RANGE', `Kit: "${key}" debe estar entre ${c.min} y ${c.max}.`, { key, ...c });
-  if (c?.type === 'enum' && !c.values.includes(n)) throw new PesValidationError('OUT_OF_RANGE', `Kit: "${key}" admite ${c.values.join(', ')}.`, { key, values: c.values });
+  if (!satisfies(c, n)) {
+    throw new PesValidationError('OUT_OF_RANGE', c.type === 'range' ? `Kit: "${key}" debe estar entre ${c.min} y ${c.max}.` : `Kit: "${key}" admite ${describeConstraint(c)}.`, { key, ...c });
+  }
   return String(n);
 }
 

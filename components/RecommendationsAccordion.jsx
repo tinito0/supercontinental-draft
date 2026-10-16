@@ -1,277 +1,124 @@
 import React, { memo, useState, useRef, useCallback } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, DollarSign, Sparkles, Target, Zap, TrendingUp, Eye } from 'lucide-react';
-import { formatPriceShort, getFlagUrl } from '../utils/helpers.js';
+import { ChevronDown, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { formatPriceShort, formatPriceCompact, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
+import { Badge } from './ui/Badge.jsx';
 
-/* ── Standardized Position accent colors ── */
-const POS_COLOR = {
-  DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444',
-  MC: '#22c55e', MCD: '#22c55e', MO: '#22c55e', MI: '#22c55e', MD: '#22c55e',
-  DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6',
-  PT: '#eab308',
+const STORAGE_KEY = 'recommendations_expanded';
+const SHORT_SCREEN_HEIGHT = 900; // below this the shelf starts collapsed so the market itself is in view
+const SCROLL_STEP = 360;
+
+// The one badge per card: why the player fits (utils/recommendations.js → _fit).
+const FIT_CONFIG = {
+  NECESIDAD: { label: 'Puesto clave', variant: 'warning' },
+  VALOR: { label: 'Ganga', variant: 'success' },
+  OVR: { label: 'Salto de media', variant: 'primary' },
+  FIT: { label: 'Encaje', variant: 'primary' },
 };
 
-/* ── Standardized OVR color tiers matching PlayerCard ── */
-const OVR_COLOR_THRESHOLDS = [
-  [90, '#1ec9a4'],
-  [85, '#a0dd00'],
-  [75, '#ffc400'],
-  [65, '#ec7d22'],
-];
-const OVR_COLOR_DEFAULT = '#9ca3af';
-
-function getOvrColor(ovr) {
-  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
-    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
+function readInitialExpanded() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'true' || stored === 'false') return stored === 'true';
+  } catch {
+    // no storage: fall through to the screen-height default
   }
-  return OVR_COLOR_DEFAULT;
+  return typeof window === 'undefined' || window.innerHeight >= SHORT_SCREEN_HEIGHT;
 }
 
-const FIT_CONFIG = {
-  NECESIDAD: { label: 'Puesto clave', icon: Target, badgeClass: 'bg-danger/15 text-danger-soft border-danger/30' },
-  VALOR: { label: 'Ganga', icon: DollarSign, badgeClass: 'bg-success/15 text-success-soft border-success/30' },
-  OVR: { label: 'Salto OVR', icon: TrendingUp, badgeClass: 'bg-accent/15 text-accent-soft border-accent/30' },
-  FIT: { label: 'Encaje', icon: Zap, badgeClass: 'bg-accent/15 text-accent-soft border-accent/30' },
-};
-
-export const RecommendationsAccordion = memo(function RecommendationsAccordion({
-  recommendations,
-  remainingBudget,
-  onSelectPlayer
-}) {
-  const [isExpanded, setIsExpanded] = useState(() => {
-    try {
-      return localStorage.getItem('recommendations_expanded') !== 'false';
-    } catch {
-      return true;
-    }
-  });
-
+export const RecommendationsAccordion = memo(function RecommendationsAccordion({ recommendations, onSelectPlayer }) {
+  const [isExpanded, setIsExpanded] = useState(readInitialExpanded);
   const scrollContainerRef = useRef(null);
 
   const toggleExpanded = () => {
     setIsExpanded(prev => {
       const next = !prev;
       try {
-        localStorage.setItem('recommendations_expanded', String(next));
-      } catch {}
+        localStorage.setItem(STORAGE_KEY, String(next));
+      } catch {
+        // preference only
+      }
       return next;
     });
   };
 
-  const handleScroll = useCallback((direction) => {
-    if (!scrollContainerRef.current) return;
-    const distance = 360;
-    scrollContainerRef.current.scrollBy({
-      left: direction === 'left' ? -distance : distance,
-      behavior: 'smooth'
-    });
+  const scrollShelf = useCallback((direction) => {
+    scrollContainerRef.current?.scrollBy({ left: direction === 'left' ? -SCROLL_STEP : SCROLL_STEP, behavior: 'smooth' });
   }, []);
 
   if (!recommendations || recommendations.length === 0) return null;
 
-  const budgetM = remainingBudget ? remainingBudget / 1000000 : 0;
-  const bestReason = recommendations[0]?._reason || 'Opciones estratégicas para tu plantel';
+  const bestReason = recommendations[0]?._reason || 'Opciones para tu plantel';
 
   return (
-    <section className="mb-6 rounded-2xl bg-surface border border-line/[0.12] shadow-xl overflow-hidden relative transition-all duration-300">
-      {/* Subtle top cyan ambient glow */}
-
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-surface border-b border-line/[0.08] select-none">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <Sparkles className="w-5 h-5 text-accent" />
-          </div>
+    <section className="mb-5 rounded-2xl bg-surface border border-line/[0.12]" aria-labelledby="recommendations-title">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Sparkles className="w-4 h-4 text-accent-soft shrink-0" aria-hidden="true" />
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-xs sm:text-sm font-bold text-ink uppercase tracking-wider">
-                Recomendados para vos
-              </h3>
-              <span className="text-[10px] font-bold text-accent bg-accent/10 border border-accent/25 px-2 py-0.5 rounded-full">
-                {recommendations.length} disponibles
-              </span>
-            </div>
-            <p className="text-xs text-ink-3 truncate mt-0.5">
-              {bestReason} <span className="text-ink-3">·</span> Margen disp: <span className="text-success-soft font-bold">${budgetM.toFixed(1)}M</span>
-            </p>
+            <h2 id="recommendations-title" className="text-sm font-semibold text-ink">
+              Recomendados para vos <span className="font-normal text-ink-3">· <span className="num">{recommendations.length}</span></span>
+            </h2>
+            <p className="text-xs text-ink-3 truncate">{bestReason}</p>
           </div>
         </div>
 
-        {/* Action controls: carousel arrows + collapse toggle */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {isExpanded && recommendations.length > 3 && (
-            <div className="hidden sm:flex items-center gap-1 mr-1">
-              <button
-                type="button"
-                onClick={() => handleScroll('left')}
-                className="w-8 h-8 rounded-lg bg-raised border border-line/[0.12] text-ink-3 hover:text-ink hover:border-accent/40 flex items-center justify-center transition active:scale-95"
-                title="Desplazar a la izquierda"
-                aria-label="Ver anteriores"
-              >
-                <ChevronLeft className="w-4 h-4" />
+            <div className="hidden sm:flex items-center gap-1">
+              <button type="button" onClick={() => scrollShelf('left')} className="btn btn-ghost btn-icon btn-sm" aria-label="Ver anteriores" title="Ver anteriores">
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
               </button>
-              <button
-                type="button"
-                onClick={() => handleScroll('right')}
-                className="w-8 h-8 rounded-lg bg-raised border border-line/[0.12] text-ink-3 hover:text-ink hover:border-accent/40 flex items-center justify-center transition active:scale-95"
-                title="Desplazar a la derecha"
-                aria-label="Ver siguientes"
-              >
-                <ChevronRight className="w-4 h-4" />
+              <button type="button" onClick={() => scrollShelf('right')} className="btn btn-ghost btn-icon btn-sm" aria-label="Ver siguientes" title="Ver siguientes">
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           )}
-
-          <button
-            type="button"
-            onClick={toggleExpanded}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-raised border border-line/[0.12] text-ink-2 hover:text-ink hover:border-accent/40 text-xs font-bold transition active:scale-95"
-            aria-expanded={isExpanded}
-          >
-            <span>{isExpanded ? 'Ocultar' : 'Mostrar'}</span>
-            <ChevronDown className={`w-4 h-4 text-ink-3 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-accent' : ''}`} />
+          <button type="button" onClick={toggleExpanded} className="btn btn-secondary btn-sm" aria-expanded={isExpanded} aria-controls="recommendations-shelf">
+            {isExpanded ? 'Ocultar' : 'Mostrar'}
+            <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      {/* ── Content Shelf ── */}
       {isExpanded && (
-        <div className="p-3 sm:p-5 bg-canvas/80">
-          <div
-            ref={scrollContainerRef}
-            className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory custom-scrollbar"
-            style={{ scrollbarWidth: 'thin' }}
-          >
-            {recommendations.map(player => {
-              const ovr = player.OVR_CALCULADO || 0;
-              const ovrColor = getOvrColor(ovr);
-              const posColor = POS_COLOR[player.POS_NOMBRE] || '#94a3af';
-              const flagUrl = getFlagUrl(player.Country1);
-              const fit = FIT_CONFIG[player._fit] || FIT_CONFIG.FIT;
-              const FitIcon = fit.icon;
-
-              return (
-                <div
-                  key={`rec-${player.Id}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onSelectPlayer(player.Id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectPlayer(player.Id); } }}
-                  className="group flex-shrink-0 w-[164px] sm:w-[178px] snap-start rounded-xl bg-raised border border-line/[0.12] overflow-hidden text-left cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-[0_12px_24px_rgba(58, 102, 196,0.15)] active:scale-[0.98] flex flex-col"
-                >
-                  {/* Top bar: Price & Fit Badge */}
-                  <div className="flex items-center justify-between gap-1 px-3 py-2 bg-surface border-b border-line/[0.08]">
-                    <span className="inline-flex items-center gap-1 min-w-0 font-mono">
-                      <DollarSign className="w-3.5 h-3.5 text-success-soft flex-shrink-0" />
-                      <span className="text-xs sm:text-sm font-bold text-success-soft truncate">
-                        {formatPriceShort(player.Precio)}
-                      </span>
-                    </span>
-
-                    <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${fit.badgeClass}`}>
-                      <FitIcon className="w-2.5 h-2.5" />
-                      <span>{fit.label}</span>
-                    </span>
-                  </div>
-
-                  {/* Player Image & Overlay Banner */}
-                  <div className="relative overflow-hidden aspect-[3/2.8] bg-raised">
-                    {/* Position radial aura */}
-                    <div
-                      className="absolute inset-0 opacity-25 pointer-events-none z-[1]"
-                      style={{ background: `radial-gradient(ellipse at 50% 60%, ${posColor}40 0%, transparent 70%)` }}
-                    />
-
-                    <img
-                      src={`/fotos_jugadores/${player.Id}.webp`}
-                      alt={player.Name}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover z-[2] transition-transform duration-500 ease-out group-hover:scale-105"
-                      style={{
-                        objectPosition: 'top center',
-                        filter: 'drop-shadow(0 6px 10px rgba(0,0,0,0.5))'
-                      }}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = `https://placehold.co/180x170/111722/e2e8f0?text=${player.Name?.substring(0, 2) || '?'}`;
-                      }}
-                    />
-
-                    {/* Dark gradient fade */}
-                    <div
-                      className="absolute bottom-0 left-0 right-0 z-[3] pointer-events-none"
-                      style={{ height: '40%', background: 'linear-gradient(to top, #111722 0%, transparent 100%)' }}
-                    />
-
-                    {/* Quick View Button on Hover */}
-                    <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 pointer-events-none">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-on-accent font-bold text-xs shadow-lg transform translate-y-1 group-hover:translate-y-0 transition-transform">
-                        <Eye className="w-3.5 h-3.5" /> Ver Ficha
-                      </span>
-                    </div>
-
-                    {/* OVR + Flag + Position overlay strip */}
-                    <div className="absolute bottom-1.5 left-2 right-2 z-10 flex items-center justify-between pointer-events-none">
-                      <div className="flex items-center gap-1.5">
-                        <div
-                          className="flex items-center justify-center rounded-md px-1.5 py-0.5 border"
-                          style={{
-                            background: `${ovrColor}20`,
-                            borderColor: `${ovrColor}60`,
-                            boxShadow: `0 2px 6px ${ovrColor}30`
-                          }}
-                        >
-                          <span
-                            className="text-base sm:text-lg font-bold leading-none"
-                            style={{ color: ovrColor }}
-                          >
-                            {ovr}
-                          </span>
-                        </div>
-
-                        {flagUrl && (
-                          <img
-                            src={flagUrl}
-                            alt=""
-                            className="w-4 h-3 object-cover rounded-[2px] border border-white/20 shadow"
-                            onError={e => { e.target.style.display = 'none'; }}
-                          />
-                        )}
-                      </div>
-
-                      <span
-                        className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-ink shadow-sm"
-                        style={{ background: posColor }}
-                      >
-                        {player.POS_NOMBRE}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Player Meta Details */}
-                  <div className="p-2.5 flex-1 flex flex-col justify-between bg-raised">
-                    <div>
-                      <p className="text-xs font-bold text-ink uppercase tracking-wide truncate group-hover:text-accent transition-colors">
-                        {player.Name}
-                      </p>
-
-                      {player._reason && (
-                        <div className="mt-1.5 inline-flex items-center gap-1 text-[9px] font-bold text-ink-2 bg-white/[0.05] border border-line/[0.12] px-1.5 py-0.5 rounded max-w-full">
-                          <Target className="w-2.5 h-2.5 text-accent shrink-0" />
-                          <span className="truncate">{player._reason}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-2 pt-1.5 border-t border-line/[0.08] flex items-center justify-between text-[9px] text-ink-3 font-semibold">
-                      <span>Impacto</span>
-                      <span className="text-ink-2 font-bold">{player._valueNote || '< 5%'}</span>
-                    </div>
-                  </div>
+        <div id="recommendations-shelf" ref={scrollContainerRef}
+          className="flex gap-3 overflow-x-auto px-4 sm:px-5 pb-4 snap-x custom-scrollbar">
+          {recommendations.map(player => {
+            const ovr = player.OVR_CALCULADO || 0;
+            const fit = FIT_CONFIG[player._fit] || FIT_CONFIG.FIT;
+            return (
+              <button
+                key={`rec-${player.Id}`}
+                type="button"
+                onClick={() => onSelectPlayer(player.Id)}
+                aria-label={`Ver ficha de ${player.Name}, ${fit.label}, media ${ovr}, ${formatPriceShort(player.Precio)}`}
+                className="group shrink-0 w-[152px] sm:w-[164px] snap-start rounded-xl border border-line/[0.12] bg-raised hover:border-line/30 hover:bg-overlay transition-colors text-left flex flex-col"
+              >
+                <div className="relative aspect-square overflow-hidden rounded-t-[11px] bg-overlay">
+                  <img
+                    src={`/fotos_jugadores/${player.Id}.webp`}
+                    alt=""
+                    loading="lazy"
+                    width={164}
+                    height={164}
+                    className="w-full h-full object-cover object-top"
+                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = playerPlaceholder(player.Name?.substring(0, 2) || '?'); }}
+                  />
+                  <span className={`absolute left-1.5 top-1.5 min-w-8 h-8 px-1 rounded-md flex items-center justify-center font-display num text-lg font-bold leading-none ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
+                  <span className={`absolute left-1.5 bottom-1.5 px-1.5 py-0.5 rounded text-[11px] font-bold leading-tight ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                 </div>
-              );
-            })}
-          </div>
+                <div className="flex-1 flex flex-col gap-1.5 p-2.5 min-w-0">
+                  <span className="text-sm font-semibold text-ink truncate">{player.Name}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-display num text-base font-semibold text-ink">{formatPriceCompact(player.Precio)}</span>
+                    <Badge variant={fit.variant} size="sm">{fit.label}</Badge>
+                  </div>
+                  {player._valueNote && <span className="text-xs text-ink-3">{player._valueNote}</span>}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </section>

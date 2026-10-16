@@ -117,8 +117,22 @@ the content hash is verified and the copy is cached in IndexedDB. Upload is Supe
 Where things live in the UML patch: **values** (models, colours, name/number placement, which texture files a kit
 uses) are in Sider's `content/kit-server/<league>/<team>/<kit>/config.txt`; the **texture files** themselves
 (`u0126p1.ftex`, `dor_bla_num.ftex` …, about 7 000 BC7 FTEX) are in
-`livecpk/UML_Kits/Asset/model/character/uniform/texture/#windx11`. The game looks in the kit folder first, then in
-each `cpk.root` of `sider.ini` in order (`pes/kits/textureLocator.js`). The native per-team files
+`livecpk/UML_Kits/Asset/model/character/uniform/texture/#windx11`, and many kits also carry their own copies in the
+kit folder (PSG `p1x1`, `uefa/*`). How Sider's kit-server module serves them (read from `modules/kserv.lua` v1.17,
+loaded by `sider.ini` as `lua.module = "kserv.lua"`; there is no `kitserver.lua` in this install):
+- `map.txt` maps team id → folder; `order.ini` / `gk_order.ini` list kit folders per `[section]` (non-default
+  sections are tagged `CompKit`; with `hide_comp_kits_badges = 1` kserv.lua writes X=31,Y=0 to every badge key).
+- `config.txt` is parsed as `key=value`, comment from the first `;`, BOM stripped, `tonumber` when numeric.
+- The game itself derives `KitFile + "_srm"` and `NameFontFile + "_ex"`; kserv.lua adds both keys so it can remap them.
+- For each texture key, kserv.lua checks `<kit-server>/<team>/<kit>/<name>.ftex` (**.ftex only**). If it exists the
+  name is rewritten to `k<team>p<n>…` and served from that folder; otherwise the name is left alone and the game
+  finds it through its CPKs / livecpk roots (`cpk.root` of `sider.ini`). `_nrm` is never remapped and the patch ships none.
+- The editor ranges of kserv.lua's in-game config editor (`overlay_states`) are the validation reference
+  (`pes/kits/kitConfigSchema.js`): the Kit Studio comments in config.txt are wrong for some keys
+  (`ShortsNumberX ; 0 to 14` while kserv.lua accepts 0..31 and PSG p1 uses 16; Collar 1..135, ShortsModel 0..17,
+  BackNumberSpacing 0..15). Values are never rewritten: the render keeps `{ raw, used }` per key.
+- Sleeve badges are drawn by `SleeveBadge-ArmbandServer.lua` from `content/badge-server/<competition>/badge/badge.ftex`
+  (`badge-left.ftex`, optional per-team subfolder), chosen by tournament id — competition assets, not kit assets. The native per-team files
 `livecpk/UML_Kits/common/character0/model/character/uniform/team/<id>/<id>_DEF_1st_realUni.bin` (120 bytes: colours,
 model bytes, texture names at 0x2C/0x38/0x48/0x58/0x68) hold the same data as config.txt and are replaced at runtime
 by the kit-server, so the editor never writes them. Everything is keyed by team id: a draft team that replaces team
@@ -126,12 +140,49 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
 
 - **3D preview** (`components/pes/PesKit3DViewer.jsx`): garment models of the CometKIT previewer (via PES Editor
   Rebuilt, `public/pes/kitpack.bin`, downloaded on first use), parts chosen from config.txt (TightKit, Collar,
-  ShortsModel, ShortSleevesModel, goalkeeper sleeves), WebGL fabric shader with stadium lights. Textures come from the
-  workspace (imported/generated, shared) or from the game folder opened in the browser (read-only, File System
-  Access API in Chrome/Edge, folder input elsewhere; nothing is uploaded). FTEX/DDS are decoded by
-  `pes/kits/textureDecode.js` (DXT1/3/5, BC7, RGBA8; verified on the patch's BC7 kit and font textures). Name and
-  numbers are drawn with the kit's own font sheets at the config.txt positions; the value → position conversion is
-  Rebuilt's approximation, not the game's exact placement. Without the kit texture the config colours are used.
+  ShortsModel, ShortSleevesModel, goalkeeper sleeves), WebGL fabric shader with stadium lights. Panels in tabs
+  (Vista · Camiseta · Letras · Tela · Diagnóstico).
+- **Texture resolution** (`pes/kits/kitAssetResolver.js`, pure; providers in `components/pes/kit3d/loadKitTextures.js`):
+  kit-server files only (the kit's own folder), livecpk is not searched. Order: (1) textures imported in the workspace
+  (`kit.texture.set`), (2) original kit-server files shared to the cloud — Firestore
+  `pes_workspaces/{ws}/kit_textures/{teamId}` manifest (`files[encoded path] = { path, sha256, ext, size }`) + Supabase
+  `<ws>/<sha256>.ftex`, hash-verified, cached in IndexedDB, (3) the game folder or the kit-server folder opened in the
+  browser (read only). Lookups are cached per provider and path for the session; concurrent requests share one promise.
+  "Compartir texturas" (Super Admin / Kit Manager of a league team, explicit click) uploads the .ftex found locally.
+  Slots: kit, `_srm`, `_nrm` (optional, not used by the game), name, name `_ex`, back, chest, leg.
+- **Decoding / lettering**: `pes/kits/textureDecode.js` (DXT1/3/5, BC7, RGBA8; verified on PSG's BC7 kit 2048²,
+  name 2048×512 and back/leg 4096×512 sheets). Glyph cells of the name/number sheets match PSG's sheets; accented
+  letters are in the `_ex` sheet (4096×2048) whose grid is not mapped yet, so they are drawn as the base letter.
+  Placement (`pes/kits/kitDecalFormulas.js`) is the game's own math, read from this machine's PES2021.exe (a runtime
+  image dumped by a read-only Sider module, analysed in Ghidra/ReVa) and its shaders (`data/dt00_x64.cpk` →
+  `shaders/dx11/PesShaders_dx11.fsop`, entries XOR-obfuscated with one byte, DXBC disassembled with d3dcompiler_47):
+  - kserv only calls `ctx.kits.set`; Sider's `kitinfo.cpp` packs each key into bits of the kit record (e.g.
+    ShortsNumberX = bits 5–10 of 0x16). The game converts them in `FUN_141e58c80` (back), `FUN_141e58d90` (chest),
+    `FUN_141e59150` (name), `FUN_141e59240` (NameStretch = 0.5 + n/6, 0 read as 3), `FUN_141e594a0` (shorts) with
+    range tables at 0x142B464D0/0x142B46590. A step outside 0..max is rejected (position 0, size 0.01): not drawn.
+  - Lettering is not painted into the kit texture. `FUN_1419e3c60` draws a 1600×256 "marking" texture (name in x
+    0–0.64 on a 512×128 canvas, back number 0.64–0.88, chest number 0.88–1 × top half, sleeve badge below it);
+    the shirt shader maps each region onto the kit UV with scale/offset from `FUN_141a86310` (`FUN_1419a4d20` name:
+    centre v = NameY + [0, −0.002, −0.016, −0.019][NameShape], height NameSize/16, width NameSize·NameStretch/4;
+    `FUN_1419a44f0` back number: width 1/(10−6s), height 1/(0.627451·(20−12s)), top at (0.27557 − 0.1·y)/0.627451;
+    `FUN_1419a4bf0` chest: square ChestNumberSize/16 centred at (X, Y)). The shorts number is a 128×128 texture
+    (`FUN_1419e3a30`, digits turned 90°) placed by the pants shader as a square ShortsNumberSize/16 centred at
+    (ShortsNumberY, ShortsNumberX), turned 180° on the left leg (`FUN_1419a5000`).
+  - Digits: `FUN_1419e2c10` (one digit in the middle half of its region; two digits 0.08·(spacing−1) apart, with
+    fixed corrections for 1x, x1 and 11) and `FUN_1419e4a90` (digit cells). Names: `FUN_1419e1df0` with the glyph
+    table at 0x142A96CE0 (A–Z and the accented letters of `NameFontFile_ex`); curved names add 6 px between letters
+    and sit on circles of radius 672/336/292.
+  Checked against in-game captures of FC Barcelona kit-server `Barcelona/p1` (1080p screenshots in the game folder,
+  `PES2021 2026-10-15 *.png`, and `vendor/2026-10-14 14-53-26.mp4`): number ink height 0.151 vs 0.152 measured, name
+  centre 0.3895 vs 0.387, name width and letter pitch match. Open: the light curve's end letters drop ~1.6× what the
+  decoded formula gives; the viewer's shorts/shirt meshes are CometKIT's, not the game's FMDL models
+  (`dt35_g4.cpk` → `Asset/model/character/uniform/{cloth,nocloth}/#Win/*.fmdl`), so the shape on the body can
+  differ even with the same UV placement.
+  Without the kit texture the config colours are used. Sleeve badges: positions are read and listed; the badge images (badge-server) are not drawn.
+- **WebGL lifecycle** (`components/pes/kit3d/useKitGL.js`, `kitRenderer.js`): `KitGL.make` returns null instead of
+  throwing; context loss/restoration is handled (re-upload on restore); `draw` disables its vertex attributes after
+  each pass; collar thumbnails share one offscreen context (`sharedThumbRenderer`) instead of one per render, which
+  was making the browser drop the main viewer's context.
 - **Fabric maps** (`pes/kits/fabricMaps.js`): normal map = repeating weave (8 fabrics) + relief of the kit drawings
   from the texture brightness; SRM = shine/roughness of the fabric. Previewed live in 3D and saved as
   `<KitFile>_nrm.ftex` (DXT5 2048) / `<KitFile>_srm.ftex` (DXT1 1024) through the normal texture import.

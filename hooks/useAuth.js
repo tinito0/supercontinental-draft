@@ -55,14 +55,17 @@ export function useAuth({
             setAppError("Sin permisos para cargar Market Status");
           }
         });
+        // Sin estado de mercado la app espera para siempre: mostrar el error con reintento.
+        if (error?.code !== 'permission-denied') {
+          setAppError?.('No se pudo leer el estado del mercado. Revisá tu conexión y reintentá.');
+        }
       }
     );
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      // Bloquear procesamiento durante migración activa en LinkGoogleScreen
-      if (sessionStorage.getItem('isMigrating') === 'true') {
-        return;
-      }
+    const handleAuthUser = async (firebaseUser) => {
+      // Versiones viejas de LinkGoogleScreen dejaban esta marca y, si la pestaña se cerraba a mitad de la
+      // migración, el ingreso quedaba trabado en "Conectando al servidor…".
+      try { sessionStorage.removeItem('isMigrating'); } catch { /* sin sessionStorage */ }
 
       if (firebaseUser) {
         setUser(firebaseUser);
@@ -199,6 +202,17 @@ export function useAuth({
         setIsAuthReady(true);
         setIsLoading(false);
       }
+    };
+
+    // Un fallo leyendo o creando el perfil (p. ej. sin conexión en el primer ingreso) dejaba la
+    // app en "Conectando al servidor..." para siempre.
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      handleAuthUser(firebaseUser).catch(error => {
+        console.error('Error al cargar la cuenta:', error);
+        setAppError?.('No se pudo cargar tu cuenta. Revisá tu conexión y reintentá.');
+        setIsAuthReady(true);
+        setIsLoading(false);
+      });
     });
 
     const initialSignIn = async () => {
@@ -234,6 +248,7 @@ export function useAuth({
     isAdmin,
     isAuthReady,
     needsGoogleLinking,
+    setNeedsGoogleLinking,
     authError,
     setAuthError,
     marketStatus,

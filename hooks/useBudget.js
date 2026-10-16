@@ -1,40 +1,43 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { committedInOffers as sumCommitted, spentOnLocks } from '../supabase/functions/_shared/budget.js';
+import { ownedLockEntries } from '../utils/squadSync.js';
 
 /**
- * Hook personalizado para encapsular el cálculo del presupuesto,
- * fondos comprometidos en transferencias activas y alertas de bajo saldo.
+ * Presupuesto con la misma cuenta que el servidor (supabase/functions/_shared/budget.js):
+ * base del equipo − precio de catálogo de los jugadores propios (según player_locks, no el carrito) −
+ * ofertas pendientes enviadas. El Jugador Franquicia no cuesta.
+ * @param {number} baseBudget teams/{uid}.budget (el servidor lo cambia en los traspasos)
+ * @param {(playerId: string) => number} priceOf precio en millones
  */
-export function useBudget({ userProfile, ownedCart = [], userId, sentOffers = [] }) {
-  const totalCartCost = useMemo(() => {
-    return ownedCart.reduce((total, player) => {
-      const isFranchise = player.isFranchise || (userProfile?.franchisePlayerId === player.Id);
-      return total + (isFranchise ? 0 : (Number(player.Precio) || 0) * 1000000);
-    }, 0);
-  }, [ownedCart, userProfile]);
+export function calculateBudget({ baseBudget, playerLocks, userId, sentOffers = [], priceOf, franchisePlayerId }) {
+  const spent = spentOnLocks(ownedLockEntries(playerLocks, userId), priceOf, { franchisePlayerId });
+  const committed = userId
+    ? sumCommitted((sentOffers || []).filter(o => o.senderId === userId && o.status === 'pending'))
+    : 0;
+  const base = Number(baseBudget) || 0;
+  return { base, spent, committed, remaining: base - spent - committed };
+}
 
-  const committedInOffers = useMemo(() => {
-    if (!userId || !sentOffers) return 0;
-    return sentOffers
-      .filter(o => o.senderId === userId && o.status === 'pending')
-      .reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
-  }, [userId, sentOffers]);
-
-  const remainingBudget = useMemo(() => {
-    if (!userProfile) return 0;
-    const baseBudget = Number(userProfile.budget) || 0;
-    return baseBudget - totalCartCost - committedInOffers;
-  }, [userProfile, totalCartCost, committedInOffers]);
+/**
+ * @param {boolean} [pricesKnown] false while some owned player has no price yet (bought, catalog loading):
+ *   the alert waits, so a transient high balance followed by the real one does not trigger it.
+ */
+export function useBudget({ userProfile, baseBudget, playerLocks, userId, sentOffers = [], priceOf, pricesKnown = true }) {
+  const franchisePlayerId = userProfile?.franchisePlayerId;
+  const { base, spent: totalCartCost, committed: committedInOffers, remaining } = useMemo(
+    () => calculateBudget({ baseBudget: baseBudget ?? userProfile?.budget, playerLocks, userId, sentOffers, priceOf, franchisePlayerId }),
+    [baseBudget, userProfile?.budget, playerLocks, userId, sentOffers, priceOf, franchisePlayerId],
+  );
+  const remainingBudget = userProfile ? remaining : 0;
 
   const [showBudgetAlert, setShowBudgetAlert] = useState(false);
 
-  const budgetPercent = useMemo(() => {
-    if (!userProfile?.budget) return 100;
-    return Math.max(0, (remainingBudget / userProfile.budget) * 100);
-  }, [remainingBudget, userProfile?.budget]);
+  const budgetPercent = base ? Math.max(0, (remainingBudget / base) * 100) : 100;
 
   // Mostrar alerta modal automáticamente cuando un fichaje hace caer el saldo por debajo del 20%
   const prevBudgetPercentRef = useRef(null);
   useEffect(() => {
+    if (!pricesKnown) return;
     if (prevBudgetPercentRef.current === null) {
       prevBudgetPercentRef.current = budgetPercent;
       return;
@@ -45,9 +48,10 @@ export function useBudget({ userProfile, ownedCart = [], userId, sentOffers = []
       try { sessionStorage.setItem('budget_alert_shown', 'true'); } catch {}
     }
     prevBudgetPercentRef.current = budgetPercent;
-  }, [budgetPercent]);
+  }, [budgetPercent, pricesKnown]);
 
   return {
+    budgetBase: base,
     totalCartCost,
     committedInOffers,
     remainingBudget,

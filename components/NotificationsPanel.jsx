@@ -48,7 +48,7 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDismiss(notif); }}
-          className="absolute top-2 right-2 min-w-6 min-h-6 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-white/10 transition cursor-pointer"
+          className="absolute top-1 right-1 min-w-10 min-h-10 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-white/10 transition cursor-pointer"
           title="Descartar"
           aria-label="Descartar notificación"
         >
@@ -88,7 +88,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
     <div
       role="region"
       aria-label="Panel de notificaciones"
-      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-surface border border-line/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200"
+      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-surface border border-line/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3"
     >
       <div className="flex justify-between items-center p-3.5 border-b border-line/20 bg-surface/60">
         <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
             <button
               type="button"
               onClick={onMarkAllRead}
-              className="px-2 py-1 flex items-center gap-1 text-xs text-accent hover:underline font-medium cursor-pointer"
+              className="px-2 min-h-11 flex items-center gap-1 text-xs text-accent hover:underline font-medium cursor-pointer"
               title="Marcar todas como leídas"
               aria-label="Marcar todas las notificaciones como leídas"
             >
@@ -115,7 +115,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
             <button
               type="button"
               onClick={onClear}
-              className="px-2 py-1 text-xs text-ink-3 hover:text-ink-2 font-medium cursor-pointer"
+              className="px-2 min-h-11 text-xs text-ink-3 hover:text-ink-2 font-medium cursor-pointer"
               aria-label="Borrar todas las notificaciones"
             >
               Borrar todo

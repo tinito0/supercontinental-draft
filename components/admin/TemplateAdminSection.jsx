@@ -1,53 +1,22 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { RefreshCw, Search, X, ClipboardList, Download, Package, Loader2 } from 'lucide-react';
-import { getDocs, query, collection, getDoc } from 'firebase/firestore';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { APP_ID, FORMATIONS } from '../../utils/constants.js';
+import { FORMATIONS } from '../../utils/constants.js';
+import { layoutForState, normalizeFormationStates } from '../../utils/formationStates.js';
+import { loadDraftTeams } from '../../services/draftTeamsService.js';
 
 export const TemplateAdminSection = memo(function TemplateAdminSection({
-  getPublicTeamsCollectionRef,
-  getPrivateProfileRef,
-  db,
   showStatusMessage,
 }) {
   const [teamsData, setTeamsData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 1. CARGA DE DATOS (Aseguramos que traiga players, formation y lineup)
+  // 1. CARGA DE DATOS: el mismo cargador que usa el traspaso al juego (services/draftTeamsService.js),
+  // así el CSV y el EDIT exportan exactamente los mismos datos (formación, estados tácticos, instrucciones).
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const publicSnaps = await getDocs(query(getPublicTeamsCollectionRef()));
-
-      const promises = publicSnaps.docs.map(async (teamDoc) => {
-        const publicData = teamDoc.data();
-        const userId = teamDoc.id;
-
-        const [profileSnap, cartSnap] = await Promise.all([
-          getDoc(getPrivateProfileRef(userId)),
-          getDocs(collection(db, `artifacts/${APP_ID}/users/${userId}/cart`)),
-        ]);
-
-        const profileData = profileSnap.exists() ? profileSnap.data() : {};
-        const players = cartSnap.docs.map(d => d.data());
-
-        return {
-          id: userId,
-          name: publicData.teamName || profileData.teamName || 'Sin Nombre',
-          country: publicData.country || profileData.country || 204,
-          dorsals: profileData.dorsals || {},
-          formation: profileData.formation || '4-3-3',
-          lineup: profileData.lineup || {},
-          setPieces: profileData.setPieces || {},
-          tactics: profileData.tactics || {},
-          players: players || [], // Aseguramos que sea un array
-        };
-      });
-
-      const results = await Promise.all(promises);
-      setTeamsData(results.sort((a, b) => a.name.localeCompare(b.name)));
+      setTeamsData(await loadDraftTeams());
     } catch (e) {
       console.error(e);
       showStatusMessage('error', 'Error cargando datos de plantillas.');
@@ -103,8 +72,16 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
           }
         }
       );
+      const notes = [];
+      if (result.filledSlots?.length > 0) {
+        const slots = result.filledSlots.map(f => `${f.pos} → ${f.player.Name || f.player.Id}`).join(', ');
+        notes.push(`${result.filledSlots.length} puesto(s) sin titular se completaron con el plantel (${slots})`);
+      }
       if (result.missingPlayers?.length > 0) {
-        showStatusMessage('warning', `Option File exportado con éxito. Nota: ${result.missingPlayers.length} jugador(es) no estaban en el CSV maestro y se exportaron con valores base.`);
+        notes.push(`${result.missingPlayers.length} jugador(es) no estaban en el CSV maestro y se exportaron con valores base`);
+      }
+      if (notes.length > 0) {
+        showStatusMessage('warning', `Option File exportado. Nota: ${notes.join('; ')}.`);
       } else {
         showStatusMessage('success', `Option File (${targetTeamName || pesExportModalTeam.name}) exportado correctamente para PES (ID ${targetPesTeamId}).`);
       }
@@ -120,9 +97,19 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
   };
 
   // 2. Generación de PDF (adaptado a la nueva estructura 'layout')
-  const generatePDF = (team) => {
+  // jsPDF + autotable (~400 kB) se cargan al pedir el primer PDF, no al abrir Administración.
+  const generatePDF = async (team) => {
     if (!team.players || !Array.isArray(team.players)) {
       showStatusMessage('error', 'Este equipo no tiene datos de jugadores válidos.');
+      return;
+    }
+    let jsPDF;
+    let autoTable;
+    try {
+      [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    } catch (err) {
+      console.error(err);
+      showStatusMessage('error', 'No se pudo cargar el generador de PDF. Revisá la conexión y probá de nuevo.');
       return;
     }
 
@@ -137,15 +124,18 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
     doc.setTextColor(100);
     doc.text(`ID Equipo: ${team.id}`, 14, 28);
 
-    const currentFormation = FORMATIONS[team.formation] || FORMATIONS['4-3-3'];
+    const formationKey = FORMATIONS[team.formation] ? team.formation : '4-3-3';
+    const currentFormation = FORMATIONS[formationKey];
     doc.text(`Esquema Táctico: ${currentFormation.name}`, 14, 34);
+    // Roles as played at kick-off, including the ones the manager changed on the tactics board.
+    const kickOffLayout = layoutForState(currentFormation, normalizeFormationStates(team.formationStates, formationKey, currentFormation), 'base');
 
     // --- Procesamiento de alineación ---
     const starters = [];
     const usedPlayerIds = new Set();
 
     if (currentFormation.layout) {
-      currentFormation.layout.forEach((slot, index) => {
+      kickOffLayout.forEach((slot, index) => {
         const posLabel = slot.pos;
         const playerId = team.lineup[index];
 
@@ -336,7 +326,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
       {/* ── MODAL EXPORTAR PES OPTION FILE ── */}
       {pesExportModalTeam && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-surface border border-line/20 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="bg-surface border border-line/20 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex justify-between items-center pb-2 border-b border-line/20">
               <div className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-accent" />

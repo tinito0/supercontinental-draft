@@ -1,406 +1,250 @@
 import React, { useMemo, memo } from 'react';
 import { Radar } from 'react-chartjs-2';
+import '../utils/chartSetup.js';
 import { X, Target, Check } from 'lucide-react';
 import { STAT_NAMES_MAP, STATS_JUGADOR_CAMPO, STATS_PORTERO, PLAYER_SKILLS_MAP } from '../utils/constants.js';
 import { getPosColorClass, getStatAndOvrColorClass, formatPriceShort } from '../utils/helpers.js';
 import { BaseModal } from './ui/BaseModal.jsx';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
+// Each side keeps one colour everywhere (radar, winning value, legend, exclusive skills):
+// A = crest blue (--c-accent), B = amber (--c-warning). Chart.js needs literal colours, so they mirror index.css.
+const SIDE = {
+  A: { line: 'rgb(58 102 196)', fill: 'rgba(58, 102, 196, 0.22)', dot: 'bg-accent', ring: 'ring-accent', text: 'text-accent-soft', chip: 'bg-accent/[0.12] text-accent-soft border-accent/30' },
+  B: { line: 'rgb(245 158 11)', fill: 'rgba(245, 158, 11, 0.18)', dot: 'bg-warning', ring: 'ring-warning', text: 'text-warning-soft', chip: 'bg-warning/[0.12] text-warning-soft border-warning/30' },
+};
+
+const RADAR_KEYS = {
+  field: [['SHO', 'STAT_SHO'], ['PAS', 'STAT_PAS'], ['STR', 'STAT_STR'], ['DEF', 'STAT_DEF'], ['SPD', 'STAT_SPD'], ['DRI', 'STAT_DRI']],
+  gk: [['SHO', 'STAT_SHO'], ['PAS', 'STAT_PAS'], ['STR', 'STAT_STR'], ['GK', 'STAT_GK'], ['SPD', 'STAT_SPD'], ['DRI', 'STAT_DRI']],
+};
+
+const RADAR_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: true,
+  scales: {
+    r: {
+      min: 35,
+      max: 100,
+      ticks: { display: false },
+      pointLabels: { font: { size: 11, weight: '600' }, color: 'rgb(184 194 214)', backdropColor: 'transparent' },
+      grid: { color: 'rgba(255, 255, 255, 0.08)', lineWidth: 1 },
+      angleLines: { color: 'rgba(255, 255, 255, 0.08)', lineWidth: 1 },
+    },
+  },
+  plugins: { legend: { display: false } },
+};
+
+const lastName = name => String(name || '').split(' ').pop();
+const skillsOf = player => Object.entries(PLAYER_SKILLS_MAP).filter(([key]) => player[key]).map(([, label]) => label);
+
+/** Bar fill (0–100) for a value; the physical rows use their own realistic ranges. */
+function barPercent(label, value, isWeakFoot) {
+  if (isWeakFoot) return Math.min(100, Math.max(12, (value / 4) * 100));
+  if (label === 'Edad') return Math.min(100, Math.max(15, ((value - 15) / 25) * 100));
+  if (label === 'Altura') return Math.min(100, Math.max(15, ((value - 150) / 60) * 100));
+  if (label === 'Peso') return Math.min(100, Math.max(15, ((value - 50) / 55) * 100));
+  return Math.min(100, Math.max(6, value));
+}
+
+function StatValue({ value, isWinner, side }) {
+  return (
+    <span className={`min-w-9 px-1.5 py-0.5 rounded-md font-display num text-sm font-bold text-center ${getStatAndOvrColorClass(value)} ${isWinner ? `ring-2 ring-offset-1 ring-offset-raised ${SIDE[side].ring}` : ''}`}>
+      {value}
+    </span>
+  );
+}
+
+function StatBarRow({ label, valA, valB, isWeakFoot = false }) {
+  const numA = Number(valA) || 0;
+  const numB = Number(valB) || 0;
+  const winner = numA > numB ? 'A' : numB > numA ? 'B' : null;
+  return (
+    <div className="py-2 border-b border-line/[0.08] last:border-0 flex flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <StatValue value={numA} isWinner={winner === 'A'} side="A" />
+        <span className="flex-1 text-center font-semibold text-ink-2 truncate text-xs sm:text-sm">{label}</span>
+        <StatValue value={numB} isWinner={winner === 'B'} side="B" />
+      </div>
+      <div className="flex items-center gap-1.5 h-1.5" aria-hidden="true">
+        <div className="flex-1 bg-white/[0.07] rounded-full h-full overflow-hidden flex justify-end">
+          <div className={`h-full rounded-full ${SIDE.A.dot} ${winner === 'A' ? '' : 'opacity-40'}`} style={{ width: `${barPercent(label, numA, isWeakFoot)}%` }} />
+        </div>
+        <div className="flex-1 bg-white/[0.07] rounded-full h-full overflow-hidden">
+          <div className={`h-full rounded-full ${SIDE.B.dot} ${winner === 'B' ? '' : 'opacity-40'}`} style={{ width: `${barPercent(label, numB, isWeakFoot)}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlayerHeader({ player, side, align }) {
+  const isRight = align === 'right';
+  return (
+    <div className={`flex items-center gap-3 flex-1 min-w-0 ${isRight ? 'flex-row-reverse text-right' : ''}`}>
+      <div className="relative shrink-0">
+        <img
+          src={`/fotos_jugadores/${player.Id}.webp`}
+          alt=""
+          width={56}
+          height={56}
+          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover object-top bg-raised ring-2 ${SIDE[side].ring}`}
+          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = playerPlaceholder(player.Name?.substring(0, 1) ?? '?'); }}
+        />
+        <span className={`absolute -bottom-1.5 ${isRight ? '-left-1.5' : '-right-1.5'} min-w-7 h-6 px-1 rounded-md flex items-center justify-center font-display num text-sm font-bold ${getStatAndOvrColorClass(player.OVR_CALCULADO)}`}>
+          {player.OVR_CALCULADO}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <h3 className="text-sm sm:text-base font-semibold text-ink leading-tight truncate">{player.Name}</h3>
+        <div className={`flex items-center gap-2 mt-1 flex-wrap ${isRight ? 'justify-end' : ''}`}>
+          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+          <span className="font-display num text-sm font-semibold text-ink">{formatPriceShort(player.Precio)}</span>
+          {player.PlayingStyle && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-xs text-ink-3">
+              <Target className="w-3 h-3" aria-hidden="true" />{player.PlayingStyle}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkillList({ player, skills, otherSkills, side }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold text-ink-2">{player.Name} <span className="num text-ink-3">({skills.length})</span></p>
+      <div className="flex flex-wrap gap-1.5">
+        {skills.length > 0 ? skills.map(skill => {
+          const isShared = otherSkills.includes(skill);
+          return (
+            <span key={skill} className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md border ${isShared ? 'bg-overlay text-ink-2 border-line/20' : SIDE[side].chip}`}>
+              {skill}{isShared && <Check className="w-3 h-3" aria-label="en común" />}
+            </span>
+          );
+        }) : <span className="text-xs text-ink-3">Sin habilidades especiales</span>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Side-by-side comparison of two marketplace players. The outer component only decides visibility, so the
+ * hooks in ComparisonContent always run in the same order (they used to sit after an early return).
+ */
 export const ComparisonModal = memo(function ComparisonModal({ isVisible, onClose, playerA, playerB }) {
   if (!isVisible || !playerA || !playerB) return null;
+  return <ComparisonContent onClose={onClose} playerA={playerA} playerB={playerB} />;
+});
 
+function ComparisonContent({ onClose, playerA, playerB }) {
   const isGK = playerA.Grupo === 'Arqueros' || playerB.Grupo === 'Arqueros';
   const statGroups = isGK ? STATS_PORTERO : STATS_JUGADOR_CAMPO;
 
-  // Hexágono PES en sentido horario: SHO, PAS, STR, DEF/GK, SPD, DRI
-  const rawLabels = isGK
-    ? ['SHO', 'PAS', 'STR', 'GK', 'SPD', 'DRI']
-    : ['SHO', 'PAS', 'STR', 'DEF', 'SPD', 'DRI'];
+  const radarData = useMemo(() => {
+    const keys = isGK ? RADAR_KEYS.gk : RADAR_KEYS.field;
+    const dataA = keys.map(([, key]) => playerA[key] ?? 0);
+    const dataB = keys.map(([, key]) => playerB[key] ?? 0);
+    const dataset = (player, data, side) => ({
+      label: player.Name, data, backgroundColor: SIDE[side].fill, borderColor: SIDE[side].line, borderWidth: 2,
+      pointBackgroundColor: SIDE[side].line, pointBorderColor: '#ffffff', pointRadius: 3.5, pointHoverRadius: 5,
+    });
+    return {
+      labels: keys.map(([label], i) => `${dataA[i]} ${label} ${dataB[i]}`),
+      datasets: [dataset(playerA, dataA, 'A'), dataset(playerB, dataB, 'B')],
+    };
+  }, [isGK, playerA, playerB]);
 
-  const getRadarData = (p) => isGK
-    ? [p.STAT_SHO, p.STAT_PAS, p.STAT_STR, p.STAT_GK, p.STAT_SPD, p.STAT_DRI]
-    : [p.STAT_SHO, p.STAT_PAS, p.STAT_STR, p.STAT_DEF, p.STAT_SPD, p.STAT_DRI];
-
-  const dataA = getRadarData(playerA);
-  const dataB = getRadarData(playerB);
-
-  const radarLabels = rawLabels.map((l, i) => `${dataA[i] ?? 0} ${l} ${dataB[i] ?? 0}`);
-
-  const radarData = useMemo(() => ({
-    labels: radarLabels,
-    datasets: [
-      {
-        label: playerA.Name,
-        data: dataA,
-        backgroundColor: 'rgba(58, 102, 196, 0.20)',
-        borderColor: '#3a66c4',
-        borderWidth: 2,
-        pointBackgroundColor: '#3a66c4',
-        pointBorderColor: '#ffffff',
-        pointRadius: 3.5,
-        pointHoverRadius: 5,
-      },
-      {
-        label: playerB.Name,
-        data: dataB,
-        backgroundColor: 'rgba(249, 115, 22, 0.20)',
-        borderColor: '#f97316',
-        borderWidth: 2,
-        pointBackgroundColor: '#f97316',
-        pointBorderColor: '#ffffff',
-        pointRadius: 3.5,
-        pointHoverRadius: 5,
-      }
-    ]
-  }), [playerA.Name, playerB.Name, dataA, dataB, radarLabels]);
-
-  const radarOptions = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: true,
-    scales: {
-      r: {
-        min: 35,
-        max: 100,
-        ticks: {
-          display: false,
-        },
-        pointLabels: {
-          font: { size: 10, weight: '600' },
-          color: "rgba(226, 232, 240, 0.85)",
-          backdropColor: 'transparent',
-        },
-        grid: { color: "rgba(255, 255, 255, 0.08)", lineWidth: 1 },
-        angleLines: { color: "rgba(255, 255, 255, 0.08)", lineWidth: 1 }
-      }
-    },
-    plugins: { legend: { display: false } }
-  }), []);
-
-  const skillsA = Object.entries(PLAYER_SKILLS_MAP).filter(([k]) => playerA[k]).map(([, v]) => v);
-  const skillsB = Object.entries(PLAYER_SKILLS_MAP).filter(([k]) => playerB[k]).map(([, v]) => v);
-
-  const StatBarRow = ({ label, valA, valB, isWeakFoot }) => {
-    const numA = Number(valA) || 0;
-    const numB = Number(valB) || 0;
-
-    const isAWin = numA > numB;
-    const isBWin = numB > numA;
-
-    const colorClassA = getStatAndOvrColorClass(numA);
-    const colorClassB = getStatAndOvrColorClass(numB);
-
-    let pctA = 50;
-    let pctB = 50;
-    if (isWeakFoot) {
-      pctA = Math.min(100, Math.max(12, (numA / 4) * 100));
-      pctB = Math.min(100, Math.max(12, (numB / 4) * 100));
-    } else if (label === 'Edad') {
-      pctA = Math.min(100, Math.max(15, ((numA - 15) / 25) * 100));
-      pctB = Math.min(100, Math.max(15, ((numB - 15) / 25) * 100));
-    } else if (label === 'Altura') {
-      pctA = Math.min(100, Math.max(15, ((numA - 150) / 60) * 100));
-      pctB = Math.min(100, Math.max(15, ((numB - 150) / 60) * 100));
-    } else if (label === 'Peso') {
-      pctA = Math.min(100, Math.max(15, ((numA - 50) / 55) * 100));
-      pctB = Math.min(100, Math.max(15, ((numB - 50) / 55) * 100));
-    } else {
-      pctA = Math.min(100, Math.max(6, numA));
-      pctB = Math.min(100, Math.max(6, numB));
-    }
-
-    return (
-      <div className="py-2 px-1 border-b border-line/[0.08] last:border-0 flex flex-col gap-1.5 transition-colors hover:bg-white/[0.02] rounded-lg">
-        {/* Fila superior: Valores numéricos y nombre */}
-        <div className="flex items-center justify-between text-xs sm:text-sm">
-          {/* Valor A */}
-          <div className="flex items-center gap-1.5 min-w-[3.2rem]">
-            <span
-              className={`stat-value ${colorClassA} px-2 py-0.5 rounded-md font-mono font-bold text-xs sm:text-sm tabular-nums min-w-[2.2rem] text-center inline-flex items-center justify-center transition-all ${
-                isAWin ? 'ring-2 ring-accent/80 shadow-[0_0_8px_rgba(58, 102, 196,0.35)] scale-105' : 'opacity-70'
-              }`}
-            >
-              {numA}
-            </span>
-            {isAWin && <span className="text-[10px] text-accent font-bold hidden sm:inline">▲</span>}
-          </div>
-
-          {/* Nombre de la estadística */}
-          <span className="flex-1 text-center font-semibold text-ink-2 truncate px-2 text-xs sm:text-sm">
-            {label}
-          </span>
-
-          {/* Valor B */}
-          <div className="flex items-center justify-end gap-1.5 min-w-[3.2rem]">
-            {isBWin && <span className="text-[10px] text-orange-400 font-bold hidden sm:inline">▲</span>}
-            <span
-              className={`stat-value ${colorClassB} px-2 py-0.5 rounded-md font-mono font-bold text-xs sm:text-sm tabular-nums min-w-[2.2rem] text-center inline-flex items-center justify-center transition-all ${
-                isBWin ? 'ring-2 ring-orange-400/80 shadow-[0_0_8px_rgba(251,146,60,0.35)] scale-105' : 'opacity-70'
-              }`}
-            >
-              {numB}
-            </span>
-          </div>
-        </div>
-
-        {/* Barras de magnitud horizontales estilo SofaScore */}
-        <div className="flex items-center gap-1.5 h-1.5 sm:h-2 w-full px-1">
-          {/* Barra Jugador A (crece de derecha a izquierda hacia el centro) */}
-          <div className="flex-1 bg-white/[0.07] rounded-full h-full overflow-hidden flex justify-end">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${colorClassA} ${
-                isAWin ? 'opacity-100 shadow-[0_0_6px_rgba(58, 102, 196,0.3)]' : 'opacity-40'
-              }`}
-              style={{ width: `${pctA}%` }}
-            />
-          </div>
-
-          {/* Ancla central */}
-          <div className="w-1 h-2 bg-white/20 rounded-full shrink-0" />
-
-          {/* Barra Jugador B (crece de izquierda a derecha desde el centro) */}
-          <div className="flex-1 bg-white/[0.07] rounded-full h-full overflow-hidden flex justify-start">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${colorClassB} ${
-                isBWin ? 'opacity-100 shadow-[0_0_6px_rgba(251,146,60,0.3)]' : 'opacity-40'
-              }`}
-              style={{ width: `${pctB}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
+  const skillsA = useMemo(() => skillsOf(playerA), [playerA]);
+  const skillsB = useMemo(() => skillsOf(playerB), [playerB]);
   const ovrDiff = (playerA.OVR_CALCULADO || 0) - (playerB.OVR_CALCULADO || 0);
+  const leader = ovrDiff > 0 ? 'A' : ovrDiff < 0 ? 'B' : null;
+
+  const legend = (
+    <div className="flex items-center gap-3 text-xs text-ink-2">
+      <span className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${SIDE.A.dot}`} aria-hidden="true" />{lastName(playerA.Name)}</span>
+      <span className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${SIDE.B.dot}`} aria-hidden="true" />{lastName(playerB.Name)}</span>
+    </div>
+  );
 
   return (
     <BaseModal
-      isOpen={isVisible}
+      isOpen
       onClose={onClose}
       size="2xl"
       showClose={false}
-      className="!p-0 h-[92vh] sm:h-[90vh]"
+      ariaLabel={`Comparación: ${playerA.Name} contra ${playerB.Name}`}
+      className="!p-0 h-[92dvh] sm:h-[90dvh]"
       contentClassName="!p-0 !overflow-hidden flex flex-col h-full min-h-0"
     >
-      <div className="flex flex-col h-full min-h-0 relative">
-
-        {/* HEADER DUELO STICKY */}
-        <div className="sticky top-0 z-30 bg-surface p-3 sm:p-4 pr-12 sm:pr-4 border-b border-line/[0.12] flex justify-between items-center shrink-0">
-
-          {/* JUGADOR A */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-            <div className="relative shrink-0">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-line/20 bg-raised shadow-sm">
-                <img
-                  src={`/fotos_jugadores/${playerA.Id}.webp`}
-                  alt={playerA.Name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/100x100/111/555?text=${playerA.Name.substring(0, 1)}`; }}
-                />
-              </div>
-              <div className={`absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded font-bold text-[10px] sm:text-xs tabular-nums !text-black ${getStatAndOvrColorClass(playerA.OVR_CALCULADO)}`}>
-                {playerA.OVR_CALCULADO}
-              </div>
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs sm:text-base font-bold text-ink leading-tight truncate">
-                {playerA.Name}
-              </h3>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded !text-black ${getPosColorClass(playerA.POS_NOMBRE)}`}>
-                  {playerA.POS_NOMBRE}
-                </span>
-                <span className="text-xs font-semibold text-ink-2 tabular-nums">
-                  {formatPriceShort(playerA.Precio)}
-                </span>
-                {playerA.PlayingStyle && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-ink-3 bg-raised px-1.5 py-0.5 rounded border border-line/20">
-                    <Target className="w-3 h-3 text-ink-3" />
-                    {playerA.PlayingStyle}
-                  </span>
-                )}
-              </div>
-            </div>
+      <div className="flex flex-col h-full min-h-0">
+        <div className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4 border-b border-line/[0.12] shrink-0">
+          <PlayerHeader player={playerA} side="A" align="left" />
+          <div className="shrink-0 text-center px-1">
+            <p className="text-[11px] font-semibold text-ink-3 uppercase tracking-wider">Media</p>
+            <p className={`font-display num text-lg font-bold leading-tight ${leader ? SIDE[leader].text : 'text-ink-2'}`}>
+              {leader ? `+${Math.abs(ovrDiff)}` : '='}
+            </p>
+            <p className="text-[11px] text-ink-3 max-w-[5.5rem] truncate">
+              {leader ? lastName((leader === 'A' ? playerA : playerB).Name) : 'Igual'}
+            </p>
           </div>
-
-          {/* CENTRO: DUEL BADGE */}
-          <div className="flex flex-col items-center justify-center px-2 shrink-0">
-            <span className="px-2.5 py-1 rounded-full bg-raised border border-line/20 text-xs font-semibold text-ink-2 tabular-nums">
-              {ovrDiff > 0 ? `+${ovrDiff} A` : ovrDiff < 0 ? `+${Math.abs(ovrDiff)} B` : 'PARIDAD'}
-            </span>
-          </div>
-
-          {/* JUGADOR B */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-1 justify-end text-right min-w-0">
-            <div className="min-w-0">
-              <h3 className="text-xs sm:text-base font-bold text-ink leading-tight truncate">
-                {playerB.Name}
-              </h3>
-              <div className="flex items-center gap-2 mt-1 justify-end flex-wrap">
-                {playerB.PlayingStyle && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-ink-3 bg-raised px-1.5 py-0.5 rounded border border-line/20">
-                    <Target className="w-3 h-3 text-ink-3" />
-                    {playerB.PlayingStyle}
-                  </span>
-                )}
-                <span className="text-xs font-semibold text-ink-2 tabular-nums">
-                  {formatPriceShort(playerB.Precio)}
-                </span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded !text-black ${getPosColorClass(playerB.POS_NOMBRE)}`}>
-                  {playerB.POS_NOMBRE}
-                </span>
-              </div>
-            </div>
-            <div className="relative shrink-0">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-line/20 bg-raised shadow-sm">
-                <img
-                  src={`/fotos_jugadores/${playerB.Id}.webp`}
-                  alt={playerB.Name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/100x100/111/555?text=${playerB.Name.substring(0, 1)}`; }}
-                />
-              </div>
-              <div className={`absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded font-bold text-[10px] sm:text-xs tabular-nums !text-black ${getStatAndOvrColorClass(playerB.OVR_CALCULADO)}`}>
-                {playerB.OVR_CALCULADO}
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 z-50 p-1.5 rounded-lg bg-raised/80 hover:bg-overlay text-ink-3 hover:text-ink border border-line/20 transition-colors"
-            title="Cerrar"
-            aria-label="Cerrar comparador"
-          >
-            <X size={18} />
+          <PlayerHeader player={playerB} side="B" align="right" />
+          <button type="button" onClick={onClose} aria-label="Cerrar comparador" title="Cerrar"
+            className="shrink-0 min-w-11 min-h-11 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-white/[0.06] transition-colors">
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
-        {/* CONTENIDO SCROLLABLE */}
-        <div className="relative z-10 flex-grow overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-
-            {/* COLUMNA IZQUIERDA: RADAR Y FÍSICO */}
+        <div className="flex-grow overflow-y-auto overscroll-contain p-4 sm:p-6 custom-scrollbar">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
             <div className="lg:col-span-4 space-y-4">
-              <div className="bg-raised p-4 rounded-xl border border-line/20 shadow-sm flex flex-col items-center justify-center">
-                <div className="w-full flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-ink-2">Superposición de atributos</span>
-                  <div className="flex items-center gap-3 text-xs font-medium">
-                    <span className="flex items-center gap-1.5 text-ink-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500" />
-                      {playerA.Name.split(' ').pop()}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-ink-2">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      {playerB.Name.split(' ').pop()}
-                    </span>
-                  </div>
+              <section className="well p-4" aria-labelledby="compare-radar">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h4 id="compare-radar" className="text-xs font-semibold text-ink-2">Atributos generales</h4>
+                  {legend}
                 </div>
                 <div className="relative w-full h-[245px] flex items-center justify-center">
-                  <Radar data={radarData} options={radarOptions} />
+                  <Radar data={radarData} options={RADAR_OPTIONS} aria-label={`Radar de atributos de ${playerA.Name} y ${playerB.Name}`} role="img" />
                 </div>
-              </div>
+              </section>
 
-              <div className="bg-raised p-4 sm:p-5 rounded-xl border border-line/20 shadow-sm">
-                <h4 className="text-xs sm:text-sm font-semibold text-ink mb-3 text-center border-b border-line/20 pb-2">
-                  Biometría y Perfil
-                </h4>
-                <StatBarRow label="Edad" valA={playerA.Age} valB={playerB.Age} isWeakFoot={false} />
-                <StatBarRow label="Altura" valA={playerA.Height} valB={playerB.Height} isWeakFoot={false} />
-                <StatBarRow label="Peso" valA={playerA.Weight} valB={playerB.Weight} isWeakFoot={false} />
-              </div>
+              <section className="well p-4" aria-labelledby="compare-physical">
+                <h4 id="compare-physical" className="section-title text-center text-sm mb-2">Físico</h4>
+                <StatBarRow label="Edad" valA={playerA.Age} valB={playerB.Age} />
+                <StatBarRow label="Altura" valA={playerA.Height} valB={playerB.Height} />
+                <StatBarRow label="Peso" valA={playerA.Weight} valB={playerB.Weight} />
+              </section>
             </div>
 
-            {/* COLUMNA DERECHA: GRUPOS DE ATRIBUTOS */}
-            <div className="lg:col-span-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(statGroups).map(([groupName, statKeys]) => (
-                  <div key={groupName} className="bg-raised p-4 sm:p-5 rounded-xl border border-line/20 shadow-sm transition">
-                    <h4 className="text-xs sm:text-sm font-semibold text-ink mb-3 text-center border-b border-line/20 pb-2">
-                      {groupName}
-                    </h4>
-                    {statKeys.map(key => {
-                      const isWF = key === 'WeakFootAcc' || key === 'WeakFootUsage';
-                      return <StatBarRow key={key} label={STAT_NAMES_MAP[key] || key} valA={playerA[key]} valB={playerB[key]} isWeakFoot={isWF} />;
-                    })}
-                  </div>
-                ))}
-              </div>
+            <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 content-start">
+              {Object.entries(statGroups).map(([groupName, statKeys]) => (
+                <section key={groupName} className="well p-4">
+                  <h4 className="section-title text-center text-sm mb-2">{groupName}</h4>
+                  {statKeys.map(key => (
+                    <StatBarRow key={key} label={STAT_NAMES_MAP[key] || key} valA={playerA[key]} valB={playerB[key]}
+                      isWeakFoot={key === 'WeakFootAcc' || key === 'WeakFootUsage'} />
+                  ))}
+                </section>
+              ))}
             </div>
           </div>
 
-          {/* ── HABILIDADES DE JUGADOR COMPARATIVAS ── */}
-          <div className="bg-raised p-4 sm:p-5 rounded-xl border border-line/20 shadow-sm mt-4">
-            <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-line/20">
-              <h4 className="text-xs sm:text-sm font-semibold text-ink">
-                Habilidades especiales ({skillsA.length} vs {skillsB.length})
+          <section className="well p-4 mt-4" aria-labelledby="compare-skills">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-line/[0.12]">
+              <h4 id="compare-skills" className="text-sm font-semibold text-ink">
+                Habilidades especiales <span className="num text-ink-3 font-normal">({skillsA.length} vs {skillsB.length})</span>
               </h4>
-              <div className="flex items-center gap-3 text-xs font-medium text-ink-3">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-blue-500/30 border border-blue-500" /> {playerA.Name.split(' ').pop()}</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-warning/30 border border-amber-500" /> {playerB.Name.split(' ').pop()}</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-overlay border border-slate-500" /> Compartidas</span>
-              </div>
+              {legend}
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Player A Skills */}
-              <div className="space-y-1.5">
-                <div className="text-xs font-medium text-ink-2">
-                  {playerA.Name} ({skillsA.length})
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {skillsA.length > 0 ? (
-                    skillsA.map(skill => {
-                      const isShared = skillsB.includes(skill);
-                      return (
-                        <span
-                          key={skill}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-md border ${
-                            isShared
-                              ? 'bg-raised/90 text-ink-2 border-line/20'
-                              : 'bg-blue-500/10 text-blue-300 border-blue-500/25'
-                          }`}
-                        >
-                          {skill}{isShared && <Check className="w-3 h-3 inline ml-1" aria-label="en común" />}
-                        </span>
-                      );
-                    })
-                  ) : (
-                    <span className="text-xs text-ink-3 italic">Sin habilidades especiales</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Player B Skills */}
-              <div className="space-y-1.5">
-                <div className="text-xs font-medium text-ink-2">
-                  {playerB.Name} ({skillsB.length})
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {skillsB.length > 0 ? (
-                    skillsB.map(skill => {
-                      const isShared = skillsA.includes(skill);
-                      return (
-                        <span
-                          key={skill}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-md border ${
-                            isShared
-                              ? 'bg-raised/90 text-ink-2 border-line/20'
-                              : 'bg-warning/10 text-warning-soft border-warning/25'
-                          }`}
-                        >
-                          {skill}{isShared && <Check className="w-3 h-3 inline ml-1" aria-label="en común" />}
-                        </span>
-                      );
-                    })
-                  ) : (
-                    <span className="text-xs text-ink-3 italic">Sin habilidades especiales</span>
-                  )}
-                </div>
-              </div>
+              <SkillList player={playerA} skills={skillsA} otherSkills={skillsB} side="A" />
+              <SkillList player={playerB} skills={skillsB} otherSkills={skillsA} side="B" />
             </div>
-          </div>
+          </section>
         </div>
       </div>
     </BaseModal>
   );
-});
+}

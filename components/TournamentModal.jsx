@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { X, Save, Edit2, Trophy, ShieldAlert, LayoutGrid, Star, CalendarDays } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
+import { X, Save, Edit2, Trophy, LayoutGrid, Star, CalendarDays } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 import { Spinner } from './ui/Spinner.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { normalizeTournamentView } from '../utils/tournamentViews.js';
+import { CUP_IDS } from '../utils/bracketModel.js';
+import { useElementSize } from '../hooks/useElementSize.js';
 import {
-  TournamentActionButton,
-  TournamentTabButton,
   tournamentBackdropClass,
   tournamentShellClass,
 } from './TournamentUI.jsx';
@@ -22,7 +22,10 @@ import {
   RepechajeView,
   StatsView,
   buildAutomaticTournamentData,
+  buildAutomaticTournamentReport,
 } from './tournament/index.js';
+import { Alert } from './ui/Alert.jsx';
+import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
 
 export {
   TournamentTeamsContext,
@@ -37,6 +40,33 @@ export {
   buildAutomaticTournamentData,
 };
 
+// Escala propia de cada vista dentro del lienzo de 1920×1080 de OBS (las copas usan BroadcastBracket).
+const OBS_CONTENT_SCALE = { groups: 1, stats: 0.82, matches: 0.78 };
+const OBS_STAGE = { width: 1920, height: 1080 };
+
+/** Lienzo de 1920×1080 ajustado a la ventana real (antes era fijo y se recortaba en fuentes de 1280×720). */
+function ObsStage({ scale = 1, children }) {
+  const [ref, { width, height }] = useElementSize();
+  const fit = width && height ? Math.min(width / OBS_STAGE.width, height / OBS_STAGE.height) : 1;
+  return (
+    // Sin tournamentShellClass: trae `relative`, que pisa a `fixed`, deja el contenedor con alto 0 y el lienzo
+    // centrado en ese alto nulo (media tabla fuera de pantalla y sin ajuste de escala).
+    <div ref={ref} className="fixed inset-0 overflow-hidden bg-canvas text-ink font-sans">
+      <div
+        className="absolute left-1/2 top-1/2 flex flex-col items-center justify-center"
+        style={{
+          width: OBS_STAGE.width,
+          height: OBS_STAGE.height,
+          transform: `translate(-50%, -50%) scale(${fit * scale})`,
+          contain: 'content',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export const TournamentModal = memo(function TournamentModal({
   isVisible,
   isPage,
@@ -48,25 +78,23 @@ export const TournamentModal = memo(function TournamentModal({
   initialTab = 'groups',
   userTeamName,
   allPlayers,
+  isBroadcast,
 }) {
   const [activeTab, setActiveTab] = useState(() => normalizeTournamentView(initialTab));
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [localData, setLocalData] = useState(null);
-  const isObsMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'obs';
+  const editBaselineRef = useRef('');
+  // Las rutas de OBS lo indican con isBroadcast; ?mode=obs queda como respaldo para enlaces viejos.
+  const isObsMode = isBroadcast ?? (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'obs');
 
   useEffect(() => {
     setActiveTab(normalizeTournamentView(initialTab));
   }, [initialTab]);
 
-  // Close on Escape key
-  useEffect(() => {
-    if (!isVisible || isPage) return; // as a page there is nothing to close
-    const handleEsc = (e) => {
-      if (e.key === 'Escape' && onClose) onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [isVisible, isPage, onClose]);
+  // Escape lo maneja BaseModal (que además no cierra mientras se escribe en un campo). Un segundo listener
+  // acá llamaba onClose dos veces y cerraba aunque el foco estuviera en un input.
 
   useEffect(() => {
     if (tournamentData && !isEditing) {
@@ -132,12 +160,6 @@ export const TournamentModal = memo(function TournamentModal({
     .filter(team => team.name)
     .sort((a, b) => a.name.localeCompare(b.name)), [allTeams]);
 
-  const obsContentScale = activeTab === 'repechaje' ? 0.50
-    : activeTab === 'bracket' ? 0.65
-      : activeTab === 'stats' ? 0.82
-        : activeTab === 'matches' ? 0.78
-          : 1;
-
   const getTeamLogo = useCallback((teamName) => {
     if (!teamName || !allTeams) return DEFAULT_LOGO;
     const target = teamName.trim().toLowerCase();
@@ -177,14 +199,44 @@ export const TournamentModal = memo(function TournamentModal({
     });
   }, []);
 
-  const handleSave = () => {
-    const sortedData = sortLeague(buildAutomaticTournamentData(localData));
-    if (sortedData.league.length > 12) {
-      sortedData.league = sortedData.league.slice(0, 12);
+  const startEditing = () => {
+    editBaselineRef.current = JSON.stringify(localData);
+    setIsEditing(true);
+  };
+
+  const hasUnsavedChanges = () => isEditing && JSON.stringify(localData) !== editBaselineRef.current;
+
+  // Se sale del modo edición solo si el guardado terminó bien: si falla, los cambios siguen en pantalla.
+  const handleSave = async () => {
+    if (isSaving) return;
+    const { data: computed, overflow } = buildAutomaticTournamentReport(localData);
+    // La liga es de 12: un club de más casi siempre es un partido con un nombre que no está en la tabla.
+    // Antes se descartaba sin aviso al guardar (y con él, sus resultados en la tabla).
+    if (overflow.length > 0) {
+      setSaveError(`La tabla tendría ${12 + overflow.length} clubes y la liga admite 12. No entran: ${overflow.join(', ')}. Revisá el nombre de esos clubes en los partidos o quitá un club de la tabla.`);
+      return;
     }
+    setSaveError(null);
+    const sortedData = sortLeague(computed);
     setLocalData(sortedData);
-    onUpdateTournament(sortedData);
+    setIsSaving(true);
+    try {
+      const saved = await onUpdateTournament(sortedData);
+      if (saved !== false) setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEditing = () => {
+    if (hasUnsavedChanges() && !window.confirm('¿Descartar los cambios sin guardar del torneo?')) return;
+    setIsEditing(false); // el efecto de sincronización vuelve a cargar los datos guardados
+  };
+
+  const handleClose = () => {
+    if (hasUnsavedChanges() && !window.confirm('Hay cambios del torneo sin guardar. ¿Cerrar y descartarlos?')) return;
     setIsEditing(false);
+    onClose?.();
   };
 
   const updateMatchGeneric = useCallback((path, index, field, value) => {
@@ -307,6 +359,65 @@ export const TournamentModal = memo(function TournamentModal({
     );
   }
 
+  const tabContent = (
+    <>
+      {activeTab === 'matches' && (
+        <MatchCenter
+          matches={localData.matches}
+          isEditing={isEditing}
+          onUpdate={updateTournamentMatch}
+          onAdd={addTournamentMatch}
+          onRemove={removeTournamentMatch}
+          getTeamLogo={getTeamLogo}
+          isObsMode={isObsMode}
+        />
+      )}
+
+      {activeTab === 'groups' && (
+        <LeagueTableView
+          localData={localData}
+          isEditing={isEditing}
+          isObsMode={isObsMode}
+          userTeamName={userTeamName}
+          getTeamLogo={getTeamLogo}
+          updateLeagueTeam={updateLeagueTeam}
+          clearLeagueSlot={clearLeagueSlot}
+        />
+      )}
+
+      {activeTab === 'bracket' && (
+        <BracketView
+          localData={localData}
+          isEditing={isEditing}
+          isObsMode={isObsMode}
+          getTeamLogo={getTeamLogo}
+          updateGeneric={updateGeneric}
+        />
+      )}
+
+      {activeTab === 'repechaje' && (
+        <RepechajeView
+          localData={localData}
+          isEditing={isEditing}
+          isObsMode={isObsMode}
+          getTeamLogo={getTeamLogo}
+          updateGeneric={updateGeneric}
+        />
+      )}
+
+      {activeTab === 'stats' && (
+        <StatsView
+          localData={localData}
+          isEditing={isEditing}
+          isObsMode={isObsMode}
+          getTeamLogo={getTeamLogo}
+          getPlayerPhoto={getPlayerPhoto}
+          updateStat={updateStat}
+        />
+      )}
+    </>
+  );
+
   const content = (
     <>
       <div className={`${tournamentBackdropClass} z-0`}></div>
@@ -334,16 +445,29 @@ export const TournamentModal = memo(function TournamentModal({
                       </div>
                     </details>
                   )}
+                  {isAdmin && isEditing && (
+                    <button type="button" className="btn btn-ghost" onClick={handleCancelEditing} disabled={isSaving}>
+                      Cancelar
+                    </button>
+                  )}
                   {isAdmin && (
-                    <button type="button" className={`btn ${isEditing ? 'btn-primary' : 'btn-secondary'}`} onClick={() => (isEditing ? handleSave() : setIsEditing(true))}>
-                      {isEditing ? <><Save className="w-4 h-4" aria-hidden="true" />Guardar</> : <><Edit2 className="w-4 h-4" aria-hidden="true" />Editar</>}
+                    <button
+                      type="button"
+                      className={`btn ${isEditing ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => (isEditing ? handleSave() : startEditing())}
+                      disabled={isSaving}
+                    >
+                      {isEditing
+                        ? <><Save className="w-4 h-4" aria-hidden="true" />{isSaving ? 'Guardando…' : 'Guardar'}</>
+                        : <><Edit2 className="w-4 h-4" aria-hidden="true" />Editar</>}
                     </button>
                   )}
                   {!isPage && onClose && (
-                    <button type="button" onClick={onClose} className="btn btn-ghost btn-icon" aria-label="Cerrar torneo"><X className="w-5 h-5" aria-hidden="true" /></button>
+                    <button type="button" onClick={handleClose} className="btn btn-ghost btn-icon" aria-label="Cerrar torneo"><X className="w-5 h-5" aria-hidden="true" /></button>
                   )}
                 </div>
               </div>
+              {saveError && isEditing && <Alert tone="danger">{saveError}</Alert>}
               {copiedObs && (
                 <p role="status" className={`text-xs ${copiedObs.ok ? 'text-success-soft' : 'text-warning-soft'}`}>
                   {copiedObs.ok ? `Enlace OBS de ${copiedObs.label} copiado.` : <>No se pudo copiar. Enlace: <code className="text-ink-2 break-all">{copiedObs.url}</code></>}
@@ -359,67 +483,9 @@ export const TournamentModal = memo(function TournamentModal({
             </div>
           )}
 
-          <div className={`flex-grow relative ${isObsMode ? 'flex flex-col items-center justify-center p-0 overflow-hidden' : `w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar ${isPage ? '' : 'p-3 sm:p-6'}`}`}>
-            <div
-              className={isObsMode ? 'w-[1920px] h-[1080px] flex flex-col items-center justify-center transition-transform duration-500 origin-center' : 'w-full max-w-7xl mx-auto flex flex-col'}
-              style={{
-                transform: isObsMode ? `scale(${obsContentScale})` : undefined,
-                contain: isObsMode ? 'content' : undefined,
-              }}
-            >
-              {activeTab === 'matches' && (
-                <MatchCenter
-                  matches={localData.matches}
-                  isEditing={isEditing}
-                  onUpdate={updateTournamentMatch}
-                  onAdd={addTournamentMatch}
-                  onRemove={removeTournamentMatch}
-                  getTeamLogo={getTeamLogo}
-                />
-              )}
-
-              {activeTab === 'groups' && (
-                <LeagueTableView
-                  localData={localData}
-                  isEditing={isEditing}
-                  isObsMode={isObsMode}
-                  userTeamName={userTeamName}
-                  getTeamLogo={getTeamLogo}
-                  updateLeagueTeam={updateLeagueTeam}
-                  clearLeagueSlot={clearLeagueSlot}
-                />
-              )}
-
-              {activeTab === 'bracket' && (
-                <BracketView
-                  localData={localData}
-                  isEditing={isEditing}
-                  isObsMode={isObsMode}
-                  getTeamLogo={getTeamLogo}
-                  updateGeneric={updateGeneric}
-                />
-              )}
-
-              {activeTab === 'repechaje' && (
-                <RepechajeView
-                  localData={localData}
-                  isEditing={isEditing}
-                  isObsMode={isObsMode}
-                  getTeamLogo={getTeamLogo}
-                  updateGeneric={updateGeneric}
-                />
-              )}
-
-              {activeTab === 'stats' && (
-                <StatsView
-                  localData={localData}
-                  isEditing={isEditing}
-                  isObsMode={isObsMode}
-                  getTeamLogo={getTeamLogo}
-                  getPlayerPhoto={getPlayerPhoto}
-                  updateStat={updateStat}
-                />
-              )}
+          <div className={`flex-grow relative w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar ${isPage ? '' : 'p-3 sm:p-6'}`}>
+            <div className={`w-full mx-auto flex flex-col ${activeTab === 'bracket' || activeTab === 'repechaje' ? '' : 'max-w-7xl'}`}>
+              {tabContent}
             </div>
           </div>
         </div>
@@ -427,11 +493,18 @@ export const TournamentModal = memo(function TournamentModal({
   );
 
   if (isObsMode) {
+    if (activeTab === 'bracket' || activeTab === 'repechaje') {
+      return (
+        <BroadcastBracket
+          cupId={activeTab === 'bracket' ? CUP_IDS.ORO : CUP_IDS.PLATA}
+          bracket={localData.bracket}
+          getTeamLogo={getTeamLogo}
+        />
+      );
+    }
     return (
       <TournamentTeamsContext.Provider value={teamOptions}>
-        <div className={`w-[1920px] h-[1080px] overflow-hidden ${tournamentShellClass}`}>
-          {content}
-        </div>
+        <ObsStage scale={OBS_CONTENT_SCALE[activeTab] ?? 1}>{tabContent}</ObsStage>
       </TournamentTeamsContext.Provider>
     );
   }
@@ -450,9 +523,10 @@ export const TournamentModal = memo(function TournamentModal({
     <TournamentTeamsContext.Provider value={teamOptions}>
       <BaseModal
         isOpen={true}
-        onClose={onClose}
+        onClose={handleClose}
         size="full"
         showClose={false}
+        ariaLabel="Torneo"
         className={`!p-0 ${tournamentShellClass}`}
         contentClassName="!p-0 !overflow-hidden flex flex-col"
       >

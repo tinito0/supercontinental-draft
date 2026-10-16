@@ -2,6 +2,7 @@ import React, { memo, useState } from 'react';
 import { ArrowRight, BadgeDollarSign } from 'lucide-react';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { formatPriceShort, getFlagUrl } from '../utils/helpers.js';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
 function getOvrBadgeClass(ovr) {
   const value = Number(ovr) || 0;
@@ -47,7 +48,7 @@ export const TransferPlayerCard = memo(function TransferPlayerCard({
   const toLogo = transfer?.teamLogo || toTeam.logoUrl;
   const ovrBadgeStyle = getOvrBadgeClass(ovr);
   const photoSrc = imgError
-    ? `https://placehold.co/220x260/101318/4b5563?text=${encodeURIComponent(playerName.slice(0, 2))}`
+    ? playerPlaceholder(playerName.slice(0, 2))
     : `/fotos_jugadores/${playerId}.webp`;
 
   return (

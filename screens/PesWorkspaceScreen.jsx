@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Database, Users, Shield, Shirt, ListChecks, KeyRound, LayoutGrid, Lock, ArrowRightLeft, FolderOpen } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Database, Users, Shield, ListChecks, KeyRound, LayoutGrid, Lock, ArrowRightLeft, FolderOpen } from 'lucide-react';
 import { usePesWorkspace } from '../hooks/usePesWorkspace.js';
 import { Card, Pill, ErrorText } from '../components/pes/PesUi.jsx';
 import { Page } from '../components/ui/Page.jsx';
@@ -8,9 +9,8 @@ import { Tabs } from '../components/ui/Tabs.jsx';
 import { Spinner } from '../components/ui/Spinner.jsx';
 import { EmptyState } from '../components/ui/EmptyState.jsx';
 import { PesSourcesPanel } from '../components/pes/PesSourcesPanel.jsx';
-import { PesTeamsPanel } from '../components/pes/PesTeamsPanel.jsx';
+import { PesTeamWorkspace } from '../components/pes/team/PesTeamWorkspace.jsx';
 import { PesPlayersPanel } from '../components/pes/PesPlayersPanel.jsx';
-import { PesKitsPanel } from '../components/pes/PesKitsPanel.jsx';
 import { PesChangesPanel } from '../components/pes/PesChangesPanel.jsx';
 import { PesRolesPanel } from '../components/pes/PesRolesPanel.jsx';
 import { PesDraftPanel } from '../components/pes/PesDraftPanel.jsx';
@@ -21,9 +21,9 @@ const TABS = [
   { id: 'sources', label: 'Fuentes', icon: Database, show: () => true },
   { id: 'overview', label: 'Resumen', icon: LayoutGrid, show: () => true },
   { id: 'draft', label: 'Draft → PES', icon: ArrowRightLeft, show: c => c.has('team.replace') },
-  { id: 'teams', label: 'Equipos', icon: Shield, show: c => c.has('team.edit') || c.has('kit.edit') || c.has('workspace.read') },
+  // One workspace per team (data, squad, kits): the former «Kits» tab is its «Kits» section.
+  { id: 'teams', label: 'Equipos', icon: Shield, show: c => c.has('team.edit') || c.has('kit.edit') || c.has('kit.read') || c.has('workspace.read') },
   { id: 'players', label: 'Jugadores', icon: Users, show: c => c.has('workspace.read') && !c.has('kit.edit') || c.has('player.edit') },
-  { id: 'kits', label: 'Kits', icon: Shirt, show: c => c.has('kit.read') },
   { id: 'changes', label: 'Cambios y exportación', icon: ListChecks, show: () => true },
   { id: 'roles', label: 'Roles', icon: KeyRound, show: c => c.has('roles.manage') },
 ];
@@ -95,7 +95,20 @@ function Overview({ pes }) {
 /** PES 2021 database & kit workspace. Only users with a PES role reach this screen. */
 export default function PesWorkspaceScreen({ userId, isAdmin, allTeams, appPlayers = [] }) {
   const pes = usePesWorkspace({ userId, isAdmin });
-  const [tab, setTab] = useState('sources');
+  // Tab, team and section live in the URL, so a reload or a shared link reopens the same team.
+  // ?tab=kits (links from before the merge) opens the team workspace on its «Kits» section.
+  const [params, setParams] = useSearchParams();
+  const legacyKits = params.get('tab') === 'kits';
+  const requestedTab = legacyKits ? 'teams' : params.get('tab') || 'sources';
+  const teamParam = Number(params.get('team'));
+  const teamId = params.get('team') && Number.isInteger(teamParam) ? teamParam : null;
+  const section = legacyKits ? 'kits' : params.get('section') || 'identity';
+  const setParam = (changes, push = false) => setParams(prev => {
+    const next = new URLSearchParams(prev);
+    for (const [k, v] of Object.entries(changes)) if (v == null) next.delete(k); else next.set(k, String(v));
+    return next;
+  }, { replace: !push });
+  const setTab = id => setParam({ tab: id });
   const [applyError, setApplyError] = useState(null);
   const modified = useMemo(() => modifiedKeys(pes.savedOps, pes.drafts), [pes.savedOps, pes.drafts]);
   const view = { ...pes, modified };
@@ -111,9 +124,11 @@ export default function PesWorkspaceScreen({ userId, isAdmin, allTeams, appPlaye
   };
   const safeApply = ops => onApply(ops).catch(() => {});
   const tabs = TABS.filter(t => t.show(pes.caps));
+  // A link can name a tab this role does not have: fall back to «Fuentes» instead of rendering it.
+  const tab = tabs.some(t => t.id === requestedTab) ? requestedTab : 'sources';
   const roleLabel = ROLE_LABELS[pes.role.role];
   const roleText = pes.role.label && pes.role.label !== roleLabel ? `${roleLabel} (${pes.role.label})` : roleLabel;
-  const needsWorkspace = ['draft', 'teams', 'players', 'kits'].includes(tab) && !pes.ws;
+  const needsWorkspace = ['draft', 'teams', 'players'].includes(tab) && !pes.ws;
 
   return (
     <Page>
@@ -127,9 +142,12 @@ export default function PesWorkspaceScreen({ userId, isAdmin, allTeams, appPlaye
       {tab === 'sources' && <PesSourcesPanel pes={view} />}
       {tab === 'overview' && <Overview pes={view} />}
       {tab === 'draft' && pes.ws && <PesDraftPanel pes={view} />}
-      {tab === 'teams' && pes.ws && <PesTeamsPanel pes={view} onApply={safeApply} />}
+      {tab === 'teams' && pes.ws && (
+        <PesTeamWorkspace pes={view} allTeams={allTeams} teamId={teamId} section={section}
+          onTeamChange={id => setParam({ team: id, section: null, tab: 'teams' }, true)}
+          onSectionChange={id => setParam({ section: id, tab: 'teams' })} />
+      )}
       {tab === 'players' && pes.ws && <PesPlayersPanel pes={view} onApply={safeApply} appPlayers={appPlayers} />}
-      {tab === 'kits' && pes.ws && <PesKitsPanel pes={view} onApply={onApply} />}
       {tab === 'changes' && pes.wsDoc && <PesChangesPanel pes={view} />}
       {tab === 'roles' && <PesRolesPanel actorUid={userId} allTeams={allTeams} />}
       {needsWorkspace && (
