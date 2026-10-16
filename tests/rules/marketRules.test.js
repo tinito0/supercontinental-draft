@@ -7,6 +7,10 @@ import path from 'node:path';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { doc, setDoc, updateDoc, deleteDoc, writeBatch, collection, serverTimestamp, addDoc, getDocs } from 'firebase/firestore';
 import { DEFAULT_BUDGET, TRANSFER_FEE_RATE } from '../../utils/constants.js';
+import { OFFER_TTL_MS } from '../../supabase/functions/_shared/offerExpiry.js';
+
+// Expiry of a turn that starts now (the emulator's request.time is the real clock).
+const turn = () => Date.now() + OFFER_TTL_MS;
 
 const APP = 'scl-draft-2025';
 const base = `artifacts/${APP}`;
@@ -178,7 +182,7 @@ describe('transfer offers', () => {
   });
 
   it('the seller can reject or counter, and the buyer can withdraw', async () => {
-    await assertSucceeds(updateDoc(offer(as('seller')), { status: 'countered', counterAmount: 11500000, history: [] }));
+    await assertSucceeds(updateDoc(offer(as('seller')), { status: 'countered', counterAmount: 11500000, expiresAtMs: turn(), history: [] }));
     await assertSucceeds(updateDoc(offer(as('buyer')), { status: 'withdrawn', history: [] }));
   });
 
@@ -189,12 +193,23 @@ describe('transfer offers', () => {
   it('the buyer answers a counter-offer with a new offer, which goes back to the seller', async () => {
     await env.withSecurityRulesDisabled(ctx => updateDoc(offer(ctx.firestore()), { status: 'countered', counterAmount: 11500000 }));
     await assertFails(updateDoc(offer(as('buyer')), { status: 'countered', counterAmount: 10000000 }));
-    await assertSucceeds(updateDoc(offer(as('buyer')), { status: 'pending', offerAmount: 11200000, history: [] }));
+    await assertSucceeds(updateDoc(offer(as('buyer')), { status: 'pending', offerAmount: 11200000, expiresAtMs: turn(), history: [] }));
+  });
+
+  it('every turn expires in 48 hours: no offer or answer without it, or with a later one', async () => {
+    const create = (fields) => setDoc(doc(as('mallory'), `${base}/public/data/offers/timed`), {
+      playerId: PLAYER, senderId: 'mallory', targetTeamId: 'seller', offerAmount: 10500000, status: 'pending', history: [], ...fields,
+    });
+    await assertFails(create({}));
+    await assertFails(create({ expiresAtMs: turn() + 30 * 24 * 3600 * 1000 }));
+    await assertSucceeds(create({ expiresAtMs: turn() }));
+    await assertFails(updateDoc(offer(as('seller')), { status: 'countered', counterAmount: 11500000, history: [] }));
+    await assertFails(updateDoc(offer(as('seller')), { status: 'rejected', expiresAtMs: turn(), history: [] }));
   });
 
   it('offer amounts must be positive whole numbers: a forged amount would free budget on the server', async () => {
     const newOffer = (db, offerAmount) => setDoc(doc(db, `${base}/public/data/offers/forged`), {
-      playerId: PLAYER, senderId: 'mallory', targetTeamId: 'seller', offerAmount, status: 'pending', history: [],
+      playerId: PLAYER, senderId: 'mallory', targetTeamId: 'seller', offerAmount, status: 'pending', history: [], expiresAtMs: turn(),
     });
     for (const amount of [-1000000000000, 0, '11000000', 10500000.5]) {
       await assertFails(newOffer(as('mallory'), amount));

@@ -1,6 +1,7 @@
 // Budget arithmetic shared by the market function (market.js) and the app (hooks/useBudget.js), so the
 // remaining budget the app shows is the one the server enforces. Pure: no Firestore, no React.
 // Budget = team base budget − base price of the team's non-franchise locks − its pending offers.
+import { isOfferExpired } from './offerExpiry.js';
 
 /** Millions (catalog `Precio`) → money units, rounded like every stored amount. */
 export const toUnits = millions => Math.round((Number(millions) || 0) * 1000000);
@@ -31,9 +32,12 @@ export function heldAmount(value) {
   return Number.isFinite(amount) && amount > 0 ? amount : 0;
 }
 
-/** Money held by the team's pending offers (pass only offers the team sent with status 'pending'). */
-export function committedInOffers(pendingOffers, { excludeOfferId } = {}) {
+/**
+ * Money held by the team's pending offers (pass only offers the team sent with status 'pending'). An expired
+ * offer no longer holds money (offerExpiry.js).
+ */
+export function committedInOffers(pendingOffers, { excludeOfferId, nowMs = Date.now() } = {}) {
   return pendingOffers
-    .filter(offer => offer.id !== excludeOfferId)
+    .filter(offer => offer.id !== excludeOfferId && !isOfferExpired(offer, nowMs))
     .reduce((sum, offer) => sum + heldAmount(offer.offerAmount), 0);
 }

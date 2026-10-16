@@ -20,3 +20,11 @@ export function formatCountdown(msLeft) {
   const clock = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   return days > 0 ? `${days} d ${clock}` : clock;
 }
+
+/** Short time left for an offer's turn: "31 h", "45 min", "menos de 1 min". */
+export function formatTimeLeft(msLeft) {
+  if (!Number.isFinite(msLeft) || msLeft <= 0) return '';
+  if (msLeft >= HOUR) return `${Math.floor(msLeft / HOUR)} h`;
+  if (msLeft >= MINUTE) return `${Math.floor(msLeft / MINUTE)} min`;
+  return 'menos de 1 min';
+}

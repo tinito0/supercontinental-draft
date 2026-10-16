@@ -148,6 +148,19 @@ describe('acceptOffer', () => {
     await expectMarketError(sign('mallory', 9100), /presupuesto/); // still only 50 M left
   });
 
+  it('an expired pending offer no longer holds the buyer money', async () => {
+    await seed(db => setDoc(doc(db, `${base}/public/data/offers/old`), {
+      playerId: 1, senderId: 'mallory', targetTeamId: 'x', offerAmount: 100000000, status: 'pending', expiresAtMs: Date.now() - 1000,
+    }));
+    await expect(sign('mallory', 9000)).resolves.toBeTruthy(); // 150 M of 200 M: the expired 100 M is not held
+  });
+
+  it('an expired offer cannot be accepted', async () => {
+    await seed(db => updateDoc(doc(db, `${base}/public/data/offers/o1`), { expiresAtMs: Date.now() - 1000 }));
+    await expectMarketError(accept('seller'), /venció/);
+    expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'seller' });
+  });
+
   it('only the party whose turn it is can accept', async () => {
     await expect(accept('buyer')).rejects.toMatchObject({ status: 403 });
     await expect(accept('mallory')).rejects.toMatchObject({ status: 403 });

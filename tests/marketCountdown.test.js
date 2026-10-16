@@ -17,3 +17,13 @@ describe('formatCountdown', () => {
     expect(formatCountdown(NaN)).toBe('');
   });
 });
+
+describe('formatTimeLeft', () => {
+  it('shows whole hours, then minutes', async () => {
+    const { formatTimeLeft } = await import('../utils/marketCountdown.js');
+    expect(formatTimeLeft(31.9 * 3600 * 1000)).toBe('31 h');
+    expect(formatTimeLeft(45 * 60 * 1000 + 5000)).toBe('45 min');
+    expect(formatTimeLeft(20 * 1000)).toBe('menos de 1 min');
+    expect(formatTimeLeft(0)).toBe('');
+  });
+});

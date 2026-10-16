@@ -26,13 +26,19 @@ Qué hace el servidor y qué sigue en el navegador:
 - **Servidor:**
   - fichar (lock, feed, franquicia);
   - liberar (lock, carrito, fichaje del feed, plantilla pública; cierra las ofertas abiertas por el jugador; no
-    libera Jugadores Franquicia);
+    libera Jugadores Franquicia; no libera con el mercado cerrado);
   - aceptar ofertas (lock, presupuestos, plantillas, carrito del vendedor, oferta, feed; cierra las demás ofertas
     por ese jugador; respeta el estado del mercado). Nombres, escudos y datos del jugador salen de los equipos y
     del catálogo, no de la oferta.
 - **Navegador (validado por reglas):** enviar/rechazar/contraofertar/retirar ofertas por turnos (montos enteros
   positivos), formación, carrito privado. El carrito es una copia: `hooks/useSquadSync.js` lo alinea con los
   locks, y el presupuesto y las exportaciones salen de los locks (`_shared/budget.js`, compartido con la app).
+- **Vencimiento de ofertas:** cada turno (oferta, contraoferta, nueva oferta) vence a las 48 h
+  (`expiresAtMs`, `_shared/offerExpiry.js`). Una oferta pendiente vencida no retiene plata del comprador y el
+  servidor no la acepta; las reglas exigen un vencimiento de unas 48 h en cada turno. Las ofertas anteriores, sin
+  `expiresAtMs`, no vencen.
+- **Mercado cerrado:** la app sigue usable (tácticas, torneo, chat); fichar, ofertar, aceptar y liberar esperan a
+  que abra (`MarketClosedBanner`, mismas reglas que el servidor).
 - **Hora de apertura programada:** `config/market.openTime` es un instante ISO; los valores viejos sin zona se
   leen como hora argentina (`_shared/marketTime.js`), igual en la app y en el servidor.
 

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { X, Send, AlertTriangle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { offerExpiresAt } from '../supabase/functions/_shared/offerExpiry.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { db } from '../config/firebase.js';
 import { APP_ID, DEFAULT_LOGO, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
@@ -52,7 +53,8 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
 
     try {
       const proposalRef = collection(db, `artifacts/${APP_ID}/public/data/offers`);
-      const nowIso = new Date().toISOString();
+      const nowMs = Date.now();
+      const nowIso = new Date(nowMs).toISOString();
       await addDoc(proposalRef, {
         playerId: player.Id,
         playerName: player.Name,
@@ -68,6 +70,8 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
         message: message.trim(),
         status: 'pending',
         createdAt: nowIso,
+        // The seller has 48 hours to answer; after that the offer stops holding this club's money.
+        expiresAtMs: offerExpiresAt(nowMs),
         history: [{
           type: 'sent',
           title: 'Oferta enviada',

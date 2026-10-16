@@ -7,6 +7,7 @@ import { ADMIN_USER_IDS, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from './ma
 import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from './franchise.js';
 import { toUnits, spentOnLocks, committedInOffers } from './budget.js';
 import { parseOpenTime } from './marketTime.js';
+import { isOfferExpired } from './offerExpiry.js';
 
 export class MarketError extends Error {
   constructor(message, status = 400) {
@@ -58,7 +59,7 @@ export function isMarketOpen(marketStatus, team, isAdmin, now = new Date()) {
 }
 
 /** Money already spent (locks not franchise) or committed in pending offers by a team (budget.js). */
-export async function getCommittedFunds(tx, paths, catalog, teamId, { excludeOfferId, franchisePlayerId } = {}) {
+export async function getCommittedFunds(tx, paths, catalog, teamId, { excludeOfferId, franchisePlayerId, now = new Date() } = {}) {
   const [locks, offers] = await Promise.all([
     tx.query(paths.locks, [['lockedBy', '==', teamId]]),
     tx.query(paths.offers, [['senderId', '==', teamId], ['status', '==', 'pending']]),
@@ -68,7 +69,7 @@ export async function getCommittedFunds(tx, paths, catalog, teamId, { excludeOff
     playerId => getCatalogPlayer(catalog, playerId)?.Precio ?? 0,
     { franchisePlayerId },
   );
-  const committed = committedInOffers(offers.map(offer => ({ id: offer.id, ...offer.data })), { excludeOfferId });
+  const committed = committedInOffers(offers.map(offer => ({ id: offer.id, ...offer.data })), { excludeOfferId, nowMs: now.getTime() });
   return spent + committed;
 }
 
@@ -106,7 +107,7 @@ export async function signPlayer({ tx, appId, catalog, user, playerId, isFranchi
     }
   } else {
     const budget = Number(team.data.budget ?? profile.data.budget) || 0;
-    const committed = await getCommittedFunds(tx, paths, catalog, user.uid, { franchisePlayerId: profile.data.franchisePlayerId });
+    const committed = await getCommittedFunds(tx, paths, catalog, user.uid, { franchisePlayerId: profile.data.franchisePlayerId, now });
     if (budget - committed < toUnits(player.Precio)) {
       throw new MarketError('No tienes presupuesto suficiente (incluyendo ofertas comprometidas).', 409);
     }
@@ -151,6 +152,9 @@ export async function acceptOffer({ tx, appId, catalog, user, offerId, now = new
   if (user.uid !== accepterId) {
     throw new MarketError('Solo el equipo que recibió la oferta actual puede aceptarla.', 403);
   }
+  if (isOfferExpired(offer, now.getTime())) {
+    throw new MarketError('La oferta venció: pasaron más de 48 horas sin respuesta.', 409);
+  }
   const player = getCatalogPlayer(catalog, offer.playerId);
   if (!player) throw new MarketError('Jugador no encontrado en la base de datos.', 404);
   const lockId = String(player.Id);
@@ -178,7 +182,7 @@ export async function acceptOffer({ tx, appId, catalog, user, offerId, now = new
   const buyerBudget = Number(buyerTeam.data.budget) || 0;
   const sellerBudget = Number(sellerTeam.data.budget) || 0;
   const buyerCommitted = await getCommittedFunds(tx, paths, catalog, buyerId, {
-    excludeOfferId: offerId, franchisePlayerId: buyerProfile?.data.franchisePlayerId,
+    excludeOfferId: offerId, franchisePlayerId: buyerProfile?.data.franchisePlayerId, now,
   });
   if (buyerBudget - buyerCommitted < amount) {
     throw new MarketError('El comprador no tiene fondos líquidos suficientes (incluyendo ofertas comprometidas).', 409);

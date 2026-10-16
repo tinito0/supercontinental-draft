@@ -1,5 +1,6 @@
 import { doc, runTransaction } from 'firebase/firestore';
 import { APP_ID, MAX_TRANSFER_MULTIPLIER } from '../utils/constants.js';
+import { offerExpiresAt } from '../supabase/functions/_shared/offerExpiry.js';
 
 export function getOfferAmount(offer) {
   return offer?.status === 'countered' ? offer.counterAmount : offer?.offerAmount;
@@ -49,10 +50,13 @@ export function buildOfferUpdate({ offer, userId, action, amount, teamName, at }
       history: appendHistory(offer, { ...event, type: 'withdrawn', title: 'Oferta retirada', amount: getOfferAmount(offer) }),
     };
   }
+  // A counter or a new offer starts the other club's turn: 48 more hours to answer (offerExpiry.js).
+  const expiresAtMs = offerExpiresAt(Date.parse(at));
   if (role === 'seller') {
     return {
       status: 'countered',
       counterAmount: amount,
+      expiresAtMs,
       counterAt: at,
       counterBy: name,
       history: appendHistory(offer, { ...event, type: 'countered', title: 'Contraoferta enviada', amount }),
@@ -61,6 +65,7 @@ export function buildOfferUpdate({ offer, userId, action, amount, teamName, at }
   return {
     status: 'pending',
     offerAmount: amount,
+    expiresAtMs,
     reofferedAt: at,
     history: appendHistory(offer, { ...event, type: 'sent', title: 'Nueva oferta enviada', amount }),
   };

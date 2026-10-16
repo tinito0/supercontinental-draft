@@ -5,6 +5,8 @@ import { X, ShoppingCart, DollarSign, ArrowRight, History, ClipboardList, Lock }
 import { formatPriceShort, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
 import { DEFAULT_BUDGET } from '../utils/constants.js';
 import { budgetMeter } from '../utils/budgetDisplay.js';
+import { isOfferExpired, offerTimeLeft } from '../supabase/functions/_shared/offerExpiry.js';
+import { formatTimeLeft } from '../utils/marketCountdown.js';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { ProposalChat } from './ProposalChat.jsx';
@@ -137,6 +139,12 @@ const NegotiationCard = memo(function NegotiationCard({
   const targetName = getOfferTargetName(offer, allTeams);
   const activeAmount = getOfferAmount(offer);
   const busyTitle = isProcessing ? 'Hay una operación en curso' : undefined;
+  // Each turn has 48 hours (supabase/functions/_shared/offerExpiry.js). An expired offer can still be rejected or
+  // withdrawn to tidy up, but not accepted or countered, and it no longer holds the buyer's money.
+  const isOpenOffer = !isHistory && (offer.status === 'pending' || offer.status === 'countered');
+  const timeLeft = isOpenOffer ? offerTimeLeft(offer) : null;
+  const isExpired = isOpenOffer && isOfferExpired(offer);
+  const expiredTitle = isExpired ? 'La oferta venció: pasaron 48 horas sin respuesta' : undefined;
   // When the other club answers (counter, re-offer, rejection) the card glows once, so the change is noticed
   // while reading another offer. Restarting a CSS animation needs the class removed and a reflow in between.
   const cardRef = useRef(null);
@@ -191,6 +199,13 @@ const NegotiationCard = memo(function NegotiationCard({
               <span className={`text-xs font-semibold ${STATUS_TONE[offer.status] || 'text-ink-3'}`}>{getOfferStatusLabel(offer.status)}</span>
               <span className="font-display num text-2xl font-bold text-ink">{formatPriceShort((activeAmount || 0) / 1000000)}</span>
             </div>
+            {timeLeft !== null && (
+              <p className={`-mt-2 mb-3 text-xs ${isExpired ? 'font-semibold text-warning-soft' : 'text-ink-3'}`}>
+                {isExpired
+                  ? (isIncoming ? 'Vencida: pasaron 48 h sin respuesta.' : 'Vencida: ya no reserva tu presupuesto.')
+                  : <>Vence en <span className="num">{formatTimeLeft(timeLeft)}</span></>}
+              </p>
+            )}
 
             {!isHistory && counteringOfferId === offer.id ? (
               <div className="flex w-full flex-wrap items-center gap-2">
@@ -210,8 +225,8 @@ const NegotiationCard = memo(function NegotiationCard({
                 {isIncoming ? (
                   <>
                     <button type="button" onClick={() => onReject(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-danger">Rechazar</button>
-                    <button type="button" onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing} title={busyTitle} className="btn btn-secondary">Contraofertar</button>
-                    <button type="button" onClick={() => onAccept(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-primary">Aceptar</button>
+                    <button type="button" onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing || isExpired} title={busyTitle || expiredTitle} className="btn btn-secondary">Contraofertar</button>
+                    <button type="button" onClick={() => onAccept(offer)} disabled={isProcessing || isExpired} title={busyTitle || expiredTitle} className="btn btn-primary">Aceptar</button>
                   </>
                 ) : (
                   <button type="button" onClick={() => onWithdraw(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-danger col-span-3">Retirar oferta</button>

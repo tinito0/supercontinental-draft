@@ -82,13 +82,14 @@ service cloud.firestore {
             && request.resource.data.targetTeamId != request.auth.uid
             && request.resource.data.status == 'pending'
             && isMoney(request.resource.data.offerAmount)
+            && isFreshExpiry(request.resource.data.expiresAtMs)
           )
         );
         allow update: if isAuth() && (
           isAdmin() || (
             request.auth.uid in [resource.data.senderId, resource.data.targetTeamId]
             && changedKeys().hasOnly(['status', 'offerAmount', 'counterAmount', 'history', 'rejectedAt', 'rejectedBy',
-              'withdrawnAt', 'counterAt', 'counterBy', 'reofferedAt'])
+              'withdrawnAt', 'counterAt', 'counterBy', 'reofferedAt', 'expiresAtMs'])
             && isOfferTransition()
           )
         );
@@ -100,6 +101,14 @@ service cloud.firestore {
           return value is int && value > 0;
         }
 
+        // Cada turno (oferta, contraoferta, nueva oferta) vence a las 48 h (supabase/functions/_shared/offerExpiry.js).
+        // Se acepta una hora de margen por el reloj del navegador; nadie puede fijar un vencimiento más lejano.
+        function isFreshExpiry(value) {
+          return value is int
+            && value >= request.time.toMillis() + 47 * 3600 * 1000
+            && value <= request.time.toMillis() + 49 * 3600 * 1000;
+        }
+
         // Igual que buildOfferUpdate (services/transferService.js):
         // pending:   vendedor → rejected | countered; comprador → withdrawn
         // countered: comprador → rejected | withdrawn | pending (nueva oferta); vendedor → withdrawn
@@ -107,14 +116,15 @@ service cloud.firestore {
           let from = resource.data.status;
           let to = request.resource.data.status;
           let isSeller = request.auth.uid == resource.data.targetTeamId;
-          let amountsKept = !changedKeys().hasAny(['offerAmount', 'counterAmount']);
+          let amountsKept = !changedKeys().hasAny(['offerAmount', 'counterAmount', 'expiresAtMs']);
+          let newTurn = isFreshExpiry(request.resource.data.get('expiresAtMs', 0));
           return (from == 'pending' && isSeller && to == 'rejected' && amountsKept)
             || (from == 'pending' && isSeller && to == 'countered' && !changedKeys().hasAny(['offerAmount'])
-              && isMoney(request.resource.data.counterAmount))
+              && isMoney(request.resource.data.counterAmount) && newTurn)
             || (from == 'pending' && !isSeller && to == 'withdrawn' && amountsKept)
             || (from == 'countered' && !isSeller && to in ['rejected', 'withdrawn'] && amountsKept)
             || (from == 'countered' && !isSeller && to == 'pending' && !changedKeys().hasAny(['counterAmount'])
-              && isMoney(request.resource.data.offerAmount))
+              && isMoney(request.resource.data.offerAmount) && newTurn)
             || (from == 'countered' && isSeller && to == 'withdrawn' && amountsKept);
         }
 
