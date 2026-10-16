@@ -1,14 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useExitAnimation } from '../../hooks/usePresence.js';
 import { X } from 'lucide-react';
-import { isTyping } from '../../hooks/useKeyboardShortcuts.js';
+import { useModalDialog, hasOpenModalDialog } from '../../hooks/useModalDialog.js';
 
-// Open dialogs, oldest first. Only the top one reacts to Escape/Tab: with a confirmation open over a sheet,
-// one Escape used to close both (every dialog listens on window).
-const openDialogs = [];
-
-/** True while any BaseModal is open. The app's global Escape listener leaves Escape to it (app.jsx). */
-export const hasOpenBaseModal = () => openDialogs.length > 0;
+/** True while any modal dialog is open. The app's global Escape listener leaves Escape to it (app.jsx). */
+export const hasOpenBaseModal = hasOpenModalDialog;
 
 const SIZE_MAP = {
   sm: 'max-w-md',
@@ -34,82 +30,8 @@ export function BaseModal({
   contentClassName = '',
 }) {
   const dialogRef = useRef(null);
-  // Parents usually pass an inline onClose (a new function on every render). Reading it through a ref
-  // keeps the focus effect below tied to opening/closing only: re-running it on each render moved the
-  // focus to the first focusable control (the close button) while the user was typing in a field.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-
-  // Keep keyboard focus inside the dialog and return it to the trigger on close.
-  // This is deliberately centralized so every consumer gets the same baseline.
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const dialogToken = {};
-    openDialogs.push(dialogToken);
-    const isTopDialog = () => openDialogs[openDialogs.length - 1] === dialogToken;
-    const previouslyFocused = document.activeElement;
-    const getFocusableElements = () => dialogRef.current?.querySelectorAll(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    ) || [];
-
-    const handleKeyDown = (e) => {
-      if (!isTopDialog()) return;
-      if (e.key === 'Escape') {
-        // Escape inside a field leaves the field first; it never closes the dialog while typing.
-        if (isTyping(e.target)) {
-          e.target.blur?.();
-          return;
-        }
-        onCloseRef.current?.();
-        return;
-      }
-
-      if (e.key === 'Tab') {
-        const focusable = Array.from(getFocusableElements());
-        if (focusable.length === 0) {
-          e.preventDefault();
-          dialogRef.current?.focus();
-          return;
-        }
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    // A dialog stacked over another (a confirmation over a sheet) takes Escape first, in the capture phase,
-    // and stops it: otherwise the dialog below and the app's global Escape listener would close too.
-    const handleStackedEscape = (e) => {
-      if (e.key !== 'Escape' || openDialogs.length < 2 || !isTopDialog() || isTyping(e.target)) return;
-      e.stopPropagation();
-      e.preventDefault();
-      onCloseRef.current?.();
-    };
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keydown', handleStackedEscape, true);
-    const firstFocusable = getFocusableElements()[0];
-    (firstFocusable || dialogRef.current)?.focus();
-
-    return () => {
-      const index = openDialogs.indexOf(dialogToken);
-      if (index !== -1) openDialogs.splice(index, 1);
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keydown', handleStackedEscape, true);
-      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
-    };
-  }, [isOpen]);
+  // Focus trap, Escape, scroll lock and focus return (hooks/useModalDialog.js, shared with hand-made dialogs).
+  useModalDialog(dialogRef, isOpen, onClose);
 
   // Exit: a dialog whose isOpen turns false stays mounted with data-closing while it animates out. Focus, the
   // dialog stack and the page scroll are released at once (the effect above), and the leaving copy is inert.
