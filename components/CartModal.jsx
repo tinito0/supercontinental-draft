@@ -218,7 +218,7 @@ const NegotiationCard = memo(function NegotiationCard({
   );
 });
 
-export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, isSquadLoading = false, onRemoveFromCart, userProfile, userId, budgetBase, budgetPercent, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage }) {
+export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, isSquadLoading = false, onRemoveFromCart, userProfile, userId, budgetBase, budgetPercent, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage, isMarketOpen = true }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingOfferRef = useRef(null);
@@ -245,6 +245,13 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   const handleAcceptOffer = async (offer) => {
     if (isProcessing || processingOfferRef.current) return;
+    if (!isMarketOpen) {
+      showStatusMessage?.('error', 'El mercado está cerrado: las ofertas se aceptan cuando abra.');
+      return;
+    }
+    // The only offer action that cannot be undone (rejecting and withdrawing already asked).
+    const price = formatPriceShort(getOfferAmount(offer) / 1000000);
+    if (!window.confirm(`¿Aceptar la oferta por ${offer.playerName} (${price})? El jugador pasa a ${getOfferSenderName(offer, allTeams)} y no se puede deshacer.`)) return;
     processingOfferRef.current = offer?.id || 'unknown';
     setIsProcessing(true);
     showStatusMessage?.('loading', `Aceptando la oferta por ${offer.playerName}...`);

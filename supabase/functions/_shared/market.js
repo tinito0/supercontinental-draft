@@ -267,8 +267,8 @@ export async function releasePlayer({ tx, appId, user, playerId, now = new Date(
   const paths = marketPaths(appId);
   const lockId = String(playerId);
   const numericId = Number(playerId);
-  const [lock, team, playerOffers, signings] = await Promise.all([
-    tx.get(paths.lock(lockId)), tx.get(paths.team(user.uid)),
+  const [market, lock, team, playerOffers, signings] = await Promise.all([
+    tx.get(paths.market), tx.get(paths.lock(lockId)), tx.get(paths.team(user.uid)),
     tx.query(paths.offers, [['playerId', '==', numericId]]),
     tx.query(paths.transfers, [['playerId', '==', numericId], ['teamId', '==', user.uid]]),
   ]);
@@ -277,6 +277,10 @@ export async function releasePlayer({ tx, appId, user, playerId, now = new Date(
   }
   if (lock.data.isFranchise) {
     throw new MarketError('Los Jugadores Franquicia no se pueden liberar. Pedile al administrador que resetee la franquicia.', 409);
+  }
+  // A release refunds the player's price, so with the market closed it would let squads change while no one can buy.
+  if (!isMarketOpen(market?.data || { status: 'closed' }, team?.data, user.isAdmin, now)) {
+    throw new MarketError('El mercado está cerrado.', 403);
   }
 
   const at = now.toISOString();

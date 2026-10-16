@@ -232,6 +232,12 @@ describe('release', () => {
     await expectMarketError(release('seller'), /Franquicia/);
     expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'seller' });
   });
+
+  it('is refused while the market is closed', async () => {
+    await setMarket('closed');
+    await expectMarketError(release('seller'), /mercado está cerrado/);
+    expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'seller' });
+  });
 });
 
 describe('request validation', () => {

@@ -125,7 +125,7 @@ supercontinental-draft/
 │   ├── LinkGoogleScreen.jsx   # Migración/vinculación de cuenta Google
 │   ├── TeamScreen.jsx         # Vista pública de equipo
 │   ├── FormationViewScreen.jsx # Vista pública de formación
-│   └── MaintenanceScreen.jsx  # Pantalla de mantenimiento
+│   └── (mercado cerrado: components/MarketClosedBanner.jsx)
 │
 ├── utils/                     # Utilidades y constantes
 │   ├── constants.js           # Posiciones, stats, formaciones, skills, regiones

@@ -31,7 +31,7 @@ There is no linter or type checker; plain JS/JSX, ES modules. Env vars: copy `.e
 | --- | --- | --- |
 | Entry | `main.jsx` → `app.jsx` | `BrowserRouter` + `ErrorBoundary`; Chart.js registered lazily |
 | App shell | `app.jsx` (~2,900 lines) | routing, Firestore subscriptions, market logic, modal wiring. Widest blast radius in the repo |
-| Screens | `screens/` | Landing, Login, LinkGoogle, Maintenance, TeamScreen, FormationViewScreen, PesWorkspaceScreen |
+| Screens | `screens/` | Landing, Login, LinkGoogle, TeamScreen, FormationViewScreen, PesWorkspaceScreen. A closed market is read-only (`MarketClosedBanner`), not a screen |
 | Components | `components/` | feature modals at top level; `ui/` primitives; `admin/`, `tournament/`, `formation/`, `pes/` |
 | Hooks | `hooks/` | `useAuth`, `useFirebaseData` (listeners), `useBudget`, `useRemoteConflict`, `usePesWorkspace`, … |
 | Services | `services/`, `config/` | `firebase.js` (Auth, Firestore with persistent multi-tab cache, Storage), `supabase.js` |

@@ -8,7 +8,7 @@ import { TopHeader } from './components/TopHeader.jsx';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, db, storage, firebaseInitializationError } from './config/firebase.js';
 import { LinkGoogleScreen } from './screens/LinkGoogleScreen.jsx';
-import { MaintenanceScreen } from './screens/MaintenanceScreen.jsx';
+import { MarketClosedBanner } from './components/MarketClosedBanner.jsx';
 import { InstallPopup } from './components/InstallPopup.jsx';
 import { ToastStack } from './components/ToastStack.jsx';
 import { NotificationsPanel } from './components/NotificationsPanel.jsx';
@@ -703,6 +703,9 @@ function App() {
     const timer = setTimeout(() => setMarketClock(tick => tick + 1), Math.min(wait + 500, 2147483000));
     return () => clearTimeout(timer);
   }, [scheduledOpenAt]);
+  // Same rule as the server (supabase/functions/_shared/market.js). A closed market used to replace the whole app
+  // with a maintenance screen; now everything stays usable and only signing, offers and releases wait for it.
+  const isMarketOpen = isMarketOpenFor(marketStatus, allTeams?.[userId], isAdmin);
   const shouldLoadPlayerDatabase = useMemo(() => {
     if (isSpecialMode || location.pathname.startsWith('/overlay') || location.pathname.startsWith('/team/') || location.pathname.startsWith('/tactics/view/')) {
       return false;
@@ -1474,6 +1477,10 @@ function App() {
       showStatusMessage('error', 'Debes iniciar sesión para fichar jugadores.');
       return false;
     }
+    if (!isMarketOpen) {
+      showStatusMessage('error', 'El mercado está cerrado.');
+      return false;
+    }
     if (!isFranchise && marketStatus && marketStatus.status === 'FranchiseMarket') {
       showStatusMessage('error', 'Solo se permiten fichajes de Jugadores Franquicia en este momento.');
       return false;
@@ -1515,10 +1522,14 @@ function App() {
     // sin lock un instante y la sincronización la borraría.
     showStatusMessage('success', `¡${player.Name} fichado exitosamente!`);
     return true;
-  }, [userId, userProfile, remainingBudget, playerLocks, marketStatus, showStatusMessage]);
+  }, [userId, userProfile, remainingBudget, playerLocks, marketStatus, isMarketOpen, showStatusMessage]);
 
   const handleRemoveFromCart = useCallback(async (player, { confirmed: alreadyConfirmed = false } = {}) => {
     if (!userId || !player) return;
+    if (!isMarketOpen) {
+      showStatusMessage('error', 'El mercado está cerrado: los jugadores se liberan cuando abra.');
+      return;
+    }
 
     const confirmed = alreadyConfirmed || window.confirm(`¿Estás seguro de que deseas liberar a ${player.Name || 'este jugador'} de tu equipo? Su bloqueo quedará disponible para otros managers.`);
     if (!confirmed) return;
@@ -1533,7 +1544,7 @@ function App() {
       console.error('Error al liberar al jugador: ', e);
       showStatusMessage('error', e?.message || 'No se pudo liberar al jugador.');
     }
-  }, [userId, showStatusMessage]);
+  }, [userId, isMarketOpen, showStatusMessage]);
 
   const handleOpenPlayerFromCart = (player) => {
     handleOpenPlayerModal(player.Id);
@@ -1793,29 +1804,6 @@ function App() {
     return <LoadingScreen message="Cargando perfil de usuario..." error={appError} />;
   }
 
-  // Misma regla que el servidor (supabase/functions/_shared/market.js).
-  if (!isMarketOpenFor(marketStatus, allTeams[userId], isAdmin)) {
-    return (
-      <>
-        <MaintenanceScreen
-          marketStatus={marketStatus}
-          onLogout={handleLogout}
-          onSuggestionsClick={() => openModalRoute('suggestions')}
-        />
-        <Suspense fallback={null}>
-        <SuggestionsModal
-          isVisible={isSuggestionsModalVisible}
-          onClose={() => setIsSuggestionsModalVisible(false)}
-          teamName={userProfile?.teamName || "Usuario Anónimo"}
-          userId={userId}
-          getSuggestionsCollectionRef={getSuggestionsCollectionRef}
-          showStatusMessage={showStatusMessage}
-        />
-        </Suspense>
-      </>
-    );
-  }
-
   return (
     <>
       {/* ── OFFLINE STATUS BANNER ── */}
@@ -1897,6 +1885,7 @@ function App() {
 
             {/* CENTER VIEW - MARKETPLACE MULTIPLEXING */}
             <main data-app-tour="main" className={`flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7 flex flex-col bg-canvas ${compareList.length > 0 ? 'pb-32 lg:pb-32' : ''}`} id="main-content" tabIndex={-1}>
+              {!isMarketOpen && <MarketClosedBanner marketStatus={marketStatus} />}
               {/* VISTA RESUMEN / INICIO (SOFASCORE STYLE) */}
               {activeTab === 'Overview' && (
                 <div className="animate-in fade-in">
@@ -1960,6 +1949,7 @@ function App() {
                       cart={ownedCart}
                       initialTab={clubTab}
                       onRemoveFromCart={handleRemoveFromCart}
+                      isMarketOpen={isMarketOpen}
                       userProfile={userProfile}
                       userId={userId}
                       isSquadLoading={!isCartSynced && ownedCart.length === 0}
@@ -2190,6 +2180,7 @@ function App() {
         allPlayers={allPlayers}
         onPlayerSwitch={(p) => setSelectedPlayerId(p.Id)}
         marketStatus={marketStatus}
+        isMarketOpen={isMarketOpen}
       />
       {(isCartVisible || modalRoute === 'cart') && (
         <CartModal
@@ -2202,6 +2193,7 @@ function App() {
           }}
           cart={ownedCart}
           onRemoveFromCart={handleRemoveFromCart}
+          isMarketOpen={isMarketOpen}
           userProfile={userProfile}
           userId={userId}
           isSquadLoading={!isCartSynced && ownedCart.length === 0}

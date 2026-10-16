@@ -399,6 +399,7 @@ export const PlayerModal = memo(function PlayerModal({
   onSearchSimilar,
   isVisitor,
   marketStatus,
+  isMarketOpen = true,
   isFranchisePlayer
 }) {
   const [isSigning, setIsSigning] = useState(false);
@@ -482,6 +483,23 @@ export const PlayerModal = memo(function PlayerModal({
       return (
         <div className="flex items-center justify-center px-6 py-3 font-bold rounded-xl bg-raised text-ink-3 border border-line/20 w-full sm:w-auto cursor-not-allowed opacity-70" aria-disabled="true" title="Modo Visitante (Solo Lectura)">
           <Eye className="w-5 h-5 mr-2" /> Modo Visitante (Solo Lectura)
+        </div>
+      );
+    }
+
+    // Closed market: the app stays usable, but signing, offers and releases wait for it to open (the server refuses
+    // them too, supabase/functions/_shared/market.js).
+    if (!isMarketOpen) {
+      return (
+        <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
+          <div className="btn btn-secondary btn-lg w-full sm:w-auto cursor-not-allowed opacity-70" aria-disabled="true" title="El mercado está cerrado">
+            <Lock className="w-4 h-4" aria-hidden="true" />
+            Mercado cerrado
+          </div>
+          <span className="text-xs text-ink-3 text-center max-w-[240px]">
+            {cartStatus === 'LOCKED_BY_OTHER' ? `Fichado por ${lockedTeamName || 'otro equipo'}. ` : ''}
+            Fichajes, ofertas y liberaciones vuelven cuando abra el mercado.
+          </span>
         </div>
       );
     }

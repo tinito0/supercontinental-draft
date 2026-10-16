@@ -1,7 +1,8 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Settings, Save, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 import { onSnapshot, setDoc, getDocs, query, collection, doc } from 'firebase/firestore';
-import { APP_ID, DEFAULT_TACTICS } from '../../utils/constants.js';
+import { APP_ID } from '../../utils/constants.js';
+import { profileResetData, teamResetData, canResetSeason } from '../../utils/seasonReset.js';
 import { commitBatchOperations } from './commitBatchOperations.js';
 import { toLocalDateTimeInput } from '../../utils/helpers.js';
 import { parseOpenTime } from '../../supabase/functions/_shared/marketTime.js';
@@ -72,6 +73,10 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
 
   const handleConfirmResetDraft = async () => {
     if (resetConfirmInput.trim().toUpperCase() !== 'RESETEAR') return;
+    if (!canResetSeason(marketStatus)) {
+      showStatusMessage('error', 'Cerrá el mercado antes de resetear: con el mercado abierto un fichaje podía quedar a medias.');
+      return;
+    }
     setIsSaving(true);
     showStatusMessage('loading', 'Iniciando el reseteo de temporada...');
     setResetProgress({ active: true, current: 0, total: 100, stage: 'Consultando colecciones de clubes, ofertas y mercado...' });
@@ -125,40 +130,21 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
         // Borrar historial y resultados de búsquedas scout
         scoutSearchesSnap.forEach(d => operations.push({ type: 'delete', ref: d.ref }));
 
-        // Reiniciar plantilla y formación en perfil privado (manteniendo presupuesto)
-        const profileRef = doc(db, `artifacts/${APP_ID}/users/${uid}/profile`, 'data');
+        // Perfil privado y equipo público: plantilla y formación vacías, franquicia libre; el presupuesto queda.
+        // mergeFields reemplaza cada campo entero (con merge: true las tácticas se fusionaban con las viejas).
+        const profileData = profileResetData();
         operations.push({
           type: 'set',
-          ref: profileRef,
-          data: {
-            franchisePlayerUsed: false,
-            franchisePlayerId: null,
-            lineup: {},
-            dorsals: {},
-            formation: '4-3-3',
-            setPieces: {},
-            tactics: DEFAULT_TACTICS,
-            availability: {},
-            matchBench: [],
-          },
-          options: { merge: true },
+          ref: doc(db, `artifacts/${APP_ID}/users/${uid}/profile`, 'data'),
+          data: profileData,
+          options: { mergeFields: Object.keys(profileData) },
         });
-
-        // Reiniciar plantilla y formación en equipo público (manteniendo presupuesto)
-        const publicTeamRef = doc(db, `artifacts/${APP_ID}/public/data/teams`, uid);
+        const teamData = teamResetData();
         operations.push({
           type: 'set',
-          ref: publicTeamRef,
-          data: {
-            lineup: {},
-            dorsals: {},
-            formation: '4-3-3',
-            setPieces: {},
-            tactics: DEFAULT_TACTICS,
-            availability: {},
-            matchBench: [],
-          },
-          options: { merge: true },
+          ref: doc(db, `artifacts/${APP_ID}/public/data/teams`, uid),
+          data: teamData,
+          options: { mergeFields: Object.keys(teamData) },
         });
       });
 
@@ -171,7 +157,9 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
       setResetConfirmInput('');
     } catch (e) {
       console.error(e);
-      showStatusMessage('error', 'Error al resetear temporada.');
+      // Each batch is committed on its own: a failure leaves part of the season deleted. Running it again is safe,
+      // it reads what is left and finishes it.
+      showStatusMessage('error', 'El reseteo se cortó a mitad de camino. Volvé a ejecutarlo: borra lo que quedó y termina.');
     } finally {
       setIsSaving(false);
       setResetProgress({ active: false, current: 0, total: 0, stage: '' });
@@ -254,11 +242,14 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
           </h4>
         </div>
         <p className="text-xs text-ink-3 mb-4 leading-relaxed max-w-2xl">
-          Esta acción vacía todos los planteles (carritos), plantillas y formaciones (alineación, tácticas, dorsales y banco), borra los usos y búsquedas del scout, y elimina bloqueos de mercado, ofertas activas y transferencias. Conserva los presupuestos de los equipos y el estado del mercado actual.
+          Esta acción vacía todos los planteles (carritos y plantilla pública), plantillas y formaciones (alineación, tácticas, dorsales y banco), borra los usos y búsquedas del scout, y elimina bloqueos de mercado, ofertas, noticias, formaciones compartidas y transferencias. Conserva los presupuestos, el acceso anticipado, el torneo, el chat y las sugerencias.
         </p>
+        {!canResetSeason(marketStatus) && (
+          <p className="text-xs text-warning-soft mb-3 font-semibold">Primero poné el mercado en «Cerrado» y guardá: con el mercado abierto un fichaje podía quedar a medias.</p>
+        )}
         <button
           onClick={() => { setIsResetModalOpen(true); setResetConfirmInput(''); }}
-          disabled={isSaving}
+          disabled={isSaving || !canResetSeason(marketStatus)}
           className="bg-red-600 hover:bg-red-500 text-ink font-bold text-xs uppercase tracking-wider py-2.5 px-5 rounded-xl flex items-center gap-2 disabled:opacity-50 transition shadow-lg shadow-red-950/50 active:scale-95"
         >
           <RefreshCw className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
@@ -283,12 +274,13 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
             <div className="bg-red-950/30 border border-danger/20 rounded-xl p-4 text-xs text-ink-2 space-y-2">
               <p className="font-bold text-danger-soft">Se purgarán los siguientes datos de TODOS los equipos:</p>
               <ul className="list-disc list-inside space-y-1 text-ink-3 pl-1">
-                <li>Planteles y carritos de jugadores</li>
+                <li>Planteles: carritos y plantilla pública de cada club</li>
                 <li>Alineaciones, tácticas, dorsales y suplentes</li>
                 <li>Historial y créditos mensuales del Scout</li>
-                <li>Bloqueos de mercado, ofertas, noticias y transferencias</li>
+                <li>Bloqueos de mercado, ofertas (con su chat), noticias, formaciones compartidas y transferencias</li>
               </ul>
-              <p className="text-success-soft font-medium pt-1">Se conservan los presupuestos actuales y el estado del mercado.</p>
+              <p className="text-success-soft font-medium pt-1">Se conservan los presupuestos, el acceso anticipado, el torneo, el chat de managers y las sugerencias.</p>
+              <p className="text-warning-soft font-semibold pt-1">Si necesitás los planteles de esta temporada en el PES (Draft → PES o CSV), exportalos antes: después del reseteo ya no existen.</p>
             </div>
 
             <div>
