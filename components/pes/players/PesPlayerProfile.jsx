@@ -156,7 +156,8 @@ function StatRow({ field, value, canEdit, modified, onCommit }) {
   const scaleMax = field.addend === 40 ? 99 : max;
   const pct = Math.max(4, Math.min(100, ((Number(value) - scaleMin) / (scaleMax - scaleMin)) * 100));
   const tone = statTone(field.name, value, getStatAndOvrColorClass);
-  const commit = () => { const v = Number(draft); if (Number.isFinite(v) && v !== value) onCommit(Math.max(min, Math.min(max, v))); else setDraft(value); };
+  // Number('') is 0: a cleared field used to commit the minimum. Empty goes back to the value.
+  const commit = () => { const v = Number(draft); if (String(draft ?? '').trim() !== '' && Number.isFinite(v) && v !== value) onCommit(Math.max(min, Math.min(max, v))); else setDraft(value); };
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_3.25rem] items-center gap-x-3 py-1.5">
       <div className="min-w-0">

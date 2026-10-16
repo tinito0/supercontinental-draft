@@ -139,6 +139,8 @@ export function PesSourcesPanel({ pes }) {
 
   const replace = async s => {
     setError(null);
+    // The saved changes are re-applied over the new file; the ones that no longer fit fail (Validación lists them).
+    if (!window.confirm('¿Reemplazar esta fuente por el archivo nuevo? Los cambios guardados se vuelven a aplicar sobre él y los que ya no encajen van a fallar.')) return;
     try { await pes.replaceSource(s); setPending(p => p.filter(x => x !== s)); } catch (e) { setError(e); }
   };
 

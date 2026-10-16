@@ -58,6 +58,12 @@ export function PesChangesPanel({ pes }) {
   const [lastExport, setLastExport] = useState(null);
   const run = fn => async () => { setError(null); try { await fn(); } catch (e) { setError(e); } };
   const canDiscard = op => caps.has('workspace.manage') || op.actorUid === actor?.uid;
+  // Discarding cannot be undone. One draft out of a batch (a squad replacement) leaves the rest half applied, and
+  // a saved change is discarded for everyone, so those ask first.
+  const confirmDiscardAll = () => window.confirm(`¿Descartar los ${drafts.length} cambios sin guardar? No se puede deshacer.`);
+  const confirmDiscardDraft = op => !op.batch
+    || window.confirm('Este cambio es parte de un reemplazo de plantel: descartar solo este deja el resto a medias. ¿Descartarlo igual?');
+  const confirmDiscardSaved = op => window.confirm(`¿Descartar «${describe(op)}» del historial compartido? Deja de aplicarse para todo el equipo.`);
 
   const doExport = run(async () => {
     const { zip, manifest } = await pes.exportZip();
@@ -72,14 +78,14 @@ export function PesChangesPanel({ pes }) {
       <ErrorText error={error} />
       <Card title="Sin guardar" description="Viven en este navegador (sobreviven a recargar). «Guardar» los agrega al historial compartido."
         actions={<>
-          <Button variant="danger" disabled={!drafts.length} onClick={run(() => pes.discardDrafts())}><Undo2 className="w-4 h-4" aria-hidden="true" />Descartar todo</Button>
+          <Button variant="danger" disabled={!drafts.length} onClick={run(() => confirmDiscardAll() && pes.discardDrafts())}><Undo2 className="w-4 h-4" aria-hidden="true" />Descartar todo</Button>
           <Button variant="primary" disabled={!drafts.length || Boolean(pes.busy)} onClick={run(pes.saveDrafts)}><Save className="w-4 h-4" aria-hidden="true" />Guardar {drafts.length > 0 && <span className="num">({drafts.length})</span>}</Button>
         </>}
         className="xl:order-first">
         {drafts.length === 0 ? <p className="text-sm text-ink-3">No hay cambios pendientes.</p> : (
           <ul>{drafts.map((op, i) => (
             <OpRow key={op.clientId || i} op={op} actions={(
-              <button type="button" className={iconBtn} onClick={run(() => pes.discardDrafts([i]))} aria-label={`Descartar ${describe(op)}`} title="Descartar este cambio">
+              <button type="button" className={iconBtn} onClick={run(() => confirmDiscardDraft(op) && pes.discardDrafts([i]))} aria-label={`Descartar ${describe(op)}`} title="Descartar este cambio">
                 <Undo2 className="w-4 h-4" aria-hidden="true" />
               </button>
             )} />
@@ -125,7 +131,7 @@ export function PesChangesPanel({ pes }) {
         {savedOps.length === 0 ? <p className="text-sm text-ink-3">Sin cambios guardados.</p> : (
           <ul className="max-h-[50vh] overflow-y-auto overscroll-contain">{[...savedOps].reverse().map(op => (
             <OpRow key={op.id} op={op} actions={op.state !== 'discarded' && canDiscard(op) && (
-              <button type="button" className={iconBtn} onClick={run(() => pes.discardSaved(op.id))} aria-label={`Descartar ${describe(op)}`} title="Descartar este cambio">
+              <button type="button" className={iconBtn} onClick={run(() => confirmDiscardSaved(op) && pes.discardSaved(op.id))} aria-label={`Descartar ${describe(op)}`} title="Descartar este cambio">
                 <Trash2 className="w-4 h-4" aria-hidden="true" />
               </button>
             )} />

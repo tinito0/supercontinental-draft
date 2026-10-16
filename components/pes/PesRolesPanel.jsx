@@ -35,7 +35,11 @@ export function PesRolesPanel({ actorUid, allTeams = {} }) {
       await load();
     } catch (e) { setError(e); }
   };
-  const remove = async id => { setError(null); try { await removePesRole(id); await load(); } catch (e) { setError(e); } };
+  const remove = async id => {
+    if (!window.confirm(`¿Quitarle el rol del editor PES a ${nameOf(id) || id}? Deja de ver el editor.`)) return;
+    setError(null);
+    try { await removePesRole(id); await load(); } catch (e) { setError(e); }
+  };
 
   return (
     <Card title="Roles del editor PES">
@@ -58,7 +62,7 @@ export function PesRolesPanel({ actorUid, allTeams = {} }) {
             <Pill tone={r.role === 'super_admin' ? 'red' : r.role === 'kit_manager' ? 'cyan' : 'slate'}>{ROLE_LABELS[r.role] || r.role}</Pill>
             <span className="font-bold">{r.label}</span>
             <span className="text-ink-3">{r.displayName || nameOf(r.uid)} · {r.uid}</span>
-            {r.uid !== actorUid && <Button className="ml-auto" variant="danger" onClick={() => remove(r.uid)}><Trash2 className="w-3 h-3" /></Button>}
+            {r.uid !== actorUid && <Button className="ml-auto" variant="danger" onClick={() => remove(r.uid)} aria-label={`Quitar el rol a ${r.displayName || nameOf(r.uid) || r.uid}`}><Trash2 className="w-3 h-3" aria-hidden="true" /></Button>}
           </li>
         ))}
       </ul>

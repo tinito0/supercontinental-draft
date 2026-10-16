@@ -50,12 +50,24 @@ function KitValueInput({ line, readOnly, modified, onCommit }) {
   React.useEffect(() => setDraft(line.value), [line.value]);
   const editable = !readOnly && KIT_EDITABLE_KEYS.includes(line.key);
   const commit = v => { if (editable && v !== line.value) onCommit(v); };
+  // The colour picker previews while dragging and commits once when it closes (native `change`), like
+  // ColourField: React's onChange fires on every drag step and each one created a draft.
+  const colourRef = React.useRef(null);
+  const commitRef = React.useRef(commit);
+  commitRef.current = commit;
+  React.useEffect(() => {
+    const el = colourRef.current;
+    if (!el) return undefined;
+    const onNativeChange = () => commitRef.current(el.value.toUpperCase());
+    el.addEventListener('change', onNativeChange);
+    return () => el.removeEventListener('change', onNativeChange);
+  }, [line.key]);
   const base = 'w-full input min-h-9';
   let control;
   if (COLOR_KEYS.includes(line.key)) {
     control = (
       <div className="flex gap-1">
-        <input type="color" value={/^#[0-9A-F]{6}$/i.test(draft) ? draft : '#000000'} disabled={!editable} onChange={e => { setDraft(e.target.value.toUpperCase()); commit(e.target.value.toUpperCase()); }} className="w-8 h-7 bg-transparent" />
+        <input ref={colourRef} type="color" value={/^#[0-9A-F]{6}$/i.test(draft) ? draft : '#000000'} disabled={!editable} onChange={e => setDraft(e.target.value.toUpperCase())} aria-label={`${line.key}: color`} className="w-8 h-7 bg-transparent" />
         <input value={draft} disabled={!editable} onChange={e => setDraft(e.target.value)} onBlur={() => commit(draft)} className={base} />
       </div>
     );
@@ -68,8 +80,10 @@ function KitValueInput({ line, readOnly, modified, onCommit }) {
     );
   } else {
     const isNum = line.constraint?.type === 'range';
+    // A cleared number field goes back to its value instead of committing 0.
+    const commitNumberOrText = () => (isNum && String(draft).trim() === '' ? setDraft(line.value) : commit(draft));
     control = <input type={isNum ? 'number' : 'text'} min={line.constraint?.min} max={line.constraint?.max} value={draft} disabled={!editable}
-      onChange={e => setDraft(e.target.value)} onBlur={() => commit(draft)} onKeyDown={e => e.key === 'Enter' && commit(draft)} className={base} />;
+      onChange={e => setDraft(e.target.value)} onBlur={commitNumberOrText} onKeyDown={e => e.key === 'Enter' && commitNumberOrText()} className={base} />;
   }
   return (
     <label className={`flex flex-col gap-1 text-[11px] ${modified ? 'text-accent-soft' : 'text-ink-3'}`}>
