@@ -38,14 +38,26 @@ There is no linter or type checker; plain JS/JSX, ES modules. Env vars: copy `.e
 | Pure helpers | `utils/` | `constants.js` (positions, formations, `APP_ID`), `helpers.js`, `formationStates.js`, `pesExport.js`, … |
 | PES engine | `pes/` | pure, no React, no Firebase: `core` → `formats/pes2021` → `operations.js`, `kits/`, `draftTransfer.js` |
 
-**Routing** is not declared with `<Route>`: `app.jsx` derives the active tab from `location.pathname` via the
+**Two sites, one page** (`main.jsx`, `utils/siteRoutes.js`): the root is the public **league site**
+(`screens/league/`, `components/league/`, data from `hooks/useLeagueData.js`: `/`, `/historia`, `/equipos`,
+`/equipos/:userId` = club history + `screens/TeamScreen.jsx`, `/reglamento` (season rules), `/torneo`, `/partidos` = PES match centre from `live_matches`, docs/MATCH_FEED.md). Its texts
+(league history, club histories, season rules) are plain text written in Administración → Web pública
+(`components/admin/LeagueContentAdminSection.jsx`, `utils/leagueContent.js`). The **draft** lives under `/draft`, mounted with
+`<BrowserRouter basename="/draft">`; nothing on the league site links to it (managers type `/draft`, `/DRAFT` is
+normalised). Inside the draft every path below is relative to `/draft`; URLs that are copied or shared must go
+through `draftUrl()`. Old draft URLs redirect: paths in `firebase.json` `hosting.redirects`, query modes
+(`/?mode=obs`, `/torneo?mode=…`) in `legacyDraftRedirect()`. The two public fronts share
+`components/landing/SiteChrome.jsx` (nav, footer, section titles), `RuleGroups.jsx` and `FollowLeague.jsx`.
+
+**Draft routing** is not declared with `<Route>`: `app.jsx` derives the active tab from `location.pathname` via the
 path↔tab maps near line 235 (`/overview`, `/marketplace`, `/my-team`, `/tactics`, `/admin`, `/pes`, …).
-Modals are routes too (`/modal/<name>`, returning to `location.state.from`). Public, unauthenticated views:
-`/`, `/login`, `/team/:id`, `/tactics/view/:id`, `/torneo`, `/overlay…`, and query modes `?mode=obs|table|bracket`.
+Modals are routes too (`/modal/<name>`, returning to `location.state.from`). Public, unauthenticated draft views:
+`/` (draft landing), `/login`, `/team/:id`, `/tactics/view/:id`, `/torneo`, `/overlay…`, and query modes
+`?mode=obs|table|bracket`, all under `/draft`.
 Screens and heavy modals are `React.lazy`; a `vite:preloadError` reloads the page after a deploy.
 
 **Firestore layout** (paths are built as strings, so the graph does not link readers of the same data):
-- `artifacts/${APP_ID}/public/data/{player_locks,teams,transfers,offers,manager_chat,shared_formations,suggestions,news,tournament,broadcast,config,locks}`
+- `artifacts/${APP_ID}/public/data/{player_locks,teams,transfers,offers,manager_chat,shared_formations,suggestions,news,tournament,broadcast,config,locks,league_content}`
 - `artifacts/${APP_ID}/presence/{uid}`, `artifacts/${APP_ID}/users/{uid}/{cart,profile/data,…}`
 - `pes_roles/{uid}`, `pes_workspaces/{wsId}/{ops,exports,meta}`
 - `APP_ID` comes from `utils/constants.js`, not from the Firebase config.

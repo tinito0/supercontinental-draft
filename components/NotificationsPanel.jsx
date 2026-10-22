@@ -24,7 +24,7 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? () => onClick(notif) : undefined}
       onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(notif); } } : undefined}
-      className={`group relative flex items-start gap-2.5 p-3 pr-8 rounded-xl text-sm border transition-all duration-150 ${wrap} ${
+      className={`group relative flex items-start gap-2.5 p-3 pr-8 rounded-xl text-sm border transition-colors duration-150 ${wrap} ${
         isClickable ? 'cursor-pointer hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-accent/40' : ''
       }`}
     >

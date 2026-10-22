@@ -1,0 +1,580 @@
+/* Estética de la transmisión de la liga (OBS, lienzo de 1920×1080): marco grueso en degradé azul marino → azul →
+   lavanda con una franja clara arriba, panel blanco con las esquinas de abajo redondeadas, encabezados con el escudo
+   en un cuadro blanco y texto Barlow Condensed blanco. Usan estas clases el overlay (BroadcastOverlay.jsx), el popup
+   con QR (OverlayPopup.jsx) y las vistas OBS del torneo (BroadcastFrame.jsx). Durante el partido solo se ve el popup. */
+
+.scl-broadcast {
+  --scl-navy: #022a5e;
+  --scl-navy-2: #00489a;
+  --scl-blue: #005fbd;
+  --scl-periwinkle: #4f6db5;
+  --scl-lavender: #7a7bb7;
+  --scl-lilac: #b6b6ec;
+  --scl-slate: #39436b;
+  --scl-row: #eef0f6;
+  --scl-ink: #04173a;
+  --scl-muted: #55607f;
+  --scl-win: #12b532;
+  --scl-loss: #e8132d;
+  --scl-frame: linear-gradient(100deg, #022a5e 8%, #00489a 38%, #005fbd 55%, #4f6db5 75%, #7a7bb7 95%);
+  --scl-bar: linear-gradient(90deg, #022a5e, #00489a 55%, #0d6ac4);
+  --scl-stripe: linear-gradient(90deg, #7a7bb7, #b6b6ec);
+  font-family: Barlow Condensed, Barlow, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+.scl-broadcast * { box-sizing: border-box; }
+
+/* Marco: franja + degradé + panel blanco. */
+.scl-frame {
+  position: relative;
+  padding: 14px 28px 28px;
+  background: var(--scl-frame);
+  border-radius: 0 0 44px 44px;
+  box-shadow: 0 26px 80px rgba(2, 10, 30, 0.55);
+  overflow: hidden;
+}
+.scl-frame-stripe {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 10px;
+  background: var(--scl-stripe);
+}
+/* Marca de agua: aros de pelota en la esquina, como el marco de la transmisión. */
+.scl-frame-ball {
+  position: absolute;
+  right: -150px;
+  bottom: -170px;
+  width: 460px;
+  height: 460px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 54%, rgba(255,255,255,0.13) 55%, rgba(255,255,255,0.13) 57%, transparent 58%),
+    radial-gradient(circle, transparent 66%, rgba(255,255,255,0.09) 67%, rgba(255,255,255,0.09) 70%, transparent 71%);
+  pointer-events: none;
+}
+.scl-frame-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  margin: 10px 0 16px;
+}
+.scl-badge {
+  flex: none;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+}
+.scl-badge img { width: 48px; height: 48px; object-fit: contain; }
+.scl-frame-titles { min-width: 0; color: #ffffff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+.scl-frame-kicker {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--scl-lilac);
+}
+.scl-frame-title {
+  display: block;
+  font-size: 54px;
+  line-height: 0.95;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scl-frame-aside { margin-left: auto; text-align: right; color: #ffffff; font-size: 24px; font-weight: 700; }
+.scl-panel {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  color: var(--scl-ink);
+  border-radius: 0 0 30px 30px;
+  padding: 30px 34px 32px;
+}
+
+/* ---- Overlay (BroadcastOverlay.jsx) ---- */
+.broadcast-overlay-root {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent;
+  color: #ffffff;
+}
+
+/* Marcador (escenas que no son de panel ni el partido en vivo). */
+.broadcast-top-score {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1040px;
+  height: 112px;
+  display: grid;
+  grid-template-columns: 1fr 190px 1fr;
+  background: var(--scl-slate);
+  border-top: 6px solid var(--scl-lavender);
+  box-shadow: 0 18px 55px rgba(2, 10, 30, 0.5);
+}
+.broadcast-team { min-width: 0; display: flex; align-items: center; gap: 18px; padding: 16px 30px; }
+.broadcast-team.away { justify-content: flex-end; text-align: right; }
+.broadcast-team-logo { width: 70px; height: 70px; object-fit: contain; flex: none; }
+.broadcast-team-name {
+  min-width: 0;
+  max-width: 300px;
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.broadcast-score-core {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: var(--scl-frame);
+}
+.broadcast-score { font-size: 62px; line-height: 0.9; font-weight: 800; font-variant-numeric: tabular-nums; }
+.broadcast-clock {
+  margin-top: 6px;
+  padding: 2px 14px;
+  background: #ffffff;
+  color: var(--scl-navy);
+  font-size: 19px;
+  font-weight: 800;
+  min-width: 86px;
+  text-align: center;
+}
+.broadcast-meta {
+  position: absolute;
+  top: 148px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 36px;
+  min-width: 560px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 0 26px;
+  background: var(--scl-bar);
+  font-size: 19px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.broadcast-live-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--scl-win); }
+
+/* Lower third: como el encabezado «Momentos del Partido». */
+.broadcast-lower {
+  position: absolute;
+  left: 70px;
+  right: 70px;
+  bottom: 92px;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  box-shadow: 0 18px 60px rgba(2, 10, 30, 0.5);
+}
+.broadcast-brand {
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+}
+.broadcast-brand-logo { width: 72px; height: 72px; object-fit: contain; }
+.broadcast-headline { min-width: 0; display: grid; grid-template-rows: auto auto; }
+.broadcast-headline strong {
+  display: block;
+  padding: 10px 28px 8px;
+  background: var(--scl-bar);
+  border-top: 4px solid var(--scl-lilac);
+  font-size: 48px;
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.broadcast-headline span {
+  display: block;
+  padding: 8px 28px;
+  background: var(--scl-slate);
+  color: #dfe3f7;
+  font-size: 24px;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.broadcast-ticker {
+  position: absolute;
+  left: 70px;
+  right: 70px;
+  bottom: 40px;
+  height: 42px;
+  display: flex;
+  align-items: stretch;
+  background: var(--scl-row);
+  overflow: hidden;
+}
+.broadcast-ticker-label {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: var(--scl-bar);
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.broadcast-ticker-text {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  color: var(--scl-ink);
+  font-size: 22px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Escenas de panel: previa, descanso, final, tabla, llaves, goleadores. */
+.broadcast-panel {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  width: 1180px;
+}
+.broadcast-versus {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr;
+  align-items: center;
+  gap: 28px;
+}
+.broadcast-versus-team {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 18px 22px;
+  background: var(--scl-row);
+}
+.broadcast-versus-team.away { flex-direction: row-reverse; text-align: right; }
+.broadcast-versus-team img { width: 96px; height: 96px; object-fit: contain; }
+.broadcast-versus-team strong {
+  min-width: 0;
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.broadcast-vs {
+  display: grid;
+  place-items: center;
+  height: 120px;
+  border-radius: 999px;
+  background: var(--scl-frame);
+  color: #ffffff;
+  font-size: 40px;
+  font-weight: 800;
+}
+.broadcast-final-score {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 104px;
+  line-height: 0.9;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--scl-navy);
+}
+
+/* Datos en vivo de las escenas (BroadcastMatchExtras.jsx): goleadores, predicción y MVP de la comunidad. */
+.broadcast-scorers {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 148px;
+}
+.broadcast-scorers-side { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; align-content: start; }
+.broadcast-scorers-side li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--scl-ink);
+}
+.broadcast-scorers-side.away li { flex-direction: row-reverse; }
+.broadcast-scorer-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+.broadcast-scorer-minute { flex-shrink: 0; color: var(--scl-muted); font-variant-numeric: tabular-nums; }
+.broadcast-community { margin-top: 24px; display: grid; gap: 8px; }
+.broadcast-community-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--scl-muted);
+}
+.broadcast-prediction-bar {
+  display: flex;
+  height: 54px;
+  overflow: hidden;
+  border-radius: 999px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+.broadcast-prediction-bar span { display: flex; align-items: center; padding: 0 22px; min-width: 0; }
+.broadcast-prediction-bar .home { background: var(--scl-bar); }
+.broadcast-prediction-bar .draw { justify-content: center; background: var(--scl-slate); }
+.broadcast-prediction-bar .away { justify-content: flex-end; background: var(--scl-periwinkle); }
+.broadcast-mvp {
+  padding: 14px 22px;
+  background: var(--scl-row);
+  border-left: 8px solid var(--scl-navy-2);
+}
+.broadcast-mvp strong {
+  font-size: 44px;
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--scl-navy);
+}
+.broadcast-rankings { display: grid; gap: 8px; }
+.broadcast-ranking-row {
+  height: 56px;
+  display: grid;
+  grid-template-columns: 60px 1fr 110px;
+  align-items: center;
+  gap: 16px;
+  background: var(--scl-row);
+  padding-right: 18px;
+}
+.broadcast-ranking-pos {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: var(--scl-bar);
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 800;
+}
+.broadcast-ranking-name { min-width: 0; display: flex; align-items: baseline; gap: 14px; text-transform: uppercase; }
+.broadcast-ranking-name strong {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.broadcast-ranking-name small { color: var(--scl-muted); font-size: 18px; font-weight: 700; white-space: nowrap; }
+.broadcast-ranking-value { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; color: var(--scl-navy); }
+.broadcast-ranking-value strong { font-size: 34px; line-height: 1; font-weight: 800; }
+.broadcast-ranking-value small { font-size: 16px; font-weight: 800; color: var(--scl-periwinkle); }
+.broadcast-empty {
+  padding: 44px;
+  color: var(--scl-muted);
+  text-align: center;
+  background: var(--scl-row);
+  text-transform: uppercase;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+/* ---- Popup con QR (OverlayPopup.jsx) ---- */
+.scl-popup {
+  position: absolute;
+  top: 200px;
+  width: 460px;
+  padding: 12px 22px 22px;
+  border-radius: 0 0 34px 34px;
+  animation: scl-popup-unfold 560ms cubic-bezier(.16, 1, .3, 1) backwards;
+}
+.scl-popup .scl-frame-stripe { height: 8px; }
+.scl-popup .scl-frame-ball { right: -120px; bottom: -140px; width: 340px; height: 340px; }
+.scl-popup[data-position=right] { right: 64px; }
+.scl-popup[data-position=left] { left: 64px; }
+.scl-popup[data-position=center] { left: 50%; margin-left: -230px; }
+.scl-popup .scl-frame-head { min-height: 58px; margin: 8px 0 14px; gap: 12px; }
+.scl-popup .scl-badge { width: 50px; height: 50px; }
+.scl-popup .scl-badge img { width: 40px; height: 40px; }
+.scl-popup .scl-frame-title { font-size: 34px; line-height: 1; white-space: normal; text-transform: none; }
+.scl-popup .scl-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 24px 22px;
+  border-radius: 0 0 24px 24px;
+  text-align: center;
+}
+.scl-popup-text { color: var(--scl-navy); font-size: 25px; line-height: 1.15; font-weight: 700; }
+.scl-popup-qr { position: relative; line-height: 0; }
+.scl-popup-url {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--scl-bar);
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+}
+
+/* ---- Tarjeta de la comunidad (CommunityCard.jsx): mismo marco y entrada que el popup, a la izquierda. Las barras
+   crecen con transform (no width) y la del primero se pinta con el degradé del marco. ---- */
+.scl-card { width: 520px; }
+.scl-card .scl-frame-kicker { font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.85; }
+.scl-card .scl-panel { align-items: stretch; text-align: left; gap: 12px; padding: 20px 24px 20px; }
+.scl-card-aside {
+  align-self: flex-start;
+  padding: 4px 12px;
+  background: var(--scl-navy);
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.scl-card-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.scl-card-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--scl-ink); }
+.scl-card-row-name {
+  min-width: 0;
+  font-size: 27px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+.scl-card-row-pct { flex-shrink: 0; font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--scl-muted); }
+.scl-card-row.is-leader .scl-card-row-name,
+.scl-card-row.is-leader .scl-card-row-pct { color: var(--scl-navy); font-weight: 800; }
+.scl-card-bar { height: 12px; margin-top: 4px; overflow: hidden; background: var(--scl-row); }
+.scl-card-bar span {
+  display: block;
+  height: 100%;
+  background: var(--scl-lilac);
+  transform-origin: left;
+  transition: transform 700ms cubic-bezier(.16, 1, .3, 1);
+}
+.scl-card-row.is-leader .scl-card-bar span { background: var(--scl-frame); }
+.scl-card-footer { font-size: 20px; font-weight: 700; color: var(--scl-muted); text-align: right; font-variant-numeric: tabular-nums; }
+.scl-card-rows li { animation: scl-popup-rise 380ms ease-out backwards; }
+.scl-card-rows li:nth-child(1) { animation-delay: 480ms; }
+.scl-card-rows li:nth-child(2) { animation-delay: 560ms; }
+.scl-card-rows li:nth-child(3) { animation-delay: 640ms; }
+.scl-card-rows li:nth-child(4) { animation-delay: 720ms; }
+.scl-card-bar span { animation: scl-card-grow 700ms 700ms cubic-bezier(.16, 1, .3, 1) backwards; }
+@keyframes scl-card-grow { from { transform: scaleX(0); } }
+
+/* Entrada en secuencia (~1,6 s): el marco se despliega desde la franja, entra el encabezado, el QR crece con un
+   pequeño rebote y lo recorre una línea de escaneo, y la barra del enlace se abre de izquierda a derecha. Después el
+   QR late suave para llamar la atención. Al vencer el tiempo, el marco se pliega hacia arriba (.is-leaving).
+   fill-mode backwards: al terminar no queda un clip-path que recorte la sombra. */
+.scl-popup .scl-frame-stripe { transform-origin: left; animation: scl-popup-stripe 420ms 120ms cubic-bezier(.2, .8, .2, 1) backwards; }
+.scl-popup .scl-frame-head { animation: scl-popup-slide 420ms 300ms cubic-bezier(.16, 1, .3, 1) backwards; }
+.scl-popup-text { animation: scl-popup-rise 380ms 480ms ease-out backwards; }
+.scl-popup-qr { animation: scl-popup-qr-pop 560ms 620ms cubic-bezier(.34, 1.56, .64, 1) backwards, scl-popup-qr-pulse 2.6s 2.4s ease-in-out infinite; }
+.scl-popup-scan {
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: 0;
+  height: 18px;
+  background: linear-gradient(180deg, transparent, rgba(0, 95, 189, 0.55), transparent);
+  opacity: 0;
+  animation: scl-popup-scan 900ms 1100ms ease-in-out both;
+  pointer-events: none;
+}
+.scl-popup-url { animation: scl-popup-wipe 460ms 950ms cubic-bezier(.16, 1, .3, 1) backwards; }
+.scl-popup.is-leaving { animation: scl-popup-fold 280ms cubic-bezier(.23, 1, .32, 1) forwards; }
+
+@keyframes scl-popup-unfold {
+  from { opacity: 0; transform: translateY(24px); clip-path: inset(0 0 100% 0); }
+  to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
+}
+@keyframes scl-popup-fold {
+  from { opacity: 1; clip-path: inset(0 0 0 0); }
+  to { opacity: 0; transform: translateY(-16px); clip-path: inset(0 0 100% 0); }
+}
+@keyframes scl-popup-stripe { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes scl-popup-slide { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes scl-popup-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes scl-popup-qr-pop { from { opacity: 0; transform: scale(0.55) rotate(-4deg); } to { opacity: 1; transform: none; } }
+@keyframes scl-popup-qr-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(122, 123, 183, 0); }
+  50% { box-shadow: 0 0 0 10px rgba(122, 123, 183, 0.35); }
+}
+@keyframes scl-popup-scan {
+  0% { opacity: 0; transform: translateY(0); }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(232px); }
+}
+@keyframes scl-popup-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .scl-popup, .scl-popup *, .scl-popup.is-leaving { animation: none !important; }
+  .scl-popup-scan { display: none; }
+  .scl-card-bar span { transition: none; }
+}
+
+/* ---- Tabla de la liga (BroadcastLeagueTable.jsx, dentro del ObsStage de 1920×1080) ---- */
+.scl-stage { width: 1920px; height: 1080px; display: flex; align-items: center; justify-content: center; }
+.scl-table-frame { width: 1480px; }
+.scl-table-frame .scl-panel { padding: 22px 28px 26px; }
+.scl-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-variant-numeric: tabular-nums; }
+.scl-table th {
+  padding: 0 10px 2px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--scl-periwinkle);
+  text-align: center;
+}
+.scl-table td {
+  height: 52px;
+  padding: 0 10px;
+  background: var(--scl-row);
+  color: var(--scl-ink);
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+}
+.scl-table .scl-table-pos { width: 60px; min-width: 60px; padding: 0; }
+.scl-table td.scl-table-pos { background: var(--scl-bar); color: #ffffff; font-weight: 800; }
+.scl-table .scl-table-club { width: 100%; text-align: left; padding: 0 18px; }
+.scl-table th:not(.scl-table-club):not(.scl-table-pos):not(.scl-table-pts) { width: 74px; min-width: 74px; }
+.scl-table-team { display: flex; align-items: center; gap: 16px; max-width: 600px; }
+.scl-table-team img { width: 40px; height: 40px; object-fit: contain; flex: none; }
+.scl-table-team span {
+  min-width: 0;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scl-table .scl-table-pts { width: 96px; min-width: 96px; }
+.scl-table td.scl-table-pts { background: var(--scl-slate); color: #ffffff; font-size: 32px; font-weight: 800; }

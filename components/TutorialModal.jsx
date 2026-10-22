@@ -216,7 +216,7 @@ export const TutorialModal = memo(function TutorialModal({ isVisible, onClose, b
               key={item.targetSelector}
               type="button"
               onClick={() => setStep(index)}
-              className={`h-2 rounded-full transition-all ${index === step ? 'w-7 bg-accent' : 'w-2 bg-white/15 hover:bg-white/30'}`}
+              className={`h-2 rounded-full transition-[width,background-color] duration-200 ease-out ${index === step ? 'w-7 bg-accent' : 'w-2 bg-white/15 hover:bg-white/30'}`}
               aria-label={`Ir al paso ${index + 1}`}
             />
           ))}

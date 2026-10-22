@@ -1,5 +1,5 @@
-import React, { useState, memo } from 'react';
-import { Settings, Users, Trophy, FileText, MessageSquarePlus } from 'lucide-react';
+import React, { useState, memo, lazy, Suspense } from 'react';
+import { Settings, Users, Trophy, FileText, MessageSquarePlus, Globe } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
@@ -23,10 +23,14 @@ export {
   TournamentBroadcastAdminSection,
 };
 
+// Texts of the public league site; only loaded when that tab opens.
+const LeagueContentAdminSection = lazy(() => import('./admin/LeagueContentAdminSection.jsx'));
+
 const ADMIN_TABS = [
   { id: 'general', label: 'Configuración', icon: Settings },
   { id: 'equipos', label: 'Equipos y usuarios', icon: Users },
   { id: 'torneo', label: 'Torneo y transmisión', icon: Trophy },
+  { id: 'web', label: 'Web pública', icon: Globe },
   { id: 'templates', label: 'Plantillas', icon: FileText },
   { id: 'suggestions', label: 'Buzón', icon: MessageSquarePlus },
 ];
@@ -60,8 +64,14 @@ export const AdminModal = memo(function AdminModal({
           broadcastOverlayData={props.broadcastOverlayData}
           onUpdateBroadcastOverlay={props.onUpdateBroadcastOverlay}
           onOpenTournamentModal={onOpenTournamentModal}
+          onUpdateTournament={onUpdateTournament}
           showStatusMessage={props.showStatusMessage}
         />
+      )}
+      {activeTab === 'web' && (
+        <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>
+          <LeagueContentAdminSection allTeams={props.allTeams} showStatusMessage={props.showStatusMessage} />
+        </Suspense>
       )}
       {activeTab === 'templates' && <TemplateAdminSection {...props} />}
       {activeTab === 'suggestions' && <SuggestionsAdminSection {...props} />}
@@ -73,7 +83,7 @@ export const AdminModal = memo(function AdminModal({
   if (isPage) {
     return (
       <Page className="pb-16">
-        <PageHeader eyebrow="Gestión" title="Administración" description="Configuración de la liga, equipos y usuarios, torneo y transmisión." />
+        <PageHeader eyebrow="Gestión" title="Administración" description="Configuración de la liga, equipos y usuarios, torneo y transmisión, y los textos de la web pública." />
         {tabs}
         <div>{section}</div>
       </Page>

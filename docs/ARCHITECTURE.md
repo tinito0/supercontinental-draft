@@ -21,6 +21,20 @@ dependency graph current. The binary formats and the PES engine are described in
   - **Missing file types.** `.sql` files (tree-sitter SQL not installed), `firestore.rules`, CSS and
     `config.txt`/JSON data are not in the graph.
 
+## Two sites
+
+`main.jsx` reads the URL before rendering and mounts one of two apps from the same `index.html`
+(`utils/siteRoutes.js`, tested in `tests/siteRoutes.test.js`):
+
+| URL | App | Notes |
+| --- | --- | --- |
+| `/draft…` (also `/DRAFT…`) | `app.jsx` in `<BrowserRouter basename="/draft">` | the draft; its own title and PWA manifest |
+| everything else | `screens/league/LeagueSite.jsx` | public league site; never links to the draft |
+
+Each app is its own lazy chunk, so league visitors do not download the draft. Old draft URLs keep working:
+`firebase.json` redirects paths (`/team/…`, `/overlay`, `/login`, …) and `legacyDraftRedirect()` handles query
+modes the hosting cannot match (`/?mode=obs`, `/torneo?mode=…`).
+
 ## Layers
 
 | Layer | Folders | Depends on |

@@ -1,7 +1,7 @@
 {
   "name": "Supercontinental Draft",
   "short_name": "SCL Draft",
-  "start_url": "/",
+  "start_url": "/draft/",
   "display": "standalone",
   "background_color": "#080b14",
   "theme_color": "#080b14",

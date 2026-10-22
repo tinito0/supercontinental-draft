@@ -6,6 +6,9 @@ import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { Field } from '../ui/Field.jsx';
 import { Alert } from '../ui/Alert.jsx';
 import { BroadcastMatchPicker, teamLogoFor } from './BroadcastMatchPicker.jsx';
+import { OverlayPopupAdmin } from './OverlayPopupAdmin.jsx';
+import { CupPollAdmin } from './CupPollAdmin.jsx';
+import { OBS_SCENES, OverlaySceneControl } from './OverlaySceneControl.jsx';
 import {
   EMPTY_OVERLAY_MATCH,
   buildOverlayPatchForMatch,
@@ -18,17 +21,7 @@ import {
 
 const OVERLAY_FIELDS = Object.keys(DEFAULT_BROADCAST_OVERLAY);
 
-const SCENES = [
-  { id: 'live', label: 'En vivo' },
-  { id: 'previa', label: 'Previa' },
-  { id: 'descanso', label: 'Descanso' },
-  { id: 'final', label: 'Final' },
-  { id: 'tabla', label: 'Tabla' },
-  { id: 'bracket', label: 'Copa de Oro' },
-  { id: 'repechaje', label: 'Copa de Plata' },
-  { id: 'goleadores', label: 'Goleadores' },
-];
-const SCENE_LABEL = Object.fromEntries(SCENES.map(scene => [scene.id, scene.label]));
+const SCENE_LABEL = Object.fromEntries(OBS_SCENES.map(scene => [scene.id, scene.label]));
 
 function pickOverlayFields(data) {
   const merged = { ...DEFAULT_BROADCAST_OVERLAY, ...(data || {}) };
@@ -166,6 +159,12 @@ export const OverlayAdminSection = memo(function OverlayAdminSection({
 
   return (
     <div className="space-y-6">
+      <OverlaySceneControl saved={saved} overlay={broadcastOverlayData} onPersist={persist} />
+
+      <OverlayPopupAdmin savedPopup={broadcastOverlayData?.popup} onPersist={persist} />
+
+      <CupPollAdmin tournamentData={tournamentData} showStatusMessage={showStatusMessage} />
+
       {/* AL AIRE */}
       <section className="panel p-5 space-y-4" aria-labelledby="overlay-onair-title">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -246,12 +245,7 @@ export const OverlayAdminSection = memo(function OverlayAdminSection({
           {isDirty && <span className="text-xs font-semibold text-warning-soft" role="status">Cambios sin guardar ({dirtyFields.length})</span>}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Field label="Escena">
-            <select value={form.scene} onChange={event => updateField('scene', event.target.value)} className="select">
-              {SCENES.map(scene => <option key={scene.id} value={scene.id}>{scene.label}</option>)}
-            </select>
-          </Field>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Local">
             <select value={form.homeTeamId} onChange={event => updateField('homeTeamId', event.target.value)} className="select">
               <option value="">{form.homeTeamName || 'Sin club registrado'}</option>
@@ -280,22 +274,6 @@ export const OverlayAdminSection = memo(function OverlayAdminSection({
           <OverlayInput label="Subtítulo" field="subheadline" value={form.subheadline} onChange={updateField} />
         </div>
         <OverlayInput label="Ticker" field="ticker" value={form.ticker} onChange={updateField} />
-
-        <fieldset>
-          <legend className="field-label">Visible en OBS</legend>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {[
-              ['showScoreboard', 'Marcador'],
-              ['showLowerThird', 'Lower third'],
-              ['showTicker', 'Ticker'],
-            ].map(([field, label]) => (
-              <label key={field} className={`flex items-center justify-between min-h-11 rounded-lg border px-4 cursor-pointer transition-colors ${form[field] ? 'bg-accent-deep/60 border-accent/60 text-ink' : 'bg-raised border-line/[0.16] text-ink-2 hover:border-line/30'}`}>
-                <span className="text-sm font-semibold">{label}</span>
-                <input type="checkbox" aria-label={`Mostrar ${label.toLowerCase()} en OBS`} checked={Boolean(form[field])} onChange={event => updateField(field, event.target.checked)} className="h-4 w-4 accent-[rgb(var(--c-accent))]" />
-              </label>
-            ))}
-          </div>
-        </fieldset>
 
         <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-between pt-4 border-t border-line/10">
           <button type="button" className="btn btn-danger" onClick={handleReset} disabled={isSaving}>

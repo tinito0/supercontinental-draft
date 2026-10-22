@@ -88,3 +88,6 @@ graphify-out/graph.html
 graphify-out/.graphify_labels.pending.json
 # Old credentials file (no longer used; also untracked)
 scripts/credenciales.txt
+
+# Python bytecode
+__pycache__/

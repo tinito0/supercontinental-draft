@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import App from './app.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
+import { DRAFT_BASE, isDraftPath, legacyDraftRedirect, normalizeDraftPath } from './utils/siteRoutes.js';
 // Self-hosted fonts (works offline in the PWA; no third-party font requests).
 import '@fontsource/barlow/400.css';
 import '@fontsource/barlow/500.css';
@@ -33,12 +33,46 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload();
 });
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ErrorBoundary>
-  </React.StrictMode>
-);
+// Two apps share this page (utils/siteRoutes.js): the draft under /draft (typed by hand, also as /DRAFT) and the
+// public league site everywhere else. Each one is its own chunk, so a league visitor never downloads the draft.
+const App = lazy(() => import('./app.jsx'));
+const LeagueSite = lazy(() => import('./screens/league/LeagueSite.jsx'));
+
+const { pathname, search, hash } = window.location;
+const legacyTarget = legacyDraftRedirect({ pathname, search });
+
+if (legacyTarget) {
+  // An OBS source or link from before the draft moved: the hosting cannot redirect on a query string.
+  window.location.replace(legacyTarget + hash);
+} else {
+  const isDraft = isDraftPath(pathname);
+  if (isDraft) {
+    if (normalizeDraftPath(pathname) !== pathname) {
+      window.history.replaceState(window.history.state, '', normalizeDraftPath(pathname) + search + hash);
+    }
+    // index.html describes the public league site; the draft has its own name and is the installable PWA.
+    document.title = 'SCL Draft';
+    const manifest = document.createElement('link');
+    manifest.rel = 'manifest';
+    manifest.href = '/manifest.json';
+    document.head.appendChild(manifest);
+  }
+
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <Suspense fallback={null}>
+          {isDraft ? (
+            <BrowserRouter basename={DRAFT_BASE}>
+              <App />
+            </BrowserRouter>
+          ) : (
+            <BrowserRouter>
+              <LeagueSite />
+            </BrowserRouter>
+          )}
+        </Suspense>
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+}

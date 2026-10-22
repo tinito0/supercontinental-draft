@@ -11,6 +11,8 @@ import {
   chooseBroadcastLayout,
   connectorPaths,
   getMatchWinner,
+  isTiedScore,
+  shootoutLabel,
   isMatchCompleted,
   slotCenter,
 } from '../utils/bracketModel.js';
@@ -55,6 +57,15 @@ describe('getMatchWinner / isMatchCompleted', () => {
     expect(getMatchWinner(null)).toBeNull();
     expect(isMatchCompleted(m('A', 'B', 0, 0))).toBe(true);
     expect(isMatchCompleted(m('A', 'B', '', 0))).toBe(false);
+  });
+
+  it('a tie is decided by the shootout when it is loaded', () => {
+    expect(getMatchWinner({ ...m('A', 'B', 1, 1), penaltiesA: 3, penaltiesB: 4 })).toBe('B');
+    expect(getMatchWinner({ ...m('A', 'B', 1, 1), penaltiesA: '', penaltiesB: '' })).toBeNull();
+    expect(shootoutLabel({ ...m('A', 'B', 1, 1), penaltiesA: 4, penaltiesB: 3 })).toBe('4-3 pen.');
+    expect(shootoutLabel({ ...m('A', 'B', 2, 1), penaltiesA: 4, penaltiesB: 3 })).toBe('');
+    expect(isTiedScore(m('A', 'B', '2', 2))).toBe(true);
+    expect(isTiedScore(m('A', 'B', '', ''))).toBe(false);
   });
 });
 

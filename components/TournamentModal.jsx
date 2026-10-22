@@ -23,9 +23,13 @@ import {
   StatsView,
   buildAutomaticTournamentData,
   buildAutomaticTournamentReport,
+  rankLeague,
+  suggestSwissRound,
 } from './tournament/index.js';
 import { Alert } from './ui/Alert.jsx';
 import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
+import { BroadcastLeagueTable } from './broadcast/BroadcastLeagueTable.jsx';
+import { draftUrl } from '../utils/siteRoutes.js';
 
 export {
   TournamentTeamsContext,
@@ -45,13 +49,13 @@ const OBS_CONTENT_SCALE = { groups: 1, stats: 0.82, matches: 0.78 };
 const OBS_STAGE = { width: 1920, height: 1080 };
 
 /** Lienzo de 1920×1080 ajustado a la ventana real (antes era fijo y se recortaba en fuentes de 1280×720). */
-function ObsStage({ scale = 1, children }) {
+function ObsStage({ scale = 1, transparent = false, children }) {
   const [ref, { width, height }] = useElementSize();
   const fit = width && height ? Math.min(width / OBS_STAGE.width, height / OBS_STAGE.height) : 1;
   return (
     // Sin tournamentShellClass: trae `relative`, que pisa a `fixed`, deja el contenedor con alto 0 y el lienzo
     // centrado en ese alto nulo (media tabla fuera de pantalla y sin ajuste de escala).
-    <div ref={ref} className="fixed inset-0 overflow-hidden bg-canvas text-ink font-sans">
+    <div ref={ref} className={`fixed inset-0 overflow-hidden ${transparent ? 'bg-transparent' : 'bg-canvas'} text-ink font-sans`}>
       <div
         className="absolute left-1/2 top-1/2 flex flex-col items-center justify-center"
         style={{
@@ -84,6 +88,8 @@ export const TournamentModal = memo(function TournamentModal({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  // Avisos del último guardado (empates sin tanda, empates en la tabla): no bloquean.
+  const [saveWarnings, setSaveWarnings] = useState([]);
   const [localData, setLocalData] = useState(null);
   const editBaselineRef = useRef('');
   // Las rutas de OBS lo indican con isBroadcast; ?mode=obs queda como respaldo para enlaces viejos.
@@ -174,21 +180,10 @@ export const TournamentModal = memo(function TournamentModal({
     return found ? `/fotos_jugadores/${found.Id || found.id}.webp` : null;
   }, [allPlayers]);
 
+  // Desempates del reglamento (tournamentEngine.rankLeague); los empates que nada resuelve se avisan.
   const sortLeague = (data) => {
-    const sorted = { ...data };
-    sorted.league = [...(sorted.league || [])].slice(0, 12);
-    sorted.league.sort((a, b) => {
-      if (a.name === 'Club...') return 1;
-      if (b.name === 'Club...') return -1;
-      const ptsA = Number(a.pts) || 0;
-      const ptsB = Number(b.pts) || 0;
-      if (ptsB !== ptsA) return ptsB - ptsA;
-      const dgA = (Number(a.gf) || 0) - (Number(a.gc) || 0);
-      const dgB = (Number(b.gf) || 0) - (Number(b.gc) || 0);
-      if (dgB !== dgA) return dgB - dgA;
-      return (Number(b.gf) || 0) - (Number(a.gf) || 0);
-    });
-    return sorted;
+    const { league, unresolvedTies } = rankLeague((data.league || []).slice(0, 12));
+    return { data: { ...data, league }, unresolvedTies };
   };
 
   const clearLeagueSlot = useCallback((index) => {
@@ -209,7 +204,7 @@ export const TournamentModal = memo(function TournamentModal({
   // Se sale del modo edición solo si el guardado terminó bien: si falla, los cambios siguen en pantalla.
   const handleSave = async () => {
     if (isSaving) return;
-    const { data: computed, overflow } = buildAutomaticTournamentReport(localData);
+    const { data: computed, overflow, issues } = buildAutomaticTournamentReport(localData);
     // La liga es de 12: un club de más casi siempre es un partido con un nombre que no está en la tabla.
     // Antes se descartaba sin aviso al guardar (y con él, sus resultados en la tabla).
     if (overflow.length > 0) {
@@ -217,7 +212,11 @@ export const TournamentModal = memo(function TournamentModal({
       return;
     }
     setSaveError(null);
-    const sortedData = sortLeague(computed);
+    const { data: sortedData, unresolvedTies } = sortLeague(computed);
+    setSaveWarnings([
+      ...issues.map(issue => `${issue.label}: ${issue.reason}`),
+      ...unresolvedTies.map(group => `Empate en la tabla sin desempate posible: ${group.join(', ')}. Decidí el orden (el reglamento no define el último criterio).`),
+    ]);
     setLocalData(sortedData);
     setIsSaving(true);
     try {
@@ -315,6 +314,25 @@ export const TournamentModal = memo(function TournamentModal({
     }));
   }, []);
 
+  // Cruces suizos sugeridos (desde la fecha 2): se agregan como programados y el admin los puede cambiar antes de guardar.
+  const suggestNextRound = useCallback(() => {
+    const suggestion = suggestSwissRound(localData);
+    if (!suggestion.ok) {
+      setSaveWarnings([suggestion.reason]);
+      return;
+    }
+    const list = suggestion.pairs.map(([home, away]) => `${home} vs ${away}`).join('\n');
+    if (!window.confirm(`${suggestion.round} sugerida:\n${list}\n\n¿Agregar estos partidos? Se guardan al presionar Guardar.`)) return;
+    setSaveWarnings([]);
+    setLocalData(prev => ({
+      ...prev,
+      matches: [...(prev.matches || []), ...suggestion.pairs.map(([homeTeam, awayTeam]) => ({
+        id: crypto.randomUUID(), round: suggestion.round, homeTeam, awayTeam, homeScore: '', awayScore: '', date: '', mvp: '',
+        homeGoals: '', awayGoals: '', homeAssists: '', awayAssists: '', homeConfirmed: false, awayConfirmed: false, status: 'scheduled',
+      }))],
+    }));
+  }, [localData]);
+
   const removeTournamentMatch = useCallback((matchId) => {
     if (!window.confirm('¿Eliminar este partido? Se aplicará al presionar Guardar.')) return;
     setLocalData(prev => ({ ...prev, matches: (prev.matches || []).filter(match => match.id !== matchId) }));
@@ -322,7 +340,7 @@ export const TournamentModal = memo(function TournamentModal({
 
   const [copiedObs, setCopiedObs] = useState(null);
   const copyObsUrl = async (label, query) => {
-    const url = `${window.location.origin}/torneo?mode=obs&${query}`;
+    const url = draftUrl(`/torneo?mode=obs&${query}`);
     try {
       await navigator.clipboard.writeText(url);
       setCopiedObs({ label, ok: true });
@@ -367,6 +385,7 @@ export const TournamentModal = memo(function TournamentModal({
           isEditing={isEditing}
           onUpdate={updateTournamentMatch}
           onAdd={addTournamentMatch}
+          onSuggestRound={suggestNextRound}
           onRemove={removeTournamentMatch}
           getTeamLogo={getTeamLogo}
           isObsMode={isObsMode}
@@ -468,6 +487,11 @@ export const TournamentModal = memo(function TournamentModal({
                 </div>
               </div>
               {saveError && isEditing && <Alert tone="danger">{saveError}</Alert>}
+              {saveWarnings.length > 0 && (
+                <Alert tone="warning" title="Revisá la tabla">
+                  <ul className="list-disc space-y-0.5 pl-4">{saveWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
+                </Alert>
+              )}
               {copiedObs && (
                 <p role="status" className={`text-xs ${copiedObs.ok ? 'text-success-soft' : 'text-warning-soft'}`}>
                   {copiedObs.ok ? `Enlace OBS de ${copiedObs.label} copiado.` : <>No se pudo copiar. Enlace: <code className="text-ink-2 break-all">{copiedObs.url}</code></>}
@@ -500,6 +524,13 @@ export const TournamentModal = memo(function TournamentModal({
           bracket={localData.bracket}
           getTeamLogo={getTeamLogo}
         />
+      );
+    }
+    if (activeTab === 'groups') {
+      return (
+        <ObsStage transparent>
+          <BroadcastLeagueTable league={localData.league} getTeamLogo={getTeamLogo} />
+        </ObsStage>
       );
     }
     return (

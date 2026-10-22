@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { DRAFT_BASE, isDraftPath } from '../utils/siteRoutes.js';
 
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -28,7 +29,8 @@ export class ErrorBoundary extends Component {
   };
 
   handleGoHome = () => {
-    window.location.href = '/';
+    // Home of whichever app failed: the draft lives under /draft, the league site at the root.
+    window.location.href = isDraftPath(window.location.pathname) ? `${DRAFT_BASE}/` : '/';
   };
 
   render() {

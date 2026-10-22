@@ -4,6 +4,7 @@ import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { TournamentActionButton, TournamentPanel, TournamentSectionTitle } from '../TournamentUI.jsx';
 import { TeamSelect } from './TournamentTeamsContext.jsx';
 import { hasScore } from '../../utils/bracketModel.js';
+import { leagueMatchOutcome } from '../../utils/competitionRules.js';
 
 // El motor (tournamentEngine.js) lee "Nombre" o "Nombre x2" separados por coma; un minuto ("23'") quedaría
 // como parte del nombre y partiría al goleador en dos filas.
@@ -21,6 +22,7 @@ export const MatchCenter = memo(function MatchCenter({
   isEditing,
   onUpdate,
   onAdd,
+  onSuggestRound,
   onRemove,
   getTeamLogo,
   isObsMode = false,
@@ -94,9 +96,16 @@ export const MatchCenter = memo(function MatchCenter({
         </div>
 
         {isEditing && (
-          <TournamentActionButton tone="green" onClick={onAdd}>
-            + Agregar partido
-          </TournamentActionButton>
+          <div className="flex flex-wrap gap-2">
+            {onSuggestRound && (
+              <TournamentActionButton tone="blue" onClick={onSuggestRound}>
+                Sugerir próxima fecha
+              </TournamentActionButton>
+            )}
+            <TournamentActionButton tone="green" onClick={onAdd}>
+              + Agregar partido
+            </TournamentActionButton>
+          </div>
         )}
       </div>
       )}
@@ -130,15 +139,17 @@ export const MatchCenter = memo(function MatchCenter({
                   const isCompleted = match.status === 'completed';
                   // Finalizado sin los dos marcadores: el motor no lo cuenta en la tabla, avisarlo al editar.
                   const isMissingScore = isCompleted && (!hasScore(match.homeScore) || !hasScore(match.awayScore));
-                  const homeScore = Number(match.homeScore) || 0;
-                  const awayScore = Number(match.awayScore) || 0;
-                  const homeWon = isCompleted && homeScore > awayScore;
-                  const awayWon = isCompleted && awayScore > homeScore;
+                  // Reglamento 2/1/0: un empate se define por penales (competitionRules.leagueMatchOutcome).
+                  const outcome = leagueMatchOutcome(match);
+                  const homeWon = isCompleted && outcome.ok && outcome.winner === 'home';
+                  const awayWon = isCompleted && outcome.ok && outcome.winner === 'away';
+                  const isDraw = hasScore(match.homeScore) && hasScore(match.awayScore) && Number(match.homeScore) === Number(match.awayScore);
+                  const isMissingShootout = isCompleted && isDraw && !outcome.ok;
 
                   return (
                     <article
                       key={match.id}
-                      className="rounded-xl border border-line/[0.12] bg-surface p-3.5 shadow-md transition-all hover:border-white/[0.18]"
+                      className="rounded-xl border border-line/[0.12] bg-surface p-3.5 shadow-md transition-colors hover:border-white/[0.18]"
                     >
                       {/* Top status */}
                       <div className="mb-2.5 flex items-center justify-between gap-2 text-xs border-b border-line/[0.08] pb-2">
@@ -265,6 +276,31 @@ export const MatchCenter = memo(function MatchCenter({
                         </div>
                       </div>
 
+                      {!isEditing && isCompleted && outcome.ok && outcome.decidedBy === 'shootout' && (
+                        <p className="text-right text-[11px] font-semibold text-ink-3 tabular-nums">
+                          Penales {match.homePenalties}-{match.awayPenalties}
+                        </p>
+                      )}
+                      {isEditing && isDraw && (
+                        <div className="mt-1 flex items-center justify-between gap-2 rounded-lg bg-raised px-2.5 py-1.5 text-xs text-ink-3">
+                          <span>Empate: penales</span>
+                          <span className="flex items-center gap-1.5">
+                            {[['homePenalties', match.homeTeam || 'local'], ['awayPenalties', match.awayTeam || 'visitante']].map(([field, team]) => (
+                              <input
+                                key={field}
+                                type="number"
+                                min="0"
+                                inputMode="numeric"
+                                value={match[field] ?? ''}
+                                aria-label={`Penales de ${team}`}
+                                onChange={e => onUpdate(match.id, field, e.target.value)}
+                                className="w-10 h-7 rounded-lg border border-white/20 bg-black/50 px-1 text-center text-sm font-bold text-ink outline-none"
+                              />
+                            ))}
+                          </span>
+                        </div>
+                      )}
+
                       {/* Goalscorers & Meta */}
                       <div className="mt-2.5 pt-2 border-t border-line/[0.08] text-[11px] text-ink-3 flex flex-wrap items-center justify-between gap-2">
                         {match.homeGoals || match.awayGoals ? (
@@ -292,6 +328,11 @@ export const MatchCenter = memo(function MatchCenter({
                       </div>
 
                       {/* Formulario de Edición */}
+                      {isEditing && isMissingShootout && (
+                        <p role="alert" className="mt-2 text-[11px] text-warning-soft">
+                          Empate sin la tanda: suma el partido y los goles, pero no los puntos, hasta cargar los penales.
+                        </p>
+                      )}
                       {isEditing && isMissingScore && (
                         <p role="alert" className="mt-2 text-[11px] text-warning-soft">
                           Marcado como finalizado sin marcador completo: no suma a la tabla hasta cargar los dos resultados.

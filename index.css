@@ -238,7 +238,7 @@
   .btn {
     @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-lg text-sm font-semibold whitespace-nowrap select-none
       transition-[background-color,border-color,color,transform,box-shadow] duration-150
-      disabled:opacity-45 disabled:cursor-not-allowed active:translate-y-px;
+      disabled:opacity-45 disabled:cursor-not-allowed active:scale-[0.97];
   }
   .btn-sm { @apply min-h-8 px-3 text-xs rounded-md gap-1.5; }
   .btn-lg { @apply min-h-12 px-5 text-base; }
@@ -393,14 +393,14 @@
 /* Salida de BaseModal (components/ui/BaseModal.jsx): el fondo se funde; la hoja baja 8 px en celular y el
    diálogo se achica apenas en pantallas grandes. Más corta que la entrada. */
 .modal-backdrop[data-closing] {
-  animation: app-fade-out var(--dur-fast) var(--ease-in) both;
-  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-in) both;
+  animation: app-fade-out var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
   pointer-events: none;
 }
 .modal-backdrop[data-closing] .modal-panel {
   --exit-ty: 8px;
-  animation: app-exit var(--dur-fast) var(--ease-in) both;
-  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-in) both;
+  animation: app-exit var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
 }
 @media (min-width: 640px) {
   .modal-backdrop[data-closing] .modal-panel { --exit-ty: 0; --exit-scale: 0.98; }
@@ -428,8 +428,8 @@
 }
 .toast[data-closing] {
   --exit-ty: 4px;
-  animation: app-exit var(--dur-fast) var(--ease-in) both;
-  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-in) both;
+  animation: app-exit var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
   pointer-events: none;
 }
 

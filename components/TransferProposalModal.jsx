@@ -176,7 +176,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                   step="0.1"
                   value={offerAmount}
                   onChange={(e) => setOfferAmount(e.target.value)}
-                  className="w-full bg-surface border border-line/20 rounded-xl pl-7 pr-10 py-2.5 text-ink font-semibold text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
+                  className="w-full bg-surface border border-line/20 rounded-xl pl-7 pr-10 py-2.5 text-ink font-semibold text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-[border-color,box-shadow]"
                   placeholder={`Ej. ${(player.Precio).toFixed(2)}`}
                   required
                 />
@@ -201,7 +201,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                 id="offer-message-input"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="w-full bg-surface border border-line/20 rounded-xl px-3.5 py-2.5 text-ink text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all resize-none"
+                className="w-full bg-surface border border-line/20 rounded-xl px-3.5 py-2.5 text-ink text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-[border-color,box-shadow] resize-none"
                 placeholder="Escribe un mensaje para convencer al otro equipo..."
                 rows="3"
               ></textarea>

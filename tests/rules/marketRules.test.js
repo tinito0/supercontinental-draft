@@ -5,7 +5,7 @@ import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, deleteDoc, writeBatch, collection, serverTimestamp, addDoc, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, collection, serverTimestamp, addDoc, getDocs, query, where, or } from 'firebase/firestore';
 import { DEFAULT_BUDGET, TRANSFER_FEE_RATE } from '../../utils/constants.js';
 import { OFFER_TTL_MS } from '../../supabase/functions/_shared/offerExpiry.js';
 
@@ -298,5 +298,69 @@ describe('transfer feed (written by the market Edge Function)', () => {
   it('nobody but the admin deletes a transfer between two teams', async () => {
     await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), `${base}/public/data/transfers/t1`), { teamId: 'buyer', fromTeamId: 'seller', type: 'transfer' }));
     await assertFails(deleteDoc(doc(as('buyer'), `${base}/public/data/transfers/t1`)));
+  });
+});
+
+// docs/SECURITY_AUDIT.md S1: any new Google account gets a pending team, so "signed in" is not "manager".
+describe('who reads negotiations and the manager chat', () => {
+  const offers = db => collection(db, `${base}/public/data/offers`);
+  const mine = (db, uid) => query(offers(db), or(where('targetTeamId', '==', uid), where('senderId', '==', uid)));
+  const messages = db => collection(db, `${base}/public/data/offers/o1/messages`);
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async ctx => {
+      const db = ctx.firestore();
+      await setDoc(team(db, 'stranger'), { teamName: 'x', userId: 'stranger', budget: BUDGET, inWhitelist: false, approved: false });
+      await setDoc(doc(db, `${base}/public/data/offers/o1/messages/m1`), { senderId: 'buyer', text: 'hola' });
+    });
+  });
+
+  it('each club reads only its own offers, with the query the app uses', async () => {
+    await assertSucceeds(getDocs(mine(as('buyer'), 'buyer')));
+    await assertSucceeds(getDocs(mine(as('seller'), 'seller')));
+    await assertSucceeds(getDoc(offer(as('buyer'))));
+    await assertFails(getDoc(offer(as('mallory'))));
+    await assertFails(getDocs(offers(as('mallory'))));
+    await assertFails(getDocs(offers(as('stranger'))));
+  });
+
+  it('only the two clubs read the negotiation chat', async () => {
+    await assertSucceeds(getDocs(messages(as('seller'))));
+    await assertFails(getDocs(messages(as('mallory'))));
+    await assertFails(getDocs(messages(env.unauthenticatedContext().firestore())));
+  });
+
+  it('a signed-in account waiting for approval cannot read the manager chat', async () => {
+    await assertFails(getDocs(collection(as('stranger'), `${base}/public/data/manager_chat`)));
+    await assertFails(getDocs(collection(as('nobody'), `${base}/public/data/manager_chat`)));
+  });
+
+  it('nobody deletes someone else\'s presence', async () => {
+    await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), `${base}/presence/seller`), { online: true }));
+    await assertFails(deleteDoc(doc(as('mallory'), `${base}/presence/seller`)));
+    await assertSucceeds(deleteDoc(doc(as('seller'), `${base}/presence/seller`)));
+  });
+});
+
+describe('shared formations (auditoría S7)', () => {
+  const formations = db => collection(db, `${base}/public/data/shared_formations`);
+  const valid = uid => ({
+    teamName: 'Los Pibes', logoUrl: '/logo.webp', formationKey: '4-3-3', formationName: '4-3-3',
+    formationStates: { formation: '4-3-3', fluid: false, positions: {}, roles: {}, presets: {} },
+    slots: { 0: { playerId: '1', name: 'X', pos: 'PT', ovr: 80, dorsal: '1' } },
+    bench: [{ playerId: '2', name: 'Y', pos: 'DFC', ovr: 75, dorsal: '', available: true }],
+    isPublic: true, createdAt: new Date().toISOString(), createdBy: uid,
+  });
+
+  it('a signed-in manager shares the formation the app builds', async () => {
+    await assertSucceeds(addDoc(formations(as('buyer')), valid('buyer')));
+  });
+
+  it('refuses extra fields, oversized text and oversized lists', async () => {
+    const db = as('buyer');
+    await assertFails(addDoc(formations(db), { ...valid('buyer'), blob: 'x' }));
+    await assertFails(addDoc(formations(db), { ...valid('buyer'), teamName: 'x'.repeat(81) }));
+    await assertFails(addDoc(formations(db), { ...valid('buyer'), bench: Array.from({ length: 61 }, () => ({})) }));
+    await assertFails(addDoc(formations(db), { ...valid('buyer'), createdBy: 'someone-else' }));
   });
 });

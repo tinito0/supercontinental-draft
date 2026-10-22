@@ -53,7 +53,7 @@ export const TransferPlayerCard = memo(function TransferPlayerCard({
 
   return (
     <article
-      className={`relative overflow-hidden rounded-xl border border-line/[0.12] bg-surface shadow-sm transition-all hover:shadow-md ${
+      className={`relative overflow-hidden rounded-xl border border-line/[0.12] bg-surface shadow-sm transition-shadow hover:shadow-md ${
         compact ? 'max-w-none' : 'mx-auto max-w-[340px]'
       }`}
     >

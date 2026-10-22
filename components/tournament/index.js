@@ -5,4 +5,4 @@ export { LeagueTableView } from './LeagueTableView.jsx';
 export { BracketView } from './BracketView.jsx';
 export { RepechajeView } from './RepechajeView.jsx';
 export { StatsView } from './StatsView.jsx';
-export { buildAutomaticTournamentData, buildAutomaticTournamentReport, getMatchesWithNewResults } from './tournamentEngine.js';
+export { buildAutomaticTournamentData, buildAutomaticTournamentReport, getMatchesWithNewResults, rankLeague, suggestSwissRound } from './tournamentEngine.js';

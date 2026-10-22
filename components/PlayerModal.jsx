@@ -666,7 +666,7 @@ export const PlayerModal = memo(function PlayerModal({
         {canAfford && (
           <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden mt-2">
             <div
-              className="h-full rounded-full transition-all duration-300"
+              className="h-full rounded-full transition-[width] duration-300 ease-out"
               style={{ width: `${budgetAfterPercent}%`, background: barColor }}
             />
           </div>

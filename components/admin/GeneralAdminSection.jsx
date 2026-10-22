@@ -180,7 +180,7 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
           {['open', 'closed', 'scheduled', 'FranchiseMarket'].map((status) => (
             <label
               key={status}
-              className={`flex items-center p-3 rounded-xl border cursor-pointer transition-all ${
+              className={`flex items-center p-3 rounded-xl border cursor-pointer transition-colors ${
                 localStatus === status
                   ? 'bg-accent/15 border-accent text-ink shadow-sm shadow-accent/10'
                   : 'bg-white/[0.02] border-line/[0.08] text-ink-2 hover:bg-white/[0.05]'

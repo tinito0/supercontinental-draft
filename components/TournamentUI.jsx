@@ -39,7 +39,7 @@ export const TournamentTabButton = memo(function TournamentTabButton({ id, tabId
     <button
       type="button"
       onClick={() => onClick(targetId)}
-      className={`relative flex items-center px-3 sm:px-4 py-2 font-semibold text-xs sm:text-sm transition-all rounded-lg whitespace-nowrap cursor-pointer
+      className={`relative flex items-center px-3 sm:px-4 py-2 font-semibold text-xs sm:text-sm transition-colors rounded-lg whitespace-nowrap cursor-pointer
         ${isActive
           ? 'bg-accent text-slate-950 font-bold shadow-md'
           : 'text-ink-3 hover:text-ink hover:bg-white/[0.06]'

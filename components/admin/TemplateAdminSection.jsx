@@ -474,7 +474,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
                 {exportPercent !== null && (
                   <div className="w-full bg-accent-deep/80 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="bg-accent h-full transition-all duration-150 ease-out"
+                      className="bg-accent h-full transition-[width] duration-150 ease-out"
                       style={{ width: `${exportPercent}%` }}
                     />
                   </div>

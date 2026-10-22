@@ -76,6 +76,8 @@ export function createFirestore({ projectId, databaseId = '(default)', baseUrl =
       },
       /** Create only: fails the commit if the document already exists. */
       create(path, data, options = {}) { write(path, data, { ...options, exists: false }); },
+      /** Create or replace the whole document. */
+      set(path, data, options = {}) { write(path, data, options); },
       /** Merge the given top-level fields into an existing document. */
       update(path, data, options = {}) { write(path, data, { ...options, mask: Object.keys(data), exists: true }); },
       delete(path) { writes.push({ delete: docName(path) }); },

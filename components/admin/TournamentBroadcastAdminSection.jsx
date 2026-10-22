@@ -2,6 +2,8 @@ import React, { memo, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Copy, ExternalLink, Maximize2, Radio, Trophy } from 'lucide-react';
 import { OverlayAdminSection } from './OverlayAdminSection.jsx';
+import { CollectorImportAdmin } from './CollectorImportAdmin.jsx';
+import { draftUrl } from '../../utils/siteRoutes.js';
 
 // "Torneo y transmisión": el resumen del torneo, el control del marcador de OBS y las fuentes de navegador
 // en una sola pestaña. Antes eran dos ("Torneo y OBS" y "Marcador en vivo") con los enlaces repetidos.
@@ -79,10 +81,8 @@ function ObsSources({ showStatusMessage }) {
   const [copiedId, setCopiedId] = useState('');
   const timerRef = useRef(null);
   useEffect(() => () => clearTimeout(timerRef.current), []);
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-
   const copy = async (source) => {
-    const url = `${origin}${source.path}`;
+    const url = draftUrl(source.path);
     try {
       await navigator.clipboard.writeText(url);
       setCopiedId(source.id);
@@ -109,7 +109,7 @@ function ObsSources({ showStatusMessage }) {
           </div>
           <ul className="divide-y divide-line/10 rounded-xl border border-line/[0.12] bg-raised/40">
             {group.sources.map(source => {
-              const url = `${origin}${source.path}`;
+              const url = draftUrl(source.path);
               const isCopied = copiedId === source.id;
               return (
                 <li key={source.id} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 px-4 py-3">
@@ -143,11 +143,15 @@ export const TournamentBroadcastAdminSection = memo(function TournamentBroadcast
   broadcastOverlayData,
   onUpdateBroadcastOverlay,
   onOpenTournamentModal,
+  onUpdateTournament,
   showStatusMessage,
 }) {
   return (
     <div className="space-y-6">
       <TournamentSummary tournamentData={tournamentData} onOpenTournamentModal={onOpenTournamentModal} />
+      {onUpdateTournament && (
+        <CollectorImportAdmin tournamentData={tournamentData} onUpdateTournament={onUpdateTournament} showStatusMessage={showStatusMessage} />
+      )}
       <OverlayAdminSection
         allTeams={allTeams}
         tournamentData={tournamentData}

@@ -80,10 +80,12 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
 
-      // Ofertas de traspaso. Lectura abierta a managers. Aceptar la ejecuta el servidor; el resto
-      // de la negociación la escriben los participantes, por turnos.
+      // Ofertas de traspaso. Las leen solo los dos clubes de la oferta (y el admin): cualquier cuenta de Google
+      // nueva queda con un equipo pendiente, así que «con sesión» no alcanza para ver negociaciones ajenas
+      // (docs/SECURITY_AUDIT.md, S1). Aceptar la ejecuta el servidor; el resto de la negociación la escriben los
+      // participantes, por turnos.
       match /public/data/offers/{offerId} {
-        allow read: if isAuth();
+        allow read: if isAdmin() || (isAuth() && (resource.data.senderId == request.auth.uid || resource.data.targetTeamId == request.auth.uid));
         allow create: if isAuth() && (
           isAdmin() || (
             request.resource.data.senderId == request.auth.uid
@@ -140,7 +142,7 @@ service cloud.firestore {
         // Chat de la negociación: solo los dos clubes de la oferta, mientras sigue abierta, con texto corto.
         // Antes cualquier manager podía escribir en cualquier oferta, sin límite de largo.
         match /messages/{messageId} {
-          allow read: if isAuth();
+          allow read: if isAdmin() || (isAuth() && request.auth.uid in [negotiation().senderId, negotiation().targetTeamId]);
           allow create: if isAuth() && (isAdmin() || (
             request.resource.data.senderId == request.auth.uid
             && request.auth.uid in [negotiation().senderId, negotiation().targetTeamId]
@@ -161,10 +163,10 @@ service cloud.firestore {
       }
 
       // Manager chat
-      // Solo managers con sesión (antes era legible sin iniciar sesión). Un mensaje puede ser solo un GIF: el texto
-      // vacío se rechazaba aunque el chat permitía mandarlo.
+      // Solo managers aprobados (antes bastaba con tener sesión, y cualquier cuenta de Google nueva la tiene). Un
+      // mensaje puede ser solo un GIF: el texto vacío se rechazaba aunque el chat permitía mandarlo.
       match /public/data/manager_chat/{messageId} {
-        allow read: if isAuth();
+        allow read: if isAdmin() || (isAuth() && isApprovedManager());
         allow create: if isAuth()
           && request.resource.data.senderId == request.auth.uid
           && isApprovedManager()
@@ -182,13 +184,30 @@ service cloud.firestore {
 
       // Formaciones compartidas: cualquier persona puede verlas, pero sólo su autor
       // (o un admin) puede crear, editar o eliminar su propio snapshot.
+      // Formaciones compartidas (FormationModal → /tactics/view/:id). Cualquier cuenta con sesión crea: límites de
+      // forma y tamaño para que nadie use la colección pública como almacenamiento (auditoría S7).
+      function isSharedFormationShape(data) {
+        return data.keys().hasOnly(['teamName', 'logoUrl', 'formationKey', 'formationName', 'formationStates',
+            'slots', 'bench', 'isPublic', 'createdAt', 'createdBy'])
+          && data.teamName is string && data.teamName.size() <= 80
+          && data.logoUrl is string && data.logoUrl.size() <= 2048
+          && data.formationKey is string && data.formationKey.size() <= 40
+          && data.formationName is string && data.formationName.size() <= 80
+          && data.slots is map && data.slots.size() <= 11
+          && data.bench is list && data.bench.size() <= 60
+          && (!('formationStates' in data) || (data.formationStates is map
+            && data.formationStates.keys().hasOnly(['formation', 'fluid', 'positions', 'roles', 'presets'])))
+          && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 40));
+      }
       match /public/data/shared_formations/{formationId} {
         allow read: if true;
         allow create: if isAuth()
-          && request.resource.data.createdBy == request.auth.uid;
+          && request.resource.data.createdBy == request.auth.uid
+          && isSharedFormationShape(request.resource.data);
         allow update: if isAdmin() || (
           resource.data.createdBy == request.auth.uid
           && request.resource.data.createdBy == resource.data.createdBy
+          && isSharedFormationShape(request.resource.data)
         );
         allow delete: if isAdmin() || resource.data.createdBy == request.auth.uid;
       }
@@ -221,6 +240,37 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
 
+      // Textos de la web pública de la liga (historia de la liga, de cada club y reglamento de la temporada):
+      // los escribe el admin desde «Web pública» (utils/leagueContent.js); los lee cualquiera.
+      match /public/data/league_content/{docId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      // Partidos de PES en vivo: los escribe la función match-feed (cuenta de servicio) con lo que sube el
+      // puente local (pes-collector/bridge). Nadie los escribe desde el navegador salvo el admin.
+      match /public/data/live_matches/{matchKey} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      // Votos del público sin cuenta (docs/COMMUNITY_PLATFORM.md): totales públicos que escribe solo la función
+      // community-vote (cuenta de servicio). Las boletas y los contadores por IP viven fuera de artifacts
+      // (community_ballots, community_ip) y caen en el catch-all: solo admin.
+      match /public/data/predictions/{matchId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+      match /public/data/mvp_votes/{matchKey} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+      // Encuesta «¿quién gana la copa?»: el admin la abre, la cierra y carga las opciones; los votos los suma la función.
+      match /public/data/polls/{pollId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
       // La configuración de mercado cambia permisos funcionales y debe ser admin-only.
       match /public/data/config/{configId} {
         allow read: if true;
@@ -236,7 +286,7 @@ service cloud.firestore {
       match /presence/{userId} {
         allow read: if true;
         allow create, update: if isAuth() && (request.auth.uid == userId || isAdmin());
-        allow delete: if isAuth();
+        allow delete: if isAuth() && (request.auth.uid == userId || isAdmin());
       }
 
       // ── USUARIOS ──────────────────────────────────────────────

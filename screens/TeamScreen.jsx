@@ -9,6 +9,8 @@ import { Shield, Trophy, Users, ArrowLeft, RefreshCw, WifiOff, Award, TrendingUp
 import { processPlayersData, formatPriceShort, getStatAndOvrColorClass } from '../utils/helpers.js';
 import { fetchRawPlayers } from '../utils/playerCatalog.js';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
+import { teamCrestUrl } from '../utils/teamCrest.js';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 
 /* ── Umbrales dinámicos de color OVR consistentes con el mercado ── */
 const OVR_COLOR_THRESHOLDS = [
@@ -49,7 +51,11 @@ const POS_RANK = {
 
 const getPosRank = (pos) => POS_RANK[String(pos || '').toUpperCase()] || 5;
 
-export default function TeamScreen() {
+/**
+ * Public page of a club. Shared by the draft (/draft/team/:id) and the league site (/equipos/:id), which passes
+ * `isLeagueSite` (no draft badge, no own footer) and the club's history as `afterHeader`.
+ */
+export default function TeamScreen({ isLeagueSite = false, afterHeader = null }) {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -68,6 +74,7 @@ export default function TeamScreen() {
 
   const [teamData, setTeamData] = useState(null);
   const [loading, setLoading] = useState(true);
+  useDocumentTitle(teamData?.teamName || 'Equipos');
   const [error, setError] = useState(null);
   const [cartPlayers, setCartPlayers] = useState([]);
   const [teamRecord, setTeamRecord] = useState({ played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [], mvpCount: 0, rival: '—', titles: 0 });
@@ -224,7 +231,7 @@ export default function TeamScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4 text-ink-2">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center space-y-4 text-ink-2">
         <div className="w-10 h-10 border-3 border-accent/20 border-t-accent-soft rounded-full animate-spin"></div>
         <p className="text-sm font-medium text-ink-3">Cargando perfil táctico...</p>
       </div>
@@ -234,7 +241,7 @@ export default function TeamScreen() {
   if (error) {
     const isNetworkError = error.includes('conexión');
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-ink-2">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-6 text-center text-ink-2">
         <div className={`w-16 h-16 ${isNetworkError ? 'bg-warning/10 border-warning/20 text-warning-soft' : 'bg-danger/10 border-danger/20 text-danger-soft'} rounded-xl flex items-center justify-center mb-5 border`}>
           {isNetworkError ? <WifiOff className="w-8 h-8" /> : <Shield className="w-8 h-8" />}
         </div>
@@ -260,7 +267,7 @@ export default function TeamScreen() {
 
   if (!teamData) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-ink-2">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-6 text-center text-ink-2">
         <div className="w-16 h-16 rounded-xl bg-surface border border-line/20 flex items-center justify-center text-ink-3 mb-4">
           <Users className="w-8 h-8" />
         </div>
@@ -318,7 +325,7 @@ export default function TeamScreen() {
   const goalDiff = teamRecord.gf - teamRecord.ga;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-ink-2 flex flex-col selection:bg-accent/30">
+    <div className="min-h-screen bg-canvas text-ink-2 flex flex-col selection:bg-accent/30">
       {/* ── HEADER PANEL DE IDENTIDAD ── */}
       <div className="bg-surface/95 border-b border-line/20 px-4 py-6 sm:py-7 relative">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -327,7 +334,7 @@ export default function TeamScreen() {
             <div className="relative group shrink-0">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-raised border border-line/20 p-2.5 flex items-center justify-center shadow-md">
                 <img 
-                  src={teamData?.logoUrl || DEFAULT_LOGO} 
+                  src={teamCrestUrl(teamData)}
                   width={96}
                   height={96}
                   className="w-full h-full object-contain" 
@@ -340,9 +347,11 @@ export default function TeamScreen() {
             {/* Metadatos y Nombre */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                <span className="bg-accent/10 text-accent border border-accent/20 text-xs font-semibold px-2 py-0.5 rounded">
-                  SCL DRAFT 2026
-                </span>
+                {!isLeagueSite && (
+                  <span className="bg-accent/10 text-accent border border-accent/20 text-xs font-semibold px-2 py-0.5 rounded">
+                    SCL DRAFT 2026
+                  </span>
+                )}
                 <span className="text-ink-3 text-xs font-medium">
                   Ficha oficial de equipo
                 </span>
@@ -384,6 +393,8 @@ export default function TeamScreen() {
           </div>
         </div>
       </div>
+
+      {afterHeader}
 
       {/* ── FRANJA DE RENDIMIENTO & RÉCORD DEPORTIVO ── */}
       <section className="w-full max-w-6xl mx-auto px-4 pt-6">
@@ -609,12 +620,14 @@ export default function TeamScreen() {
         </div>
       </section>
 
-      {/* ── FOOTER EDITORIAL OFICIAL ── */}
-      <footer className="mt-auto py-5 border-t border-line/20 text-center bg-slate-950">
-        <p className="text-xs text-ink-3 font-normal">
-          SCL Draft 2026 • Argentina
-        </p>
-      </footer>
+      {/* ── FOOTER EDITORIAL OFICIAL ── (the league site has its own footer) */}
+      {!isLeagueSite && (
+        <footer className="mt-auto py-5 border-t border-line/20 text-center bg-slate-950">
+          <p className="text-xs text-ink-3 font-normal">
+            SCL Draft 2026 • Argentina
+          </p>
+        </footer>
+      )}
     </div>
   );
 }

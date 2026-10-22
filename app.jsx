@@ -15,7 +15,8 @@ import { missedOfferNotifications } from './utils/missedEvents.js';
 import { InstallPopup } from './components/InstallPopup.jsx';
 import { ToastStack } from './components/ToastStack.jsx';
 import { NotificationsPanel } from './components/NotificationsPanel.jsx';
-import { BroadcastOverlay, DEFAULT_BROADCAST_OVERLAY } from './components/BroadcastOverlay.jsx';
+import { DEFAULT_BROADCAST_OVERLAY } from './components/BroadcastOverlay.jsx';
+import { BroadcastOverlayLive } from './components/broadcast/BroadcastOverlayLive.jsx';
 import { normalizeTournamentView } from './utils/tournamentViews.js';
 import { getMatchesWithNewResults } from './components/tournament/tournamentEngine.js';
 import { getMentionedTeamIds, hasTransferIntent } from './utils/managerChatUtils.js';
@@ -1804,7 +1805,7 @@ function App() {
     }
 
     return (
-      <BroadcastOverlay
+      <BroadcastOverlayLive
         overlayData={broadcastOverlayData}
         allTeams={allTeams}
         tournamentData={tournamentData}

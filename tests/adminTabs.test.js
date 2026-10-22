@@ -3,11 +3,12 @@ import { ADMIN_TAB_IDS, normalizeAdminTab, readStoredAdminTab, storeAdminTab } f
 import { filterAdminTeams } from '../utils/adminTeams.js';
 
 describe('admin tabs', () => {
-  it('has five sections and maps the merged legacy ones', () => {
-    expect(ADMIN_TAB_IDS).toEqual(['general', 'equipos', 'torneo', 'templates', 'suggestions']);
+  it('has six sections and maps the merged legacy ones', () => {
+    expect(ADMIN_TAB_IDS).toEqual(['general', 'equipos', 'torneo', 'web', 'templates', 'suggestions']);
     expect(normalizeAdminTab('users')).toBe('equipos');
     expect(normalizeAdminTab('overlay')).toBe('torneo');
     expect(normalizeAdminTab('torneo')).toBe('torneo');
+    expect(normalizeAdminTab('web')).toBe('web');
     expect(normalizeAdminTab('nope')).toBe('general');
     expect(normalizeAdminTab(undefined)).toBe('general');
   });

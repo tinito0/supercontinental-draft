@@ -66,7 +66,7 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
 | `--dur-move` / `duration-move` | 220ms | things moving to a new place (pitch markers, meters) |
 | `--dur-flash` | 600ms | a value that changed glows once (`.value-flash`) |
 | `--ease-out` / `ease-out` | `cubic-bezier(0.2,0.7,0.2,1)` | entries |
-| `--ease-in` / `ease-in` | `cubic-bezier(0.4,0,1,1)` | exits |
+| `--ease-in` / `ease-in` | `cubic-bezier(0.4,0,1,1)` | only falling things (confetti); exits use `--ease-out` too |
 | `--ease-in-out` / `ease-in-out` | `cubic-bezier(0.4,0,0.2,1)` | moves |
 
 - **Entries**: `animate-in` plus `fade-in`, `zoom-in-95`, `slide-in-from-*`. Its length is fixed: `duration-*` classes
@@ -77,6 +77,13 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
 - **Only `transform` and `opacity`**, using individual properties (`translate`, `scale`), not an inline `transform`:
   it overrides Tailwind's scale classes. Exceptions: the pitch markers keep `left`/`top` in % (11 small elements) and
   meters animate `width`.
+- **Press and hover** (2026-10-22 audit): pressables scale to 0.97 on `:active` (`.btn`, vote buttons, OBS scene
+  buttons). `hover:` only applies with a real pointer (`future.hoverOnlyWhenSupported` in `tailwind.config.js`), so a
+  tap never leaves a hover stuck on phones. No `transition-all`: list the properties.
+- **Live values**: bars fed by live votes grow with `transform: scaleX()` and a 300ms ease-out transition, not `width`.
+  A live score that changes flashes once (`.value-flash`), never on page load.
+- **OBS overlay** (`components/broadcast/broadcast.css`) is broadcast graphics, not app UI: staged entries (~1.6 s) and
+  short row staggers are allowed there; the exit is shorter than the entry (280ms ease-out).
 - **Reduced motion**: no animation runs except its declared reduced version, `--animation-reduced` next to the
   original (`index.css`). Entries and exits become fades; spinners turn slowly instead of freezing. Transitions are
   instant. Check `prefersReducedMotion()` (`utils/motion.js`) before starting JS-driven effects such as the confetti.

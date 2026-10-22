@@ -5,6 +5,8 @@ const token = name => `rgb(var(--c-${name}) / <alpha-value>)`;
 
 export default {
   darkMode: 'class',
+  // hover: solo con puntero real (@media (hover: hover)): en el celular un toque no deja el hover pegado.
+  future: { hoverOnlyWhenSupported: true },
   content: [
     "./index.html",
     "./*.jsx",

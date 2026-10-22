@@ -2,6 +2,7 @@
 // Una sola fuente para la vista de la app (editable), la de OBS y la selección de partidos del overlay.
 // Datos en Firestore (tournament/official): bracket.{quarters[4], semis[2], final{}} para la Copa de Oro y
 // bracket.repechaje.{r1[4], r2[2], semis[2], final{}} para la Copa de Plata.
+import { knockoutWinner } from './competitionRules.js';
 
 export const EMPTY_BRACKET_MATCH = Object.freeze({ teamA: '', teamB: '', scoreA: '', scoreB: '' });
 
@@ -52,12 +53,20 @@ export function hasScore(value) {
 }
 
 /** 'A' | 'B' | null. Un empate o un resultado incompleto no tiene ganador (no se modelan penales). */
+/** Quién pasa: el marcador y, si quedó empatado, la tanda (penaltiesA/B). null si falta información. */
 export function getMatchWinner(match) {
-  if (!match || !hasScore(match.scoreA) || !hasScore(match.scoreB)) return null;
-  const a = Number(match.scoreA);
-  const b = Number(match.scoreB);
-  if (a === b) return null;
-  return a > b ? 'A' : 'B';
+  return match ? knockoutWinner(match) : null;
+}
+
+/** Los dos marcadores cargados e iguales: hace falta la tanda. */
+export function isTiedScore(match) {
+  return Boolean(match) && hasScore(match.scoreA) && hasScore(match.scoreB) && Number(match.scoreA) === Number(match.scoreB);
+}
+
+/** «4-3 pen.» cuando el cruce se definió por penales; vacío si no. */
+export function shootoutLabel(match) {
+  if (!isTiedScore(match) || !hasScore(match.penaltiesA) || !hasScore(match.penaltiesB)) return '';
+  return `${Number(match.penaltiesA)}-${Number(match.penaltiesB)} pen.`;
 }
 
 export function isMatchCompleted(match) {
@@ -173,7 +182,7 @@ export const BROADCAST_REFERENCE = { width: 1920, height: 1080 };
 // minCardWidth: ancho en el que un nombre de club típico ("Manchester City") entra entero junto a escudo,
 // siembra y marcador con la letra de 26u. Con 316u (Oro espejado en 16:9) los nombres se cortaban.
 export const BROADCAST_METRICS = {
-  sidePadding: 56,
+  sidePadding: 72, // raíz + marco + panel (broadcastBracket.css)
   connectorWidth: 56,
   minCardWidth: 400,
   maxCardWidth: 520,

@@ -68,7 +68,7 @@ export const SuggestionsModal = memo(function SuggestionsModal({ isVisible, onCl
                 value={suggestionText}
                 onChange={(e) => setSuggestionText(e.target.value)}
                 rows="6"
-                className="w-full h-40 sm:h-auto p-4 bg-black/20 text-ink border border-line/20 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none placeholder-slate-600 text-base transition-all"
+                className="w-full h-40 sm:h-auto p-4 bg-black/20 text-ink border border-line/20 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none placeholder-slate-600 text-base transition-[border-color,box-shadow]"
                 placeholder="Escribe aquí tu reporte o sugerencia..."
                 autoFocus
               ></textarea>

@@ -18,6 +18,7 @@ import { normalizeAdvancedInstructions, toggleInstruction, replaceInstruction } 
 import { TacticalStateBar } from './formation/TacticalStateBar.jsx';
 import { AdvancedInstructionsPanel } from './formation/AdvancedInstructionsPanel.jsx';
 import { PositionPicker } from './formation/PositionPicker.jsx';
+import { draftUrl } from '../utils/siteRoutes.js';
 
 export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange }) => (
   <div className={`flex items-center justify-between gap-2 p-2 w-full rounded-lg border transition-colors ${isSelected ? 'bg-accent/15 border-accent/60' : 'bg-raised border-line/[0.12] hover:border-line/30'}`}>
@@ -982,7 +983,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         createdBy: userProfile?.userId || 'unknown',
       });
 
-      const url = `${window.location.origin}/tactics/view/${snap.id}`;
+      const url = draftUrl(`/tactics/view/${snap.id}`);
       setShareUrl(url);
 
       const ok = await copyToClipboard(url);

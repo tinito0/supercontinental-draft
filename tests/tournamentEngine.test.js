@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAutomaticTournamentData, getMatchesWithNewResults } from '../components/tournament/tournamentEngine.js';
+import { buildAutomaticTournamentData, buildAutomaticTournamentReport, getMatchesWithNewResults } from '../components/tournament/tournamentEngine.js';
 
 describe('components/tournament/tournamentEngine.js', () => {
   it('undoes computed stats when a completed match goes back to scheduled', () => {
@@ -15,7 +15,7 @@ describe('components/tournament/tournamentEngine.js', () => {
 
   it('a team whose only match is reverted is reset even while other matches stay completed', () => {
     const m1 = { id: 'm1', homeTeam: 'Boca', awayTeam: 'River', homeScore: 1, awayScore: 0, status: 'completed' };
-    const m2 = { id: 'm2', homeTeam: 'Racing', awayTeam: 'Independiente', homeScore: 3, awayScore: 3, status: 'completed' };
+    const m2 = { id: 'm2', homeTeam: 'Racing', awayTeam: 'Independiente', homeScore: 3, awayScore: 3, homePenalties: 5, awayPenalties: 4, status: 'completed' };
     const computed = buildAutomaticTournamentData({ league: [], matches: [m1, m2] });
     const reverted = buildAutomaticTournamentData({ ...computed, matches: [{ ...m1, status: 'scheduled' }, m2] });
     expect(reverted.league.find(t => t.name === 'Boca')).toMatchObject({ pj: 0, pts: 0 });
@@ -91,32 +91,30 @@ describe('components/tournament/tournamentEngine.js', () => {
     expect(calculated.league.length).toBe(12);
   });
 
-  it('handles draws awarding 1 point to each side', () => {
+  it('a draw goes to the shootout winner: 1 point and a GPEN for the winner, a loss for the other (T1)', () => {
     const inputData = {
       league: [
         { name: 'Racing', pj: 0, pg: 0, gpen: 0, pp: 0, pts: 0, gf: 0, gc: 0 },
         { name: 'Independiente', pj: 0, pg: 0, gpen: 0, pp: 0, pts: 0, gf: 0, gc: 0 }
       ],
-      matches: [
-        {
-          id: 'm2',
-          homeTeam: 'Racing',
-          awayTeam: 'Independiente',
-          homeScore: 2,
-          awayScore: 2,
-          status: 'completed'
-        }
-      ]
+      matches: [{ id: 'm2', homeTeam: 'Racing', awayTeam: 'Independiente', homeScore: 2, awayScore: 2, homePenalties: 3, awayPenalties: 4, status: 'completed' }],
     };
+    const { data, issues } = buildAutomaticTournamentReport(inputData);
+    const racing = data.league.find(t => t.name === 'Racing');
+    const rojo = data.league.find(t => t.name === 'Independiente');
+    expect(rojo).toMatchObject({ pj: 1, pg: 0, gpen: 1, pp: 0, pts: 1, gf: 2, gc: 2 });
+    expect(racing).toMatchObject({ pj: 1, pg: 0, gpen: 0, pp: 1, pts: 0, gf: 2, gc: 2 });
+    expect(issues).toEqual([]);
+  });
 
-    const calculated = buildAutomaticTournamentData(inputData);
-    const racing = calculated.league.find(t => t.name.toLowerCase() === 'racing');
-    const rojo = calculated.league.find(t => t.name.toLowerCase() === 'independiente');
-
-    expect(racing.pts).toBe(1);
-    expect(racing.gpen).toBe(1);
-    expect(rojo.pts).toBe(1);
-    expect(rojo.gpen).toBe(1);
+  it('a draw without the shootout counts the goals but no points, and is reported', () => {
+    const inputData = {
+      league: [{ name: 'Racing' }, { name: 'Independiente' }],
+      matches: [{ id: 'm2', homeTeam: 'Racing', awayTeam: 'Independiente', homeScore: 1, awayScore: 1, status: 'completed' }],
+    };
+    const { data, issues } = buildAutomaticTournamentReport(inputData);
+    expect(data.league.find(t => t.name === 'Racing')).toMatchObject({ pj: 1, pts: 0, gf: 1, gpen: 0, pp: 0 });
+    expect(issues).toEqual([{ matchId: 'm2', label: 'Racing vs Independiente', reason: 'Empate en los 90 minutos: falta el resultado de la tanda de penales.' }]);
   });
 
   it('a match marked completed without both scores does not count as a 0-0 draw', () => {
@@ -146,6 +144,27 @@ describe('getMatchesWithNewResults', () => {
   });
 });
 
+describe('rankLeague (desempates del reglamento, T3)', () => {
+  it('orders by points, goal difference, regulation wins, total wins and goals for, empty slots last', async () => {
+    const { rankLeague } = await import('../components/tournament/tournamentEngine.js');
+    const league = [
+      { name: 'Club...', pts: 0 },
+      { name: 'A', pts: 4, pg: 1, gpen: 2, gf: 5, gc: 3 },
+      { name: 'B', pts: 4, pg: 2, gpen: 0, gf: 6, gc: 4 },
+      { name: 'C', pts: 6, pg: 3, gpen: 0, gf: 3, gc: 3 },
+    ];
+    const { league: ranked, unresolvedTies } = rankLeague(league);
+    expect(ranked.map(row => row.name)).toEqual(['C', 'B', 'A', 'Club...']);
+    expect(unresolvedTies).toEqual([]);
+  });
+
+  it('reports ties no criterion breaks instead of deciding them', async () => {
+    const { rankLeague } = await import('../components/tournament/tournamentEngine.js');
+    const twin = { pts: 2, pg: 1, gpen: 0, gf: 1, gc: 0 };
+    expect(rankLeague([{ name: 'Y', ...twin }, { name: 'X', ...twin }]).unresolvedTies).toEqual([['X', 'Y']]);
+  });
+});
+
 describe('buildAutomaticTournamentReport', () => {
   it('reports the clubs that do not fit in the 12-team table instead of dropping them silently', async () => {
     const { buildAutomaticTournamentReport } = await import('../components/tournament/tournamentEngine.js');
@@ -155,5 +174,31 @@ describe('buildAutomaticTournamentReport', () => {
     expect(overflow).toEqual(['Club Fantasma']);
     expect(data.league).toHaveLength(12);
     expect(buildAutomaticTournamentReport({ league, matches: [{ ...match, awayTeam: 'Club 2' }] }).overflow).toEqual([]);
+  });
+});
+
+describe('suggestSwissRound («Sugerir fecha N»)', () => {
+  const teams = ['A', 'B', 'C', 'D'];
+  const done = (id, round, homeTeam, awayTeam, homeScore, awayScore) => ({ id, round, homeTeam, awayTeam, homeScore, awayScore, status: 'completed' });
+
+  it('leaves round 1 to the admin', async () => {
+    const { suggestSwissRound } = await import('../components/tournament/tournamentEngine.js');
+    expect(suggestSwissRound({ league: teams.map(name => ({ name })), matches: [] })).toMatchObject({ ok: false, reason: expect.stringMatching(/fecha 1/i) });
+  });
+
+  it('pairs teams by the table without repeating a rival once the round is over', async () => {
+    const { suggestSwissRound } = await import('../components/tournament/tournamentEngine.js');
+    const data = { league: teams.map(name => ({ name })), matches: [done('1', 'Fecha 1', 'A', 'B', 2, 0), done('2', 'Fecha 1', 'C', 'D', 1, 0)] };
+    const suggestion = suggestSwissRound(data);
+    expect(suggestion.ok).toBe(true);
+    expect(suggestion.round).toBe('Fecha 2');
+    // Tabla: A y C con 2 puntos; D (DG -1) arriba de B (DG -2).
+    expect(suggestion.pairs).toEqual([['A', 'C'], ['D', 'B']]);
+  });
+
+  it('waits until every match of the last round is finished', async () => {
+    const { suggestSwissRound } = await import('../components/tournament/tournamentEngine.js');
+    const data = { league: teams.map(name => ({ name })), matches: [done('1', 'Fecha 1', 'A', 'B', 2, 0), { id: '2', round: 'Fecha 1', homeTeam: 'C', awayTeam: 'D', status: 'scheduled' }] };
+    expect(suggestSwissRound(data)).toMatchObject({ ok: false, reason: expect.stringMatching(/Terminá la Fecha 1/) });
   });
 });

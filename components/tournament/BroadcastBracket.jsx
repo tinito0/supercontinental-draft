@@ -14,11 +14,12 @@ import {
   hasScore,
   isMatchCompleted,
 } from '../../utils/bracketModel.js';
+import { BroadcastBadge } from '../broadcast/BroadcastFrame.jsx';
 import './broadcastBracket.css';
 
 const TONE_STROKES = {
-  gold: { final: 'rgba(245,158,11,0.75)', base: 'rgba(150,166,200,0.38)' },
-  silver: { final: 'rgba(203,213,225,0.8)', base: 'rgba(150,166,200,0.38)' },
+  gold: { final: 'rgba(217,119,6,0.85)', base: 'rgba(57,67,107,0.35)' },
+  silver: { final: 'rgba(85,96,127,0.85)', base: 'rgba(57,67,107,0.35)' },
 };
 
 function TeamRow({ name, score, seed, outcome, getTeamLogo }) {
@@ -100,45 +101,51 @@ export const BroadcastBracket = memo(function BroadcastBracket({ cupId, bracket,
   return (
     <div
       ref={rootRef}
-      className="bb-root"
+      className="bb-root scl-broadcast"
       data-tone={cup.tone}
       data-layout={layout}
       style={{ '--u': `${unit}px` }}
       aria-label={`${cup.name} — bracket`}
     >
-      <header className="bb-header">
-        <div className="bb-brand">
-          <img className="bb-logo" src={DEFAULT_LOGO} alt="" />
-          <div className="min-w-0">
-            <div className="bb-eyebrow">Supercontinental League</div>
-            <div className="bb-title">{cup.name}</div>
+      <div className="bb-frame scl-frame">
+        <div className="scl-frame-stripe" aria-hidden="true" />
+        <div className="scl-frame-ball" aria-hidden="true" />
+        <header className="bb-header">
+          <div className="bb-brand">
+            <BroadcastBadge />
+            <div className="min-w-0">
+              <div className="bb-eyebrow">Supercontinental League</div>
+              <div className="bb-title">{cup.name}</div>
+            </div>
           </div>
-        </div>
-        <div className="bb-status">
-          <div className="bb-status-label">{champion ? cup.championLabel : 'Partidos jugados'}</div>
-          <div className={`bb-status-value ${champion ? 'is-champion' : ''}`}>
-            {champion || `${played} / ${allMatches.length}`}
+          <div className="bb-status">
+            <div className="bb-status-label">{champion ? cup.championLabel : 'Partidos jugados'}</div>
+            <div className={`bb-status-value ${champion ? 'is-champion' : ''}`}>
+              {champion || `${played} / ${allMatches.length}`}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <BracketBoard
-        className="bb-board"
-        style={{ justifyContent: 'center' }}
-        columns={columns}
-        connectors={connectors}
-        columnWidth={`${Math.floor(cardWidth)}px`}
-        connectorWidth={`${BROADCAST_METRICS.connectorWidth * unit}px`}
-        slotPadding={`${Math.round(10 * unit)}px 0`}
-        strokeWidth={Math.max(2, 3 * unit)}
-        connectorStroke={connector => (connector.toFinal ? strokes.final : strokes.base)}
-        renderLabel={column => (
-          <div className={`bb-round-label ${column.isFinal ? 'is-final' : ''}`}>{column.label}</div>
-        )}
-        renderMatch={entry => (
-          <BroadcastMatchCard entry={entry} cup={cup} getTeamLogo={getTeamLogo} />
-        )}
-      />
+        <div className="bb-panel scl-panel">
+          <BracketBoard
+            className="bb-board"
+            style={{ justifyContent: 'center' }}
+            columns={columns}
+            connectors={connectors}
+            columnWidth={`${Math.floor(cardWidth)}px`}
+            connectorWidth={`${BROADCAST_METRICS.connectorWidth * unit}px`}
+            slotPadding={`${Math.round(10 * unit)}px 0`}
+            strokeWidth={Math.max(2, 3 * unit)}
+            connectorStroke={connector => (connector.toFinal ? strokes.final : strokes.base)}
+            renderLabel={column => (
+              <div className={`bb-round-label ${column.isFinal ? 'is-final' : ''}`}>{column.label}</div>
+            )}
+            renderMatch={entry => (
+              <BroadcastMatchCard entry={entry} cup={cup} getTeamLogo={getTeamLogo} />
+            )}
+          />
+        </div>
+      </div>
     </div>
   );
 });

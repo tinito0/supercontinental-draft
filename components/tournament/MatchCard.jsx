@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Trophy } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { TeamSelect } from './TournamentTeamsContext.jsx';
-import { getMatchWinner, isMatchCompleted } from '../../utils/bracketModel.js';
+import { getMatchWinner, isMatchCompleted, isTiedScore, shootoutLabel } from '../../utils/bracketModel.js';
 
 export const BracketFork = memo(function BracketFork({ height = 180, tone = 'slate' }) {
   const strokeColor = tone === 'gold' ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.18)';
@@ -60,10 +60,12 @@ export const MatchCard = memo(function MatchCard({
   const winner = getMatchWinner(match);
   const teamAWon = winner === 'A';
   const teamBWon = winner === 'B';
+  const isTied = isTiedScore(match);
+  const penalties = shootoutLabel(match);
 
   return (
     <div
-      className={`w-full max-w-[260px] rounded-xl overflow-hidden bg-surface border transition-all duration-200 shadow-md ${
+      className={`w-full max-w-[260px] rounded-xl overflow-hidden bg-surface border transition-[border-color,box-shadow] duration-200 shadow-md ${
         isFinal
           ? 'border-warning/60 shadow-[0_0_24px_rgba(245,158,11,0.14)] ring-1 ring-amber-500/30'
           : 'border-line/[0.12] hover:border-white/[0.18]'
@@ -178,6 +180,33 @@ export const MatchCard = memo(function MatchCard({
           );
         })}
       </div>
+
+      {/* Empate: la tanda decide quién pasa (competitionRules.knockoutWinner). */}
+      {isEditing && isTied && (
+        <div className="flex items-center justify-between gap-2 border-t border-line/[0.08] bg-raised px-3 py-1.5 text-[11px] text-ink-3">
+          <span>Penales</span>
+          <span className="flex items-center gap-1">
+            {['penaltiesA', 'penaltiesB'].map((field, i) => (
+              <input
+                key={field}
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={match[field] ?? ''}
+                aria-label={`${cardTitle}: penales de ${match[i === 0 ? 'teamA' : 'teamB'] || `equipo ${i + 1}`}`}
+                onChange={(e) => updateMatch(updateTarget, index, field, e.target.value)}
+                className="w-8 h-6 bg-surface text-center rounded text-ink text-xs border border-white/20 outline-none font-bold"
+              />
+            ))}
+          </span>
+        </div>
+      )}
+      {!isEditing && penalties && (
+        <div className="border-t border-line/[0.08] px-3 py-1 text-right text-[10px] font-semibold text-ink-3 tabular-nums">{penalties}</div>
+      )}
+      {!isEditing && isTied && !penalties && (
+        <div className="border-t border-line/[0.08] px-3 py-1 text-right text-[10px] font-semibold text-warning-soft">Falta la tanda</div>
+      )}
     </div>
   );
 });

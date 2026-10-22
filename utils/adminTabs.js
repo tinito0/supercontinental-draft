@@ -1,6 +1,6 @@
 // Secciones de Administración. 'users' y 'overlay' eran pestañas propias: hoy viven dentro de
 // 'equipos' (Equipos y usuarios) y 'torneo' (Torneo y transmisión).
-export const ADMIN_TAB_IDS = ['general', 'equipos', 'torneo', 'templates', 'suggestions'];
+export const ADMIN_TAB_IDS = ['general', 'equipos', 'torneo', 'web', 'templates', 'suggestions'];
 
 const LEGACY_TABS = { users: 'equipos', overlay: 'torneo' };
 const STORAGE_KEY = 'scl.admin.tab';
