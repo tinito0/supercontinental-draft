@@ -129,6 +129,14 @@
     padding-right: env(safe-area-inset-right);
   }
 
+  /* Fuente de OBS (public/boot.js y main.jsx agregan la clase): transparente desde el primer pintado. */
+  html.obs-source,
+  html.obs-source body,
+  html.obs-source #root {
+    background: transparent;
+    padding: 0;
+  }
+
   h1, h2, h3, h4 {
     font-family: 'Barlow Condensed', 'Barlow', ui-sans-serif, system-ui, sans-serif;
     letter-spacing: 0.005em;

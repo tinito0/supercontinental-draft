@@ -19,7 +19,7 @@ export function BroadcastOverlayLive(props) {
     () => buildOverlayLive({ match: liveMatchKey ? match : null, prediction, mvpVotes, polls: [oroPoll, plataPoll] }),
     [liveMatchKey, match, prediction, mvpVotes, oroPoll, plataPoll],
   );
-  return <BroadcastOverlay {...props} live={live} />;
+  return <BroadcastOverlay {...props} live={live} liveMatch={liveMatchKey ? match : null} />;
 }
 
 export default BroadcastOverlayLive;

@@ -185,8 +185,33 @@ export const BROADCAST_METRICS = {
   sidePadding: 72, // raíz + marco + panel (broadcastBracket.css)
   connectorWidth: 56,
   minCardWidth: 400,
-  maxCardWidth: 520,
+  maxCardWidth: 600,
+  // Alto del tablero dentro del lienzo de 1920×1080 (1080 menos márgenes, encabezado y rótulos de ronda).
+  boardHeight: 820,
+  // Tarjeta de referencia (escala 1): 400 de ancho, encabezado de 36 + dos filas de 56.
+  baseCardWidth: 400,
+  baseCardHeight: 150,
+  slotPadding: 10,
+  // Lo que ocupan arriba y abajo de la final el rótulo y el campeón.
+  finalExtras: 130,
+  maxCardScale: 1.6,
 };
+
+/**
+ * Escala de las tarjetas de una columna del bracket de OBS: crecen hasta llenar su lugar (antes quedaban fijas en
+ * ~150 px y las semis y la final ocupaban un tercio o menos de su alto), sin pasar el ancho que deja entrar un nombre
+ * largo ni un tope. Nunca achica por debajo de 1.
+ * @param {number} entriesCount partidos de la columna
+ * @param {number} cardWidth ancho de tarjeta en px del lienzo
+ * @param {{ isFinal?: boolean }} options
+ */
+export function broadcastCardScale(entriesCount, cardWidth, { isFinal = false } = {}) {
+  const m = BROADCAST_METRICS;
+  const slot = m.boardHeight / Math.max(1, entriesCount) - 2 * m.slotPadding - (isFinal ? m.finalExtras : 0);
+  const byHeight = slot / m.baseCardHeight;
+  const byWidth = cardWidth / m.baseCardWidth;
+  return Math.max(1, Math.min(byHeight, byWidth, m.maxCardScale));
+}
 
 export function getBroadcastUnit(width, height) {
   if (!(width > 0) || !(height > 0)) return 1;

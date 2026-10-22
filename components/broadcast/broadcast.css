@@ -24,6 +24,25 @@
 }
 .scl-broadcast * { box-sizing: border-box; }
 
+/* Lugar sin club todavía: un círculo punteado discreto. */
+.scl-crest-empty { display: inline-block; border-radius: 999px; border: 2px dashed rgba(85, 96, 127, 0.45); }
+/* Nombres largos (BroadcastCrest.isLongName): un poco más chicos antes de cortarse con «…». */
+.scl-fx-name.is-long-name { font-size: 29px; }
+.scl-table-team span.is-long-name { font-size: 23px; }
+.broadcast-versus-team strong.is-long-name { font-size: 32px; }
+
+/* Club sin escudo cargado: sus iniciales (BroadcastCrest.jsx). */
+.scl-crest-initials {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--scl-bar);
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
 /* Marco: franja + degradé + panel blanco. */
 .scl-frame {
   position: relative;
@@ -89,7 +108,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.scl-frame-aside { margin-left: auto; text-align: right; color: #ffffff; font-size: 24px; font-weight: 700; }
+.scl-frame-aside { margin-left: auto; text-align: right; color: #ffffff; font-size: 24px; font-weight: 700; text-transform: uppercase; }
 .scl-panel {
   position: relative;
   z-index: 1;
@@ -273,7 +292,18 @@
   background: var(--scl-row);
 }
 .broadcast-versus-team.away { flex-direction: row-reverse; text-align: right; }
-.broadcast-versus-team img { width: 96px; height: 96px; object-fit: contain; }
+.broadcast-versus-team img, .broadcast-versus-crest { width: 96px; height: 96px; object-fit: contain; flex: none; }
+.broadcast-versus-crest.scl-crest-initials { font-size: 34px; }
+.broadcast-final-pens {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--scl-periwinkle);
+  font-variant-numeric: tabular-nums;
+}
 .broadcast-versus-team strong {
   min-width: 0;
   font-size: 40px;
@@ -378,7 +408,7 @@
   font-size: 26px;
   font-weight: 800;
 }
-.broadcast-ranking-name { min-width: 0; display: flex; align-items: baseline; gap: 14px; text-transform: uppercase; }
+.broadcast-ranking-name { min-width: 0; display: flex; align-items: center; gap: 14px; text-transform: uppercase; }
 .broadcast-ranking-name strong {
   font-size: 28px;
   line-height: 1;
@@ -567,7 +597,8 @@
 .scl-table .scl-table-club { width: 100%; text-align: left; padding: 0 18px; }
 .scl-table th:not(.scl-table-club):not(.scl-table-pos):not(.scl-table-pts) { width: 74px; min-width: 74px; }
 .scl-table-team { display: flex; align-items: center; gap: 16px; max-width: 600px; }
-.scl-table-team img { width: 40px; height: 40px; object-fit: contain; flex: none; }
+.scl-table-team img, .scl-table-team .scl-crest-initials { width: 40px; height: 40px; object-fit: contain; flex: none; }
+.scl-table-team .scl-crest-initials { font-size: 16px; }
 .scl-table-team span {
   min-width: 0;
   font-weight: 800;
@@ -578,3 +609,60 @@
 }
 .scl-table .scl-table-pts { width: 96px; min-width: 96px; }
 .scl-table td.scl-table-pts { background: var(--scl-slate); color: #ffffff; font-size: 32px; font-weight: 800; }
+/* Zonas: 1-8 a la Copa de Oro (posición en degradé azul), 9-12 a la Copa de Plata (posición gris pizarra). */
+.scl-table tr.is-plata td.scl-table-pos { background: var(--scl-slate); }
+.scl-table tr.is-zone-break td { border-top: 4px solid var(--scl-lilac); }
+.scl-table-legend { display: flex; gap: 24px; margin-top: 10px; font-size: 20px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--scl-muted); }
+.scl-table-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.scl-table-legend i { width: 18px; height: 18px; display: inline-block; background: var(--scl-bar); }
+.scl-table-legend i.is-plata { background: var(--scl-slate); }
+
+/* ---- Escena «Fecha» (BroadcastFixtures.jsx) ---- */
+.scl-fx-frame { width: 1400px; }
+.scl-fx-frame .scl-panel { padding: 24px 28px 28px; }
+.scl-fx-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.scl-fx-row {
+  display: grid;
+  grid-template-columns: 1fr 230px 1fr;
+  align-items: stretch;
+  min-height: 92px;
+  background: var(--scl-row);
+}
+.scl-fx-row.is-live { box-shadow: inset 6px 0 0 var(--scl-win); }
+.scl-fx-row.is-on-air:not(.is-live) { box-shadow: inset 6px 0 0 var(--scl-lavender); }
+.scl-fx-team { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 20px; padding: 0 24px; }
+.scl-fx-team.away { justify-content: flex-start; }
+.scl-fx-crest { width: 60px; height: 60px; object-fit: contain; flex: none; }
+.scl-fx-crest.scl-crest-initials { font-size: 22px; }
+.scl-fx-name {
+  min-width: 0;
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--scl-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scl-fx-team.is-winner .scl-fx-name { font-weight: 800; color: var(--scl-navy); }
+.scl-fx-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--scl-bar);
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+.scl-fx-score strong { font-size: 46px; line-height: 1; font-weight: 800; text-transform: uppercase; }
+.scl-fx-score small { font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--scl-lilac); }
+.scl-fx-score.is-live { background: var(--scl-win); }
+.scl-fx-score.is-live small { color: #ffffff; }
+.scl-fx-score.is-upcoming { background: var(--scl-slate); }
+.scl-fx-score.is-upcoming strong { font-size: 34px; }
+.scl-fx-score.is-nosignal, .scl-fx-score.is-played { background: var(--scl-periwinkle); }
+
+/* ---- Goleadores con escudo ---- */
+.broadcast-ranking-row .scl-crest-initials, .broadcast-ranking-row .broadcast-ranking-crest { width: 40px; height: 40px; object-fit: contain; font-size: 16px; flex: none; }

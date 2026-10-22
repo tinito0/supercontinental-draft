@@ -174,10 +174,11 @@ describe('chooseBroadcastLayout (OBS)', () => {
     }
   });
 
-  it('cards scale with the source: at 1920×1080 an Oro card is 520px, never the old 169px (260px × 0.65)', () => {
+  it('at 1920×1080 an Oro card uses the whole width (3 columns), never the old 169px (260px × 0.65)', () => {
     const { cardWidth, unit } = chooseBroadcastLayout(buildCupRounds(CUP_IDS.ORO, {}), 1920, 1080);
     expect(unit).toBe(1);
-    expect(cardWidth).toBe(520);
+    expect(cardWidth).toBeGreaterThan(550);
+    expect(3 * cardWidth + 2 * BROADCAST_METRICS.connectorWidth + 2 * BROADCAST_METRICS.sidePadding).toBeCloseTo(1920, 0);
     const plata = chooseBroadcastLayout(buildCupRounds(CUP_IDS.PLATA, {}), 1920, 1080);
     expect(plata.cardWidth).toBeGreaterThan(400); // was 130px (260px × 0.50)
   });
@@ -245,5 +246,24 @@ describe('cup progression (seedGoldCup / advanceCups)', () => {
     const { bracket: next } = advanceCups(bracket, ranking, { leagueComplete: true });
     expect(next.repechaje.semis.map(m => [m.teamA, m.teamB])).toEqual([['T09', 'T04'], ['T11', 'T03']]);
     expect(next.repechaje.final).toMatchObject({ teamA: '', teamB: '' });
+  });
+});
+
+describe('broadcastCardScale (OBS)', () => {
+  it('grows semi-final and final cards into their slot, limited by the card width', async () => {
+    const { broadcastCardScale, chooseBroadcastLayout: choose, buildCupRounds: rounds, CUP_IDS: ids } = await import('../utils/bracketModel.js');
+    const oro = choose(rounds(ids.ORO, {}), 1920, 1080).cardWidth;
+    const quarters = broadcastCardScale(4, oro);
+    const semis = broadcastCardScale(2, oro);
+    const final = broadcastCardScale(1, oro, { isFinal: true });
+    expect(quarters).toBeGreaterThan(1.15);
+    expect(semis).toBeGreaterThan(quarters);
+    expect(final).toBeGreaterThanOrEqual(semis - 0.001);
+    // Una tarjeta escalada sigue entrando en su lugar: 4 por columna en 820 px.
+    expect(4 * (150 * quarters + 20)).toBeLessThanOrEqual(820);
+    // Plata (4 columnas) queda limitada por el ancho pero nunca por debajo de la escala 1.
+    const plata = choose(rounds(ids.PLATA, {}), 1920, 1080).cardWidth;
+    expect(broadcastCardScale(2, plata)).toBeGreaterThanOrEqual(1);
+    expect(broadcastCardScale(2, plata)).toBeLessThanOrEqual(plata / 400 + 0.001);
   });
 });

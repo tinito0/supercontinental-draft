@@ -5,11 +5,10 @@ import { Tabs } from './ui/Tabs.jsx';
 import { Spinner } from './ui/Spinner.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { normalizeTournamentView } from '../utils/tournamentViews.js';
-import { CUP_IDS, seedGoldCup as seedGoldCupBracket } from '../utils/bracketModel.js';
+import { seedGoldCup as seedGoldCupBracket } from '../utils/bracketModel.js';
 import { normalizeTournament } from '../utils/tournamentModel.js';
 import { LEAGUE_ROUNDS, roundStatus } from './tournament/tournamentEngine.js';
 import { TieBreakEditor } from './tournament/TieBreakEditor.jsx';
-import { useElementSize } from '../hooks/useElementSize.js';
 import {
   tournamentBackdropClass,
   tournamentShellClass,
@@ -30,8 +29,6 @@ import {
   suggestSwissRound,
 } from './tournament/index.js';
 import { Alert } from './ui/Alert.jsx';
-import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
-import { BroadcastLeagueTable } from './broadcast/BroadcastLeagueTable.jsx';
 import { draftUrl } from '../utils/siteRoutes.js';
 
 export {
@@ -47,33 +44,6 @@ export {
   buildAutomaticTournamentData,
 };
 
-// Escala propia de cada vista dentro del lienzo de 1920×1080 de OBS (las copas usan BroadcastBracket).
-const OBS_CONTENT_SCALE = { groups: 1, stats: 0.82, matches: 0.78 };
-const OBS_STAGE = { width: 1920, height: 1080 };
-
-/** Lienzo de 1920×1080 ajustado a la ventana real (antes era fijo y se recortaba en fuentes de 1280×720). */
-function ObsStage({ scale = 1, transparent = false, children }) {
-  const [ref, { width, height }] = useElementSize();
-  const fit = width && height ? Math.min(width / OBS_STAGE.width, height / OBS_STAGE.height) : 1;
-  return (
-    // Sin tournamentShellClass: trae `relative`, que pisa a `fixed`, deja el contenedor con alto 0 y el lienzo
-    // centrado en ese alto nulo (media tabla fuera de pantalla y sin ajuste de escala).
-    <div ref={ref} className={`fixed inset-0 overflow-hidden ${transparent ? 'bg-transparent' : 'bg-canvas'} text-ink font-sans`}>
-      <div
-        className="absolute left-1/2 top-1/2 flex flex-col items-center justify-center"
-        style={{
-          width: OBS_STAGE.width,
-          height: OBS_STAGE.height,
-          transform: `translate(-50%, -50%) scale(${fit * scale})`,
-          contain: 'content',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 export const TournamentModal = memo(function TournamentModal({
   isVisible,
   isPage,
@@ -85,7 +55,6 @@ export const TournamentModal = memo(function TournamentModal({
   initialTab = 'groups',
   userTeamName,
   allPlayers,
-  isBroadcast,
 }) {
   const [activeTab, setActiveTab] = useState(() => normalizeTournamentView(initialTab));
   const [isEditing, setIsEditing] = useState(false);
@@ -96,8 +65,8 @@ export const TournamentModal = memo(function TournamentModal({
   const [localData, setLocalData] = useState(null);
   const editBaselineRef = useRef('');
   const editBaseRef = useRef(null);
-  // Las rutas de OBS lo indican con isBroadcast; ?mode=obs queda como respaldo para enlaces viejos.
-  const isObsMode = isBroadcast ?? (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'obs');
+  // Las vistas de OBS viven en screens/ObsScreen.jsx (BroadcastOverlay); acá siempre es la vista de la app.
+  const isObsMode = false;
 
   useEffect(() => {
     setActiveTab(normalizeTournamentView(initialTab));
@@ -320,8 +289,8 @@ export const TournamentModal = memo(function TournamentModal({
   }, []);
 
   const [copiedObs, setCopiedObs] = useState(null);
-  const copyObsUrl = async (label, query) => {
-    const url = draftUrl(`/torneo?mode=obs&${query}`);
+  const copyObsUrl = async (label, scene) => {
+    const url = draftUrl(`/overlay?scene=${scene}`);
     try {
       await navigator.clipboard.writeText(url);
       setCopiedObs({ label, ok: true });
@@ -329,7 +298,6 @@ export const TournamentModal = memo(function TournamentModal({
       setCopiedObs({ label, ok: false, url });
     }
   };
-  const handleCopyObsLink = (view) => copyObsUrl(view === 'groups' ? 'Tabla' : 'Bracket', `view=${view}`);
 
   const pendingMatchesCount = useMemo(() => {
     if (!localData?.matches || !Array.isArray(localData.matches)) return 0;
@@ -438,10 +406,10 @@ export const TournamentModal = memo(function TournamentModal({
                     <details className="relative">
                       <summary className="btn btn-secondary list-none cursor-pointer [&::-webkit-details-marker]:hidden">Enlaces OBS</summary>
                       <div className="absolute right-0 top-full mt-2 z-dropdown panel p-2 w-56 flex flex-col">
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => handleCopyObsLink('groups')}>Copiar enlace de la tabla</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => handleCopyObsLink('bracket')}>Copiar enlace del bracket</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Goleadores', 'view=goleadores')}>Copiar enlace de goleadores</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Plata', 'view=bracket&tournament=copa-plata')}>Copiar enlace de Copa de Plata</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Tabla', 'tabla')}>Copiar enlace de la tabla</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Oro', 'bracket')}>Copiar enlace de la Copa de Oro</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Goleadores', 'goleadores')}>Copiar enlace de goleadores</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Plata', 'repechaje')}>Copiar enlace de Copa de Plata</button>
                       </div>
                     </details>
                   )}
@@ -511,30 +479,6 @@ export const TournamentModal = memo(function TournamentModal({
         </div>
     </>
   );
-
-  if (isObsMode) {
-    if (activeTab === 'bracket' || activeTab === 'repechaje') {
-      return (
-        <BroadcastBracket
-          cupId={activeTab === 'bracket' ? CUP_IDS.ORO : CUP_IDS.PLATA}
-          bracket={localData.bracket}
-          getTeamLogo={getTeamLogo}
-        />
-      );
-    }
-    if (activeTab === 'groups') {
-      return (
-        <ObsStage transparent>
-          <BroadcastLeagueTable league={localData.league} getTeamLogo={getTeamLogo} />
-        </ObsStage>
-      );
-    }
-    return (
-      <TournamentTeamsContext.Provider value={teamOptions}>
-        <ObsStage scale={OBS_CONTENT_SCALE[activeTab] ?? 1}>{tabContent}</ObsStage>
-      </TournamentTeamsContext.Provider>
-    );
-  }
 
   if (isPage) {
     return (

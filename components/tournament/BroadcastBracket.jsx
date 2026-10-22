@@ -1,11 +1,12 @@
 import React, { memo, useMemo } from 'react';
 import { Trophy } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
-import { useElementSize } from '../../hooks/useElementSize.js';
 import { BracketBoard } from './BracketBoard.jsx';
 import {
   BROADCAST_METRICS,
+  BROADCAST_REFERENCE,
   CUP_DEFINITIONS,
+  broadcastCardScale,
   buildBracketColumns,
   buildConnectors,
   buildCupRounds,
@@ -13,8 +14,10 @@ import {
   getMatchWinner,
   hasScore,
   isMatchCompleted,
+  shootoutLabel,
 } from '../../utils/bracketModel.js';
 import { BroadcastBadge } from '../broadcast/BroadcastFrame.jsx';
+import { BroadcastCrest, isLongName } from '../broadcast/BroadcastCrest.jsx';
 import './broadcastBracket.css';
 
 const TONE_STROKES = {
@@ -22,35 +25,31 @@ const TONE_STROKES = {
   silver: { final: 'rgba(85,96,127,0.85)', base: 'rgba(57,67,107,0.35)' },
 };
 
-function TeamRow({ name, score, seed, outcome, getTeamLogo }) {
-  const logo = (name && getTeamLogo) ? getTeamLogo(name) : DEFAULT_LOGO;
+function TeamRow({ name, score, seed, outcome, logo }) {
   const scoreShown = hasScore(score);
   return (
     <div className={`bb-team ${outcome ? `is-${outcome}` : ''}`}>
       {seed !== undefined && <span className="bb-seed">{seed}</span>}
-      <img
-        className="bb-crest"
-        src={logo || DEFAULT_LOGO}
-        alt=""
-        onError={event => { event.currentTarget.src = DEFAULT_LOGO; }}
-      />
-      <span className={`bb-name ${name ? '' : 'is-empty'}`} title={name || undefined}>{name || 'A definir'}</span>
+      <BroadcastCrest className="bb-crest" name={name} logo={name ? logo : null} />
+      <span className={`bb-name ${name ? '' : 'is-empty'} ${isLongName(name) ? 'is-long-name' : ''}`} title={name || undefined}>{name || 'A definir'}</span>
       <span className={`bb-score ${scoreShown ? '' : 'is-empty'}`}>{scoreShown ? Number(score) : '–'}</span>
     </div>
   );
 }
 
-const BroadcastMatchCard = memo(function BroadcastMatchCard({ entry, cup, getTeamLogo }) {
+const BroadcastMatchCard = memo(function BroadcastMatchCard({ entry, cup, getTeamLogo, scale }) {
   const { match } = entry;
   // Solo las rondas sembradas (cuartos de Oro) llevan la columna de siembra.
   const showSeeds = Boolean(entry.seedA || entry.seedB);
   const winner = getMatchWinner(match);
   const completed = isMatchCompleted(match);
+  const pens = shootoutLabel(match);
   const outcomeFor = side => (winner ? (winner === side ? 'winner' : 'loser') : null);
   const championName = entry.isFinal && winner ? (winner === 'A' ? match.teamA : match.teamB) : '';
+  const logoOf = name => (name && getTeamLogo ? getTeamLogo(name) : null);
 
   return (
-    <div className="bb-slot" data-match-key={entry.key}>
+    <div className="bb-slot" data-match-key={entry.key} style={{ '--bb-k': scale.toFixed(3) }}>
       {entry.isFinal && (
         <div className="bb-final-tag">
           <Trophy className="bb-icon" aria-hidden="true" />
@@ -60,10 +59,10 @@ const BroadcastMatchCard = memo(function BroadcastMatchCard({ entry, cup, getTea
       <div className={`bb-card ${entry.isFinal ? 'is-final' : ''}`}>
         <div className="bb-card-head">
           <span className="bb-card-title">{entry.title}</span>
-          <span className={`bb-card-state ${completed ? 'is-done' : ''}`}>{completed ? 'Final' : ''}</span>
+          <span className={`bb-card-state ${completed ? 'is-done' : ''}`}>{pens ? `Final · ${pens}` : completed ? 'Final' : ''}</span>
         </div>
-        <TeamRow name={match.teamA} score={match.scoreA} seed={showSeeds ? entry.seedA : undefined} outcome={outcomeFor('A')} getTeamLogo={getTeamLogo} />
-        <TeamRow name={match.teamB} score={match.scoreB} seed={showSeeds ? entry.seedB : undefined} outcome={outcomeFor('B')} getTeamLogo={getTeamLogo} />
+        <TeamRow name={match.teamA} score={match.scoreA} seed={showSeeds ? entry.seedA : undefined} outcome={outcomeFor('A')} logo={logoOf(match.teamA)} />
+        <TeamRow name={match.teamB} score={match.scoreB} seed={showSeeds ? entry.seedB : undefined} outcome={outcomeFor('B')} logo={logoOf(match.teamB)} />
       </div>
       {championName && (
         <div className="bb-champion">
@@ -76,18 +75,15 @@ const BroadcastMatchCard = memo(function BroadcastMatchCard({ entry, cup, getTea
 });
 
 /**
- * Bracket de Copa de Oro / Copa de Plata para una fuente de navegador de OBS.
- * Ocupa toda la ventana, se dimensiona según el tamaño real medido (no un lienzo fijo escalado) y usa una
- * columna por ronda cuando el espejado dejaría tarjetas demasiado angostas para los nombres: en 16:9 es el
- * caso de las dos copas; el espejado queda para fuentes más anchas (p. ej. ultrawide).
+ * Bracket de Copa de Oro / Copa de Plata en el lienzo de 1920×1080 de la transmisión (BroadcastStage lo escala a la
+ * fuente real). Una columna por ronda: en 16:9 el espejado dejaría tarjetas demasiado angostas para los nombres.
+ * Las tarjetas de cada columna crecen con el lugar que tienen (broadcastCardScale): las semis y la final ya no
+ * quedan chicas en el medio de un panel vacío.
  */
 export const BroadcastBracket = memo(function BroadcastBracket({ cupId, bracket, getTeamLogo }) {
   const cup = CUP_DEFINITIONS[cupId];
-  const [rootRef, { width, height }] = useElementSize();
   const rounds = useMemo(() => buildCupRounds(cupId, bracket), [cupId, bracket]);
-
-  // El tablero ocupa el ancho del contenedor menos el padding lateral, que también se mide en u.
-  const { layout, unit, cardWidth } = chooseBroadcastLayout(rounds, width || 1920, height || 1080);
+  const { layout, cardWidth } = chooseBroadcastLayout(rounds, BROADCAST_REFERENCE.width, BROADCAST_REFERENCE.height);
   const columns = useMemo(() => buildBracketColumns(rounds, layout), [rounds, layout]);
   const connectors = useMemo(() => buildConnectors(columns), [columns]);
   const strokes = TONE_STROKES[cup.tone];
@@ -99,21 +95,14 @@ export const BroadcastBracket = memo(function BroadcastBracket({ cupId, bracket,
   const champion = finalWinner ? (finalWinner === 'A' ? finalEntry.match.teamA : finalEntry.match.teamB) : '';
 
   return (
-    <div
-      ref={rootRef}
-      className="bb-root scl-broadcast"
-      data-tone={cup.tone}
-      data-layout={layout}
-      style={{ '--u': `${unit}px` }}
-      aria-label={`${cup.name} — bracket`}
-    >
+    <div className="bb-root" data-tone={cup.tone} data-layout={layout} aria-label={`${cup.name} — bracket`}>
       <div className="bb-frame scl-frame">
         <div className="scl-frame-stripe" aria-hidden="true" />
         <div className="scl-frame-ball" aria-hidden="true" />
         <header className="bb-header">
           <div className="bb-brand">
             <BroadcastBadge />
-            <div className="min-w-0">
+            <div className="bb-brand-text">
               <div className="bb-eyebrow">Supercontinental League</div>
               <div className="bb-title">{cup.name}</div>
             </div>
@@ -133,15 +122,20 @@ export const BroadcastBracket = memo(function BroadcastBracket({ cupId, bracket,
             columns={columns}
             connectors={connectors}
             columnWidth={`${Math.floor(cardWidth)}px`}
-            connectorWidth={`${BROADCAST_METRICS.connectorWidth * unit}px`}
-            slotPadding={`${Math.round(10 * unit)}px 0`}
-            strokeWidth={Math.max(2, 3 * unit)}
+            connectorWidth={`${BROADCAST_METRICS.connectorWidth}px`}
+            slotPadding={`${BROADCAST_METRICS.slotPadding}px 0`}
+            strokeWidth={3}
             connectorStroke={connector => (connector.toFinal ? strokes.final : strokes.base)}
             renderLabel={column => (
               <div className={`bb-round-label ${column.isFinal ? 'is-final' : ''}`}>{column.label}</div>
             )}
-            renderMatch={entry => (
-              <BroadcastMatchCard entry={entry} cup={cup} getTeamLogo={getTeamLogo} />
+            renderMatch={(entry, column) => (
+              <BroadcastMatchCard
+                entry={entry}
+                cup={cup}
+                getTeamLogo={getTeamLogo}
+                scale={broadcastCardScale(column.entries.length, cardWidth, { isFinal: column.isFinal })}
+              />
             )}
           />
         </div>

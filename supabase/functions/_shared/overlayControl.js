@@ -5,7 +5,7 @@
 // Los atajos del popup copian POPUP_PRESETS de utils/overlayPopup.js (las funciones no importan fuera de
 // supabase/functions); el test falla si se desalinean.
 
-export const OVERLAY_SCENES = ['live', 'previa', 'descanso', 'final', 'tabla', 'bracket', 'repechaje', 'goleadores'];
+export const OVERLAY_SCENES = ['live', 'previa', 'descanso', 'final', 'partidos', 'tabla', 'bracket', 'repechaje', 'goleadores'];
 
 export const OVERLAY_TOGGLES = { marcador: 'showScoreboard', lower: 'showLowerThird', ticker: 'showTicker', auto: 'autoPopup' };
 

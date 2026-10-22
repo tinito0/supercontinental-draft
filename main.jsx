@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import { DRAFT_BASE, isDraftPath, legacyDraftRedirect, normalizeDraftPath } from './utils/siteRoutes.js';
+import { resolveObsRequest } from './utils/obsScenes.js';
 // Self-hosted fonts (works offline in the PWA; no third-party font requests).
 import '@fontsource/barlow/400.css';
 import '@fontsource/barlow/500.css';
@@ -37,6 +38,8 @@ window.addEventListener('vite:preloadError', (event) => {
 // public league site everywhere else. Each one is its own chunk, so a league visitor never downloads the draft.
 const App = lazy(() => import('./app.jsx'));
 const LeagueSite = lazy(() => import('./screens/league/LeagueSite.jsx'));
+// Fuentes de OBS (/draft/overlay, ?mode=obs…): solo la transmisión, sin cargar el draft (login, mercado).
+const ObsScreen = lazy(() => import('./screens/ObsScreen.jsx'));
 
 const { pathname, search, hash } = window.location;
 const legacyTarget = legacyDraftRedirect({ pathname, search });
@@ -46,7 +49,9 @@ if (legacyTarget) {
   window.location.replace(legacyTarget + hash);
 } else {
   const isDraft = isDraftPath(pathname);
-  if (isDraft) {
+  const obsRequest = isDraft ? resolveObsRequest(normalizeDraftPath(pathname).slice(DRAFT_BASE.length) || '/', search) : null;
+  if (obsRequest?.transparent) document.documentElement.classList.add('obs-source');
+  if (isDraft && !obsRequest) {
     if (normalizeDraftPath(pathname) !== pathname) {
       window.history.replaceState(window.history.state, '', normalizeDraftPath(pathname) + search + hash);
     }
@@ -62,7 +67,9 @@ if (legacyTarget) {
     <React.StrictMode>
       <ErrorBoundary>
         <Suspense fallback={null}>
-          {isDraft ? (
+          {obsRequest ? (
+            <ObsScreen request={obsRequest} />
+          ) : isDraft ? (
             <BrowserRouter basename={DRAFT_BASE}>
               <App />
             </BrowserRouter>

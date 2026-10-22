@@ -56,7 +56,7 @@ function cardContent(kind, live, homeName, awayName) {
   return null;
 }
 
-export const CommunityCard = memo(function CommunityCard({ card, live, homeName, awayName }) {
+export const CommunityCard = memo(function CommunityCard({ card, live, homeName, awayName, side = 'left' }) {
   const remaining = useRemaining(card);
   if (remaining === 0) return null;
   // Sin votos no hay nada que mostrar: la tarjeta no aparece vacía.
@@ -67,7 +67,7 @@ export const CommunityCard = memo(function CommunityCard({ card, live, homeName,
     <BroadcastFrame
       key={`${shownKey(card)}|${card.kind}`}
       className={`scl-popup scl-card ${isLeaving ? 'is-leaving' : ''}`}
-      dataPosition="left"
+      dataPosition={side}
       kicker="Comunidad"
       title={content.title}
     >

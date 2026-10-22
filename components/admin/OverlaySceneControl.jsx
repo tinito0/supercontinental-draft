@@ -1,20 +1,12 @@
 import React, { memo, useState } from 'react';
 import { Clapperboard, Copy, EyeOff, Keyboard, Users } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
+import { OBS_SCENES } from '../../utils/obsScenes.js';
 
 // Botonera de escenas del overlay de OBS: cada botón publica al instante (sin «Guardar»), igual que los botones de
 // Macro Deck (scl-obs → función overlay-control). Mismo doc: public/data/broadcast/overlay.
 
-export const OBS_SCENES = [
-  { id: 'live', label: 'En partido', hint: 'Solo el popup con QR' },
-  { id: 'previa', label: 'Previa', hint: 'Los dos equipos' },
-  { id: 'descanso', label: 'Entretiempo', hint: 'Equipos y resultado' },
-  { id: 'final', label: 'Final', hint: 'Resultado final' },
-  { id: 'tabla', label: 'Tabla', hint: 'Posiciones de la liga' },
-  { id: 'bracket', label: 'Copa de Oro', hint: 'Llaves' },
-  { id: 'repechaje', label: 'Copa de Plata', hint: 'Llaves' },
-  { id: 'goleadores', label: 'Goleadores', hint: 'Tabla de goleadores' },
-];
+export { OBS_SCENES };
 
 const TOGGLES = [
   { field: 'showLowerThird', target: 'lower', label: 'Lower third' },

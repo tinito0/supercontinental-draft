@@ -11,6 +11,7 @@ import { OverlayPopup } from '../components/broadcast/OverlayPopup.jsx';
 import { BroadcastOverlay } from '../components/BroadcastOverlay.jsx';
 import { BroadcastLeagueTable } from '../components/broadcast/BroadcastLeagueTable.jsx';
 import { CUP_IDS } from '../utils/bracketModel.js';
+import { OBS_SCENES } from '../utils/obsScenes.js';
 
 vi.mock('firebase/firestore', () => ({ serverTimestamp: () => 'ts' }));
 
@@ -40,7 +41,11 @@ describe('BroadcastBracket', () => {
     expect(html).toContain('Campeón Oro');
     expect(html).toContain(`title="${LONG}"`); // long names are truncated with the full name as title
     expect(html).toContain('>12<'); // two-digit scores render as numbers
-    expect(html).toContain('--u:1px');
+    // Cada columna escala sus tarjetas con su lugar (bracketModel.broadcastCardScale): las semis más que los cuartos.
+    const scales = [...html.matchAll(/--bb-k:([\d.]+)/g)].map(m => Number(m[1]));
+    expect(scales).toHaveLength(7);
+    expect(Math.max(...scales)).toBeGreaterThan(Math.min(...scales));
+    expect(Math.min(...scales)).toBeGreaterThan(1);
     expect(html).not.toMatch(/scale\(/); // no arbitrary CSS scale on the bracket
   });
 
@@ -200,7 +205,9 @@ describe('BroadcastLeagueTable (OBS tabla)', () => {
     const league = Array.from({ length: 14 }, (_, i) => ({ id: String(i), name: i === 13 ? 'Club...' : `Club ${i}`, pj: 1, pg: 1, gpen: 0, pp: 0, gf: 3, gc: i, pts: 2 }));
     const html = renderToStaticMarkup(<BroadcastLeagueTable league={league} getTeamLogo={() => ''} />);
     expect(html).toContain('Tabla de posiciones');
-    expect(count(html, '<tr>')).toBe(13); // header + 12 clubs (placeholder rows dropped)
+    expect(count(html, '<tr')).toBe(13); // header + 12 clubs (placeholder rows dropped)
+    expect(count(html, '<tr class="is-plata')).toBe(4); // puestos 9-12: Copa de Plata
+    expect(html).toContain('1-8 · Copa de Oro');
     expect(html).toContain('>+3<');
     expect(html).toContain('>-2<');
   });
@@ -214,7 +221,7 @@ describe('OverlaySceneControl (Admin → Overlay)', () => {
   it('shows one instant button per scene, marks the one on air and lists the Macro Deck commands', () => {
     const html = renderToStaticMarkup(<OverlayAdminSection allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{ scene: 'previa', showTicker: true }} />);
     expect(html).toContain('Escena en OBS');
-    expect(count(html, 'aria-pressed=')).toBe(8);
+    expect(count(html, 'aria-pressed=')).toBe(OBS_SCENES.length);
     expect(count(html, 'aria-pressed="true"')).toBe(1);
     expect(html).toMatch(/aria-pressed="true"[^>]*>[\s\S]*?Previa/);
     expect(html).toContain('Botones de Macro Deck 3');
@@ -275,5 +282,49 @@ describe('community card and live scenes (overlay en vivo)', () => {
     const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'previa' }} live={live} />);
     expect(html).toContain('La comunidad dice');
     expect(html).toContain('Empate 30%');
+  });
+});
+
+describe('BroadcastOverlay full-screen and tournament scenes', () => {
+  const popup = { visible: true, title: 'Tabla y copas', text: '', url: 'https://example.com/torneo', position: 'right', autoHideSec: 0 };
+  const tournamentData = {
+    league: [{ name: 'Racing', pts: 2 }, { name: 'Boca', pts: 0 }],
+    matches: [{ id: 'm1', round: 'Fecha 1', homeTeam: 'Racing', awayTeam: 'Boca', homeScore: 2, awayScore: 1, status: 'completed' },
+      { id: 'm2', round: 'Fecha 2', homeTeam: 'Boca', awayTeam: 'Racing', homeScore: '', awayScore: '', date: '2026-12-19', time: '21:00', status: 'scheduled' }],
+    bracket: { quarters: [{ teamA: 'Racing', teamB: 'Boca', scoreA: 1, scoreB: 1, penaltiesA: 4, penaltiesB: 3 }] },
+  };
+
+  it('renders the table, both cups and the scorers inside the overlay, with the popup on top', () => {
+    for (const [scene, marker] of [['tabla', 'Tabla de posiciones'], ['bracket', 'Copa de Oro'], ['repechaje', 'Copa de Plata'], ['goleadores', 'Goleadores']]) {
+      const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene, popup, showLowerThird: true, showTicker: true }} allTeams={{}} tournamentData={tournamentData} />);
+      expect(html, scene).toContain(marker);
+      expect(html, scene).toContain('class="scl-frame scl-popup');
+      if (scene !== 'goleadores') expect(html, scene).not.toContain('class="broadcast-lower"');
+    }
+  });
+
+  it('shows a cup tie decided on penalties', () => {
+    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'bracket' }} allTeams={{}} tournamentData={tournamentData} />);
+    expect(html).toContain('Final · 4-3 pen.');
+  });
+
+  it('the Fecha scene lists the open round with date and time', () => {
+    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'partidos' }} allTeams={{}} tournamentData={tournamentData} />);
+    expect(html).toContain('Fecha 2');
+    expect(html).toContain('19/12 · 21:00');
+    expect(html).not.toContain('2-1');
+  });
+
+  it('shows club initials instead of the league crest when a club has no crest', () => {
+    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'tabla' }} allTeams={{}} tournamentData={tournamentData} />);
+    expect(html).toContain('scl-crest-initials');
+  });
+
+  it('moves the community card to the right when the popup is on the left', () => {
+    const now = Date.now();
+    const live = { mvpTop: [{ id: 1, name: 'Saka', pct: 60, votes: 3 }], mvp: null };
+    const overlayData = { scene: 'live', popup: { ...popup, position: 'left', shownAt: now }, card: { visible: true, kind: 'mvp', autoHideSec: 0, shownAt: now } };
+    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={overlayData} live={live} />);
+    expect(html).toMatch(/scl-card[^>]*data-position="right"/);
   });
 });

@@ -133,24 +133,28 @@ export function useLiveMatch(matchKey) {
   return state;
 }
 
-/** Un doc público en vivo (overlay, predicción o votos del MVP); null si no existe o si no hay path. */
+/**
+ * Un doc público en vivo (overlay, predicción o votos del MVP); null si no existe o si no hay path.
+ * El estado recuerda de qué path es: al cambiar de partido no se muestran los datos del anterior mientras llega el nuevo.
+ */
 function usePublicDoc(path, label) {
-  const [state, setState] = useState({ data: null, loading: Boolean(path), error: '' });
+  const [state, setState] = useState({ path, data: null, loading: Boolean(path), error: '' });
   useEffect(() => {
     if (!path) {
-      setState({ data: null, loading: false, error: '' });
+      setState({ path, data: null, loading: false, error: '' });
       return undefined;
     }
+    setState({ path, data: null, loading: true, error: '' });
     return onSnapshot(
       doc(db, path),
-      (snap) => setState({ data: snap.exists() ? snap.data() : null, loading: false, error: '' }),
+      (snap) => setState({ path, data: snap.exists() ? snap.data() : null, loading: false, error: '' }),
       (err) => {
         console.error(`[${label}]`, err);
-        setState({ data: null, loading: false, error: 'No se pudo cargar.' });
+        setState({ path, data: null, loading: false, error: 'No se pudo cargar.' });
       },
     );
   }, [path, label]);
-  return state;
+  return state.path === path ? state : { path, data: null, loading: Boolean(path), error: '' };
 }
 
 const PUBLIC_DATA = `artifacts/${APP_ID}/public/data`;

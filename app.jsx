@@ -16,7 +16,6 @@ import { InstallPopup } from './components/InstallPopup.jsx';
 import { ToastStack } from './components/ToastStack.jsx';
 import { NotificationsPanel } from './components/NotificationsPanel.jsx';
 import { DEFAULT_BROADCAST_OVERLAY } from './components/BroadcastOverlay.jsx';
-import { BroadcastOverlayLive } from './components/broadcast/BroadcastOverlayLive.jsx';
 import { normalizeTournamentView } from './utils/tournamentViews.js';
 import { saveTournamentEdit } from './services/tournamentService.js';
 import { getMentionedTeamIds, hasTransferIntent } from './utils/managerChatUtils.js';
@@ -340,13 +339,6 @@ function App() {
   const searchParams = useMemo(() => (
     new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   ), [location.search]);
-  const rawMode = searchParams.get('mode');
-  const viewParam = searchParams.get('view');
-  const tournamentParam = searchParams.get('tournament'); // e.g. 'copa-plata'
-  const isObsMode = rawMode === 'obs';
-  const isPublicView = rawMode === 'table' || rawMode === 'bracket';
-  const isSpecialMode = isObsMode || isPublicView;
-  const targetView = normalizeTournamentView(viewParam || (rawMode === 'table' ? 'groups' : rawMode === 'bracket' ? 'bracket' : 'groups'));
   const initialTab = normalizeTournamentView(searchParams.get('tab') || 'groups');
   const clubTab = ['players', 'offers', 'sent', 'history', 'stats'].includes(searchParams.get('tab'))
     ? searchParams.get('tab')
@@ -531,8 +523,6 @@ function App() {
     const isPublicAuthRoute = location.pathname === '/' || location.pathname === '/login';
     const isPublicStandaloneRoute =
       isPublicAuthRoute ||
-      isSpecialMode ||
-      location.pathname.startsWith('/overlay') ||
       location.pathname.startsWith('/team/') ||
       location.pathname.startsWith('/tactics/view/') ||
       location.pathname.startsWith('/torneo');
@@ -545,7 +535,7 @@ function App() {
     if (!user && !isPublicStandaloneRoute) {
       navigate('/', { replace: true });
     }
-  }, [isAuthReady, isSpecialMode, location.pathname, navigate, user]);
+  }, [isAuthReady, location.pathname, navigate, user]);
 
 
 
@@ -718,7 +708,7 @@ function App() {
   // with a maintenance screen; now everything stays usable and only signing, offers and releases wait for it.
   const isMarketOpen = isMarketOpenFor(marketStatus, allTeams?.[userId], isAdmin);
   const shouldLoadPlayerDatabase = useMemo(() => {
-    if (isSpecialMode || location.pathname.startsWith('/overlay') || location.pathname.startsWith('/team/') || location.pathname.startsWith('/tactics/view/')) {
+    if (location.pathname.startsWith('/team/') || location.pathname.startsWith('/tactics/view/')) {
       return false;
     }
     if (location.pathname === '/' || location.pathname === '/login') return false;
@@ -726,7 +716,7 @@ function App() {
     const modalsThatNeedPlayers = new Set(['filters', 'cart', 'teams', 'compare']);
     return tabsThatNeedPlayers.has(activeTab) || modalsThatNeedPlayers.has(modalRoute) || Boolean(selectedPlayerId) || compareList.length > 0
       || squadNeedsCatalog;
-  }, [activeTab, compareList.length, isSpecialMode, location.pathname, modalRoute, selectedPlayerId, squadNeedsCatalog]);
+  }, [activeTab, compareList.length, location.pathname, modalRoute, selectedPlayerId, squadNeedsCatalog]);
 
   const dismissedNotifIdsRef = useRef(new Set(
     (() => {
@@ -1622,66 +1612,7 @@ function App() {
     }
   }, [activeTab, allPlayers, cart, playerLocks, remainingBudget, userProfile]);
 
-  if (isSpecialMode) {
-    // OBS Goleadores view
-    if (viewParam === 'goleadores' && !isObsMode) {
-      if (!tournamentData)
-        return <div role="status" className="min-h-screen bg-transparent flex items-center justify-center gap-2 text-white font-bold tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando...</div>;
-      const scorers = tournamentData.topScorers || [];
-      return (
-        <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-canvas'} p-8 font-sans`}>
-          <h2 className="text-5xl font-black text-white italic tracking-tighter uppercase mb-8 text-center drop-shadow-2xl">MÁXIMOS GOLEADORES</h2>
-          <div className="max-w-[800px] mx-auto space-y-4">
-            {scorers.map((p, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-surface/80 p-5 rounded-2xl border border-white/10">
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center font-black text-2xl text-slate-400">{idx + 1}</div>
-                  <div>
-                    <div className="text-2xl font-black text-white uppercase">{p.name || '---'}</div>
-                    <div className="text-sm font-bold text-slate-500 uppercase tracking-widest">{p.team || '---'}</div>
-                  </div>
-                </div>
-                <div className="text-5xl font-black text-blue-400">{p.goals || 0}</div>
-              </div>
-            ))}
-          </div>
-          {isObsMode && <style>{`body, html { background: transparent !important; }`}</style>}
-        </div>
-      );
-    }
-
-    // Copa de Plata OBS: /?mode=obs&view=bracket&tournament=copa-plata
-    const effectiveTab = tournamentParam === 'copa-plata' ? 'repechaje' : targetView;
-
-    if (!tournamentData)
-      return <div role="status" className="min-h-screen bg-black flex items-center justify-center gap-2 text-white font-bold tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando SCL Data...</div>;
-
-    return (
-      <div className={`min-h-screen ${isObsMode ? 'bg-transparent' : 'bg-canvas'}`}>
-        <Suspense fallback={null}>
-          <TournamentModal
-            isVisible={true}
-            onClose={() => { }}
-            tournamentData={tournamentData}
-            isAdmin={false}
-            onUpdateTournament={() => { }}
-            allTeams={allTeams}
-            allPlayers={allPlayers}
-            initialTab={effectiveTab}
-            userTeamName={userProfile?.teamName}
-            isBroadcast={isObsMode}
-          />
-        </Suspense>
-        <style>{`
-            .lucide-x, .border-b button { display: none !important; } 
-            .flex.border-b.border-slate-700 { display: none !important; }
-            ${isObsMode ? 'body, html { background: transparent !important; }' : ''}
-        `}</style>
-      </div>
-    );
-  }
-
-  // /torneo?mode=obs no llega acá: el bloque isSpecialMode de arriba ya resuelve todo ?mode=obs.
+  // Las fuentes de OBS (/overlay, ?mode=obs|table|bracket) no llegan acá: main.jsx las monta en screens/ObsScreen.jsx.
   if (location.pathname.startsWith('/torneo')) {
     if (!isAuthReady) {
       return <LoadingScreen message="Cargando torneo..." />;
@@ -1752,55 +1683,6 @@ function App() {
   if (!isAuthReady) {
     return <LoadingScreen message="Conectando al servidor..." />;
   }
-
-  if (location.pathname.startsWith('/overlay')) {
-    const overlayScene = searchParams.get('scene') || viewParam || broadcastOverlayData.scene || 'live';
-    const tournamentOverlayTabs = {
-      tabla: 'groups',
-      table: 'groups',
-      groups: 'groups',
-      llaves: 'bracket',
-      bracket: 'bracket',
-      repechaje: 'repechaje',
-    };
-    const tournamentOverlayTab = tournamentOverlayTabs[overlayScene];
-
-    if (tournamentOverlayTab) {
-      if (!tournamentData) {
-        return <div role="status" className="min-h-screen bg-transparent flex items-center justify-center gap-2 text-white font-bold tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando torneo...</div>;
-      }
-
-      return (
-        <div className="min-h-screen bg-transparent">
-          <Suspense fallback={null}>
-            <TournamentModal
-              isVisible={true}
-              onClose={() => { }}
-              tournamentData={tournamentData}
-              isAdmin={false}
-              onUpdateTournament={() => { }}
-              allTeams={allTeams}
-              allPlayers={allPlayers}
-              initialTab={tournamentOverlayTab}
-              userTeamName={userProfile?.teamName}
-              isBroadcast={true}
-            />
-          </Suspense>
-          <style>{`body, html { background: transparent !important; }`}</style>
-        </div>
-      );
-    }
-
-    return (
-      <BroadcastOverlayLive
-        overlayData={broadcastOverlayData}
-        allTeams={allTeams}
-        tournamentData={tournamentData}
-        forcedScene={overlayScene}
-      />
-    );
-  }
-
 
   if (!user) {
     return <LoadingScreen message="Volviendo al inicio..." />;
