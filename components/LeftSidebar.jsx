@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import {
   LayoutDashboard, Trophy, ShoppingCart, ClipboardList, Search, Users, Shield,
-  Crown, HelpCircle, MessageSquarePlus, LogOut, X, Keyboard, Database,
+  Crown, HelpCircle, MessageSquarePlus, LogOut, X, Keyboard, Database, Globe,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -52,6 +52,7 @@ function NavItem({ item, active, onClick }) {
 export const LeftSidebar = memo(function LeftSidebar({
   setActiveTab,
   isAdmin,
+  isLeagueEditor, // editor de la web pública: entra a Administración solo para esos textos
   hasPesAccess, // rol en el editor PES (Super Admin / Admin del Draft / Kit Manager)
   isOpen,
   onClose,
@@ -79,6 +80,7 @@ export const LeftSidebar = memo(function LeftSidebar({
   const tools = [
     hasPesAccess && { id: 'PES', label: 'Editor PES', icon: Database, paths: ['/pes'] },
     isAdmin && { id: 'Admin', label: 'Administración', icon: Crown, paths: ['/admin'] },
+    !isAdmin && isLeagueEditor && { id: 'Admin', label: 'Web pública', icon: Globe, paths: ['/admin'] },
   ].filter(Boolean);
   if (tools.length) groups.push({ label: 'Gestión', items: tools });
 

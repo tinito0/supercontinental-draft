@@ -43,16 +43,23 @@ export const AdminModal = memo(function AdminModal({
   onUpdateTournament,
   onOpenTournamentModal,
   initialTab,
+  allowedTabs,
   ...props
 }) {
+  // Un editor de la web pública (no admin) recibe allowedTabs={['web']}: ve solo esa sección.
+  const visibleTabs = allowedTabs ? ADMIN_TABS.filter(tab => allowedTabs.includes(tab.id)) : ADMIN_TABS;
+  const isEditorOnly = Boolean(allowedTabs);
   // Vuelve a la última sección: abrir el gestor del torneo cierra este modal y antes se volvía a Configuración.
-  const [activeTab, setActiveTab] = useState(() => normalizeAdminTab(initialTab || readStoredAdminTab()));
+  const [storedTab, setActiveTab] = useState(() => normalizeAdminTab(initialTab || readStoredAdminTab()));
+  const activeTab = visibleTabs.some(tab => tab.id === storedTab) ? storedTab : visibleTabs[0]?.id;
   const changeTab = (tab) => {
     setActiveTab(tab);
     storeAdminTab(tab);
   };
 
-  const tabs = <Tabs tabs={ADMIN_TABS} value={activeTab} onChange={changeTab} label="Secciones de administración" />;
+  const tabs = visibleTabs.length > 1
+    ? <Tabs tabs={visibleTabs} value={activeTab} onChange={changeTab} label="Secciones de administración" />
+    : null;
   const section = (
     <>
       {activeTab === 'general' && <GeneralAdminSection {...props} />}
@@ -70,7 +77,7 @@ export const AdminModal = memo(function AdminModal({
       )}
       {activeTab === 'web' && (
         <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>
-          <LeagueContentAdminSection allTeams={props.allTeams} showStatusMessage={props.showStatusMessage} />
+          <LeagueContentAdminSection allTeams={props.allTeams} showStatusMessage={props.showStatusMessage} canManageEditors={!isEditorOnly} />
         </Suspense>
       )}
       {activeTab === 'templates' && <TemplateAdminSection {...props} />}
@@ -83,7 +90,9 @@ export const AdminModal = memo(function AdminModal({
   if (isPage) {
     return (
       <Page className="pb-16">
-        <PageHeader eyebrow="Gestión" title="Administración" description="Configuración de la liga, equipos y usuarios, torneo y transmisión, y los textos de la web pública." />
+        {isEditorOnly
+          ? <PageHeader eyebrow="Gestión" title="Web pública" description="Los textos del sitio de la liga: su historia, la de cada club y el reglamento de la temporada." />
+          : <PageHeader eyebrow="Gestión" title="Administración" description="Configuración de la liga, equipos y usuarios, torneo y transmisión, y los textos de la web pública." />}
         {tabs}
         <div>{section}</div>
       </Page>

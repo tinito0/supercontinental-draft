@@ -242,8 +242,33 @@ service cloud.firestore {
 
       // Textos de la web pública de la liga (historia de la liga, de cada club y reglamento de la temporada):
       // los escribe el admin desde «Web pública» (utils/leagueContent.js); los lee cualquiera.
+      // Un editor de la web (league_editors/{uid}, lo nombra el admin) puede crear y editar esos textos y nada más:
+      // solo los documentos conocidos, con los campos y largos de utils/leagueContent.js, a su nombre. No borra.
+      function isLeagueEditor() {
+        return isAuth()
+          && exists(/databases/$(database)/documents/artifacts/$(appId)/league_editors/$(request.auth.uid));
+      }
+      function isLeagueContentDoc(docId) {
+        return docId in ['history', 'rules'] || docId.matches('club-[A-Za-z0-9_-]{1,128}');
+      }
+      function isValidLeagueContent() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(['body', 'season', 'chapters', 'updatedAt', 'updatedBy'])
+          && data.updatedBy == request.auth.uid
+          && data.updatedAt == request.time
+          && (!('body' in data) || isShortText(data.body, 20000))
+          && (!('season' in data) || isShortText(data.season, 40))
+          && (!('chapters' in data) || (data.chapters is list && data.chapters.size() <= 40));
+      }
       match /public/data/league_content/{docId} {
         allow read: if true;
+        allow write: if isAdmin();
+        allow create, update: if isLeagueEditor() && isLeagueContentDoc(docId) && isValidLeagueContent();
+      }
+
+      // Quién es editor de la web pública: cada uno lee el suyo (para ver la sección); solo el admin los nombra.
+      match /league_editors/{uid} {
+        allow read: if isAuth() && (request.auth.uid == uid || isAdmin());
         allow write: if isAdmin();
       }
 

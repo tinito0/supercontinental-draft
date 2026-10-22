@@ -26,6 +26,7 @@ import { OverviewTab } from './components/OverviewTab.jsx';
 import { useFirebaseData } from './hooks/useFirebaseData.js';
 import { useAuth } from './hooks/useAuth.js';
 import { usePesAccess } from './hooks/usePesAccess.js';
+import { useLeagueEditorAccess } from './hooks/useLeagueEditorAccess.js';
 import { useBudget } from './hooks/useBudget.js';
 import { useSquadSync } from './hooks/useSquadSync.js';
 import { isMarketOpen as isMarketOpenFor } from './supabase/functions/_shared/market.js';
@@ -500,6 +501,8 @@ function App() {
 
   // Rol en el editor PES (null = sin acceso: el usuario solo usa el mercado y el resto de la app).
   const hasPesAccess = usePesAccess(userId, isAdmin);
+  // Editor de la web pública: ve solo Administración → Web pública (firestore.rules le dejan escribir solo esos textos).
+  const isLeagueEditor = useLeagueEditorAccess(userId, isAdmin);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -1875,6 +1878,7 @@ function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           isAdmin={isAdmin}
+          isLeagueEditor={isLeagueEditor}
           hasPesAccess={hasPesAccess}
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
@@ -2082,7 +2086,7 @@ function App() {
                     />
                   </div>
                 )}
-                {activeTab === 'Admin' && isAdmin && (
+                {activeTab === 'Admin' && (isAdmin || isLeagueEditor) && (
                   <div className="animate-in fade-in h-full w-full">
                     <AdminModal
                       isVisible={true}
@@ -2106,6 +2110,7 @@ function App() {
                       tournamentData={tournamentData}
                       onUpdateTournament={handleUpdateTournament}
                       onOpenTournamentModal={() => setIsTournamentModalVisible(true)}
+                      allowedTabs={isAdmin ? undefined : ['web']}
                     />
                   </div>
                 )}

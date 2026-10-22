@@ -8,6 +8,7 @@ import { EmptyState } from '../ui/EmptyState.jsx';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import { isTeamApproved } from '../../supabase/functions/_shared/membership.js';
 import { saveClubStory, saveLeagueHistory, saveSeasonRules } from '../../services/leagueContentService.js';
+import { LeagueEditorsPanel } from './LeagueEditorsPanel.jsx';
 import {
   LEAGUE_HISTORY_DOC,
   MAX_STORY_LENGTH,
@@ -194,7 +195,7 @@ function SeasonRulesEditor({ showStatusMessage }) {
   );
 }
 
-export const LeagueContentAdminSection = memo(function LeagueContentAdminSection({ allTeams, showStatusMessage }) {
+export const LeagueContentAdminSection = memo(function LeagueContentAdminSection({ allTeams, showStatusMessage, canManageEditors = false }) {
   const [section, setSection] = useState('liga');
 
   return (
@@ -218,6 +219,7 @@ export const LeagueContentAdminSection = memo(function LeagueContentAdminSection
       )}
       {section === 'clubes' && <ClubStories allTeams={allTeams} showStatusMessage={showStatusMessage} />}
       {section === 'reglamento' && <SeasonRulesEditor showStatusMessage={showStatusMessage} />}
+      {canManageEditors && <LeagueEditorsPanel allTeams={allTeams} showStatusMessage={showStatusMessage} />}
     </section>
   );
 });
