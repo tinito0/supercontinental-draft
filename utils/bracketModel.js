@@ -2,7 +2,7 @@
 // Una sola fuente para la vista de la app (editable), la de OBS y la selección de partidos del overlay.
 // Datos en Firestore (tournament/official): bracket.{quarters[4], semis[2], final{}} para la Copa de Oro y
 // bracket.repechaje.{r1[4], r2[2], semis[2], final{}} para la Copa de Plata.
-import { knockoutWinner } from './competitionRules.js';
+import { goldCupQuarterFinals, isScore, knockoutWinner, teamKey } from './competitionRules.js';
 
 export const EMPTY_BRACKET_MATCH = Object.freeze({ teamA: '', teamB: '', scoreA: '', scoreB: '' });
 
@@ -48,11 +48,11 @@ export const CUP_DEFINITIONS = {
   },
 };
 
+/** Marcador cargado y válido (entero, no negativo): la misma regla que la tabla (competitionRules.isScore). */
 export function hasScore(value) {
-  return value !== '' && value !== undefined && value !== null && Number.isFinite(Number(value));
+  return isScore(value);
 }
 
-/** 'A' | 'B' | null. Un empate o un resultado incompleto no tiene ganador (no se modelan penales). */
 /** Quién pasa: el marcador y, si quedó empatado, la tanda (penaltiesA/B). null si falta información. */
 export function getMatchWinner(match) {
   return match ? knockoutWinner(match) : null;
@@ -213,6 +213,108 @@ export function chooseBroadcastLayout(rounds, width, height) {
   }
   const linearWidth = cardWidthFor(rounds.length, width, unit);
   return { layout: 'linear', unit, cardWidth: Math.min(linearWidth, BROADCAST_METRICS.maxCardWidth * unit) };
+}
+
+// ── Avance de las copas ────────────────────────────────────────────────────────────────────────────────────────
+// Decisión del usuario (2026-10-22): el admin arma la Copa de Oro con la tabla final (1-8, 4-5, 2-7, 3-6) y desde ahí
+// los ganadores pasan solos. Copa de Plata: Ronda 1 = 9.° a 12.° contra los 4 perdedores de cuartos de Oro (el 9.°
+// contra el peor ubicado de ellos, el 12.° contra el mejor), después la ronda 2, y en semis entran los 2 perdedores
+// de semis de Oro. Solo se completan lugares vacíos: nunca se pisa algo cargado a mano.
+
+const isBlank = value => !String(value ?? '').trim();
+const slotAt = (list, index) => (Array.isArray(list) && list[index] && typeof list[index] === 'object' ? list[index] : { ...EMPTY_BRACKET_MATCH });
+const teamNames = ranking => (ranking || []).map(row => (typeof row === 'string' ? row : row?.name)).filter(name => name && name !== 'Club...');
+
+function decided(match) {
+  const side = getMatchWinner(match);
+  if (!side) return null;
+  return side === 'A' ? { winner: match.teamA, loser: match.teamB } : { winner: match.teamB, loser: match.teamA };
+}
+
+/**
+ * «Armar Copa de Oro»: cuartos desde la tabla final. Solo si los cuartos están vacíos.
+ * @returns {{ ok: true, bracket: object } | { ok: false, reason: string }}
+ */
+export function seedGoldCup(bracket, ranking) {
+  const quarters = Array.from({ length: 4 }, (_, index) => slotAt(bracket?.quarters, index));
+  if (quarters.some(match => !isBlank(match.teamA) || !isBlank(match.teamB))) {
+    return { ok: false, reason: 'Los cuartos de la Copa de Oro ya tienen equipos: vacialos a mano si querés volver a armarlos.' };
+  }
+  let seeds;
+  try {
+    seeds = goldCupQuarterFinals(teamNames(ranking).map(name => ({ name })));
+  } catch (error) {
+    return { ok: false, reason: error.message };
+  }
+  return { ok: true, bracket: { ...bracket, quarters: seeds.map(({ teamA, teamB }) => ({ ...EMPTY_BRACKET_MATCH, teamA, teamB })) } };
+}
+
+/**
+ * Lleva a los ganadores (y a los perdedores que van a la Plata) a su próximo cruce. Idempotente: con el mismo bracket
+ * devuelve el mismo bracket. Si un lugar ya tiene otro club (un resultado corregido después de avanzar), no lo toca y
+ * lo avisa en `warnings`.
+ * @param {object} bracket
+ * @param {Array<string|{name}>} ranking tabla de la liga ordenada
+ * @param {{ leagueComplete?: boolean }} options la Ronda 1 de Plata necesita la tabla final
+ * @returns {{ bracket: object, changes: string[], warnings: string[] }}
+ */
+export function advanceCups(bracket, ranking = [], { leagueComplete = false } = {}) {
+  const source = bracket || {};
+  const repechaje = source.repechaje || {};
+  const next = {
+    ...source,
+    quarters: Array.from({ length: 4 }, (_, i) => slotAt(source.quarters, i)),
+    semis: Array.from({ length: 2 }, (_, i) => slotAt(source.semis, i)),
+    final: source.final && typeof source.final === 'object' ? { ...source.final } : { ...EMPTY_BRACKET_MATCH },
+    repechaje: {
+      ...repechaje,
+      r1: Array.from({ length: 4 }, (_, i) => slotAt(repechaje.r1, i)),
+      r2: Array.from({ length: 2 }, (_, i) => slotAt(repechaje.r2, i)),
+      semis: Array.from({ length: 2 }, (_, i) => slotAt(repechaje.semis, i)),
+      final: repechaje.final && typeof repechaje.final === 'object' ? { ...repechaje.final } : { ...EMPTY_BRACKET_MATCH },
+    },
+  };
+  const changes = [];
+  const warnings = [];
+  const place = (slot, side, team, label) => {
+    if (isBlank(team)) return slot;
+    if (isBlank(slot[side])) {
+      changes.push(`${team} → ${label}`);
+      return { ...slot, [side]: team };
+    }
+    if (teamKey(slot[side]) !== teamKey(team)) warnings.push(`${label}: figura ${slot[side]}, pero el que corresponde es ${team}. Corregilo a mano.`);
+    return slot;
+  };
+  const fillPair = (slot, a, b, label) => place(place(slot, 'teamA', a, label), 'teamB', b, label);
+
+  const q = next.quarters.map(decided);
+  next.semis[0] = fillPair(next.semis[0], q[0]?.winner, q[1]?.winner, 'Semifinal 1 (Oro)');
+  next.semis[1] = fillPair(next.semis[1], q[2]?.winner, q[3]?.winner, 'Semifinal 2 (Oro)');
+  const s = next.semis.map(decided);
+  next.final = fillPair(next.final, s[0]?.winner, s[1]?.winner, 'Gran Final (Oro)');
+
+  const names = teamNames(ranking);
+  if (leagueComplete && names.length >= 12 && q.every(Boolean)) {
+    const position = name => {
+      const index = names.findIndex(item => teamKey(item) === teamKey(name));
+      return index === -1 ? names.length : index;
+    };
+    const losers = q.map(result => result.loser).sort((a, b) => position(a) - position(b));
+    // 9.° vs el peor ubicado de los perdedores de cuartos … 12.° vs el mejor.
+    for (let k = 0; k < 4; k += 1) {
+      next.repechaje.r1[k] = fillPair(next.repechaje.r1[k], names[8 + k], losers[3 - k], `Preliminar ${k + 1} (Plata)`);
+    }
+  }
+  const r1 = next.repechaje.r1.map(decided);
+  next.repechaje.r2[0] = fillPair(next.repechaje.r2[0], r1[0]?.winner, r1[1]?.winner, 'Cuartos Plata 1');
+  next.repechaje.r2[1] = fillPair(next.repechaje.r2[1], r1[2]?.winner, r1[3]?.winner, 'Cuartos Plata 2');
+  const r2 = next.repechaje.r2.map(decided);
+  next.repechaje.semis[0] = fillPair(next.repechaje.semis[0], r2[0]?.winner, s[0]?.loser, 'Semifinal Plata 1');
+  next.repechaje.semis[1] = fillPair(next.repechaje.semis[1], r2[1]?.winner, s[1]?.loser, 'Semifinal Plata 2');
+  const ps = next.repechaje.semis.map(decided);
+  next.repechaje.final = fillPair(next.repechaje.final, ps[0]?.winner, ps[1]?.winner, 'Final Plata');
+
+  return { bracket: changes.length ? next : source, changes, warnings };
 }
 
 /** Partidos de una copa en una lista plana (para el selector de partidos del overlay). */

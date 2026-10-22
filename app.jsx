@@ -18,7 +18,7 @@ import { NotificationsPanel } from './components/NotificationsPanel.jsx';
 import { DEFAULT_BROADCAST_OVERLAY } from './components/BroadcastOverlay.jsx';
 import { BroadcastOverlayLive } from './components/broadcast/BroadcastOverlayLive.jsx';
 import { normalizeTournamentView } from './utils/tournamentViews.js';
-import { getMatchesWithNewResults } from './components/tournament/tournamentEngine.js';
+import { saveTournamentEdit } from './services/tournamentService.js';
 import { getMentionedTeamIds, hasTransferIntent } from './utils/managerChatUtils.js';
 import { makePrefetchable, schedulePrefetchOnIdle } from './utils/prefetch.js';
 import { readSessionHint, writeSessionHint } from './utils/sessionHint.js';
@@ -115,7 +115,6 @@ import {
   setDoc,
   onSnapshot,
   collection,
-  writeBatch,
   addDoc,
   getDocs,
   serverTimestamp,
@@ -931,40 +930,25 @@ function App() {
 
 
 
-  // Devuelve si se guardó: TournamentModal solo sale del modo edición cuando es true.
-  const handleUpdateTournament = async (newData) => {
-    if (!isAdmin) return false;
+  // Guarda una edición del torneo (services/tournamentService.js: transacción que fusiona con lo guardado mientras
+  // tanto, recalcula tabla, fecha suiza y copas, y publica las noticias). `base` = el torneo al empezar a editar.
+  // Devuelve el resultado: TournamentModal solo sale del modo edición con ok.
+  const handleUpdateTournament = async (edited, { base = null } = {}) => {
+    if (!isAdmin) return { ok: false, error: 'Solo el admin guarda el torneo.' };
     try {
-      // Torneo y noticias en un solo batch: antes, si fallaba una noticia, el torneo quedaba guardado, el
-      // aviso decía que no, y al reintentar ya no había resultados "nuevos", así que la noticia no salía nunca.
-      const batch = writeBatch(db);
-      // mergeFields reemplaza cada campo de nivel superior entero (bracket, league, matches…): con merge: true
-      // los mapas se fusionan en profundidad y una clave borrada en el editor nunca se borraba en Firestore.
-      batch.set(getTournamentDocRef(), newData, { mergeFields: Object.keys(newData) });
-      // Noticias solo de resultados nuevos o corregidos; antes cada guardado republicaba todos los partidos.
-      const changedResults = getMatchesWithNewResults(tournamentData?.matches, newData.matches);
-      changedResults.forEach(match => batch.set(
-        doc(db, `artifacts/${APP_ID}/public/data/news`, `match-${match.id}`),
-        {
-          type: 'match_result',
-          matchId: match.id,
-          round: match.round || 'Partido de torneo',
-          homeTeam: match.homeTeam || 'Local',
-          awayTeam: match.awayTeam || 'Visitante',
-          homeScore: Number(match.homeScore) || 0,
-          awayScore: Number(match.awayScore) || 0,
-          mvp: match.mvp || '',
-          publishedAt: serverTimestamp(),
-        },
-        { merge: true }
-      ));
-      await batch.commit();
-      showStatusMessage('success', 'Torneo actualizado correctamente.');
-      return true;
+      const result = await saveTournamentEdit({ base, edited });
+      if (!result.ok) {
+        showStatusMessage('error', result.error);
+        return result;
+      }
+      const extra = result.generatedRound ? ` Se armó la ${result.generatedRound}.` : '';
+      showStatusMessage('success', `Torneo actualizado correctamente.${extra}`);
+      return result;
     } catch (e) {
       console.error(e);
-      showStatusMessage('error', 'No se pudo guardar el torneo. Tus cambios siguen en pantalla; probá de nuevo.');
-      return false;
+      const error = 'No se pudo guardar el torneo. Tus cambios siguen en pantalla; probá de nuevo.';
+      showStatusMessage('error', error);
+      return { ok: false, error };
     }
   };
 

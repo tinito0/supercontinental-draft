@@ -5,7 +5,10 @@ import { Tabs } from './ui/Tabs.jsx';
 import { Spinner } from './ui/Spinner.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { normalizeTournamentView } from '../utils/tournamentViews.js';
-import { CUP_IDS } from '../utils/bracketModel.js';
+import { CUP_IDS, seedGoldCup as seedGoldCupBracket } from '../utils/bracketModel.js';
+import { normalizeTournament } from '../utils/tournamentModel.js';
+import { LEAGUE_ROUNDS, roundStatus } from './tournament/tournamentEngine.js';
+import { TieBreakEditor } from './tournament/TieBreakEditor.jsx';
 import { useElementSize } from '../hooks/useElementSize.js';
 import {
   tournamentBackdropClass,
@@ -92,6 +95,7 @@ export const TournamentModal = memo(function TournamentModal({
   const [saveWarnings, setSaveWarnings] = useState([]);
   const [localData, setLocalData] = useState(null);
   const editBaselineRef = useRef('');
+  const editBaseRef = useRef(null);
   // Las rutas de OBS lo indican con isBroadcast; ?mode=obs queda como respaldo para enlaces viejos.
   const isObsMode = isBroadcast ?? (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'obs');
 
@@ -102,64 +106,17 @@ export const TournamentModal = memo(function TournamentModal({
   // Escape lo maneja BaseModal (que además no cierra mientras se escribe en un campo). Un segundo listener
   // acá llamaba onClose dos veces y cerraba aunque el foco estuviera en un input.
 
+  // Fuera del modo edición la copia local sigue a Firestore; al editar queda fija y se guarda como diferencia
+  // contra su base (services/tournamentService.js), así que lo que otro admin guarde mientras tanto no se pisa.
   useEffect(() => {
-    if (tournamentData && !isEditing) {
-      const safeData = JSON.parse(JSON.stringify(tournamentData));
-      if (!Array.isArray(safeData.league)) safeData.league = [];
-      // STRICT 12-TEAM CAP: SuperContinental League has exactly 12 teams
-      if (safeData.league.length > 12) {
-        safeData.league = safeData.league.slice(0, 12);
-      }
-      while (safeData.league.length < 12) {
-        safeData.league.push({ id: crypto.randomUUID(), name: 'Club...', pj: 0, pg: 0, gpen: 0, pp: 0, pts: 0, gf: 0, gc: 0 });
-      }
-      safeData.league.forEach(t => {
-        if (!t.id) t.id = crypto.randomUUID();
-      });
+    if (isEditing) return;
+    if (tournamentData) setLocalData(normalizeTournament(tournamentData));
+    else setLocalData(prev => prev || normalizeTournament(null));
+  }, [tournamentData, isEditing]);
 
-      if (!safeData.bracket) safeData.bracket = { quarters: [], semis: [], final: {}, repechaje: { r1: [], r2: [], semis: [], final: {} } };
-      if (!safeData.bracket.repechaje) safeData.bracket.repechaje = { r1: [], r2: [], semis: [], final: {} };
-
-      const fillArray = (arr, requiredLength) => {
-        if (!Array.isArray(arr)) arr = [];
-        while (arr.length < requiredLength) {
-          arr.push({ teamA: '', teamB: '', scoreA: '', scoreB: '' });
-        }
-        return arr;
-      };
-
-      safeData.bracket.repechaje.r1 = fillArray(safeData.bracket.repechaje.r1, 4);
-      safeData.bracket.repechaje.r2 = fillArray(safeData.bracket.repechaje.r2, 2);
-      safeData.bracket.repechaje.semis = fillArray(safeData.bracket.repechaje.semis, 2);
-      safeData.bracket.quarters = fillArray(safeData.bracket.quarters, 4);
-      safeData.bracket.semis = fillArray(safeData.bracket.semis, 2);
-
-      // Estadísticas
-      if (!safeData.topScorers) safeData.topScorers = Array(5).fill(null).map(() => ({ name: '', team: '', goals: '' }));
-      if (!safeData.topAssisters) safeData.topAssisters = Array(5).fill(null).map(() => ({ name: '', team: '', assists: '' }));
-      if (!Array.isArray(safeData.matches)) safeData.matches = [];
-
-      setLocalData(safeData);
-    } else if (!tournamentData && !localData) {
-      setLocalData({
-        league: Array(12).fill(null).map(() => ({ id: crypto.randomUUID(), name: 'Club...', pj: 0, pg: 0, gpen: 0, pp: 0, pts: 0, gf: 0, gc: 0 })),
-        bracket: {
-          quarters: Array(4).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-          semis: Array(2).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-          final: { teamA: '', teamB: '', scoreA: '', scoreB: '' },
-          repechaje: {
-            r1: Array(4).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-            r2: Array(2).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-            semis: Array(2).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-            final: { teamA: '', teamB: '', scoreA: '', scoreB: '' },
-          },
-        },
-        topScorers: Array(5).fill(null).map(() => ({ name: '', team: '', goals: '' })),
-        topAssisters: Array(5).fill(null).map(() => ({ name: '', team: '', assists: '' })),
-        matches: [],
-      });
-    }
-  }, [tournamentData, allTeams, isEditing]);
+  // Otro guardado mientras se edita: no bloquea (se combina al guardar), pero se avisa.
+  const editStartDataRef = useRef(null);
+  const changedWhileEditing = isEditing && editStartDataRef.current !== null && editStartDataRef.current !== tournamentData;
 
   const teamOptions = useMemo(() => Object.entries(allTeams || {})
     .map(([id, team]) => ({ id, name: String(team?.teamName || '').trim() }))
@@ -180,11 +137,18 @@ export const TournamentModal = memo(function TournamentModal({
     return found ? `/fotos_jugadores/${found.Id || found.id}.webp` : null;
   }, [allPlayers]);
 
-  // Desempates del reglamento (tournamentEngine.rankLeague); los empates que nada resuelve se avisan.
-  const sortLeague = (data) => {
-    const { league, unresolvedTies } = rankLeague((data.league || []).slice(0, 12));
-    return { data: { ...data, league }, unresolvedTies };
-  };
+  // Empates sin desempate posible con la tabla que quedaría al guardar (sin el orden manual, para poder cambiarlo).
+  const liveTies = useMemo(() => {
+    if (!isEditing || !localData) return [];
+    return rankLeague(buildAutomaticTournamentReport(localData).data.league).unresolvedTies;
+  }, [isEditing, localData]);
+
+  const finalRanking = useMemo(() => {
+    if (!localData) return null;
+    const data = buildAutomaticTournamentReport(localData).data;
+    if (!roundStatus(data, LEAGUE_ROUNDS).complete) return null;
+    return rankLeague(data.league, data.tieBreakOrder).league;
+  }, [localData]);
 
   const clearLeagueSlot = useCallback((index) => {
     setLocalData(prev => {
@@ -196,35 +160,54 @@ export const TournamentModal = memo(function TournamentModal({
 
   const startEditing = () => {
     editBaselineRef.current = JSON.stringify(localData);
+    editBaseRef.current = JSON.parse(editBaselineRef.current);
+    editStartDataRef.current = tournamentData;
+    setSaveError(null);
     setIsEditing(true);
   };
 
   const hasUnsavedChanges = () => isEditing && JSON.stringify(localData) !== editBaselineRef.current;
 
   // Se sale del modo edición solo si el guardado terminó bien: si falla, los cambios siguen en pantalla.
+  // Tabla, desempates, fecha suiza automática y avance de copas los recalcula el servicio al guardar.
   const handleSave = async () => {
     if (isSaving) return;
-    const { data: computed, overflow, issues } = buildAutomaticTournamentReport(localData);
-    // La liga es de 12: un club de más casi siempre es un partido con un nombre que no está en la tabla.
-    // Antes se descartaba sin aviso al guardar (y con él, sus resultados en la tabla).
-    if (overflow.length > 0) {
-      setSaveError(`La tabla tendría ${12 + overflow.length} clubes y la liga admite 12. No entran: ${overflow.join(', ')}. Revisá el nombre de esos clubes en los partidos o quitá un club de la tabla.`);
-      return;
-    }
     setSaveError(null);
-    const { data: sortedData, unresolvedTies } = sortLeague(computed);
-    setSaveWarnings([
-      ...issues.map(issue => `${issue.label}: ${issue.reason}`),
-      ...unresolvedTies.map(group => `Empate en la tabla sin desempate posible: ${group.join(', ')}. Decidí el orden (el reglamento no define el último criterio).`),
-    ]);
-    setLocalData(sortedData);
     setIsSaving(true);
     try {
-      const saved = await onUpdateTournament(sortedData);
-      if (saved !== false) setIsEditing(false);
+      const result = await onUpdateTournament(localData, { base: editBaseRef.current });
+      if (!result?.ok) {
+        setSaveError(result?.conflicts?.length ? `${result.error} ${result.conflicts.join(' ')}` : (result?.error || 'No se pudo guardar.'));
+        return;
+      }
+      setSaveWarnings([
+        ...(result.issues || []),
+        ...(result.unresolvedTies || []).map(group => `Empate en la tabla sin desempate posible: ${group.join(', ')}. Ordenalos con «Editar».`),
+        ...(result.warnings || []),
+        ...(result.generatedRound ? [`Se armó la ${result.generatedRound} con la tabla actual. Ya está publicada.`] : []),
+        ...(result.cupChanges?.length ? [`Copas: ${result.cupChanges.join(' · ')}.`] : []),
+      ]);
+      editStartDataRef.current = null;
+      setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const setTieBreakOrder = useCallback((order) => {
+    setLocalData(prev => ({ ...prev, tieBreakOrder: order }));
+  }, []);
+
+  // «Armar Copa de Oro»: cuartos 1-8, 4-5, 2-7, 3-6 con la tabla final; desde ahí los ganadores pasan solos.
+  const seedGoldCup = () => {
+    const result = seedGoldCupBracket(localData.bracket, finalRanking);
+    if (!result.ok) {
+      setSaveWarnings([result.reason]);
+      return;
+    }
+    const list = result.bracket.quarters.map(match => `${match.teamA} vs ${match.teamB}`).join('\n');
+    if (!window.confirm(`Cuartos de la Copa de Oro:\n${list}\n\nSe publican al presionar Guardar.`)) return;
+    setLocalData(prev => ({ ...prev, bracket: result.bracket }));
   };
 
   const handleCancelEditing = () => {
@@ -314,7 +297,8 @@ export const TournamentModal = memo(function TournamentModal({
     }));
   }, []);
 
-  // Cruces suizos sugeridos (desde la fecha 2): se agregan como programados y el admin los puede cambiar antes de guardar.
+  // La fecha suiza se arma sola al guardar el último resultado de una fecha. Este botón es el respaldo manual (por
+  // ejemplo si el admin borró una fecha generada para rehacerla): mismos ids fijos, así que nunca la duplica.
   const suggestNextRound = useCallback(() => {
     const suggestion = suggestSwissRound(localData);
     if (!suggestion.ok) {
@@ -324,13 +308,10 @@ export const TournamentModal = memo(function TournamentModal({
     const list = suggestion.pairs.map(([home, away]) => `${home} vs ${away}`).join('\n');
     if (!window.confirm(`${suggestion.round} sugerida:\n${list}\n\n¿Agregar estos partidos? Se guardan al presionar Guardar.`)) return;
     setSaveWarnings([]);
-    setLocalData(prev => ({
-      ...prev,
-      matches: [...(prev.matches || []), ...suggestion.pairs.map(([homeTeam, awayTeam]) => ({
-        id: crypto.randomUUID(), round: suggestion.round, homeTeam, awayTeam, homeScore: '', awayScore: '', date: '', mvp: '',
-        homeGoals: '', awayGoals: '', homeAssists: '', awayAssists: '', homeConfirmed: false, awayConfirmed: false, status: 'scheduled',
-      }))],
-    }));
+    setLocalData(prev => {
+      const ids = new Set((prev.matches || []).map(match => match.id));
+      return { ...prev, matches: [...(prev.matches || []), ...suggestion.matches.filter(match => !ids.has(match.id))] };
+    });
   }, [localData]);
 
   const removeTournamentMatch = useCallback((matchId) => {
@@ -487,6 +468,21 @@ export const TournamentModal = memo(function TournamentModal({
                 </div>
               </div>
               {saveError && isEditing && <Alert tone="danger">{saveError}</Alert>}
+              {changedWhileEditing && (
+                <Alert tone="info">Otro admin guardó cambios del torneo mientras editabas. Al guardar se combinan con los tuyos; si tocaron lo mismo, se avisa y no se pisa nada.</Alert>
+              )}
+              {isAdmin && localData.swissStatus?.blocked && (
+                <Alert tone="warning" title={`No se pudo armar la Fecha ${localData.swissStatus.blocked.round}`}>
+                  {localData.swissStatus.blocked.reason} Cargá esa fecha a mano con «Agregar partido».
+                </Alert>
+              )}
+              {isAdmin && isEditing && <TieBreakEditor groups={liveTies} order={localData.tieBreakOrder || []} onChange={setTieBreakOrder} />}
+              {isAdmin && isEditing && activeTab === 'bracket' && finalRanking && !localData.bracket?.quarters?.some(match => match?.teamA || match?.teamB) && (
+                <Alert tone="info" title="La liga terminó">
+                  <span className="mr-2">Armá los cuartos de la Copa de Oro con la tabla final (1-8, 4-5, 2-7, 3-6). Después los ganadores pasan solos.</span>
+                  <button type="button" className="btn btn-secondary btn-sm min-h-11 mt-2" onClick={seedGoldCup}>Armar Copa de Oro</button>
+                </Alert>
+              )}
               {saveWarnings.length > 0 && (
                 <Alert tone="warning" title="Revisá la tabla">
                   <ul className="list-disc space-y-0.5 pl-4">{saveWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul>

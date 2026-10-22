@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { RefreshCw, Search, X, Users, Edit2, Crown, Trash2, Upload, Save, KeyRound, UserCheck } from 'lucide-react';
-import { getDocs, query, collection, getDoc, writeBatch, doc, setDoc, where } from 'firebase/firestore';
+import { getDocs, query, collection, getDoc, writeBatch, doc, setDoc, where, runTransaction } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { DEFAULT_LOGO, APP_ID } from '../../utils/constants.js';
 import { formatBudget } from '../../utils/helpers.js';
@@ -166,23 +166,27 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
     setIsUploading(false);
   };
 
-  /** Adds the tournament and overlay rewrites for a renamed club to `batch`; returns where it changed. */
-  const renameTeamEverywhere = async (batch, oldName, newName) => {
+  /**
+   * Adds the tournament and overlay rewrites for a renamed club to `transaction`; returns where it changed.
+   * Reads both documents first (a transaction needs every read before its writes) so a result saved meanwhile
+   * makes Firestore retry with it instead of being overwritten.
+   */
+  const renameTeamEverywhere = async (transaction, oldName, newName) => {
     if (!oldName || oldName.trim() === newName.trim()) return '';
     const targets = [
       { ref: doc(db, `artifacts/${APP_ID}/public/data/tournament`, 'official'), label: 'el torneo' },
       { ref: doc(db, `artifacts/${APP_ID}/public/data/broadcast`, 'overlay'), label: 'el overlay' },
     ];
+    const snaps = await Promise.all(targets.map(({ ref }) => transaction.get(ref)));
     const places = [];
-    for (const { ref, label } of targets) {
-      const snap = await getDoc(ref);
-      if (!snap.exists()) continue;
-      const { data, changedKeys } = renameTeamInTournament(snap.data(), oldName, newName);
-      if (!changedKeys.length) continue;
+    targets.forEach(({ ref, label }, index) => {
+      if (!snaps[index].exists()) return;
+      const { data, changedKeys } = renameTeamInTournament(snaps[index].data(), oldName, newName);
+      if (!changedKeys.length) return;
       // Sólo los campos con el nombre viejo (league, matches, bracket…): el resto del documento no se toca.
-      batch.set(ref, Object.fromEntries(changedKeys.map(key => [key, data[key]])), { mergeFields: changedKeys });
+      transaction.set(ref, Object.fromEntries(changedKeys.map(key => [key, data[key]])), { mergeFields: changedKeys });
       places.push(label);
-    }
+    });
     return places.join(' y ');
   };
 
@@ -196,7 +200,6 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
     setIsSaving(true);
     try {
       const uid = editingTeam.uid;
-      const batch = writeBatch(db);
       const saveData = {
         teamName: formData.teamName.trim(),
         budget: budget.value,
@@ -204,13 +207,15 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
         country: Number(formData.country) || 204,
         manualStats: formData.manualStats || {},
       };
-      batch.set(getPrivateProfileRef(uid), saveData, { merge: true });
-      // manualStats es un mapa entero: mergeFields lo reemplaza (con merge: true un campo vaciado no se borraba).
-      batch.set(getPublicTeamRef(uid), saveData, { mergeFields: Object.keys(saveData) });
-      // El torneo y el overlay identifican a los clubes por nombre: el cambio de nombre va en el mismo batch,
+      // El torneo y el overlay identifican a los clubes por nombre: el cambio de nombre va en la misma transacción,
       // así la tabla no se parte en dos filas ni se pierde el escudo.
-      const renamedIn = await renameTeamEverywhere(batch, editingTeam.teamName, saveData.teamName);
-      await batch.commit();
+      const renamedIn = await runTransaction(db, async transaction => {
+        const places = await renameTeamEverywhere(transaction, editingTeam.teamName, saveData.teamName);
+        transaction.set(getPrivateProfileRef(uid), saveData, { merge: true });
+        // manualStats es un mapa entero: mergeFields lo reemplaza (con merge: true un campo vaciado no se borraba).
+        transaction.set(getPublicTeamRef(uid), saveData, { mergeFields: Object.keys(saveData) });
+        return places;
+      });
       showStatusMessage('success', `Equipo "${saveData.teamName}" actualizado.${renamedIn ? ` También se renombró en ${renamedIn}.` : ''}`);
       setEditingTeam(null);
       await fetchTeams();

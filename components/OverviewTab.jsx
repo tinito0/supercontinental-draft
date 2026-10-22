@@ -7,14 +7,17 @@ import { PageHeader, SectionHeader } from './ui/PageHeader.jsx';
 import { Stat } from './ui/Stat.jsx';
 import { Button } from './ui/Button.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
+import { teamMatchResult } from '../utils/competitionRules.js';
 
 const sameName = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
 const goalDiff = t => (Number(t.gf) || 0) - (Number(t.gc) || 0);
 const RESULT = {
   V: { label: 'Victoria', className: 'bg-success text-canvas' },
-  E: { label: 'Empate', className: 'bg-warning text-canvas' },
+  P: { label: 'Definido por penales', className: 'bg-warning text-canvas' },
+  E: { label: 'Empate sin tanda cargada', className: 'bg-raised text-ink-2' },
   D: { label: 'Derrota', className: 'bg-danger text-ink' },
 };
+const FORM_CHAR = { win: 'V', shootoutWin: 'P', shootoutLoss: 'P', loss: 'D', draw: 'E' };
 
 function Crest({ src, name, className = '' }) {
   return (
@@ -108,8 +111,8 @@ export const OverviewTab = memo(function OverviewTab({
   const leagueTable = useMemo(() => {
     if (!Array.isArray(tournamentData?.league)) return [];
     return tournamentData.league
-      .filter(t => t.name && t.name !== 'Club...')
-      .sort((a, b) => (Number(b.pts) || 0) - (Number(a.pts) || 0) || goalDiff(b) - goalDiff(a));
+      // El orden guardado ya es el oficial (desempates del reglamento y orden manual del admin): no se reordena acá.
+      .filter(t => t.name && t.name !== 'Club...');
   }, [tournamentData?.league]);
 
   const userRankIndex = useMemo(() => leagueTable.findIndex(t => sameName(t.name, teamName)), [leagueTable, teamName]);
@@ -124,12 +127,11 @@ export const OverviewTab = memo(function OverviewTab({
   const nextMatch = useMemo(() => userMatches.find(m => m.status !== 'completed') || null, [userMatches]);
   const lastMatch = finished.length ? finished[finished.length - 1] : null;
 
-  const recentForm = useMemo(() => finished.slice(-5).map(m => {
-    const home = sameName(m.homeTeam, teamName);
-    const mine = Number(home ? m.homeScore : m.awayScore) || 0;
-    const theirs = Number(home ? m.awayScore : m.homeScore) || 0;
-    return mine > theirs ? 'V' : mine === theirs ? 'E' : 'D';
-  }), [finished, teamName]);
+  const recentForm = useMemo(() => finished
+    .map(m => teamMatchResult(teamName, m))
+    .filter(Boolean)
+    .slice(-5)
+    .map(({ result }) => FORM_CHAR[result]), [finished, teamName]);
 
   const topPlayers = useMemo(() => [...ownedCart].sort((a, b) => (b.OVR_CALCULADO || 0) - (a.OVR_CALCULADO || 0)).slice(0, 5), [ownedCart]);
   const averageOvr = useMemo(() => (ownedCart.length ? Math.round(ownedCart.reduce((acc, p) => acc + (p.OVR_CALCULADO || 0), 0) / ownedCart.length) : 0), [ownedCart]);

@@ -5,7 +5,6 @@ import { db } from '../../config/firebase.js';
 import { APP_ID } from '../../utils/constants.js';
 import { useLiveMatches, usePesTeamMap } from '../../hooks/useLeagueData.js';
 import { applyCollectorImport, gameTeamIds, planCollectorImport } from '../../utils/collectorImport.js';
-import { buildAutomaticTournamentReport, rankLeague } from '../tournament/tournamentEngine.js';
 import { Alert } from '../ui/Alert.jsx';
 
 // Partidos del juego → torneo (docs/TOURNAMENT_DATA_FLOW_AUDIT.md, punto 4): lista los partidos terminados que subió
@@ -65,7 +64,7 @@ function Preview({ plan }) {
   );
 }
 
-/** @param {{ tournamentData: object, onUpdateTournament: (data: object) => Promise<boolean>, showStatusMessage?: Function }} props */
+/** @param {{ tournamentData: object, onUpdateTournament: (edited: object, options: { base: object }) => Promise<{ ok: boolean }>, showStatusMessage?: Function }} props */
 export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournamentData, onUpdateTournament, showStatusMessage }) {
   const { matches, loading, error } = useLiveMatches();
   const { data: teamMapDoc } = usePesTeamMap();
@@ -90,15 +89,17 @@ export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournam
     if (!window.confirm(`¿Importar ${match.home.name} ${match.home.score}-${match.away.score} ${match.away.name} a ${plan.label}?`)) return;
     setBusyKey(match.key);
     try {
-      const { data, issues } = buildAutomaticTournamentReport(applyCollectorImport(tournamentData, plan));
-      const { league, unresolvedTies } = rankLeague(data.league);
-      const saved = await onUpdateTournament({ ...data, league });
-      if (saved !== false) {
-        setWarnings([
-          ...issues.map(issue => `${issue.label}: ${issue.reason}`),
-          ...unresolvedTies.map(group => `Empate en la tabla sin desempate posible: ${group.join(', ')}.`),
-        ]);
-      }
+      // Mismo guardado que el gestor del torneo (services/tournamentService.js): fusiona con lo último guardado,
+      // controla que no haya más de 12 clubes y recalcula tabla, fecha suiza y copas.
+      const result = await onUpdateTournament(applyCollectorImport(tournamentData, plan), { base: tournamentData });
+      setWarnings(result?.ok
+        ? [
+          ...(result.issues || []),
+          ...(result.unresolvedTies || []).map(group => `Empate en la tabla sin desempate posible: ${group.join(', ')}.`),
+          ...(result.warnings || []),
+          ...(result.generatedRound ? [`Se armó la ${result.generatedRound}.`] : []),
+        ]
+        : [result?.error || 'No se pudo importar el partido.']);
     } finally {
       setBusyKey('');
     }

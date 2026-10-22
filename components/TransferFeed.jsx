@@ -72,10 +72,13 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
           <span className="truncate text-xs font-bold text-ink-2">{transfer.homeTeam}</span>
           <strong className="rounded-lg bg-success/20 px-2.5 py-1 text-sm font-bold text-success-soft tabular-nums">
-            {transfer.homeScore} - {transfer.awayScore}
+            {transfer.homeScore ?? '–'} - {transfer.awayScore ?? '–'}
           </strong>
           <span className="truncate text-xs font-bold text-ink-2">{transfer.awayTeam}</span>
         </div>
+        {transfer.homePenalties != null && transfer.awayPenalties != null && (
+          <p className="mt-1 text-center text-[11px] text-ink-3 tabular-nums">Penales {transfer.homePenalties}-{transfer.awayPenalties}</p>
+        )}
         {transfer.mvp && <p className="mt-2 text-center text-[11px] font-medium text-warning-soft">MVP: {transfer.mvp}</p>}
       </article>
     );

@@ -3,6 +3,17 @@ import { Trash2 } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { TournamentPanel, TournamentSectionTitle } from '../TournamentUI.jsx';
 import { TeamSelect } from './TournamentTeamsContext.jsx';
+import { teamMatchResult } from '../../utils/competitionRules.js';
+
+const GOLD_CUP_PLACES = 8;
+// Forma reciente: victoria en los 90', definido por penales (ganado o perdido), derrota, o empate sin la tanda cargada.
+const FORM_STYLES = {
+  win: { char: 'V', bg: 'bg-emerald-500 text-ink', label: 'Victoria' },
+  shootoutWin: { char: 'P', bg: 'bg-amber-500 text-slate-950 font-bold', label: 'Ganó por penales' },
+  shootoutLoss: { char: 'P', bg: 'bg-amber-700 text-ink font-bold', label: 'Perdió por penales' },
+  loss: { char: 'D', bg: 'bg-rose-500 text-ink', label: 'Derrota' },
+  draw: { char: 'E', bg: 'bg-slate-500 text-ink font-bold', label: 'Empate sin tanda cargada' },
+};
 
 export const LeagueTableView = memo(function LeagueTableView({
   localData,
@@ -41,29 +52,19 @@ export const LeagueTableView = memo(function LeagueTableView({
                   : localData.league.filter(team => team.name && team.name !== 'Club...')
                 ).slice(0, 12).map((team, idx) => {
                   const isCurrentUser = userTeamName && userTeamName.trim().toLowerCase() === team.name?.trim().toLowerCase();
-                  const isTop4 = idx < 4;
-                  const isSilver = idx >= 4 && idx < 12;
-                  const qualificationBorder = isTop4 ? 'border-l-[4px] border-accent' : isSilver ? 'border-l-[4px] border-line/20' : 'border-l-[4px] border-transparent';
+                  // Puestos 1-8: cuartos de la Copa de Oro; 9-12: Copa de Plata (bracketModel / competitionRules).
+                  const isGold = idx < GOLD_CUP_PLACES;
+                  const isSilver = idx >= GOLD_CUP_PLACES && idx < 12;
+                  const qualificationBorder = isGold ? 'border-l-[4px] border-accent' : isSilver ? 'border-l-[4px] border-line/20' : 'border-l-[4px] border-transparent';
                   const rowHighlightClass = isCurrentUser ? 'bg-accent/10' : 'hover:bg-white/[0.03]';
-                  const numberColor = isTop4 ? 'text-accent font-bold' : 'text-ink-3 font-bold';
+                  const numberColor = isGold ? 'text-accent font-bold' : 'text-ink-3 font-bold';
 
-                  // Derivar forma reciente (últimos 5 partidos)
-                  const teamNameLower = team.name?.trim().toLowerCase();
-                  const teamMatches = (localData.matches || [])
-                    .filter(m => m.status === 'completed' && (
-                      m.homeTeam?.trim().toLowerCase() === teamNameLower ||
-                      m.awayTeam?.trim().toLowerCase() === teamNameLower
-                    ));
-                  const recentTeamMatches = teamMatches.slice(-5);
-                  const formResults = recentTeamMatches.map(m => {
-                    const isHome = m.homeTeam?.trim().toLowerCase() === teamNameLower;
-                    const myScore = Number(isHome ? m.homeScore : m.awayScore) || 0;
-                    const oppScore = Number(isHome ? m.awayScore : m.homeScore) || 0;
-                    const oppName = isHome ? m.awayTeam : m.homeTeam;
-                    if (myScore > oppScore) return { char: 'V', bg: 'bg-emerald-500 text-ink', title: `Victoria vs ${oppName} (${myScore}-${oppScore})` };
-                    if (myScore === oppScore) return { char: 'P', bg: 'bg-amber-500 text-slate-950 font-bold', title: `Penales vs ${oppName} (${myScore}-${oppScore})` };
-                    return { char: 'D', bg: 'bg-rose-500 text-ink', title: `Derrota vs ${oppName} (${myScore}-${oppScore})` };
-                  });
+                  // Forma reciente (últimos 5 partidos con resultado válido).
+                  const formResults = (localData.matches || [])
+                    .map(m => teamMatchResult(team.name, m))
+                    .filter(Boolean)
+                    .slice(-5)
+                    .map(({ result, scored, conceded, opponent }) => ({ ...FORM_STYLES[result], title: `${FORM_STYLES[result].label} vs ${opponent} (${scored}-${conceded})` }));
 
                   // Rellenar hasta 5 con puntos neutrales
                   const paddedForm = [...formResults];
@@ -102,7 +103,7 @@ export const LeagueTableView = memo(function LeagueTableView({
                             </button>
                           </div>
                         ) : (
-                          <span className={`whitespace-nowrap font-bold text-xs sm:text-sm tracking-wide ${isTop4 ? 'text-ink' : 'text-ink-2'}`}>
+                          <span className={`whitespace-nowrap font-bold text-xs sm:text-sm tracking-wide ${isGold ? 'text-ink' : 'text-ink-2'}`}>
                             {team.name}
                           </span>
                         )}
@@ -160,11 +161,11 @@ export const LeagueTableView = memo(function LeagueTableView({
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-accent" />
-                <span className="font-semibold text-ink-2">Puestos 1-4: Cuartos de Final (Oro)</span>
+                <span className="font-semibold text-ink-2">Puestos 1-8: Copa de Oro (cuartos)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-                <span className="font-semibold text-ink-2">Puestos 5-12: Repechaje (Copa de Plata)</span>
+                <span className="font-semibold text-ink-2">Puestos 9-12: Copa de Plata</span>
               </div>
             </div>
             <div className="text-[11px] font-mono text-ink-3">

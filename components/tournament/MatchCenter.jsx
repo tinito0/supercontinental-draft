@@ -5,6 +5,7 @@ import { TournamentActionButton, TournamentPanel, TournamentSectionTitle } from 
 import { TeamSelect } from './TournamentTeamsContext.jsx';
 import { hasScore } from '../../utils/bracketModel.js';
 import { leagueMatchOutcome } from '../../utils/competitionRules.js';
+import { formatFixtureDate } from '../../utils/leagueFixtures.js';
 
 // El motor (tournamentEngine.js) lee "Nombre" o "Nombre x2" separados por coma; un minuto ("23'") quedaría
 // como parte del nombre y partiría al goleador en dos filas.
@@ -154,17 +155,19 @@ export const MatchCenter = memo(function MatchCenter({
                       {/* Top status */}
                       <div className="mb-2.5 flex items-center justify-between gap-2 text-xs border-b border-line/[0.08] pb-2">
                         <span className="text-ink-3 font-medium text-[11px]">
-                          {match.date || 'Fecha a confirmar'}
+                          {formatFixtureDate(match) || 'Fecha a confirmar'}
                         </span>
                         <div className="flex items-center gap-2">
                           <span
                             className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                               isCompleted
                                 ? 'bg-success/15 text-success-soft border border-success/30'
-                                : 'bg-warning/15 text-warning-soft border border-warning/30'
+                                : match.status === 'postponed'
+                                  ? 'bg-raised text-ink-2 border border-line/30'
+                                  : 'bg-warning/15 text-warning-soft border border-warning/30'
                             }`}
                           >
-                            {isCompleted ? 'FINALIZADO' : 'PROGRAMADO'}
+                            {isCompleted ? 'FINALIZADO' : match.status === 'postponed' ? 'POSTERGADO' : 'PROGRAMADO'}
                           </span>
                           {isEditing && (
                             <button
@@ -350,6 +353,15 @@ export const MatchCenter = memo(function MatchCenter({
                             />
                           </div>
                           <div>
+                            <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">Hora</label>
+                            <input
+                              type="time"
+                              value={match.time || ''}
+                              onChange={event => onUpdate(match.id, 'time', event.target.value)}
+                              className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
+                            />
+                          </div>
+                          <div>
                             <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">Jornada</label>
                             <input
                               type="text"
@@ -367,6 +379,7 @@ export const MatchCenter = memo(function MatchCenter({
                               className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
                             >
                               <option value="scheduled">Programado</option>
+                              <option value="postponed">Postergado</option>
                               <option value="completed">Finalizado</option>
                             </select>
                           </div>

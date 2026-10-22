@@ -11,6 +11,7 @@ import { fetchRawPlayers } from '../utils/playerCatalog.js';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 import { teamCrestUrl } from '../utils/teamCrest.js';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
+import { knockoutWinner, teamMatchResult } from '../utils/competitionRules.js';
 
 /* ── Umbrales dinámicos de color OVR consistentes con el mercado ── */
 const OVR_COLOR_THRESHOLDS = [
@@ -129,13 +130,12 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null })
         if (tournamentSnap.exists() && normalizedTeamName) {
           const tournament = tournamentSnap.data();
           const rivals = {};
-          (tournament.matches || []).filter(match => match.status === 'completed').forEach(match => {
-            const isHome = String(match.homeTeam || '').trim().toLowerCase() === normalizedTeamName;
-            const isAway = String(match.awayTeam || '').trim().toLowerCase() === normalizedTeamName;
-            if (!isHome && !isAway) return;
-            const scored = Number(isHome ? match.homeScore : match.awayScore) || 0;
-            const conceded = Number(isHome ? match.awayScore : match.homeScore) || 0;
-            const rival = isHome ? match.awayTeam : match.homeTeam;
+          // Solo partidos con marcador válido (antes un marcador vacío contaba 0-0). Un partido definido por penales
+          // es empate en los 90' (así lo cuenta el registro del club); la tabla oficial le da el punto al ganador.
+          (tournament.matches || []).forEach(match => {
+            const outcome = teamMatchResult(data.teamName, match);
+            if (!outcome) return;
+            const { scored, conceded, opponent: rival } = outcome;
             if (rival) rivals[rival] = (rivals[rival] || 0) + 1;
             record.played += 1;
             record.gf += scored;
@@ -148,7 +148,9 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null })
           const mostFrequentRival = Object.entries(rivals).sort(([, a], [, b]) => b - a)[0];
           if (mostFrequentRival) record.rival = mostFrequentRival[0];
           const final = tournament.bracket?.final;
-          const finalWinner = Number(final?.scoreA) > Number(final?.scoreB) ? final?.teamA : Number(final?.scoreB) > Number(final?.scoreA) ? final?.teamB : '';
+          // Ganador de la final de la Copa de Oro, con alargue y penales (antes una final por penales no daba título).
+          const finalSide = final ? knockoutWinner(final) : null;
+          const finalWinner = finalSide === 'A' ? final.teamA : finalSide === 'B' ? final.teamB : '';
           if (String(finalWinner || '').trim().toLowerCase() === normalizedTeamName) record.titles += 1;
         }
         const manualStats = data.manualStats || {};

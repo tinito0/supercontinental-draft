@@ -8,7 +8,8 @@
 
 export const LEAGUE_POINTS = { REGULATION_WIN: 2, SHOOTOUT_WIN: 1, LOSS: 0 };
 
-const isScore = value => value !== '' && value != null && Number.isInteger(Number(value)) && Number(value) >= 0;
+/** Un marcador válido: entero y no negativo (un vacío o un -1 no es un resultado). */
+export const isScore = value => value !== '' && value != null && Number.isInteger(Number(value)) && Number(value) >= 0;
 
 /**
  * Resultado de un partido de liga.
@@ -30,6 +31,31 @@ export function leagueMatchOutcome({ homeScore, awayScore, homePenalties, awayPe
   if (Number(homePenalties) === Number(awayPenalties)) return { ok: false, reason: 'La tanda de penales no puede terminar empatada.' };
   const winner = Number(homePenalties) > Number(awayPenalties) ? 'home' : 'away';
   return { ok: true, winner, decidedBy: 'shootout', points: pointsFor(winner, LEAGUE_POINTS.SHOOTOUT_WIN) };
+}
+
+/**
+ * Resultado de un partido de liga visto desde un club, para la forma reciente y las fichas (tabla, resumen, ficha
+ * del club). null si el club no jugó ese partido o si no hay marcador válido (antes un marcador vacío contaba 0-0).
+ * `result`: 'win' (en los 90'), 'shootoutWin', 'shootoutLoss', 'loss' o 'draw' (empate sin la tanda cargada).
+ * @returns {{ result: string, scored: number, conceded: number, opponent: string, isHome: boolean } | null}
+ */
+export function teamMatchResult(name, match) {
+  if (!match || match.status !== 'completed') return null;
+  const key = teamKey(name);
+  const isHome = teamKey(match.homeTeam) === key;
+  if (!isHome && teamKey(match.awayTeam) !== key) return null;
+  if (!isScore(match.homeScore) || !isScore(match.awayScore)) return null;
+  const side = isHome ? 'home' : 'away';
+  const scored = Number(isHome ? match.homeScore : match.awayScore);
+  const conceded = Number(isHome ? match.awayScore : match.homeScore);
+  const opponent = isHome ? match.awayTeam : match.homeTeam;
+  const outcome = leagueMatchOutcome(match);
+  let result = 'draw';
+  if (outcome.ok) {
+    const won = outcome.winner === side;
+    result = outcome.decidedBy === 'regulation' ? (won ? 'win' : 'loss') : (won ? 'shootoutWin' : 'shootoutLoss');
+  }
+  return { result, scored, conceded, opponent, isHome };
 }
 
 function pointsFor(winner, value) {
@@ -107,7 +133,12 @@ export function rankStandings(rows) {
   return { ranking: sorted.map((row, index) => ({ ...row, position: index + 1 })), unresolvedTies };
 }
 
-const pairKey = (a, b) => [a, b].sort().join('\u0000');
+/** Identidad de un club en el torneo: el nombre sin mayúsculas ni espacios de más (la tabla ya lo comparaba así). */
+export const teamKey = name => String(name || '').trim().toLowerCase();
+
+// Por clave y no por el texto: «Boca» en la tabla y «boca» en un partido son el mismo club, y antes ese cruce no
+// contaba como jugado y podía proponerse de nuevo.
+const pairKey = (a, b) => [teamKey(a), teamKey(b)].sort().join('\u0000');
 
 /**
  * Cruces de una fecha suiza: todos los equipos juegan, nadie repite rival (regla estricta) y se elige el emparejamiento
@@ -148,6 +179,20 @@ export function swissPairings(ranking, playedPairs = []) {
   return { ok: true, pairs: best.pairs, cost: best.cost };
 }
 
+/**
+ * Localía de cada cruce: hace de local el que menos veces fue local hasta ahora; si van parejos, el mejor ubicado.
+ * Antes el mejor ubicado era siempre local y el puntero podía jugar las 4 fechas en casa.
+ * @param {[string, string][]} pairs cruces con el mejor ubicado primero
+ * @param {Map<string, number>} homeCounts partidos de local por club (clave teamKey)
+ * @returns {[string, string][]} [local, visitante]
+ */
+export function assignHomeAway(pairs, homeCounts = new Map()) {
+  return pairs.map(([higher, lower]) => {
+    const homes = name => homeCounts.get(teamKey(name)) || 0;
+    return homes(lower) < homes(higher) ? [lower, higher] : [higher, lower];
+  });
+}
+
 /** Cuartos de la Copa de Oro desde la tabla final: 1-8, 4-5, 2-7, 3-6 (el orden de bracketModel.js). */
 export function goldCupQuarterFinals(ranking) {
   if (ranking.length < 8) throw new Error(`La Copa de Oro necesita 8 clasificados (hay ${ranking.length}).`);
@@ -155,7 +200,7 @@ export function goldCupQuarterFinals(ranking) {
   return [[1, 8], [4, 5], [2, 7], [3, 6]].map(([a, b]) => ({ teamA: seed(a), teamB: seed(b), seedA: a, seedB: b }));
 }
 
-const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+const sameName = (a, b) => teamKey(a) === teamKey(b);
 
 /**
  * Ubica un partido terminado de la Konami Cup (resumen del colector, equipos ya traducidos a nombres del torneo) en

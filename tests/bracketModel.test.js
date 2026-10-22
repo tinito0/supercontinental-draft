@@ -200,3 +200,50 @@ describe('chooseBroadcastLayout (OBS)', () => {
     expect(cardWidthFor(3, 1920, unit)).toBeGreaterThanOrEqual(BROADCAST_METRICS.minCardWidth);
   });
 });
+
+describe('cup progression (seedGoldCup / advanceCups)', () => {
+  const ranking = Array.from({ length: 12 }, (_, i) => ({ name: `T${String(i + 1).padStart(2, '0')}` }));
+
+  it('seeds the Oro quarter-finals from the table only when they are empty', async () => {
+    const { seedGoldCup } = await import('../utils/bracketModel.js');
+    const seeded = seedGoldCup({}, ranking);
+    expect(seeded.ok).toBe(true);
+    expect(seeded.bracket.quarters.map(m => [m.teamA, m.teamB])).toEqual([['T01', 'T08'], ['T04', 'T05'], ['T02', 'T07'], ['T03', 'T06']]);
+    expect(seedGoldCup(seeded.bracket, ranking)).toMatchObject({ ok: false });
+    expect(seedGoldCup({}, ranking.slice(0, 7))).toMatchObject({ ok: false, reason: expect.stringMatching(/8 clasificados/) });
+  });
+
+  it('never overwrites a filled slot and warns when it disagrees with the result', async () => {
+    const { advanceCups } = await import('../utils/bracketModel.js');
+    const bracket = {
+      quarters: [{ teamA: 'T01', teamB: 'T08', scoreA: 0, scoreB: 1 }, { teamA: 'T04', teamB: 'T05', scoreA: 2, scoreB: 0 }],
+      semis: [{ teamA: 'T01', teamB: '', scoreA: '', scoreB: '' }],
+    };
+    const { bracket: next, warnings, changes } = advanceCups(bracket, ranking);
+    expect(next.semis[0]).toMatchObject({ teamA: 'T01', teamB: 'T04' });
+    expect(changes).toEqual(['T04 → Semifinal 1 (Oro)']);
+    expect(warnings[0]).toMatch(/figura T01, pero el que corresponde es T08/);
+  });
+
+  it('waits for the final table before building the Plata round 1', async () => {
+    const { advanceCups } = await import('../utils/bracketModel.js');
+    const quarters = [['T01', 'T08'], ['T04', 'T05'], ['T02', 'T07'], ['T03', 'T06']].map(([teamA, teamB]) => ({ teamA, teamB, scoreA: 1, scoreB: 0 }));
+    expect(advanceCups({ quarters }, ranking).bracket.repechaje.r1[0].teamA).toBe('');
+    expect(advanceCups({ quarters }, ranking, { leagueComplete: true }).bracket.repechaje.r1.map(m => [m.teamA, m.teamB]))
+      .toEqual([['T09', 'T08'], ['T10', 'T07'], ['T11', 'T06'], ['T12', 'T05']]);
+  });
+
+  it('sends the Oro semi-final losers to the Plata semis and builds both finals', async () => {
+    const { advanceCups } = await import('../utils/bracketModel.js');
+    const won = (teamA, teamB) => ({ teamA, teamB, scoreA: 1, scoreB: 0 });
+    const bracket = {
+      quarters: [won('T01', 'T08'), won('T04', 'T05'), won('T02', 'T07'), won('T03', 'T06')],
+      semis: [won('T01', 'T04'), won('T02', 'T03')],
+      final: won('T01', 'T02'),
+      repechaje: { r1: [won('T09', 'T08'), won('T10', 'T07'), won('T11', 'T06'), won('T12', 'T05')], r2: [won('T09', 'T10'), won('T11', 'T12')] },
+    };
+    const { bracket: next } = advanceCups(bracket, ranking, { leagueComplete: true });
+    expect(next.repechaje.semis.map(m => [m.teamA, m.teamB])).toEqual([['T09', 'T04'], ['T11', 'T03']]);
+    expect(next.repechaje.final).toMatchObject({ teamA: '', teamB: '' });
+  });
+});
