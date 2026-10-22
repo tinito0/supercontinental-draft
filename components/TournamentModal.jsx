@@ -96,7 +96,8 @@ export const TournamentModal = memo(function TournamentModal({
     if (!teamName || !allTeams) return DEFAULT_LOGO;
     const target = teamName.trim().toLowerCase();
     const foundId = Object.keys(allTeams).find(id => allTeams[id].teamName.trim().toLowerCase() === target);
-    return foundId ? allTeams[foundId].logoUrl : DEFAULT_LOGO;
+    // Un club sin escudo cargado (logoUrl vacío) mostraba una imagen rota: usa el escudo de la liga.
+    return (foundId && allTeams[foundId].logoUrl) || DEFAULT_LOGO;
   }, [allTeams]);
 
   const getPlayerPhoto = useCallback((name) => {
@@ -464,9 +465,9 @@ export const TournamentModal = memo(function TournamentModal({
               <Tabs label="Secciones del torneo" value={activeTab} onChange={setActiveTab} tabs={[
                 { id: 'matches', label: 'Partidos', icon: CalendarDays, count: pendingMatchesCount || null },
                 { id: 'groups', label: 'Tabla', icon: LayoutGrid },
-                { id: 'bracket', label: 'Brackets', icon: Trophy },
-                { id: 'repechaje', label: 'Copa de Plata', icon: Trophy, hidden: !isAdmin },
-                { id: 'stats', label: 'Goleadores', icon: Star, hidden: !isAdmin },
+                { id: 'bracket', label: 'Copa de Oro', icon: Trophy },
+                { id: 'repechaje', label: 'Copa de Plata', icon: Trophy },
+                { id: 'stats', label: 'Goleadores', icon: Star },
               ]} />
             </div>
           )}

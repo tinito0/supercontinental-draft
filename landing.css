@@ -8,6 +8,24 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* ── Competition mark ────────────────────────────────────────── */
+/* The league's broadcast band (components/broadcast/broadcast.css: navy → blue → lavender). On the site it is only a
+   competition mark: a thin rule on top of the match centre and under the hero title, never a background. */
+.league-band {
+  height: 4px;
+  background: linear-gradient(90deg, #022a5e, #005fbd 45%, #7a7bb7 85%, #b6b6ec);
+}
+/* Hero status line: the stage of the season, read from the tournament (utils/leagueFixtures.leagueStage). */
+.league-stage {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.75rem;
+  border-left: 3px solid #7a7bb7;
+  background: rgb(var(--c-surface) / 0.8);
+}
+
 /* ── Entry and scroll reveal ─────────────────────────────────── */
 /* Motion stays short and small: a soft fade with a few pixels of lift. Larger moves (a 16px rise, a 3D turn of
    the crest) read as jerky and made the crest look off-centre while it turned. */

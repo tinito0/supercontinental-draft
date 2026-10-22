@@ -189,9 +189,11 @@ const dayValue = fixture => fixture.day?.getTime() ?? null;
  * suspendido, postergado). Resultados del más reciente al más viejo; próximos al revés, con el partido al aire primero.
  */
 export function groupFixtures(fixtures) {
-  const byNewest = (a, b) => (dayValue(b) ?? -Infinity) - (dayValue(a) ?? -Infinity) || b.roundOrder - a.roundOrder || b.order - a.order;
-  const bySoonest = (a, b) => (dayValue(a) ?? Infinity) - (dayValue(b) ?? Infinity)
-    || (a.time || '99:99').localeCompare(b.time || '99:99') || a.roundOrder - b.roundOrder || a.order - b.order;
+  // Primero el avance de la competencia (fecha 1…4, después las rondas de copa, que no tienen día cargado), después
+  // el día y la hora dentro de la misma ronda.
+  const byNewest = (a, b) => b.roundOrder - a.roundOrder || (dayValue(b) ?? -Infinity) - (dayValue(a) ?? -Infinity) || b.order - a.order;
+  const bySoonest = (a, b) => a.roundOrder - b.roundOrder || (dayValue(a) ?? Infinity) - (dayValue(b) ?? Infinity)
+    || (a.time || '99:99').localeCompare(b.time || '99:99') || a.order - b.order;
   return {
     live: fixtures.filter(f => f.status === 'live'),
     results: fixtures.filter(f => f.status === 'finished' || f.status === 'played').sort(byNewest),
