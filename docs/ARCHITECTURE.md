@@ -39,6 +39,13 @@ Administration (league texts, club profiles, community voting, tournament editor
 draft, at `/draft/admin`. `/admin` is deliberately not redirected (it shows the league 404), so the URL does not point
 visitors at the draft. The league site has no admin screens.
 
+Link previews (WhatsApp, Telegram, X do not run JavaScript): `npm run build` runs `scripts/build-share-pages.mjs`
+(postbuild), which writes one HTML per league page (`dist/torneo.html`, `dist/equipos/{id}.html`, …) with its own
+title, description and image from `utils/sharePages.js`; `firebase.json` `cleanUrls` serves them at `/torneo` and
+`/equipos/{id}`. Clubs are read from Firestore over REST at build time, so a club card change shows in previews only
+after the next deploy. Match pages (`/partidos/{key}`) keep the league preview: per-match cards would need a Cloud
+Function (Blaze plan).
+
 ## Layers
 
 | Layer | Folders | Depends on |

@@ -8,6 +8,7 @@
     "dev": "vite",
     "prebuild": "node scripts/build-players-compact.mjs",
     "build": "vite build",
+    "postbuild": "node scripts/build-share-pages.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
