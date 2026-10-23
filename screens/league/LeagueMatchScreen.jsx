@@ -103,7 +103,7 @@ export default function LeagueMatchScreen() {
         {tab === 'jugadores' && (
           <div className="space-y-4">
             <PlayerAnalysis rows={views.players} summary={summary} match={match} />
-            <PlayerStatsTable rows={views.players} match={match} />
+            {views.players.length > 0 && <PlayerStatsTable rows={views.players} match={match} />}
           </div>
         )}
         {tab === 'tactica' && <MatchTacticsView summary={summary} match={match} />}
