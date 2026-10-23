@@ -35,5 +35,7 @@ describe('buildPossession', () => {
   it('trusts the counters only when they add up to the match time (probe v4 sends it)', () => {
     expect(buildPossession([poss([2, 76, 53], 6536, 7553, 14089)])).toMatchObject({ home: 46 });
     expect(buildPossession([poss([2, 76, 53], 6536, 7553, 20000)])).toBeNull();
+    // the first v4 build read a time slot that stays 0 in some matches: no check then
+    expect(buildPossession([poss([1, 7, 56], 1042, 379, 0)])).toMatchObject({ home: 73, away: 27 });
   });
 });

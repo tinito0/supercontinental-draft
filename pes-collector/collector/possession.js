@@ -9,7 +9,8 @@
 // An in-play penalty also reports period 5, but with the clock of the foul. After the shootout the clock goes back
 // to 120:00 in period 4, so everything from its first sample on is left out.
 const SHOOTOUT_MINUTES = [90, 120];
-// Probe v4 sends the match-time counter read in the same sample: the two counters must add up to it.
+// Probe v4 sends the match-time counter read in the same sample: the two counters must add up to it. The first v4
+// build read a slot that is 0 in some matches (2026-10-23), so a time of 0 is not a check.
 const TIME_TOLERANCE = 2;
 
 function isShootout(c) {
@@ -24,7 +25,7 @@ export function buildPossession(events) {
   if (!last) return null;
   const total = last.home + last.away;
   if (!(total > 0)) return null;
-  if (last.time != null && Math.abs(total - last.time) > TIME_TOLERANCE) return null;
+  if (last.time > 0 && Math.abs(total - last.time) > TIME_TOLERANCE) return null;
   const home = Math.floor((last.home * 100) / total);
   return { home, away: 100 - home, counters: { home: last.home, away: last.away } };
 }

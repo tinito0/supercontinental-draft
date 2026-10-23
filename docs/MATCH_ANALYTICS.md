@@ -36,7 +36,7 @@ duelos, despejes, gambetas, toques y penales en juego.
 | Formación de partidos grabados antes de v4 | Del archivo de guardado | Solo si el plan guardado coincide puesto por puesto con el XI inicial (S11); si no, no se dibuja |
 | Dorsales, estrategia, instrucciones | Del archivo de guardado | Solo si el plan coincide con el XI |
 | Posición registrada | Base de datos / guardado | Atributo del jugador, no el puesto que jugó |
-| Posesión | Calculado (del juego) | Dos contadores de tiempo con la pelota (S9): local = trunc(local / total × 100), visitante = 100 − local. Coincidió con la pantalla en 2 de 3 partidos (1 punto de diferencia en el otro). Algunos partidos dejan los contadores en 0: entonces no se muestra. Sin la tanda de penales |
+| Posesión | Calculado (del juego) | Dos contadores de tiempo con la pelota (S9): local = trunc(local / total × 100), visitante = 100 − local. Coincidió con la pantalla en 3 de 4 controles (1 punto de diferencia en el otro). Algunos partidos dejan los contadores en 0: entonces no se muestra. Sin la tanda de penales |
 | xG, mapa de tiros | No disponible | El juego no expone dónde se pateó |
 | Calificaciones | No disponible | No se encontraron en memoria |
 | Mapas de calor, distancia, zonas de ataque, PPDA, bloque defensivo | No disponible | Hace falta la posición de cada jugador en la cancha |
@@ -48,7 +48,7 @@ duelos, despejes, gambetas, toques y penales en juego.
 - **Goles de tiro:** goles de jugadores del equipo (contador 0); los goles en contra del rival suman al marcador
   pero no a la conversión. **Conversión** = goles de tiro / tiros. **Precisión de tiro** = al arco / tiros.
 - **Posesión:** el último par de contadores antes de la tanda de penales (durante la tanda siguen corriendo). Con
-  probe v4 cada evento trae también el tiempo de juego, y el par se descarta si no suma ese tiempo.
+  probe v4 cada evento trae también el tiempo de juego (`+0x7B518`), y el par se descarta si no suma ese tiempo.
 - **Duelos ganados:** entradas ganadas (50) / duelos disputados (49), la fila «Duelos X (Y)» del juego.
 - **Tiempos de las acciones:** sin alargue, el tiempo 3 que aparece cerca del 90' es descuento del segundo; un
   penal en juego informa el tiempo 5 y se ubica por el minuto. Si el probe encontró las estadísticas tarde, lo

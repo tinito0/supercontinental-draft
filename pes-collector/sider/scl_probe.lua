@@ -67,9 +67,10 @@ for i = KIND_FIRST_WORD + KINDS * KIND_WORDS, RECORD_WORDS - 1 do EXTRA_WORDS[#E
 -- Possession (S9): two u32 ball-time counters (home, away) at this offset from the region base; their sum equals
 -- the match-time counter. Their share matched the screen in 2 of 3 matches (a point off in the third), but in some
 -- matches the game never fills them (both 0 while the clock runs). The match time goes with every event so the
--- collector can tell a filled pair from an empty one.
+-- collector can tell a filled pair from an empty one. The match time is +0x7B518: it equals the pair's sum in all
+-- 230 stored dumps; +0xD4B68 and +0xD4B80 hold the same value but one of the two stays 0 in each match.
 local POSSESSION_OFFSET = 0x181A10
-local MATCH_TIME_OFFSET = 0xD4B80
+local MATCH_TIME_OFFSET = 0x7B518
 
 -- Team tables (S5–S6): [MATCH_MANAGER] + 0x1978 + side * 0x28. The pointers are only set at some moments,
 -- so the last valid table is kept and re-validated on every read.
