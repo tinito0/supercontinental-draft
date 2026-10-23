@@ -32,7 +32,7 @@ export function getDeviceId() {
 /**
  * Lo que este navegador votó, o null. `round` es el resetCount del doc de totales: cuando el admin reinicia la
  * votación sube en 1 y el voto recordado de la ronda anterior deja de contar. Lo guardado antes de las rondas es
- * texto plano y vale para la ronda 0.
+ * texto plano y vale para la ronda 0. Con round null (la ronda todavía no cargó) devuelve lo recordado sin mirar la ronda.
  */
 export function getMyVote(kind, target, round = 0) {
   try {
@@ -43,6 +43,7 @@ export function getMyVote(kind, target, round = 0) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && 'choice' in parsed) saved = parsed;
     } catch { /* texto plano */ }
+    if (round == null) return String(saved.choice);
     return (Number(saved.round) || 0) === (Number(round) || 0) ? String(saved.choice) : null;
   } catch {
     return null;

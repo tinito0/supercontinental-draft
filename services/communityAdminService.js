@@ -6,13 +6,17 @@ import { APP_ID } from '../utils/constants.js';
 
 const TOTALS_COLLECTION = { prediction: 'predictions', mvp: 'mvp_votes', cup: 'polls' };
 const BATCH_LIMIT = 450;
+// Último carácter posible para un rango por prefijo de id (U+F8FF, uso privado).
+const PREFIX_END = '\uf8ff';
+// Las boletas y los topes terminan en el sha-256 en hex: así «a_» no agarra las de otra votación «a_b_…».
+const HASH_SUFFIX = /^[0-9a-f]{64}$/;
 
 const totalsRef = (kind, target) => doc(db, `artifacts/${APP_ID}/public/data/${TOTALS_COLLECTION[kind]}/${target}`);
 
-/** Los ids de boletas y topes son `${kind}_${target}_${hash}`: se buscan por prefijo del id. */
+/** Los ids de boletas y topes son `${kind}_${target}_${hash}`: se buscan por prefijo y se queda solo el id exacto. */
 async function refsWithPrefix(collectionName, prefix) {
-  const snap = await getDocs(query(collection(db, collectionName), where(documentId(), '>=', prefix), where(documentId(), '<', `${prefix}`)));
-  return snap.docs.map(entry => entry.ref);
+  const snap = await getDocs(query(collection(db, collectionName), where(documentId(), '>=', prefix), where(documentId(), '<', `${prefix}${PREFIX_END}`)));
+  return snap.docs.filter(entry => HASH_SUFFIX.test(entry.id.slice(prefix.length))).map(entry => entry.ref);
 }
 
 /**

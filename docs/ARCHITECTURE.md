@@ -36,7 +36,8 @@ Each app is its own lazy chunk, so league visitors do not download the draft. Ol
 modes the hosting cannot match (`/?mode=obs`, `/torneo?mode=…`).
 
 Administration (league texts, club profiles, community voting, tournament editor, OBS scenes) exists only inside the
-draft, at `/draft/admin`: `/admin` is one of the redirected paths. The league site has no admin screens.
+draft, at `/draft/admin`. `/admin` is deliberately not redirected (it shows the league 404), so the URL does not point
+visitors at the draft. The league site has no admin screens.
 
 ## Layers
 

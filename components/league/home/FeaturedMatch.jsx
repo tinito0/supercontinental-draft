@@ -71,8 +71,10 @@ export function FeaturedMatch({ featured, clubOf, prediction }) {
       {fixture.pens && kind === 'last' && (
         <p className="mt-5 flex items-center justify-center gap-2 border-t border-line/10 pt-4 text-base font-semibold text-ink">
           <span className="h-4 w-1 rounded bg-accent" aria-hidden="true" />
-          Ganó {fixture.winner === 'away' ? fixture.away.name : fixture.home.name} por penales{' '}
-          <span className="num">{fixture.winner === 'away' ? `${fixture.pens.away}-${fixture.pens.home}` : `${fixture.pens.home}-${fixture.pens.away}`}</span>
+          {fixture.winner === 'home' || fixture.winner === 'away' ? (
+            <>Ganó {fixture.winner === 'away' ? fixture.away.name : fixture.home.name} por penales{' '}
+              <span className="num">{fixture.winner === 'away' ? `${fixture.pens.away}-${fixture.pens.home}` : `${fixture.pens.home}-${fixture.pens.away}`}</span></>
+          ) : <>Penales <span className="num">{fixture.pens.home}-{fixture.pens.away}</span></>}
         </p>
       )}
       <Link to={action.to} className={`btn btn-lg mt-6 w-full ${action.primary ? 'btn-primary' : 'btn-secondary'}`}>

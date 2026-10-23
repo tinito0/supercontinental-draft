@@ -48,9 +48,10 @@ function ShareBar({ label, pct, isMine, isLeader }) {
 
 function PredictionPanel({ overlay, teamsById, matches }) {
   const matchId = overlay?.matchId || null;
-  const { data: prediction } = usePrediction(matchId);
-  // round: cuántas veces el admin reinició esta votación; el voto recordado de otra ronda no cuenta.
-  const round = Number(prediction?.resetCount) || 0;
+  const { data: prediction, loading: predictionLoading } = usePrediction(matchId);
+  // round: cuántas veces el admin reinició esta votación; el voto recordado de otra ronda no cuenta. null mientras carga:
+  // se muestra lo recordado y no se vota hasta saber la ronda.
+  const round = predictionLoading ? null : Number(prediction?.resetCount) || 0;
   const [myVote, setMyVote] = useState(() => (matchId ? getMyVote('prediction', matchId, round) : null));
   const [state, setState] = useState({ busy: false, error: '' });
   useEffect(() => { setMyVote(matchId ? getMyVote('prediction', matchId, round) : null); }, [matchId, round]);
@@ -98,13 +99,13 @@ function PredictionPanel({ overlay, teamsById, matches }) {
       ) : (
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3">
           {[['home', home], ['away', away]].map(([side, team]) => (
-            <button key={side} type="button" disabled={state.busy} onClick={() => vote(side)}
+            <button key={side} type="button" disabled={state.busy || round == null} onClick={() => vote(side)}
               className={`${CHOICE_BUTTON} min-h-24 min-w-0 flex-col gap-2 px-2 py-4 text-center ${side === 'away' ? 'order-3' : ''}`}>
               <TeamMark team={team} teamsById={teamsById} />
               <span className="w-full truncate font-display text-lg font-bold leading-tight text-ink">{team.name}</span>
             </button>
           ))}
-          <button type="button" disabled={state.busy} onClick={() => vote('draw')}
+          <button type="button" disabled={state.busy || round == null} onClick={() => vote('draw')}
             className={`${CHOICE_BUTTON} order-2 min-h-24 min-w-16 px-3 font-display text-base font-bold text-ink`}>
             Empate
           </button>
@@ -116,8 +117,8 @@ function PredictionPanel({ overlay, teamsById, matches }) {
 }
 
 function CupPollPanel({ pollId, label }) {
-  const { data: poll } = usePoll(pollId);
-  const round = Number(poll?.resetCount) || 0;
+  const { data: poll, loading: pollLoading } = usePoll(pollId);
+  const round = pollLoading ? null : Number(poll?.resetCount) || 0;
   const [myVote, setMyVote] = useState(() => getMyVote('cup', pollId, round));
   const [state, setState] = useState({ busy: false, error: '' });
   const results = useMemo(() => pollResults(poll), [poll]);
@@ -150,7 +151,7 @@ function CupPollPanel({ pollId, label }) {
       ) : (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {poll.options.map(option => (
-            <button key={option.id} type="button" disabled={state.busy} onClick={() => vote(option.id)}
+            <button key={option.id} type="button" disabled={state.busy || round == null} onClick={() => vote(option.id)}
               className={`${CHOICE_BUTTON} min-h-11 justify-start px-3 py-2 text-left text-base font-semibold text-ink`}>
               <span className="min-w-0 truncate">{option.name}</span>
             </button>
@@ -200,10 +201,10 @@ function PlayerOfTournamentPanel({ matches }) {
 function MvpPanel({ matches }) {
   const now = useNow();
   const { match, open: inWindow } = pickMvpMatch(matches, now);
-  const { data: votes } = useMvpVotes(match?.key || null);
+  const { data: votes, loading: votesLoading } = useMvpVotes(match?.key || null);
   // El admin puede cerrar el MVP antes de que termine la ventana (closedAt en el doc de votos).
   const open = inWindow && !votes?.closedAt;
-  const round = Number(votes?.resetCount) || 0;
+  const round = votesLoading ? null : Number(votes?.resetCount) || 0;
   const [selected, setSelected] = useState(null);
   const [myVote, setMyVote] = useState(null);
   const [state, setState] = useState({ busy: false, error: '' });
@@ -267,7 +268,7 @@ function MvpPanel({ matches }) {
             </div>
           </fieldset>
         ))}
-        <button type="button" className="btn btn-primary w-full min-h-11" disabled={!selected || state.busy} onClick={vote}
+        <button type="button" className="btn btn-primary w-full min-h-11" disabled={!selected || state.busy || round == null} onClick={vote}
           title={!selected ? 'Elegí un jugador' : undefined}>
           {state.busy ? 'Votando…' : 'Votar'}
         </button>

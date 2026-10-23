@@ -65,7 +65,6 @@
       { "source": "/scouting", "destination": "/draft/scouting", "type": 301 },
       { "source": "/other-teams", "destination": "/draft/other-teams", "type": 301 },
       { "source": "/financials", "destination": "/draft/financials", "type": 301 },
-      { "source": "/admin", "destination": "/draft/admin", "type": 301 },
       { "source": "/tournament", "destination": "/draft/tournament", "type": 301 },
       { "source": "/overlay", "destination": "/draft/overlay", "type": 301 },
       { "source": "/tactics", "destination": "/draft/tactics", "type": 301 },

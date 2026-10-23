@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, Gamepad2 } from 'lucide-react';
 import { Tabs } from '../../components/ui/Tabs.jsx';
 import { FixtureRow, makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
@@ -8,20 +8,9 @@ import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
-import { MatchStatus, TeamMark } from '../../components/league/match/MatchParts.jsx';
 import { useLeagueTeams, useLiveMatches } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { groupMatchesByDay } from '../../utils/matchCenter.js';
-
-function TeamLine({ team, isWinner, teamsById }) {
-  return (
-    <div className="flex items-center gap-3 min-w-0">
-      <TeamMark team={team} teamsById={teamsById} size="sm" />
-      <span className={`min-w-0 flex-1 truncate ${isWinner ? 'font-bold text-ink' : 'font-medium text-ink'}`}>{team.name}</span>
-      <span className={`num font-display text-lg text-ink ${isWinner ? 'font-bold' : ''}`}>{team.score}</span>
-    </div>
-  );
-}
 
 function winnerSide(match) {
   if (match.status.kind !== 'finished') return null;
@@ -30,30 +19,42 @@ function winnerSide(match) {
   return null;
 }
 
-function MatchRow({ match, teamsById }) {
-  const winner = winnerSide(match);
-  const time = match.startedAt ? new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(match.startedAt) : '';
-  return (
-    <li>
-      <Link
-        to={`/partidos/${match.key}`}
-        className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-4 px-4 py-3 min-h-11 transition-colors hover:bg-white/[0.03]"
-      >
-        <div className="text-sm leading-tight">
-          <div className="font-semibold text-ink-2">{time}</div>
-          <MatchStatus status={match.status} />
-        </div>
-        <div className="space-y-1.5 min-w-0">
-          <TeamLine team={match.home} teamsById={teamsById} isWinner={winner === 'home'} />
-          <TeamLine team={match.away} teamsById={teamsById} isWinner={winner === 'away'} />
-          <div className="text-[13px] text-ink-3">
-            {match.competition}
-            {match.shootout && <> · Penales <span className="num">{match.shootout.home}-{match.shootout.away}</span></>}
-          </div>
-        </div>
-      </Link>
-    </li>
-  );
+const timeFormat = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+// Sin competición conocida no se muestra nada arriba de la hora («Partido» no dice nada).
+const GENERIC_COMPETITIONS = new Set(['Liga', 'Partido', '']);
+
+/**
+ * Un partido del registro (live_matches) con la forma de una fila del fixture, así el registro se ve igual que el
+ * fixture y la portada (FixtureRow): la hora va donde va la fecha, y la competición arriba si no es la liga.
+ */
+function gameLogFixture(match) {
+  const status = match.status.kind === 'live' ? 'live' : match.status.kind === 'abandoned' ? 'abandoned' : 'finished';
+  return {
+    id: match.key,
+    liveMatchKey: match.key,
+    status,
+    minute: match.status.kind === 'live' ? match.status.label : '',
+    competition: GENERIC_COMPETITIONS.has(match.competition || '') ? 'liga' : 'otra',
+    competitionLabel: match.competition,
+    roundLabel: match.startedAt ? timeFormat.format(match.startedAt) : 'Sin hora',
+    home: { name: match.home.name },
+    away: { name: match.away.name },
+    score: { home: match.home.score, away: match.away.score },
+    pens: match.shootout || null,
+    winner: winnerSide(match),
+  };
+}
+
+/** Escudos del registro: por el club del draft que trae cada lado (los nombres del juego pueden no coincidir). */
+function gameLogClubs(matches, teamsById) {
+  const byName = new Map();
+  for (const match of matches) {
+    for (const side of [match.home, match.away]) {
+      const club = side.draftTeamId ? teamsById?.[side.draftTeamId] : null;
+      if (club) byName.set(String(side.name || '').trim().toLowerCase(), club);
+    }
+  }
+  return name => byName.get(String(name || '').trim().toLowerCase()) || null;
 }
 
 const COMPETITIONS = [
@@ -146,6 +147,7 @@ export default function LeagueMatchesScreen() {
 function GameLog({ teamsById }) {
   const { matches, loading, error } = useLiveMatches();
   const groups = useMemo(() => groupMatchesByDay(matches), [matches]);
+  const clubOf = useMemo(() => gameLogClubs(matches, teamsById), [matches, teamsById]);
 
   let content;
   if (error) {
@@ -153,7 +155,7 @@ function GameLog({ teamsById }) {
   } else if (loading) {
     content = (
       <div className="panel divide-y divide-line/10" aria-busy="true">
-        {[0, 1, 2].map(i => <div key={i} className="h-20 m-3 skeleton" />)}
+        {[0, 1, 2].map(i => <div key={i} className="m-3 h-16 skeleton" />)}
       </div>
     );
   } else if (!matches.length) {
@@ -163,9 +165,13 @@ function GameLog({ teamsById }) {
       <div className="space-y-8">
         {groups.map(group => (
           <section key={group.label} aria-label={group.label}>
-            <h2 className="mb-3 font-display text-xl font-bold uppercase leading-none text-ink">{group.label}</h2>
+            {group.label === 'En vivo' ? (
+              <h2 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold uppercase leading-none text-danger-soft"><span className="h-2.5 w-2.5 rounded-full bg-danger animate-pulse" aria-hidden="true" />En vivo</h2>
+            ) : (
+              <h2 className="mb-3 font-display text-2xl font-bold uppercase leading-none text-ink first-letter:uppercase">{group.label}</h2>
+            )}
             <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
-              {group.matches.map(match => <MatchRow key={match.key} match={match} teamsById={teamsById} />)}
+              {group.matches.map(match => <FixtureRow key={match.key} fixture={gameLogFixture(match)} clubOf={clubOf} />)}
             </ul>
           </section>
         ))}
