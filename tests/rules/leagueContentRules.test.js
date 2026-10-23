@@ -78,6 +78,28 @@ describe('league_editors (editor de la web pública)', () => {
     await assertFails(deleteDoc(content(db)));
   });
 
+  it('an editor saves the club card (estadio, DT, títulos) with its history', async () => {
+    const db = asEditor();
+    const profile = {
+      nickname: 'El Santo', stadium: 'La Cabeza', capacity: '40.000', coach: 'R. Gómez', president: 'M. Díaz', manager: 'Santi',
+      stadiumPhotoUrl: 'https://example.com/estadio.jpg',
+      honours: [{ id: 'h1', scope: 'nacional', name: 'Liga', count: 3, years: '2019, 2021, 2023' }],
+      seasons: [{ id: 's1', season: '2025', competition: 'Supercontinental', result: 'Campeón' }],
+    };
+    await assertSucceeds(setDoc(content(db, 'club-abc123'), signed({ body: 'Historia', profile })));
+    await assertSucceeds(setDoc(content(db, 'club-abc123'), signed({ body: '', profile: { ...profile, stadiumPhotoUrl: '' } })));
+  });
+
+  it('the club card rejects non-https photos, unknown fields and oversized lists', async () => {
+    const db = asEditor();
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { stadiumPhotoUrl: 'http://example.com/a.jpg' } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { stadiumPhotoUrl: 'javascript:alert(1)' } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { budget: 999 } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { coach: 'x'.repeat(81) } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { honours: Array.from({ length: 31 }, (_, i) => ({ id: String(i) })) } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: 'texto' })));
+  });
+
   it('being an editor gives nothing outside the league texts', async () => {
     const db = asEditor();
     await assertFails(setDoc(doc(db, `artifacts/${APP}/public/data/tournament/official`), { matches: [] }));

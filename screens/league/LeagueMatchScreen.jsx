@@ -13,7 +13,8 @@ import { LineupPitch } from '../../components/league/match/LineupPitch.jsx';
 import { PlayerAnalysis } from '../../components/league/match/PlayerAnalysis.jsx';
 import { MatchTacticsView } from '../../components/league/match/MatchTacticsView.jsx';
 import { MatchAnalysisView } from '../../components/league/match/MatchAnalysisView.jsx';
-import { useLeagueTeams, useLiveMatch } from '../../hooks/useLeagueData.js';
+import { MatchCoaches } from '../../components/league/match/MatchCoaches.jsx';
+import { useClubProfiles, useLeagueTeams, useLiveMatch } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { buildLineups, buildTimeline, playerStatRows } from '../../utils/matchCenter.js';
 import { shotRows, statSections } from '../../utils/matchStats.js';
@@ -59,6 +60,7 @@ export default function LeagueMatchScreen() {
   const tab = TABS.some(t => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'resumen';
   const { match, loading, error } = useLiveMatch(matchKey);
   const { teamsById } = useLeagueTeams();
+  const { byTeamId: clubProfiles } = useClubProfiles();
   useDocumentTitle(match ? `${match.home.name} ${match.home.score}-${match.away.score} ${match.away.name}` : 'Partido');
 
   const views = useMemo(() => (match ? {
@@ -94,6 +96,7 @@ export default function LeagueMatchScreen() {
         {tab === 'alineaciones' && (
           <div className="space-y-4">
             <LineupPitch layout={views.pitch} match={match} />
+            <MatchCoaches match={match} teamsById={teamsById} profiles={clubProfiles} />
             <MatchLineups lineups={views.lineups} match={match} />
           </div>
         )}

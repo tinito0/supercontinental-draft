@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowDown } from 'lucide-react';
+import { CardMark } from './MatchParts.jsx';
+import { BallIcon } from './BallIcon.jsx';
 
 /* Las dos formaciones del saque inicial en una cancha (utils/matchAnalysis.js pitchLayout). Horizontal desde sm
    (el local ataca a la derecha); vertical en el teléfono (el local abajo, atacando hacia arriba). Coordenadas en %
@@ -29,22 +31,59 @@ const lastName = name => String(name || '').split(' ').filter(Boolean).at(-1) ||
 const EDGE = 6;
 const inset = value => EDGE + (value * (100 - 2 * EDGE)) / 100;
 
+/** Foto del jugador (/fotos_jugadores/{Id}.webp, los ids del juego) o, si no hay, su dorsal en el color del equipo. */
+function Miniface({ player, side }) {
+  const [failed, setFailed] = useState(false);
+  const ring = side === 'home' ? 'ring-accent' : 'ring-ink-2';
+  if (failed || player.id == null) {
+    return (
+      <span className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold shadow-md ring-2 sm:h-12 sm:w-12 ${ring} ${side === 'home' ? 'bg-accent text-on-accent' : 'bg-ink-2 text-canvas'}`}>
+        <span className="num">{player.number ?? player.role}</span>
+      </span>
+    );
+  }
+  return (
+    <img src={`/fotos_jugadores/${player.id}.webp`} alt="" loading="lazy" decoding="async" width="48" height="48"
+      onError={() => setFailed(true)}
+      className={`h-10 w-10 rounded-full bg-white object-cover object-top shadow-md ring-2 sm:h-12 sm:w-12 ${ring}`} />
+  );
+}
+
 function Marker({ player, side, vertical }) {
   const style = vertical
     ? { left: `${inset(player.y)}%`, top: `${inset(100 - player.x)}%` }
     : { left: `${inset(player.x)}%`, top: `${inset(player.y)}%` };
-  const label = `${player.name}${player.number != null ? `, dorsal ${player.number}` : ''}, ${player.role}${player.subbedOff ? `, salió ${player.subbedOff}` : ''}`;
+  const extras = [
+    player.goals ? `${player.goals} ${player.goals === 1 ? 'gol' : 'goles'}` : '',
+    ...(player.cards || []).map(card => (card === 'red' ? 'tarjeta roja' : 'tarjeta amarilla')),
+    player.subbedOff ? `salió ${player.subbedOff}` : '',
+  ].filter(Boolean);
+  const label = [`${player.name}${player.number != null ? `, dorsal ${player.number}` : ''}, ${player.role}`, ...extras].join(', ');
   return (
-    <li className="absolute flex w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={style} aria-label={label}>
-      <span className={`relative grid h-7 w-7 place-items-center rounded-full text-xs font-bold shadow-md sm:h-8 sm:w-8 ${side === 'home' ? 'bg-accent text-on-accent' : 'bg-ink-3 text-canvas'}`}>
-        <span className="num">{player.number ?? player.role}</span>
+    <li className="absolute flex w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={style} aria-label={label}>
+      <span className="relative">
+        <Miniface player={player} side={side} />
+        {player.goals > 0 && (
+          <span className="absolute -right-2.5 -top-1 flex items-center gap-0.5 rounded-full bg-canvas/85 py-0.5 pl-0.5 pr-1 shadow" aria-hidden="true">
+            <BallIcon className="h-4 w-4" />
+            {player.goals > 1 && <span className="num text-[11px] font-bold leading-none text-ink">{player.goals}</span>}
+          </span>
+        )}
+        {player.cards?.length > 0 && (
+          <span className="absolute -left-1.5 -top-1 flex gap-0.5" aria-hidden="true">
+            {player.cards.map((card, index) => <CardMark key={index} type={card} />)}
+          </span>
+        )}
         {player.subbedOff && (
-          <span className="absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-full bg-surface" title={`Salió ${player.subbedOff}`}>
-            <ArrowDown className="h-3 w-3 text-danger-soft" aria-hidden="true" />
+          <span className="absolute -bottom-1 -right-1.5 grid h-5 w-5 place-items-center rounded-full bg-surface shadow" title={`Salió ${player.subbedOff}`} aria-hidden="true">
+            <ArrowDown className="h-3.5 w-3.5 text-danger-soft" />
           </span>
         )}
       </span>
-      <span className="mt-0.5 max-w-full truncate rounded bg-canvas/70 px-1 text-[10px] leading-tight text-ink sm:text-[11px]">{lastName(player.name)}</span>
+      <span className="mt-1 flex max-w-full items-baseline gap-1 rounded-md bg-canvas/80 px-1.5 py-0.5 text-xs font-semibold leading-tight text-ink sm:text-[13px]">
+        {player.number != null && <span className="num text-accent-soft">{player.number}</span>}
+        <span className="truncate">{lastName(player.name)}</span>
+      </span>
     </li>
   );
 }
@@ -82,7 +121,7 @@ function SideNotice({ side, status, vertical }) {
     ? (side === 'home' ? 'bottom-0 inset-x-0 h-1/2' : 'top-0 inset-x-0 h-1/2')
     : (side === 'home' ? 'left-0 inset-y-0 w-1/2' : 'right-0 inset-y-0 w-1/2');
   return (
-    <p className={`absolute ${place} grid place-items-center p-4 text-center text-xs text-ink-3`}>
+    <p className={`absolute ${place} grid place-items-center p-4 text-center text-sm text-ink-2`}>
       {STATUS_TEXT[status] || STATUS_TEXT.missing}
     </p>
   );
@@ -90,7 +129,7 @@ function SideNotice({ side, status, vertical }) {
 
 function Pitch({ layout, vertical }) {
   return (
-    <div className={`relative w-full overflow-hidden rounded-xl bg-raised ${vertical ? 'mx-auto aspect-[68/105] max-w-sm' : 'aspect-[105/68]'}`}>
+    <div className={`lineup-pitch relative w-full overflow-hidden rounded-xl ${vertical ? 'mx-auto aspect-[68/105] max-w-md' : 'aspect-[105/68]'}`}>
       <PitchLines vertical={vertical} />
       {['home', 'away'].map(side => (
         <React.Fragment key={side}>
@@ -113,7 +152,7 @@ export function LineupPitch({ layout, match }) {
       </div>
       <div className="hidden sm:block"><Pitch layout={layout} vertical={false} /></div>
       <div className="sm:hidden"><Pitch layout={layout} vertical /></div>
-      <p className="mt-3 text-xs text-ink-3">{sourceNote(layout)}</p>
+      <p className="mt-3 text-sm text-ink-2">{sourceNote(layout)}</p>
     </section>
   );
 }

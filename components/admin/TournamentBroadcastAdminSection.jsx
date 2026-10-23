@@ -2,7 +2,6 @@ import React, { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Maximize2, Trophy } from 'lucide-react';
 import { ObsSceneStudio } from './obs/ObsSceneStudio.jsx';
-import { CupPollAdmin } from './CupPollAdmin.jsx';
 import { CollectorImportAdmin } from './CollectorImportAdmin.jsx';
 
 // "Torneo y transmisión": el resumen del torneo, los partidos del colector y el editor de escenas de OBS
@@ -77,7 +76,6 @@ export const TournamentBroadcastAdminSection = memo(function TournamentBroadcast
         showStatusMessage={showStatusMessage}
         onOpenTournamentModal={onOpenTournamentModal}
       />
-      <CupPollAdmin tournamentData={tournamentData} showStatusMessage={showStatusMessage} />
     </div>
   );
 });

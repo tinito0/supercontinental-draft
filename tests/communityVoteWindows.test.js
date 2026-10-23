@@ -4,7 +4,7 @@ import {
   castVote, clientIp, CommunityVoteError, finishedAtFor, fixtureIsFinished, LIVE_SIGNAL_MS, MVP_GRACE_MS, mvpWindow,
   predictionClosure, predictionWindow,
 } from '../supabase/functions/_shared/communityVote.js';
-import { pickMvpMatch } from '../utils/communityView.js';
+import { pickMvpMatch, predictionOutcome } from '../utils/communityView.js';
 
 const now = 50_000_000;
 
@@ -104,5 +104,19 @@ describe('pickMvpMatch (página /en-vivo)', () => {
 
   it('closes when the end was more than 15 minutes ago, even with recent uploads', () => {
     expect(pickMvpMatch([match('b', 'finished', { finishedAtMs: now - MVP_GRACE_MS - 1, updatedAtMs: now })], now)).toEqual({ match: null, open: false });
+  });
+});
+
+describe('predictionOutcome (post-partido en /en-vivo)', () => {
+  const finished = (home, away) => ({ key: 'k1', status: { kind: 'finished' }, home: { score: home }, away: { score: away } });
+  it('reads the 90-minute result of the linked match and how many guessed it', () => {
+    const prediction = { liveMatchKey: 'k1', votes: { home: 6, draw: 2, away: 2 } };
+    expect(predictionOutcome(prediction, [finished(2, 1)])).toMatchObject({ result: 'home', correctPct: 60, total: 10 });
+    expect(predictionOutcome(prediction, [finished(1, 1)])).toMatchObject({ result: 'draw', correctPct: 20 });
+  });
+
+  it('is null until the linked match finishes, or without a linked match', () => {
+    expect(predictionOutcome({ liveMatchKey: 'k1' }, [{ ...finished(1, 0), status: { kind: 'live' } }])).toBeNull();
+    expect(predictionOutcome({ votes: {} }, [finished(1, 0)])).toBeNull();
   });
 });

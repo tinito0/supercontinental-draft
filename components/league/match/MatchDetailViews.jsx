@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, Goal } from 'lucide-react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { BallIcon } from './BallIcon.jsx';
 import { Tabs } from '../../ui/Tabs.jsx';
 import { CardMark } from './MatchParts.jsx';
 
@@ -28,8 +29,8 @@ export function PlayerPhoto({ id, size = 32 }) {
 function PlayerMarks({ player }) {
   return (
     <span className="flex shrink-0 items-center gap-1 text-xs text-ink-3">
-      {Array.from({ length: player.goals }, (_, i) => <Goal key={`g${i}`} className="h-3.5 w-3.5 text-accent-soft" aria-label="Gol" />)}
-      {Array.from({ length: player.ownGoals || 0 }, (_, i) => <Goal key={`o${i}`} className="h-3.5 w-3.5 text-danger-soft" aria-label="Gol en contra" />)}
+      {Array.from({ length: player.goals }, (_, i) => <span key={`g${i}`} role="img" aria-label="Gol" className="inline-flex"><BallIcon className="h-4 w-4" /></span>)}
+      {Array.from({ length: player.ownGoals || 0 }, (_, i) => <span key={`o${i}`} role="img" aria-label="Gol en contra" className="inline-flex rounded-full ring-2 ring-danger"><BallIcon className="h-4 w-4" /></span>)}
       {player.assists > 0 && <span title="Asistencias" className="num">A{player.assists > 1 ? player.assists : ''}</span>}
       {player.cards.map((card, i) => <CardMark key={`c${i}`} type={card} />)}
       {player.subbedOff && <span className="flex items-center"><ArrowDown className="h-3.5 w-3.5 text-danger-soft" aria-label="Salió" /><span className="num">{player.subbedOff}</span></span>}

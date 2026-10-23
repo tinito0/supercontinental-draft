@@ -25,7 +25,7 @@ export function StoryText({ body, loading, error, emptyTitle, emptyDescription, 
 
   const shown = limit ? paragraphs.slice(0, limit) : paragraphs;
   return (
-    <div className={`max-w-[68ch] space-y-4 text-lg leading-relaxed text-ink-2 ${className}`}>
+    <div className={`max-w-[68ch] space-y-4 text-lg leading-relaxed text-ink ${className}`}>
       {shown.map((paragraph, index) => (
         <p key={index} className="whitespace-pre-line">{paragraph}</p>
       ))}

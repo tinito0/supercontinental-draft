@@ -13,12 +13,12 @@ import { useLeagueTeams, useLiveMatches } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { groupMatchesByDay } from '../../utils/matchCenter.js';
 
-function TeamLine({ team, isWinner, isLoser, teamsById }) {
+function TeamLine({ team, isWinner, teamsById }) {
   return (
     <div className="flex items-center gap-3 min-w-0">
       <TeamMark team={team} teamsById={teamsById} size="sm" />
-      <span className={`min-w-0 flex-1 truncate ${isWinner ? 'font-semibold text-ink' : isLoser ? 'text-ink-3' : 'text-ink-2'}`}>{team.name}</span>
-      <span className={`num font-display text-lg ${isWinner ? 'text-ink' : 'text-ink-2'}`}>{team.score}</span>
+      <span className={`min-w-0 flex-1 truncate ${isWinner ? 'font-bold text-ink' : 'font-medium text-ink'}`}>{team.name}</span>
+      <span className={`num font-display text-lg text-ink ${isWinner ? 'font-bold' : ''}`}>{team.score}</span>
     </div>
   );
 }
@@ -39,14 +39,14 @@ function MatchRow({ match, teamsById }) {
         to={`/partidos/${match.key}`}
         className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-4 px-4 py-3 min-h-11 transition-colors hover:bg-white/[0.03]"
       >
-        <div className="text-xs leading-tight">
-          <div className="text-ink-3">{time}</div>
+        <div className="text-sm leading-tight">
+          <div className="font-semibold text-ink-2">{time}</div>
           <MatchStatus status={match.status} />
         </div>
         <div className="space-y-1.5 min-w-0">
-          <TeamLine team={match.home} teamsById={teamsById} isWinner={winner === 'home'} isLoser={winner === 'away'} />
-          <TeamLine team={match.away} teamsById={teamsById} isWinner={winner === 'away'} isLoser={winner === 'home'} />
-          <div className="text-xs text-ink-3">
+          <TeamLine team={match.home} teamsById={teamsById} isWinner={winner === 'home'} />
+          <TeamLine team={match.away} teamsById={teamsById} isWinner={winner === 'away'} />
+          <div className="text-[13px] text-ink-3">
             {match.competition}
             {match.shootout && <> · Penales <span className="num">{match.shootout.home}-{match.shootout.away}</span></>}
           </div>
@@ -102,7 +102,7 @@ function FixtureList({ teams, teamsById }) {
           </button>
         ))}
       </div>
-      {rounds.length === 0 && <p className="text-sm text-ink-3">Esta competición todavía no tiene partidos.</p>}
+      {rounds.length === 0 && <p className="text-base text-ink-2">Esta competición todavía no tiene partidos.</p>}
       {rounds.map(round => (
         <section key={round.key} aria-label={round.title}>
           <h2 className="eyebrow mb-2">{round.title}</h2>

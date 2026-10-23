@@ -56,7 +56,7 @@ const getPosRank = (pos) => POS_RANK[String(pos || '').toUpperCase()] || 5;
  * Public page of a club. Shared by the draft (/draft/team/:id) and the league site (/equipos/:id), which passes
  * `isLeagueSite` (no draft badge, no own footer) and the club's history as `afterHeader`.
  */
-export default function TeamScreen({ isLeagueSite = false, afterHeader = null }) {
+export default function TeamScreen({ isLeagueSite = false, afterHeader = null, hideHeader = false }) {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -233,7 +233,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null })
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center space-y-4 text-ink-2">
+      <div className={`${hideHeader ? "min-h-[40vh]" : "min-h-screen"} bg-canvas flex flex-col items-center justify-center space-y-4 text-ink-2`}>
         <div className="w-10 h-10 border-3 border-accent/20 border-t-accent-soft rounded-full animate-spin"></div>
         <p className="text-sm font-medium text-ink-3">Cargando perfil táctico...</p>
       </div>
@@ -243,7 +243,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null })
   if (error) {
     const isNetworkError = error.includes('conexión');
     return (
-      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-6 text-center text-ink-2">
+      <div className={`${hideHeader ? "min-h-[40vh]" : "min-h-screen"} bg-canvas flex flex-col items-center justify-center p-6 text-center text-ink-2`}>
         <div className={`w-16 h-16 ${isNetworkError ? 'bg-warning/10 border-warning/20 text-warning-soft' : 'bg-danger/10 border-danger/20 text-danger-soft'} rounded-xl flex items-center justify-center mb-5 border`}>
           {isNetworkError ? <WifiOff className="w-8 h-8" /> : <Shield className="w-8 h-8" />}
         </div>
@@ -269,7 +269,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null })
 
   if (!teamData) {
     return (
-      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-6 text-center text-ink-2">
+      <div className={`${hideHeader ? "min-h-[40vh]" : "min-h-screen"} bg-canvas flex flex-col items-center justify-center p-6 text-center text-ink-2`}>
         <div className="w-16 h-16 rounded-xl bg-surface border border-line/20 flex items-center justify-center text-ink-3 mb-4">
           <Users className="w-8 h-8" />
         </div>
@@ -327,9 +327,9 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null })
   const goalDiff = teamRecord.gf - teamRecord.ga;
 
   return (
-    <div className="min-h-screen bg-canvas text-ink-2 flex flex-col selection:bg-accent/30">
-      {/* ── HEADER PANEL DE IDENTIDAD ── */}
-      <div className="bg-surface/95 border-b border-line/20 px-4 py-6 sm:py-7 relative">
+    <div className={`${hideHeader ? '' : 'min-h-screen '}bg-canvas text-ink-2 flex flex-col selection:bg-accent/30`}>
+      {/* ── HEADER PANEL DE IDENTIDAD ── (la web de la liga dibuja su propia cabecera del club) */}
+      {!hideHeader && <div className="bg-surface/95 border-b border-line/20 px-4 py-6 sm:py-7 relative">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
             {/* Escudo del equipo */}
@@ -394,7 +394,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null })
             </button>
           </div>
         </div>
-      </div>
+      </div>}
 
       {afterHeader}
 

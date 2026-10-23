@@ -7,15 +7,15 @@ import { Alert } from '../ui/Alert.jsx';
 import { EmptyState } from '../ui/EmptyState.jsx';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import { isTeamApproved } from '../../supabase/functions/_shared/membership.js';
-import { saveClubStory, saveLeagueHistory, saveSeasonRules } from '../../services/leagueContentService.js';
+import { saveClub, saveLeagueHistory, saveSeasonRules } from '../../services/leagueContentService.js';
 import { LeagueEditorsPanel } from './LeagueEditorsPanel.jsx';
+import { ClubProfileEditor } from './ClubProfileEditor.jsx';
 import {
   LEAGUE_HISTORY_DOC,
   MAX_STORY_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_SEASON_LENGTH,
   SEASON_RULES_DOC,
-  clubStoryDocId,
   moveChapter,
   newChapter,
 } from '../../utils/leagueContent.js';
@@ -24,7 +24,7 @@ import {
 
 const SECTIONS = [
   { id: 'liga', label: 'Historia de la liga', icon: History },
-  { id: 'clubes', label: 'Historia de los clubes', icon: Shield },
+  { id: 'clubes', label: 'Clubes', icon: Shield },
   { id: 'reglamento', label: 'Reglamento', icon: BookOpen },
 ];
 
@@ -108,13 +108,11 @@ function ClubStories({ allTeams, showStatusMessage }) {
           {teams.map(team => <option key={team.id} value={team.id}>{team.teamName}</option>)}
         </select>
       </Field>
-      <StoryEditor
-        docId={clubStoryDocId(selectedId)}
-        label="Historia del club"
-        help={`Cómo nació el club, su identidad, sus momentos en la liga. ${PARAGRAPH_HELP}`}
-        publicHref={`/equipos/${selectedId}`}
-        onSave={body => saveClubStory(selectedId, body, auth?.currentUser?.uid)}
-        showStatusMessage={showStatusMessage}
+      <ClubProfileEditor
+        teamId={selectedId}
+        teamName={teams.find(team => team.id === selectedId)?.teamName || ''}
+        onSave={club => runSave(() => saveClub(selectedId, club, auth?.currentUser?.uid), showStatusMessage, 'Club guardado: ya se ve en la web.')}
+        renderSaveBar={props => <SaveBar {...props} />}
       />
     </div>
   );

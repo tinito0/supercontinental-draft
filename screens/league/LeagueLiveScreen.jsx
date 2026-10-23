@@ -9,7 +9,7 @@ import { useAllMvpVotes, useBroadcastOverlay, useLeagueTeams, useLiveMatches, us
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { rankPlayerOfTournament } from '../../utils/playerOfTournament.js';
 import { getMyVote, sendVote } from '../../services/communityService.js';
-import { CUP_POLLS, mvpOptions, mvpRanking, pickMvpMatch, pollResults, predictionShares } from '../../utils/communityView.js';
+import { CUP_POLLS, mvpOptions, mvpRanking, pickMvpMatch, pollResults, predictionOutcome, predictionShares } from '../../utils/communityView.js';
 
 /* /en-vivo, la página del QR del stream: predicción del partido al aire, voto del MVP del partido en juego y la
    encuesta «¿quién gana la copa?».
@@ -32,31 +32,33 @@ function ShareBar({ label, pct, isMine, isLeader }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3 text-sm">
-        <span className={`min-w-0 truncate ${isLeader ? 'font-semibold text-ink' : 'text-ink-2'}`}>
-          {label}{isMine && <span className="ml-2 text-xs text-accent-soft">· tu voto</span>}
+        <span className={`min-w-0 truncate ${isLeader ? 'font-bold text-ink' : 'font-medium text-ink'}`}>
+          {label}{isMine && <span className="ml-2 text-sm font-semibold text-accent-soft">· tu voto</span>}
         </span>
         <span className="num font-display text-lg text-ink">{pct}%</span>
       </div>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-raised" aria-hidden="true">
         {/* scaleX y no width: los votos llegan en vivo y la barra se desliza sin recalcular el layout. */}
-        <div className={`h-full origin-left rounded-full transition-transform duration-300 ease-out motion-reduce:transition-none ${isLeader ? 'bg-accent' : 'bg-ink-3/60'}`}
+        <div className={`h-full origin-left rounded-full transition-transform duration-300 ease-out motion-reduce:transition-none ${isLeader ? 'bg-accent' : 'bg-ink-2/50'}`}
           style={{ transform: `scaleX(${pct / 100})` }} />
       </div>
     </div>
   );
 }
 
-function PredictionPanel({ overlay, teamsById }) {
+function PredictionPanel({ overlay, teamsById, matches }) {
   const matchId = overlay?.matchId || null;
   const { data: prediction } = usePrediction(matchId);
   const [myVote, setMyVote] = useState(() => (matchId ? getMyVote('prediction', matchId) : null));
   const [state, setState] = useState({ busy: false, error: '' });
   useEffect(() => { setMyVote(matchId ? getMyVote('prediction', matchId) : null); }, [matchId]);
 
-  const home = { name: prediction?.homeTeam || overlay?.homeTeamName || 'Local', draftTeamId: overlay?.homeTeamId || null };
-  const away = { name: prediction?.awayTeam || overlay?.awayTeamName || 'Visitante', draftTeamId: overlay?.awayTeamId || null };
+  const home = { name: prediction?.homeTeam || overlay?.homeTeamName || teamsById?.[overlay?.homeTeamId]?.teamName || 'Local', draftTeamId: overlay?.homeTeamId || null };
+  const away = { name: prediction?.awayTeam || overlay?.awayTeamName || teamsById?.[overlay?.awayTeamId]?.teamName || 'Visitante', draftTeamId: overlay?.awayTeamId || null };
   const isClosed = Boolean(prediction?.closedAt);
   const shares = predictionShares(prediction?.votes);
+  const outcome = useMemo(() => predictionOutcome(prediction, matches), [prediction, matches]);
+  const resultLabel = { home: `Ganó ${home.name}`, draw: 'Empate en los 90', away: `Ganó ${away.name}` };
 
   const vote = async choice => {
     setState({ busy: true, error: '' });
@@ -69,16 +71,27 @@ function PredictionPanel({ overlay, teamsById }) {
     <section className="panel p-5 space-y-4" aria-labelledby="prediction-title">
       <div className="flex items-center justify-between gap-3">
         <h2 id="prediction-title" className="section-title flex items-center gap-2"><Vote className="h-5 w-5 text-accent-soft" aria-hidden="true" /> ¿Quién gana?</h2>
-        {matchId && <span className="text-xs text-ink-3">{isClosed ? 'Cerrada: ya empezó' : 'Se cierra al empezar'}</span>}
+        {matchId && <span className="text-sm text-ink-2">{isClosed ? 'Cerrada: ya empezó' : 'Se cierra al empezar'}</span>}
       </div>
       {!matchId ? (
-        <p className="text-sm text-ink-3">Cuando haya un partido por jugarse vas a poder predecir acá.</p>
+        <p className="text-base text-ink-2">Cuando haya un partido por jugarse vas a poder predecir acá.</p>
       ) : myVote || isClosed ? (
         <div className="space-y-3">
+          {outcome && (
+            <div className="rounded-xl border border-accent/30 bg-accent-deep/50 p-4" role="status">
+              <p className="font-display text-xl font-bold uppercase text-ink">
+                Final: {home.name} <span className="num">{outcome.match.home.score}-{outcome.match.away.score}</span> {away.name}
+              </p>
+              <p className="mt-1 text-base text-ink">
+                {resultLabel[outcome.result]}. Acertó el <strong className="num">{outcome.correctPct}%</strong> del público
+                {myVote ? (myVote === outcome.result ? ', y vos también.' : '; esta vez no acertaste.') : '.'}
+              </p>
+            </div>
+          )}
           {[['home', home.name], ['draw', 'Empate'], ['away', away.name]].map(([side, label]) => (
             <ShareBar key={side} label={label} pct={shares[side]} isMine={myVote === side} isLeader={shares.leader === side} />
           ))}
-          <p className="text-xs text-ink-3"><span className="num">{shares.total}</span> {shares.total === 1 ? 'voto' : 'votos'}</p>
+          <p className="text-sm text-ink-2"><span className="num">{shares.total}</span> {shares.total === 1 ? 'voto' : 'votos'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3">
@@ -90,7 +103,7 @@ function PredictionPanel({ overlay, teamsById }) {
             </button>
           ))}
           <button type="button" disabled={state.busy} onClick={() => vote('draw')}
-            className={`${CHOICE_BUTTON} order-2 min-h-24 min-w-16 px-3 font-display text-base font-bold text-ink-2`}>
+            className={`${CHOICE_BUTTON} order-2 min-h-24 min-w-16 px-3 font-display text-base font-bold text-ink`}>
             Empate
           </button>
         </div>
@@ -121,20 +134,20 @@ function CupPollPanel({ pollId, label }) {
         <h2 id={`poll-${pollId}`} className="section-title flex items-center gap-2">
           <Trophy className="h-5 w-5 text-accent-soft" aria-hidden="true" /> {poll.title || `¿Quién gana la ${label}?`}
         </h2>
-        <span className="shrink-0 text-xs text-ink-3">{isOpen ? 'Encuesta abierta' : 'Encuesta cerrada'}</span>
+        <span className="shrink-0 text-sm text-ink-2">{isOpen ? 'Encuesta abierta' : 'Encuesta cerrada'}</span>
       </div>
       {myVote || !isOpen ? (
         <div className="space-y-3">
           {results.options.map((option, index) => (
             <ShareBar key={option.id} label={option.name} pct={option.pct} isMine={myVote === option.id} isLeader={index === 0 && option.votes > 0} />
           ))}
-          <p className="text-xs text-ink-3"><span className="num">{results.total}</span> {results.total === 1 ? 'voto' : 'votos'}</p>
+          <p className="text-sm text-ink-2"><span className="num">{results.total}</span> {results.total === 1 ? 'voto' : 'votos'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {poll.options.map(option => (
             <button key={option.id} type="button" disabled={state.busy} onClick={() => vote(option.id)}
-              className={`${CHOICE_BUTTON} min-h-11 justify-start px-3 py-2 text-left text-sm font-semibold text-ink-2 hover:text-ink`}>
+              className={`${CHOICE_BUTTON} min-h-11 justify-start px-3 py-2 text-left text-base font-semibold text-ink`}>
               <span className="min-w-0 truncate">{option.name}</span>
             </button>
           ))}
@@ -156,7 +169,7 @@ function PlayerOfTournamentPanel({ matches }) {
     <section className="panel p-5 space-y-4" aria-labelledby="pot-title">
       <div className="flex items-center justify-between gap-3">
         <h2 id="pot-title" className="section-title flex items-center gap-2"><Award className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Jugador del Torneo</h2>
-        <span className="text-xs text-ink-3">MVP de la comunidad</span>
+        <span className="text-sm text-ink-2">MVP de la comunidad</span>
       </div>
       <ol className="divide-y divide-line/10">
         {ranking.map((entry, index) => (
@@ -166,16 +179,16 @@ function PlayerOfTournamentPanel({ matches }) {
               className="h-9 w-9 shrink-0 rounded-full bg-overlay object-cover" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-ink">{entry.name}</span>
-              {entry.team && <span className="block truncate text-xs text-ink-3">{entry.team}</span>}
+              {entry.team && <span className="block truncate text-sm text-ink-2">{entry.team}</span>}
             </span>
             <span className="text-right">
               <span className="num block font-display text-lg leading-none text-ink">{entry.awards}</span>
-              <span className="block text-xs text-ink-3">{entry.awards === 1 ? 'MVP' : 'MVPs'}</span>
+              <span className="block text-sm text-ink-2">{entry.awards === 1 ? 'MVP' : 'MVPs'}</span>
             </span>
           </li>
         ))}
       </ol>
-      <p className="text-xs text-ink-3">Cuenta los partidos terminados que registró el colector. Un empate en el primer puesto no da MVP.</p>
+      <p className="text-sm text-ink-2">Cuenta los partidos terminados que registró el colector. Un empate en el primer puesto no da MVP.</p>
     </section>
   );
 }
@@ -204,25 +217,40 @@ function MvpPanel({ matches }) {
 
   let body;
   if (!match) {
-    body = <p className="text-sm text-ink-3">Cuando haya un partido en juego vas a poder votar al mejor jugador acá.</p>;
+    body = <p className="text-base text-ink-2">Cuando haya un partido en juego vas a poder votar al mejor jugador acá.</p>;
   } else if (myVote || !open) {
+    const winner = !open && ranking.length && (ranking.length === 1 || ranking[0].votes > ranking[1].votes) ? ranking[0] : null;
     body = ranking.length ? (
+      <div className="space-y-4">
+      {winner && (
+        <div className="flex items-center gap-4 rounded-xl border border-warning/30 bg-warning/10 p-4" role="status">
+          <img src={`/fotos_jugadores/${winner.id}.webp`} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-full bg-white object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold uppercase tracking-wide text-warning-soft">MVP del partido</p>
+            <p className="truncate font-display text-2xl font-bold text-ink">{winner.name}</p>
+            <p className="text-sm text-ink-2"><span className="num">{winner.pct}%</span> de los votos</p>
+          </div>
+        </div>
+      )}
       <ol className="space-y-3">
         {ranking.map((entry, index) => (
           <li key={entry.id}><ShareBar label={`${index + 1}. ${entry.name}`} pct={entry.pct} isMine={myVote === String(entry.id)} isLeader={index === 0} /></li>
         ))}
       </ol>
-    ) : <p className="text-sm text-ink-3">Todavía no hay votos.</p>;
+      </div>
+    ) : <p className="text-base text-ink-2">{open ? 'Todavía no hay votos.' : 'Este partido terminó sin votos para el MVP.'}</p>;
+  } else if (!options.home.length && !options.away.length) {
+    body = <p className="text-base text-ink-2">La lista de jugadores aparece cuando el juego manda las alineaciones. Volvé en un minuto.</p>;
   } else {
     body = (
       <div className="space-y-4">
         {[['home', match.home.name], ['away', match.away.name]].map(([side, teamName]) => (
           <fieldset key={side}>
-            <legend className="eyebrow mb-2">{teamName}</legend>
+            <legend className="mb-2 font-display text-base font-bold uppercase tracking-wide text-ink">{teamName}</legend>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {options[side].map(player => (
                 <button key={player.id} type="button" aria-pressed={selected === player.id} onClick={() => setSelected(player.id)}
-                  className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-[border-color,background-color,transform] duration-150 ease-out active:scale-[0.98] ${selected === player.id ? 'border-accent bg-accent-deep/60 text-ink' : 'border-line/[0.16] bg-raised text-ink-2 hover:border-line/30'}`}>
+                  className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-[border-color,background-color,transform] duration-150 ease-out active:scale-[0.98] ${selected === player.id ? 'border-accent bg-accent-deep/60 text-ink' : 'border-line/[0.16] bg-raised text-ink hover:border-line/30'}`}>
                   <img src={`/fotos_jugadores/${player.id}.webp`} alt="" width={28} height={28} loading="lazy"
                     className="h-7 w-7 shrink-0 rounded-full bg-overlay object-cover" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
                   <span className="min-w-0 flex-1 truncate">{player.name}</span>
@@ -244,7 +272,7 @@ function MvpPanel({ matches }) {
     <section className="panel p-5 space-y-4" aria-labelledby="mvp-title">
       <div className="flex items-center justify-between gap-3">
         <h2 id="mvp-title" className="section-title flex items-center gap-2"><Star className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Jugador del partido</h2>
-        {match && <span className="text-xs text-ink-3">{open ? 'Votación abierta' : 'Votación cerrada'}</span>}
+        {match && <span className="text-sm text-ink-2">{open ? 'Votación abierta' : 'Votación cerrada'}</span>}
       </div>
       {match && (
         <Link to={`/partidos/${match.key}`} className="well flex min-h-11 items-center gap-3 px-4 py-3 transition-colors hover:bg-overlay">
@@ -277,12 +305,12 @@ export default function LeagueLiveScreen() {
       </Reveal>
       {error && <Alert tone="danger" title={error} className="mb-4">Recargá la página para intentar de nuevo.</Alert>}
       <div className="space-y-5">
-        <PredictionPanel overlay={overlay} teamsById={teamsById} />
+        <PredictionPanel overlay={overlay} teamsById={teamsById} matches={matches} />
         <MvpPanel matches={matches} />
         {CUP_POLLS.map(poll => <CupPollPanel key={poll.id} pollId={poll.id} label={poll.label} />)}
         <PlayerOfTournamentPanel matches={matches} />
       </div>
-      <p className="mt-6 text-xs text-ink-3">
+      <p className="mt-6 text-sm text-ink-2">
         Los resultados se actualizan solos. La predicción cierra cuando empieza el partido; el MVP, 15 minutos después del final.
       </p>
     </section>

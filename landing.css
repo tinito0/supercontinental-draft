@@ -82,3 +82,50 @@
   .landing-marquee__track { animation: none; }
   .landing-marquee__copy { display: none; }
 }
+
+/* ── Readable text on the public sites ───────────────────────── */
+/* The app's secondary and muted greys (#b8c2d6, #8692ab) read as washed out on the public pages, where most text is
+   small metadata. Inside the league site and the draft landing they are lifted to near-white, and the smallest
+   labels grow to 12px. The draft app keeps its own greys. */
+.landing-root {
+  --c-ink-2: 226 232 242;  /* #e2e8f2 secundario */
+  --c-ink-3: 190 200 220;  /* #bec8dc apagado (≈ 11:1 sobre surface) */
+}
+.landing-root .eyebrow {
+  font-size: 0.75rem;
+  color: rgb(var(--c-accent-soft));
+}
+
+/* ── Club page hero ──────────────────────────────────────────── */
+/* With a stadium photo the text sits on a dark scrim (bottom-heavy, so the name stays legible on any photo); without
+   one, the league's navy with the crest as a faint watermark on the right. */
+.club-hero {
+  background: radial-gradient(120% 90% at 85% 10%, rgb(0 95 189 / 0.28), transparent 60%), rgb(var(--c-surface));
+}
+.club-hero--photo {
+  background: rgb(var(--c-canvas));
+}
+.club-hero--photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(8 11 20 / 0.15) 0%, rgb(8 11 20 / 0.55) 45%, rgb(8 11 20 / 0.94) 100%);
+}
+.club-hero__watermark {
+  right: -4rem;
+  top: 50%;
+  width: min(28rem, 70vw);
+  height: min(28rem, 70vw);
+  transform: translateY(-50%);
+  opacity: 0.08;
+  filter: grayscale(1);
+}
+
+/* ── Lineup pitch (match page) ───────────────────────────────── */
+/* A dark grass tone with soft mowing stripes, so the players' photos read on top. */
+.lineup-pitch {
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.025) 0 10%, transparent 10% 20%),
+    linear-gradient(180deg, #123524, #0e2a1d);
+}

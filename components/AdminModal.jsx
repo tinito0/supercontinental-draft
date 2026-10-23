@@ -1,5 +1,5 @@
 import React, { useState, memo, lazy, Suspense } from 'react';
-import { Settings, Users, Trophy, FileText, MessageSquarePlus, Globe } from 'lucide-react';
+import { Settings, Users, Trophy, FileText, MessageSquarePlus, Globe, Vote } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
@@ -25,11 +25,14 @@ export {
 
 // Texts of the public league site; only loaded when that tab opens.
 const LeagueContentAdminSection = lazy(() => import('./admin/LeagueContentAdminSection.jsx'));
+// Votos del público (predicción, MVP, encuestas de las copas).
+const CommunityAdminSection = lazy(() => import('./admin/CommunityAdminSection.jsx'));
 
 const ADMIN_TABS = [
   { id: 'general', label: 'Configuración', icon: Settings },
   { id: 'equipos', label: 'Equipos y usuarios', icon: Users },
   { id: 'torneo', label: 'Torneo y transmisión', icon: Trophy },
+  { id: 'comunidad', label: 'Comunidad', icon: Vote },
   { id: 'web', label: 'Web pública', icon: Globe },
   { id: 'templates', label: 'Plantillas', icon: FileText },
   { id: 'suggestions', label: 'Buzón', icon: MessageSquarePlus },
@@ -74,6 +77,11 @@ export const AdminModal = memo(function AdminModal({
           onUpdateTournament={onUpdateTournament}
           showStatusMessage={props.showStatusMessage}
         />
+      )}
+      {activeTab === 'comunidad' && (
+        <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>
+          <CommunityAdminSection broadcastOverlayData={props.broadcastOverlayData} tournamentData={tournamentData} showStatusMessage={props.showStatusMessage} />
+        </Suspense>
       )}
       {activeTab === 'web' && (
         <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>

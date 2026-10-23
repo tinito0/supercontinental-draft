@@ -34,6 +34,7 @@ export const CupBracketView = memo(function CupBracketView({
   isEditing,
   getTeamLogo,
   updateGeneric,
+  showTitle = true,
 }) {
   const cup = CUP_DEFINITIONS[cupId];
   const tone = TONE_STYLES[cup.tone];
@@ -52,7 +53,7 @@ export const CupBracketView = memo(function CupBracketView({
 
   return (
     <div className="flex flex-col items-center py-4 w-full">
-      <TournamentSectionTitle title="SUPERCONTINENTAL LEAGUE" subtitle={cup.subtitle.toUpperCase()} />
+      {showTitle && <TournamentSectionTitle title="SUPERCONTINENTAL LEAGUE" subtitle={cup.subtitle.toUpperCase()} />}
       <div ref={containerRef} className="w-full overflow-x-auto custom-scrollbar pb-6">
         <BracketBoard
           className="w-max mx-auto pt-2"

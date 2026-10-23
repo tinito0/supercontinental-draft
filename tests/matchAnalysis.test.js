@@ -94,6 +94,17 @@ describe('pitchLayout', () => {
     expect(layout.away).toEqual({ status: 'differs', players: [] });
   });
 
+  it('marks each player\'s goals (not own goals) and cards for the pitch', () => {
+    const layout = pitchLayout({
+      ...summary,
+      goals: [{ side: 'home', playerId: 9 }, { side: 'home', playerId: 9 }, { side: 'away', playerId: 2, ownGoal: true }],
+      cards: [{ side: 'home', playerId: 4, type: 'yellow' }],
+    });
+    expect(layout.home.players[8]).toMatchObject({ id: 9, goals: 2, cards: [] });
+    expect(layout.home.players[1]).toMatchObject({ id: 2, goals: 0 });
+    expect(layout.home.players[3].cards).toEqual(['yellow']);
+  });
+
   it('mirrors the away team: depth from the right, its left side at the bottom', () => {
     const away = pitchLayout({ ...summary, teamPlans: { away: plan } }).away.players[3];
     expect(away).toMatchObject({ role: 'LD', x: 100 - 15, y: 100 - 34 });

@@ -10,10 +10,11 @@ export const StatsView = memo(function StatsView({
   getTeamLogo,
   getPlayerPhoto,
   updateStat,
+  showTitle = true,
 }) {
   return (
     <div className={`flex flex-col items-center w-full ${isObsMode ? 'h-full justify-center scale-100 px-20' : 'max-w-5xl mx-auto py-4 px-4'}`}>
-      <TournamentSectionTitle title="LÍDERES INDIVIDUALES" subtitle="ESTADÍSTICAS DEL TORNEO" />
+      {showTitle && <TournamentSectionTitle title="LÍDERES INDIVIDUALES" subtitle="ESTADÍSTICAS DEL TORNEO" />}
       <div className={`w-full ${isObsMode ? 'grid grid-cols-2 gap-12 max-w-[1500px] mt-8' : 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-4'}`}>
         {/* GOLEADORES */}
         <div className=" bg-surface rounded-xl border border-line/20 shadow-sm overflow-hidden">
@@ -27,7 +28,10 @@ export const StatsView = memo(function StatsView({
             <span className="text-xs text-ink-3 font-medium">Goles</span>
           </div>
           <div className="p-3 space-y-2 divide-y divide-line/[0.08]">
-            {localData.topScorers.map((player, idx) => {
+            {!isEditing && !(localData.topScorers || []).some(player => String(player?.name || '').trim()) && <p className="px-2 py-6 text-center text-sm text-ink-2">Todavía no hay goles cargados.</p>}
+            {(localData.topScorers || []).map((player, idx) => {
+              // Fuera de edición no se muestran los lugares vacíos («—, Sin equipo, 0»).
+              if (!isEditing && !String(player?.name || '').trim()) return null;
               const photoUrl = player.photoUrl || (player.playerId ? `/fotos_jugadores/${player.playerId}.webp` : getPlayerPhoto?.(player.name));
 
               return (
@@ -96,7 +100,9 @@ export const StatsView = memo(function StatsView({
             <span className="text-xs text-ink-3 font-medium">Asist</span>
           </div>
           <div className="p-3 space-y-2 divide-y divide-line/[0.08]">
-            {localData.topAssisters.map((player, idx) => {
+            {!isEditing && !(localData.topAssisters || []).some(player => String(player?.name || '').trim()) && <p className="px-2 py-6 text-center text-sm text-ink-2">Todavía no hay asistencias cargadas.</p>}
+            {(localData.topAssisters || []).map((player, idx) => {
+              if (!isEditing && !String(player?.name || '').trim()) return null;
               const photoUrl = player.photoUrl || (player.playerId ? `/fotos_jugadores/${player.playerId}.webp` : getPlayerPhoto?.(player.name));
 
               return (

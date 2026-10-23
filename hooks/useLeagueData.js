@@ -190,3 +190,21 @@ export const usePesTeamMap = () => usePublicDoc(`${PUBLIC_DATA}/config/pesTeamMa
 
 /** Encuesta «¿quién gana la copa?» (utils/communityView.js CUP_POLLS): la abre el admin, los votos los suma la función. */
 export const usePoll = pollId => usePublicDoc(pollId ? `${PUBLIC_DATA}/polls/${pollId}` : null, 'usePoll');
+
+/** Fichas de todos los clubes (league_content/club-{teamId}.profile), por teamId: la página Equipos muestra estadio y mánager. */
+export function useClubProfiles() {
+  const [state, setState] = useState({ byTeamId: {}, loading: true, error: '' });
+  useEffect(() => onSnapshot(
+    collection(db, `${PUBLIC_DATA}/${LEAGUE_CONTENT_COLLECTION}`),
+    (snap) => setState({
+      byTeamId: Object.fromEntries(snap.docs.filter(d => d.id.startsWith('club-') && d.data()?.profile).map(d => [d.id.slice('club-'.length), d.data().profile])),
+      loading: false,
+      error: '',
+    }),
+    (err) => {
+      console.error('[useClubProfiles]', err);
+      setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar las fichas de los clubes.' }));
+    },
+  ), []);
+  return state;
+}

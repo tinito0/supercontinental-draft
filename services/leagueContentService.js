@@ -6,6 +6,7 @@ import {
   LEAGUE_HISTORY_DOC,
   SEASON_RULES_DOC,
   clubStoryDocId,
+  normalizeClub,
   normalizeSeasonRules,
   normalizeStory,
 } from '../utils/leagueContent.js';
@@ -29,5 +30,6 @@ async function saveNormalized(docId, normalized, userId) {
 }
 
 export const saveLeagueHistory = (body, userId) => saveNormalized(LEAGUE_HISTORY_DOC, normalizeStory(body), userId);
-export const saveClubStory = (teamId, body, userId) => saveNormalized(clubStoryDocId(teamId), normalizeStory(body), userId);
+/** History and card of a club, saved together: the document is replaced whole, so neither can wipe the other. */
+export const saveClub = (teamId, club, userId) => saveNormalized(clubStoryDocId(teamId), normalizeClub(club), userId);
 export const saveSeasonRules = (rules, userId) => saveNormalized(SEASON_RULES_DOC, normalizeSeasonRules(rules), userId);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Goal } from 'lucide-react';
+import { BallIcon } from './BallIcon.jsx';
 
 /* Dominio minuto a minuto (modelo de utils/matchAnalysis.js momentum): barras hacia arriba = local, hacia abajo =
    visitante; un corte entre tiempos y los goles marcados en su minuto. */
@@ -65,12 +65,12 @@ export function MomentumChart({ data, match, compact = false }) {
           return (
             <span key={i} className={`absolute -translate-x-1/2 ${goal.side === 'home' ? 'top-0' : 'bottom-0'}`}
               style={{ left: `${((x + BAR / 2) / width) * 100}%` }}>
-              <Goal className={`h-3.5 w-3.5 ${goal.side === 'home' ? 'text-accent-soft' : 'text-ink-2'}`} aria-label={`Gol ${goal.side === 'home' ? match.home.name : match.away.name}, minuto ${goal.minute + 1}`} />
+              <span role="img" className="inline-flex" aria-label={`Gol ${goal.side === 'home' ? match.home.name : match.away.name}, minuto ${goal.minute + 1}`}><BallIcon className="h-4 w-4" /></span>
             </span>
           );
         })}
       </div>
-      <div className="relative mt-1 h-4 text-[11px] text-ink-3" aria-hidden="true">
+      <div className="relative mt-1 h-4 text-xs text-ink-3" aria-hidden="true">
         {starts.map(p => {
           const left = (p.x / width) * 100;
           // Near the right edge the label is anchored by its end so it never wraps or overflows.

@@ -75,3 +75,20 @@ export function mvpRanking(votes, summary, limit = 5) {
     .slice(0, limit)
     .map(entry => ({ ...entry, name: playerName(summary, entry.id), pct: total ? Math.round((entry.votes / total) * 100) : 0 }));
 }
+
+/**
+ * Cómo terminó la predicción del partido al aire: el resultado de los 90 minutos del partido del juego vinculado
+ * (prediction.liveMatchKey, lo escribe match-feed al cerrarla) y qué parte del público acertó. Null mientras ese
+ * partido no terminó o si no hay partido vinculado. Empate = igualdad en los 90 (los penales no cambian la predicción).
+ * @returns {null | { match: object, result: 'home'|'draw'|'away', correctPct: number, total: number }}
+ */
+export function predictionOutcome(prediction, matches) {
+  const key = prediction?.liveMatchKey;
+  const match = key ? (matches || []).find(item => item.key === key) : null;
+  if (!match || match.status?.kind !== 'finished') return null;
+  const home = Number(match.home.score) || 0;
+  const away = Number(match.away.score) || 0;
+  const result = home === away ? 'draw' : home > away ? 'home' : 'away';
+  const shares = predictionShares(prediction.votes);
+  return { match, result, correctPct: shares[result], total: shares.total };
+}

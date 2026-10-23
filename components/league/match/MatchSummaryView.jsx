@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { ArrowDown, ArrowUp, Goal } from 'lucide-react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { BallIcon } from './BallIcon.jsx';
 import { CardMark, MatchStatus, TeamMark } from './MatchParts.jsx';
 
 /* Encabezado y minuto a minuto del partido (screens/league/LeagueMatchScreen.jsx). Datos: utils/matchCenter.js. */
@@ -72,7 +73,7 @@ function EventBody({ event }) {
 }
 
 function EventIcon({ event }) {
-  if (event.type === 'goal') return <Goal className={`h-4 w-4 ${event.ownGoal ? 'text-danger-soft' : 'text-accent-soft'}`} aria-label={event.ownGoal ? 'Gol en contra' : 'Gol'} />;
+  if (event.type === 'goal') return <span role="img" aria-label={event.ownGoal ? 'Gol en contra' : 'Gol'} className={`inline-flex rounded-full ${event.ownGoal ? 'ring-2 ring-danger' : ''}`}><BallIcon className="h-4 w-4" /></span>;
   if (event.type === 'card') return <CardMark type={event.card} />;
   return <span className="sr-only">Cambio</span>;
 }

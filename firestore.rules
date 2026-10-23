@@ -253,12 +253,34 @@ service cloud.firestore {
       }
       function isValidLeagueContent() {
         let data = request.resource.data;
-        return data.keys().hasOnly(['body', 'season', 'chapters', 'updatedAt', 'updatedBy'])
+        return data.keys().hasOnly(['body', 'season', 'chapters', 'profile', 'updatedAt', 'updatedBy'])
           && data.updatedBy == request.auth.uid
           && data.updatedAt == request.time
           && (!('body' in data) || isShortText(data.body, 20000))
           && (!('season' in data) || isShortText(data.season, 40))
-          && (!('chapters' in data) || (data.chapters is list && data.chapters.size() <= 40));
+          && (!('chapters' in data) || (data.chapters is list && data.chapters.size() <= 40))
+          && (!('profile' in data) || isValidClubProfile(data.profile));
+      }
+      // Ficha del club (utils/leagueContent.js CLUB_PROFILE_FIELDS): textos cortos, una foto https y dos listas acotadas.
+      function isValidClubProfile(p) {
+        return p is map
+          && p.keys().hasOnly(['nickname', 'founded', 'city', 'country', 'stadium', 'capacity', 'coach', 'president',
+            'manager', 'captain', 'colors', 'stadiumPhotoUrl', 'honours', 'seasons'])
+          && (!('nickname' in p) || isShortText(p.nickname, 60))
+          && (!('founded' in p) || isShortText(p.founded, 40))
+          && (!('city' in p) || isShortText(p.city, 60))
+          && (!('country' in p) || isShortText(p.country, 60))
+          && (!('stadium' in p) || isShortText(p.stadium, 80))
+          && (!('capacity' in p) || isShortText(p.capacity, 20))
+          && (!('coach' in p) || isShortText(p.coach, 80))
+          && (!('president' in p) || isShortText(p.president, 80))
+          && (!('manager' in p) || isShortText(p.manager, 80))
+          && (!('captain' in p) || isShortText(p.captain, 80))
+          && (!('colors' in p) || isShortText(p.colors, 60))
+          && (!('stadiumPhotoUrl' in p) || (isShortText(p.stadiumPhotoUrl, 500)
+            && (p.stadiumPhotoUrl == '' || p.stadiumPhotoUrl.matches('https://[^\\s]+'))))
+          && (!('honours' in p) || (p.honours is list && p.honours.size() <= 30))
+          && (!('seasons' in p) || (p.seasons is list && p.seasons.size() <= 40));
       }
       match /public/data/league_content/{docId} {
         allow read: if true;

@@ -22,7 +22,7 @@ export function StandingsCard({ tournament, clubOf, loading }) {
         <table className="w-full text-sm">
           <caption className="sr-only">Tabla de posiciones de la liga</caption>
           <thead>
-            <tr className="text-[11px] uppercase tracking-wider text-ink-3">
+            <tr className="text-xs uppercase tracking-wider text-ink-3">
               <th scope="col" className="w-10 py-2 pl-4 text-left font-semibold">#</th>
               <th scope="col" className="py-2 text-left font-semibold">Club</th>
               <th scope="col" className="w-10 py-2 text-center font-semibold"><abbr title="Partidos jugados" className="no-underline">PJ</abbr></th>

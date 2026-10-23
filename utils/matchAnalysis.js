@@ -174,6 +174,9 @@ export function pitchLayout(summary) {
           x: side === 'home' ? depth : 100 - depth,
           y: side === 'home' ? lateral : 100 - lateral,
           subbedOff: off ? minuteLabel(off.clock) : null,
+          // Goles (sin contar en contra) y tarjetas del partido: la cancha los marca sobre la foto del jugador.
+          goals: (summary.goals || []).filter(goal => goal.playerId === id && !goal.ownGoal).length,
+          cards: (summary.cards || []).filter(card => card.playerId === id).map(card => card.type),
         };
       }),
     };
