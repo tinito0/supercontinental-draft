@@ -63,8 +63,8 @@ const MatchRow = memo(function MatchRow({ match, isOnAir, isBusy, isDisabled, al
       <div className="flex justify-end">
         {isOnAir ? (
           <span className="inline-flex items-center gap-1.5 min-h-11 px-3 text-xs font-bold uppercase tracking-wider text-accent-soft">
-            <span className="w-2 h-2 rounded-full bg-danger animate-pulse" aria-hidden="true" />
-            Al aire
+            <span className="w-2 h-2 rounded-full bg-accent" aria-hidden="true" />
+            Elegido
           </span>
         ) : (
           <button
@@ -72,10 +72,10 @@ const MatchRow = memo(function MatchRow({ match, isOnAir, isBusy, isDisabled, al
             className="btn btn-secondary btn-sm min-h-11"
             onClick={() => onSelect(match)}
             disabled={isDisabled}
-            title={isDisabled ? 'Esperá a que termine el cambio en curso' : 'Muestra este partido en el marcador de OBS'}
+            title={isDisabled ? 'Esperá a que termine el cambio en curso' : 'Lo pone en el borrador de la escena; llega a OBS al mandarla al aire'}
           >
             <Radio className="w-4 h-4" aria-hidden="true" />
-            {isBusy ? 'Poniendo…' : 'Poner al aire'}
+            {isBusy ? 'Eligiendo…' : 'Elegir'}
           </button>
         )}
       </div>
@@ -188,7 +188,7 @@ export const BroadcastMatchPicker = memo(function BroadcastMatchPicker({
         </ul>
       )}
       <p className="text-xs text-ink-3">
-        Mostrando <span className="num">{visible.length}</span> de <span className="num">{matches.length}</span>. Poner un partido al aire actualiza el marcador de OBS al instante y no cambia su resultado en el torneo.
+        Mostrando <span className="num">{visible.length}</span> de <span className="num">{matches.length}</span>. Elegir un partido cambia el borrador de la escena; OBS lo muestra al mandarla al aire. Nunca cambia el resultado en el torneo.
       </p>
     </div>
   );

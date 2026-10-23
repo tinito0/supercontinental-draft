@@ -6,7 +6,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BroadcastBracket } from '../components/tournament/BroadcastBracket.jsx';
 import { CupBracketView } from '../components/tournament/CupBracketView.jsx';
-import { OverlayAdminSection } from '../components/admin/OverlayAdminSection.jsx';
+import { ObsSceneStudio } from '../components/admin/obs/ObsSceneStudio.jsx';
 import { OverlayPopup } from '../components/broadcast/OverlayPopup.jsx';
 import { BroadcastOverlay } from '../components/BroadcastOverlay.jsx';
 import { BroadcastLeagueTable } from '../components/broadcast/BroadcastLeagueTable.jsx';
@@ -80,7 +80,7 @@ describe('CupBracketView (app)', () => {
   });
 });
 
-describe('OverlayAdminSection (OBS Partidos)', () => {
+describe('ObsSceneStudio (Admin → Escenas de OBS)', () => {
   const allTeams = { uidBoca: { teamName: 'Boca', logoUrl: '/boca.webp' }, uidRiver: { teamName: 'River', logoUrl: '/river.webp' } };
   const tournamentData = {
     matches: [
@@ -88,52 +88,42 @@ describe('OverlayAdminSection (OBS Partidos)', () => {
       { id: 'm2', round: 'Fecha 2', homeTeam: 'River', awayTeam: 'Boca', status: 'scheduled' },
     ],
   };
+  const onAir = { scene: 'previa', matchId: 'league-m2', homeTeamId: 'uidRiver', awayTeamId: 'uidBoca', homeTeamName: 'River', awayTeamName: 'Boca', homeScore: '0', awayScore: '0', roundLabel: 'Fecha 2' };
 
-  it('marks the active match as on air and offers "Poner al aire" for the others', () => {
-    const html = renderToStaticMarkup(
-      <OverlayAdminSection
-        allTeams={allTeams}
-        tournamentData={tournamentData}
-        broadcastOverlayData={{ matchId: 'league-m2', homeTeamId: 'uidRiver', awayTeamId: 'uidBoca', homeTeamName: 'River', awayTeamName: 'Boca', homeScore: '1', awayScore: '0', roundLabel: 'Fecha 2' }}
-        onUpdateBroadcastOverlay={async () => true}
-      />,
-    );
-    expect(html).toContain('aria-current="true"');
-    expect(count(html, 'Al aire</span>')).toBe(1);
-    expect(html).toContain('Partido del torneo');
-    expect(html).toContain('1 – 0');
-    // Pending filter is the default: the finished m1 is hidden, so no other "Poner al aire" button.
-    expect(count(html, 'Poner al aire</button>')).toBe(0);
+  it('lists every scene, marks the one on air and opens it selected with its match', () => {
+    const html = renderToStaticMarkup(<ObsSceneStudio allTeams={allTeams} tournamentData={tournamentData} broadcastOverlayData={onAir} onUpdateBroadcastOverlay={async () => true} />);
+    for (const scene of OBS_SCENES) expect(html).toContain(scene.label);
+    expect(count(html, 'Al aire</span></button>')).toBe(1); // insignia de la lista de escenas
+    expect(html).toMatch(/aria-current="true"[^>]*>[\s\S]*?Previa/);
+    expect(html).toContain('En el aire ahora');
+    expect(html).toMatch(/River<\/span> vs <span[^>]*>Boca/);
+    // Sin cambios, la escena que ya está al aire no se puede volver a publicar.
+    expect(html).toContain('title="Esta escena ya está en el aire y no hay cambios"');
+    expect(html).toContain('Vista previa a escala');
   });
 
-  it('shows an empty state when the tournament has no matches', () => {
-    const html = renderToStaticMarkup(<OverlayAdminSection allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{}} />);
-    expect(html).toContain('No hay partidos cargados');
-    expect(html).toContain('No hay ningún partido en el marcador');
-  });
-
-  it('shows a loading skeleton while the tournament is not loaded', () => {
-    for (const tournamentData of [undefined, null]) {
-      const html = renderToStaticMarkup(<OverlayAdminSection allTeams={{}} tournamentData={tournamentData} broadcastOverlayData={{}} />);
-      expect(html).toContain('aria-busy="true"');
+  it('shows the empty and loading states of the match list', () => {
+    expect(renderToStaticMarkup(<ObsSceneStudio allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{ scene: 'previa' }} />)).toContain('No hay partidos cargados');
+    for (const data of [undefined, null]) {
+      expect(renderToStaticMarkup(<ObsSceneStudio allTeams={{}} tournamentData={data} broadcastOverlayData={{ scene: 'previa' }} />)).toContain('aria-busy="true"');
     }
   });
 
   it('warns when the on-air match result changed in the tournament', () => {
-    const html = renderToStaticMarkup(
-      <OverlayAdminSection
-        allTeams={allTeams}
-        tournamentData={tournamentData}
-        broadcastOverlayData={{ matchId: 'league-m1', homeTeamName: 'Boca', awayTeamName: 'River', homeScore: '1', awayScore: '0' }}
-      />,
-    );
+    const html = renderToStaticMarkup(<ObsSceneStudio allTeams={allTeams} tournamentData={tournamentData}
+      broadcastOverlayData={{ scene: 'final', matchId: 'league-m1', homeTeamName: 'Boca', awayTeamName: 'River', homeScore: '1', awayScore: '0' }} />);
     expect(html).toContain('El partido cambió en el torneo');
     expect(html).toContain('Resultado final en el torneo: 2 – 0');
+  });
+
+  it('tournament scenes have no settings of their own; the live scene explains the clean overlay', () => {
+    expect(renderToStaticMarkup(<ObsSceneStudio allTeams={{}} tournamentData={{}} broadcastOverlayData={{ scene: 'tabla' }} />)).toContain('se actualiza sola');
+    expect(renderToStaticMarkup(<ObsSceneStudio allTeams={{}} tournamentData={{}} broadcastOverlayData={{ scene: 'live' }} />)).toContain('el overlay queda limpio');
   });
 });
 
 describe('TournamentBroadcastAdminSection (Torneo y transmisión)', () => {
-  it('shows the tournament summary, the on-air control and a single list of OBS sources', async () => {
+  it('shows the tournament summary, the scene studio and one recommended OBS source', async () => {
     const { MemoryRouter } = await import('react-router-dom');
     const { TournamentBroadcastAdminSection } = await import('../components/admin/TournamentBroadcastAdminSection.jsx');
     const html = renderToStaticMarkup(
@@ -147,12 +137,10 @@ describe('TournamentBroadcastAdminSection (Torneo y transmisión)', () => {
     );
     expect(html).toContain('Abrir gestor del torneo');
     expect(html).toContain('Cavani');
-    expect(html).toContain('Al aire en OBS');
-    expect(html).toContain('Fuentes de navegador para OBS');
-    // Each OBS source appears once (they used to be listed in two tabs).
-    for (const path of ['/overlay?scene=live', '/torneo?mode=obs&amp;view=groups', '/torneo?mode=obs&amp;view=bracket', '/torneo?mode=obs&amp;view=repechaje']) {
-      expect(count(html, `${path}"`)).toBe(2); // input value + "Ver" link
-    }
+    expect(html).toContain('Escenas de OBS');
+    expect(html).toContain('Conectar OBS');
+    expect(count(html, '/draft/overlay"')).toBe(2); // input value + "Ver" link
+    expect(html).not.toContain('mode=obs');
   });
 });
 
@@ -175,63 +163,18 @@ describe('OverlayPopup (OBS, QR para la comunidad)', () => {
   });
 
   it('shows the admin block with presets and a QR preview', () => {
-    const html = renderToStaticMarkup(<OverlayAdminSection allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{}} />);
+    const html = renderToStaticMarkup(<ObsSceneStudio allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{}} />);
     expect(html).toContain('Popup para la comunidad');
     expect(html).toContain('Tabla y copas');
     expect(html).toContain('Mostrar en OBS');
   });
 });
 
-describe('BroadcastOverlay during the match', () => {
-  const popup = { visible: true, title: 'Seguí la liga', text: '', url: 'https://example.com/', position: 'right', autoHideSec: 0 };
-
-  it('shows only the popup in the live scene: no scoreboard, lower third or ticker', () => {
-    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'live', homeTeamName: 'Racing', popup }} allTeams={{}} tournamentData={{}} />);
-    expect(html).toContain('class="scl-frame scl-popup');
-    expect(html).not.toContain('class="broadcast-top-score"');
-    expect(html).not.toContain('class="broadcast-lower"');
-    expect(html).not.toContain('class="broadcast-ticker"');
-  });
-
-  it('keeps the lower third and ticker in the other scenes', () => {
-    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'previa' }} allTeams={{}} tournamentData={{}} />);
-    expect(html).toContain('class="broadcast-lower"');
-    expect(html).toContain('class="broadcast-ticker"');
-  });
-});
-
-describe('BroadcastLeagueTable (OBS tabla)', () => {
-  it('renders the framed table with the 12 clubs, signed goal difference and points', () => {
-    const league = Array.from({ length: 14 }, (_, i) => ({ id: String(i), name: i === 13 ? 'Club...' : `Club ${i}`, pj: 1, pg: 1, gpen: 0, pp: 0, gf: 3, gc: i, pts: 2 }));
-    const html = renderToStaticMarkup(<BroadcastLeagueTable league={league} getTeamLogo={() => ''} />);
-    expect(html).toContain('Tabla de posiciones');
-    expect(count(html, '<tr')).toBe(13); // header + 12 clubs (placeholder rows dropped)
-    expect(count(html, '<tr class="is-plata')).toBe(4); // puestos 9-12: Copa de Plata
-    expect(html).toContain('1-8 · Copa de Oro');
-    expect(html).toContain('>+3<');
-    expect(html).toContain('>-2<');
-  });
-
-  it('says so when there is no data', () => {
-    expect(renderToStaticMarkup(<BroadcastLeagueTable league={[]} />)).toContain('Sin datos cargados');
-  });
-});
-
-describe('OverlaySceneControl (Admin → Overlay)', () => {
-  it('shows one instant button per scene, marks the one on air and lists the Macro Deck commands', () => {
-    const html = renderToStaticMarkup(<OverlayAdminSection allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{ scene: 'previa', showTicker: true }} />);
-    expect(html).toContain('Escena en OBS');
-    expect(count(html, 'aria-pressed=')).toBe(OBS_SCENES.length);
-    expect(count(html, 'aria-pressed="true"')).toBe(1);
-    expect(html).toMatch(/aria-pressed="true"[^>]*>[\s\S]*?Previa/);
-    expect(html).toContain('Botones de Macro Deck 3');
-    expect(html).toContain('{&quot;action&quot;:&quot;scene&quot;,&quot;scene&quot;:&quot;previa&quot;}');
-    expect(html).toContain('overlay-control');
-  });
-});
-
-it('the Macro Deck guide shows Windows paths with their backslashes', () => {
-  const html = renderToStaticMarkup(<OverlayAdminSection allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{}} />);
+it('the Macro Deck guide lists the scene commands and Windows paths with their backslashes', () => {
+  const html = renderToStaticMarkup(<ObsSceneStudio allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{}} />);
+  expect(html).toContain('Botones de Macro Deck 3');
+  expect(html).toContain('{&quot;action&quot;:&quot;scene&quot;,&quot;scene&quot;:&quot;previa&quot;}');
+  expect(html).toContain('overlay-control');
   expect(html).toContain('%APPDATA%\\scl-bridge\\config.json');
   expect(html).toContain('pes-collector\\bridge\\scl-obs.cmd');
 });

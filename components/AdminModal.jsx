@@ -9,7 +9,7 @@ import {
   GeneralAdminSection,
   TeamsAdminSection,
   TemplateAdminSection,
-  OverlayAdminSection,
+  ObsSceneStudio,
   TournamentBroadcastAdminSection,
 } from './admin/index.js';
 import { normalizeAdminTab, readStoredAdminTab, storeAdminTab } from '../utils/adminTabs.js';
@@ -19,7 +19,7 @@ export {
   GeneralAdminSection,
   TeamsAdminSection,
   TemplateAdminSection,
-  OverlayAdminSection,
+  ObsSceneStudio,
   TournamentBroadcastAdminSection,
 };
 

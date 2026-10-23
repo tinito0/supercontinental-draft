@@ -1,18 +1,13 @@
 import React, { memo, useState } from 'react';
-import { Clapperboard, Copy, EyeOff, Keyboard, Users } from 'lucide-react';
+import { Copy, EyeOff, Keyboard, Users } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
 import { OBS_SCENES } from '../../utils/obsScenes.js';
 
-// Botonera de escenas del overlay de OBS: cada botón publica al instante (sin «Guardar»), igual que los botones de
-// Macro Deck (scl-obs → función overlay-control). Mismo doc: public/data/broadcast/overlay.
+// Capa de la comunidad sobre el overlay de OBS (tarjetas y popup automático) y la guía de Macro Deck. Esto se publica
+// al instante, como los botones de Macro Deck (función overlay-control): no pasa por el borrador del editor de
+// escenas (components/admin/obs/ObsSceneStudio.jsx). Mismo doc: public/data/broadcast/overlay.
 
 export { OBS_SCENES };
-
-const TOGGLES = [
-  { field: 'showLowerThird', target: 'lower', label: 'Lower third' },
-  { field: 'showTicker', target: 'ticker', label: 'Ticker' },
-  { field: 'showScoreboard', target: 'marcador', label: 'Marcador' },
-];
 
 // Cuerpos JSON de la función overlay-control (supabase/functions/_shared/overlayControl.js).
 const MACRO_DECK_COMMANDS = [
@@ -91,10 +86,10 @@ function MacroDeckGuide() {
 }
 
 /**
- * @param {{ saved: object, overlay?: object, onPersist: (patch: object, message: string) => Promise<boolean> }} props
- *   overlay: el doc completo (popup y tarjeta automáticos, tarjeta al aire)
+ * Tarjetas de la comunidad y la llave «Automático». Publican al instante.
+ * @param {{ overlay?: object, onPersist: (patch: object, message: string) => Promise<boolean> }} props
  */
-export const OverlaySceneControl = memo(function OverlaySceneControl({ saved, overlay, onPersist }) {
+export const CommunityLayerControl = memo(function CommunityLayerControl({ overlay, onPersist }) {
   const [busy, setBusy] = useState('');
   const isAuto = overlay?.autoPopup !== false;
   const run = async (key, patch, message) => {
@@ -107,95 +102,42 @@ export const OverlaySceneControl = memo(function OverlaySceneControl({ saved, ov
   };
 
   return (
-    <section className="panel p-5 space-y-4" aria-labelledby="overlay-scenes-title">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h3 id="overlay-scenes-title" className="section-title flex items-center gap-2.5">
-          <Clapperboard className="w-5 h-5 text-accent-soft" aria-hidden="true" /> Escena en OBS
-        </h3>
-        <p className="text-xs text-ink-3">Cada botón cambia OBS al instante.</p>
+    <div className="space-y-2" role="group" aria-labelledby="overlay-cards-title">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 id="overlay-cards-title" className="eyebrow flex items-center gap-2"><Users className="h-4 w-4" aria-hidden="true" /> Tarjetas de la comunidad</h4>
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink-2">
+          <input
+            type="checkbox"
+            checked={isAuto}
+            disabled={Boolean(busy)}
+            onChange={event => run('auto', { autoPopup: event.target.checked }, `Automático ${event.target.checked ? 'prendido' : 'apagado'}.`)}
+            className="h-4 w-4 accent-[rgb(var(--c-accent))]"
+          />
+          Automático
+        </label>
       </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-label="Escena del overlay">
-        {OBS_SCENES.map(scene => {
-          const isActive = (saved.scene || 'live') === scene.id;
-          return (
-            <button
-              key={scene.id}
-              type="button"
-              aria-pressed={isActive}
-              disabled={Boolean(busy)}
-              onClick={() => !isActive && run(scene.id, { scene: scene.id }, `OBS: ${scene.label}.`)}
-              className={`min-h-16 rounded-xl border px-3 py-2 text-left transition-[border-color,background-color,transform] duration-150 ease-out active:scale-[0.97] ${isActive
-                ? 'bg-accent-deep/70 border-accent text-ink'
-                : 'bg-raised border-line/[0.16] text-ink-2 hover:border-line/40'}`}
-            >
-              <span className="flex items-center gap-2 font-display text-base font-bold">
-                {isActive && <span className="w-2 h-2 rounded-full bg-success-soft" aria-hidden="true" />}
-                {scene.label}
-              </span>
-              <span className="block text-xs text-ink-3 mt-0.5">{busy === scene.id ? 'Cambiando…' : scene.hint}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {TOGGLES.map(toggle => {
-          const isOn = Boolean(saved[toggle.field]);
-          return (
-            <label key={toggle.field} className={`flex items-center justify-between min-h-11 rounded-lg border px-4 cursor-pointer transition-colors ${isOn ? 'bg-accent-deep/60 border-accent/60 text-ink' : 'bg-raised border-line/[0.16] text-ink-2 hover:border-line/30'}`}>
-              <span className="text-sm font-semibold">{toggle.label}</span>
-              <input
-                type="checkbox"
-                aria-label={`Mostrar ${toggle.label.toLowerCase()} en OBS`}
-                checked={isOn}
-                disabled={Boolean(busy)}
-                onChange={event => run(toggle.field, { [toggle.field]: event.target.checked }, `${toggle.label}: ${event.target.checked ? 'visible' : 'oculto'}.`)}
-                className="h-4 w-4 accent-[rgb(var(--c-accent))]"
-              />
-            </label>
-          );
-        })}
-      </div>
-      <p className="text-xs text-ink-3">En la escena «En partido» no se muestra nada de esto: el juego ya tiene marcador y reloj.</p>
-
-      <div className="space-y-2" role="group" aria-labelledby="overlay-cards-title">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 id="overlay-cards-title" className="eyebrow flex items-center gap-2"><Users className="h-4 w-4" aria-hidden="true" /> Tarjetas de la comunidad</h4>
-          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink-2">
-            <input
-              type="checkbox"
-              checked={isAuto}
-              disabled={Boolean(busy)}
-              onChange={event => run('auto', { autoPopup: event.target.checked }, `Automático ${event.target.checked ? 'prendido' : 'apagado'}.`)}
-              className="h-4 w-4 accent-[rgb(var(--c-accent))]"
-            />
-            Automático
-          </label>
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          {COMMUNITY_CARDS.map(card => (
-            <button key={card.kind} type="button" disabled={Boolean(busy)}
-              onClick={() => run(`card-${card.kind}`, { card: { visible: true, kind: card.kind, autoHideSec: CARD_SECONDS, shownAt: serverTimestamp() } }, `OBS: tarjeta ${card.label} (${CARD_SECONDS} s).`)}
-              className="min-h-14 rounded-xl border border-line/[0.16] bg-raised px-3 py-2 text-left text-ink-2 transition-[border-color,transform] duration-150 ease-out hover:border-line/40 active:scale-[0.97]">
-              <span className="block font-display text-base font-bold text-ink">{card.label}</span>
-              <span className="block text-xs text-ink-3">{busy === `card-${card.kind}` ? 'Mostrando…' : card.hint}</span>
-            </button>
-          ))}
-          <button type="button" disabled={Boolean(busy) || !overlay?.card?.visible}
-            onClick={() => run('card-off', { card: { ...(overlay?.card || {}), visible: false } }, 'Tarjeta oculta.')}
-            className="btn btn-ghost min-h-14">
-            <EyeOff className="h-4 w-4" aria-hidden="true" /> Ocultar
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+        {COMMUNITY_CARDS.map(card => (
+          <button key={card.kind} type="button" disabled={Boolean(busy)}
+            onClick={() => run(`card-${card.kind}`, { card: { visible: true, kind: card.kind, autoHideSec: CARD_SECONDS, shownAt: serverTimestamp() } }, `OBS: tarjeta ${card.label} (${CARD_SECONDS} s).`)}
+            className="min-h-14 rounded-xl border border-line/[0.16] bg-raised px-3 py-2 text-left text-ink-2 transition-[border-color,transform] duration-150 ease-out hover:border-line/40 active:scale-[0.97]">
+            <span className="block font-display text-base font-bold text-ink">{card.label}</span>
+            <span className="block text-xs text-ink-3">{busy === `card-${card.kind}` ? 'Mostrando…' : card.hint}</span>
           </button>
-        </div>
-        <p className="text-xs text-ink-3">
-          Automático: el popup «Votá el MVP» sale en el entretiempo y al final, la predicción al arrancar y el MVP en vivo desde el minuto 70. Sin votos, la tarjeta no aparece.
-        </p>
+        ))}
+        <button type="button" disabled={Boolean(busy) || !overlay?.card?.visible}
+          onClick={() => run('card-off', { card: { ...(overlay?.card || {}), visible: false } }, 'Tarjeta oculta.')}
+          className="btn btn-ghost min-h-14">
+          <EyeOff className="h-4 w-4" aria-hidden="true" /> Ocultar
+        </button>
       </div>
-
-      <MacroDeckGuide />
-    </section>
+      <p className="text-xs text-ink-3">
+        Automático: el popup «Votá el MVP» sale en el entretiempo y al final, la predicción al arrancar y el MVP en vivo desde el minuto 70. Sin votos, la tarjeta no aparece.
+      </p>
+    </div>
   );
 });
 
-export default OverlaySceneControl;
+export { MacroDeckGuide };
+
+export default CommunityLayerControl;

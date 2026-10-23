@@ -1,5 +1,5 @@
 // Popup para la comunidad en el overlay de OBS: una tarjeta con un QR que lleva a la web. Vive en el campo `popup` del
-// doc public/data/broadcast/overlay (lo escribe el admin desde OverlayAdminSection, lo lee components/broadcast/
+// doc public/data/broadcast/overlay (lo escribe el admin desde components/admin/obs/ObsSceneStudio.jsx, lo lee components/broadcast/
 // OverlayPopup.jsx). El QR se arma acá, sin servicios externos. Puro; tests/overlayPopup.test.js.
 import qrcode from 'qrcode-generator';
 

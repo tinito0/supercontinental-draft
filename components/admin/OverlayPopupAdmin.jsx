@@ -1,4 +1,5 @@
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
+import { rebaseOverlayForm } from '../../utils/broadcastMatches.js';
 import { EyeOff, QrCode as QrIcon, Send } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
 import { Field } from '../ui/Field.jsx';
@@ -13,6 +14,8 @@ const POSITIONS = [
   { id: 'left', label: 'Izquierda' },
   { id: 'center', label: 'Centro' },
 ];
+
+const POPUP_FORM_FIELDS = ['title', 'text', 'url', 'position', 'autoHideSec'];
 
 const siteUrl = path => (typeof window !== 'undefined' ? `${window.location.origin}${path}` : path);
 
@@ -38,6 +41,15 @@ function useOnAirSeconds(popup) {
  */
 export const OverlayPopupAdmin = memo(function OverlayPopupAdmin({ savedPopup, onPersist }) {
   const [form, setForm] = useState(() => initialForm(savedPopup));
+  // Si el popup cambia desde otro lado (Macro Deck, el popup automático, otra pestaña), el formulario toma esos
+  // valores salvo en los campos que se están editando. Antes quedaba con los viejos y «Mostrar» los republicaba.
+  const baseRef = useRef(initialForm(savedPopup));
+  useEffect(() => {
+    const base = baseRef.current;
+    const next = initialForm(savedPopup);
+    baseRef.current = next;
+    setForm(prev => rebaseOverlayForm(prev, base, next, POPUP_FORM_FIELDS));
+  }, [savedPopup]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const remaining = useOnAirSeconds(savedPopup);

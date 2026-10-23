@@ -1,35 +1,12 @@
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Copy, ExternalLink, Maximize2, Radio, Trophy } from 'lucide-react';
-import { OverlayAdminSection } from './OverlayAdminSection.jsx';
+import { Maximize2, Trophy } from 'lucide-react';
+import { ObsSceneStudio } from './obs/ObsSceneStudio.jsx';
+import { CupPollAdmin } from './CupPollAdmin.jsx';
 import { CollectorImportAdmin } from './CollectorImportAdmin.jsx';
-import { draftUrl } from '../../utils/siteRoutes.js';
 
-// "Torneo y transmisión": el resumen del torneo, el control del marcador de OBS y las fuentes de navegador
-// en una sola pestaña. Antes eran dos ("Torneo y OBS" y "Marcador en vivo") con los enlaces repetidos.
-
-const OBS_SOURCE_GROUPS = [
-  {
-    title: 'Marcador y escenas',
-    help: 'Transparentes: van encima de la imagen del partido. Muestran lo que se controla arriba.',
-    sources: [
-      { id: 'live', title: 'Marcador en vivo', desc: 'Marcador, reloj, escudos, lower third y ticker.', path: '/overlay?scene=live' },
-      { id: 'previa', title: 'Previa', desc: 'Rótulo de previa con los dos equipos.', path: '/overlay?scene=previa' },
-      { id: 'descanso', title: 'Entretiempo', desc: 'Rótulo de descanso con el marcador.', path: '/overlay?scene=descanso' },
-      { id: 'final', title: 'Post-partido', desc: 'Rótulo de final con el resultado.', path: '/overlay?scene=final' },
-    ],
-  },
-  {
-    title: 'Pantallas del torneo',
-    help: 'De pantalla completa. Se actualizan solas con los datos guardados en el gestor del torneo.',
-    sources: [
-      { id: 'groups', title: 'Tabla de posiciones', desc: 'Clasificación de la fase regular.', path: '/torneo?mode=obs&view=groups' },
-      { id: 'oro', title: 'Copa de Oro', desc: 'Bracket de cuartos, semifinales y final.', path: '/torneo?mode=obs&view=bracket' },
-      { id: 'plata', title: 'Copa de Plata', desc: 'Bracket del repechaje.', path: '/torneo?mode=obs&view=repechaje' },
-      { id: 'goleadores', title: 'Goleadores', desc: 'Ranking de goleadores y asistidores.', path: '/torneo?mode=obs&view=goleadores' },
-    ],
-  },
-];
+// "Torneo y transmisión": el resumen del torneo, los partidos del colector y el editor de escenas de OBS
+// (components/admin/obs/ObsSceneStudio.jsx, con las fuentes para OBS y la guía de Macro Deck).
 
 function TournamentSummary({ tournamentData, onOpenTournamentModal }) {
   const navigate = useNavigate();
@@ -77,66 +54,6 @@ function TournamentSummary({ tournamentData, onOpenTournamentModal }) {
   );
 }
 
-function ObsSources({ showStatusMessage }) {
-  const [copiedId, setCopiedId] = useState('');
-  const timerRef = useRef(null);
-  useEffect(() => () => clearTimeout(timerRef.current), []);
-  const copy = async (source) => {
-    const url = draftUrl(source.path);
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedId(source.id);
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setCopiedId(''), 2000);
-    } catch {
-      showStatusMessage?.('error', `No se pudo copiar. Enlace: ${url}`);
-    }
-  };
-
-  return (
-    <section className="panel p-5 space-y-5" aria-labelledby="obs-sources-title">
-      <div>
-        <h3 id="obs-sources-title" className="section-title flex items-center gap-2.5">
-          <Radio className="w-5 h-5 text-accent-soft" aria-hidden="true" /> Fuentes de navegador para OBS
-        </h3>
-        <p className="text-xs text-ink-3 mt-1">Agregá cada enlace en OBS como «Navegador» a 1920×1080. Todas se ajustan al tamaño real de la fuente.</p>
-      </div>
-      {OBS_SOURCE_GROUPS.map(group => (
-        <div key={group.title} className="space-y-2">
-          <div>
-            <h4 className="text-sm font-semibold text-ink">{group.title}</h4>
-            <p className="text-xs text-ink-3">{group.help}</p>
-          </div>
-          <ul className="divide-y divide-line/10 rounded-xl border border-line/[0.12] bg-raised/40">
-            {group.sources.map(source => {
-              const url = draftUrl(source.path);
-              const isCopied = copiedId === source.id;
-              return (
-                <li key={source.id} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 px-4 py-3">
-                  <div className="min-w-0 md:w-56 shrink-0">
-                    <p className="text-sm font-semibold text-ink">{source.title}</p>
-                    <p className="text-xs text-ink-3">{source.desc}</p>
-                  </div>
-                  <input readOnly value={url} aria-label={`Enlace de ${source.title}`} onFocus={event => event.target.select()} className="input font-mono text-xs flex-1 min-w-0" />
-                  <div className="flex gap-2 shrink-0">
-                    <button type="button" className={`btn btn-sm min-h-11 ${isCopied ? 'btn-success' : 'btn-secondary'}`} onClick={() => copy(source)} aria-live="polite">
-                      {isCopied ? <Check className="w-4 h-4" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
-                      {isCopied ? 'Copiado' : 'Copiar'}
-                    </button>
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm min-h-11" aria-label={`Ver ${source.title} en otra pestaña`}>
-                      <ExternalLink className="w-4 h-4" aria-hidden="true" /> Ver
-                    </a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
-    </section>
-  );
-}
-
 export const TournamentBroadcastAdminSection = memo(function TournamentBroadcastAdminSection({
   tournamentData,
   allTeams,
@@ -152,14 +69,15 @@ export const TournamentBroadcastAdminSection = memo(function TournamentBroadcast
       {onUpdateTournament && (
         <CollectorImportAdmin tournamentData={tournamentData} onUpdateTournament={onUpdateTournament} showStatusMessage={showStatusMessage} />
       )}
-      <OverlayAdminSection
+      <ObsSceneStudio
         allTeams={allTeams}
         tournamentData={tournamentData}
         broadcastOverlayData={broadcastOverlayData}
         onUpdateBroadcastOverlay={onUpdateBroadcastOverlay}
         showStatusMessage={showStatusMessage}
+        onOpenTournamentModal={onOpenTournamentModal}
       />
-      <ObsSources showStatusMessage={showStatusMessage} />
+      <CupPollAdmin tournamentData={tournamentData} showStatusMessage={showStatusMessage} />
     </div>
   );
 });
