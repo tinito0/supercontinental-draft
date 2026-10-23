@@ -11,7 +11,7 @@ import { PlayerPhoto } from './MatchDetailViews.jsx';
 function PositionChip({ position }) {
   const label = roleLabel(position);
   if (!label) return null;
-  return <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${getPosColorClass(label)}`} title="Posición registrada">{label}</span>;
+  return <span className={`rounded-md px-1.5 py-0.5 text-xs font-bold ${getPosColorClass(label)}`} title="Posición registrada">{label}</span>;
 }
 
 function PlayerList({ rows, match, summary, selected, onSelect }) {

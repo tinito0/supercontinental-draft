@@ -5,7 +5,7 @@ import { TeamSelect } from './TournamentTeamsContext.jsx';
 import { getMatchWinner, isMatchCompleted, isTiedScore, shootoutLabel } from '../../utils/bracketModel.js';
 
 export const BracketFork = memo(function BracketFork({ height = 180, tone = 'slate' }) {
-  const strokeColor = tone === 'gold' ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.18)';
+  const strokeColor = tone === 'gold' ? 'rgba(147,176,242,0.5)' : 'rgba(255,255,255,0.18)';
   return (
     <div className="w-10 shrink-0 flex items-center justify-center relative self-stretch">
       <svg className="w-full h-full" viewBox="0 0 40 100" preserveAspectRatio="none" fill="none">
@@ -40,7 +40,7 @@ export const MatchCard = memo(function MatchCard({
     return (
       <div className="w-full max-w-[260px] h-24 bg-surface/80 border border-dashed border-line/[0.12] flex flex-col items-center justify-center text-ink-3 font-medium text-xs rounded-xl p-3 shadow-sm">
         <span className="text-[11px] font-semibold text-ink-3">Por definir</span>
-        <span className="text-[9px] text-ink-3 mt-0.5">Cruce pendiente</span>
+        <span className="text-xs text-ink-3 mt-0.5">Cruce pendiente</span>
       </div>
     );
   }
@@ -67,31 +67,27 @@ export const MatchCard = memo(function MatchCard({
     <div
       className={`w-full max-w-[260px] rounded-xl overflow-hidden bg-surface border transition-[border-color,box-shadow] duration-200 shadow-md ${
         isFinal
-          ? 'border-warning/60 shadow-[0_0_24px_rgba(245,158,11,0.14)] ring-1 ring-amber-500/30'
+          ? 'border-accent-soft/50'
           : 'border-line/[0.12] hover:border-white/[0.18]'
       }`}
     >
       {/* Top Header Bar */}
       <div
-        className={`px-3 py-1.5 flex items-center justify-between border-b text-[10px] font-bold uppercase tracking-wider ${
+        className={`px-3 py-1.5 flex items-center justify-between border-b text-xs font-bold uppercase tracking-wider ${
           isFinal
-            ? 'bg-amber-950/40 text-warning-soft border-warning/30'
+            ? 'bg-accent/15 text-accent-soft border-accent-soft/30'
             : 'bg-raised text-ink-3 border-line/[0.08]'
         }`}
       >
         <div className="flex items-center gap-1.5 truncate">
-          {isFinal && <Trophy className="w-3.5 h-3.5 text-warning-soft shrink-0" />}
+          {isFinal && <Trophy className="w-3.5 h-3.5 text-accent-soft shrink-0" aria-hidden="true" />}
           <span className="truncate">{cardTitle}</span>
         </div>
         <div>
           {isCompleted ? (
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-success/15 text-success-soft border border-success/30">
-              FIN
-            </span>
+            <span className="text-xs font-bold text-ink-2">Final</span>
           ) : (
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-white/[0.04] text-ink-3">
-              PEND
-            </span>
+            <span className="text-xs font-semibold text-ink-3">Por jugar</span>
           )}
         </div>
       </div>
@@ -120,7 +116,7 @@ export const MatchCard = memo(function MatchCard({
                   <div className="w-1.5 h-1.5 rounded-full bg-transparent shrink-0" />
                 )}
                 {seed && (
-                  <span className="text-[10px] text-ink-3 font-mono font-bold shrink-0">{seed}</span>
+                  <span className="text-xs text-ink-3 font-mono font-bold shrink-0">{seed}</span>
                 )}
                 <img
                   src={logo}
@@ -202,10 +198,10 @@ export const MatchCard = memo(function MatchCard({
         </div>
       )}
       {!isEditing && penalties && (
-        <div className="border-t border-line/[0.08] px-3 py-1 text-right text-[10px] font-semibold text-ink-3 tabular-nums">{penalties}</div>
+        <div className="border-t border-line/[0.08] px-3 py-1 text-right text-xs font-semibold text-ink-3 tabular-nums">{penalties}</div>
       )}
       {!isEditing && isTied && !penalties && (
-        <div className="border-t border-line/[0.08] px-3 py-1 text-right text-[10px] font-semibold text-warning-soft">Falta la tanda</div>
+        <div className="border-t border-line/[0.08] px-3 py-1 text-right text-xs font-semibold text-warning-soft">Falta la tanda</div>
       )}
     </div>
   );

@@ -18,7 +18,7 @@ export const LEAGUE_NAV_LINKS = [
 ];
 
 const linkClass = ({ isActive }) =>
-  `relative rounded-lg px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:-bottom-[13px] after:h-0.5 after:rounded-full after:transition-colors ${isActive ? 'text-ink after:bg-accent-soft' : 'text-ink-2 after:bg-transparent hover:text-ink'}`;
+  `relative inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:-bottom-[10px] after:h-0.5 after:rounded-full after:transition-colors ${isActive ? 'text-ink after:bg-accent-soft' : 'text-ink-2 after:bg-transparent hover:text-ink'}`;
 
 const mobileLinkClass = ({ isActive }) =>
   `flex min-h-11 items-center rounded-lg border-l-2 px-3 text-base font-medium transition-colors ${isActive ? 'border-accent-soft bg-overlay text-ink' : 'border-transparent text-ink-2 hover:bg-white/[0.04] hover:text-ink'}`;
@@ -33,7 +33,7 @@ function LeagueNav() {
     <>
       <SiteNav
         brand={(
-          <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label={`${LEAGUE_NAME}, inicio`}>
+          <Link to="/" className="flex min-h-11 min-w-0 items-center gap-2.5" aria-label={`${LEAGUE_NAME}, inicio`}>
             <SiteBrand shortName="SCL" name={LEAGUE_NAME} />
           </Link>
         )}

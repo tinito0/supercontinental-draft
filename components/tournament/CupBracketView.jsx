@@ -12,9 +12,9 @@ const APP_CONNECTOR_WIDTH = 40;
 
 const TONE_STYLES = {
   gold: {
-    finalStroke: 'rgba(245,158,11,0.55)',
-    pill: 'bg-warning/15 border-warning/40 text-warning-soft',
-    pillIcon: 'text-warning-soft',
+    finalStroke: 'rgba(147,176,242,0.55)',
+    pill: 'bg-accent/15 border-accent-soft/40 text-accent-soft',
+    pillIcon: 'text-accent-soft',
   },
   silver: {
     finalStroke: 'rgba(148,163,184,0.65)',
@@ -65,7 +65,7 @@ export const CupBracketView = memo(function CupBracketView({
           slotPadding="14px 0"
           connectorStroke={connector => (connector.toFinal ? tone.finalStroke : 'rgba(255,255,255,0.2)')}
           renderLabel={column => (
-            <p className={`text-center text-[11px] font-semibold uppercase tracking-wider pb-1 ${column.isFinal ? 'text-ink-2' : 'text-ink-3'}`}>
+            <p className={`text-center text-xs font-semibold uppercase tracking-wider pb-1 ${column.isFinal ? 'text-ink-2' : 'text-ink-3'}`}>
               {column.label}
             </p>
           )}
