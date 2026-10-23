@@ -16,7 +16,12 @@ What it records (see docs/PES_MATCH_DATA_RESEARCH.md):
     the changed stat kinds of each player are emitted as 9 u32 (1st half x3, 2nd half x3, ET1, ET2, slot 8).
   - lineup: the 11 squad indices on the pitch per team (S5–S6), emitted when they change. A changed slot is
     reported as slot_changes; whether it is a substitution or a position swap is left to the analysis.
-  - possession: the two team ball-time counters (S9 candidate) and the home percentage, when they change.
+  - possession: the two team ball-time counters (S9), the match-time counter and the home percentage, when the
+    counters change. Some matches leave the counters at 0: the collector then reports possession as unknown.
+  - formation: each team's game plan as the match uses it, from MATCH_INFO (S12–S13): the plan block (3 fluid
+    variants of 0x21 bytes: unknown byte, roles of slots 1–10, 11 x (depth, lateral); then the strategy bytes)
+    and the 40-byte order (roster slots; the first 11 = XI by formation slot). Emitted at kick-off and whenever
+    the bytes change (the game copies them there when a menu change is confirmed).
 
 Requires in sider.ini: lua.enabled = 1, luajit.ext.enabled = 1, match-stats.enabled = 1.
 --]]
@@ -35,6 +40,16 @@ local MIS_SQUAD_OFFSET = 0x288
 local MIS_END_MARKER = 65535
 local MAX_SQUAD = 40
 
+-- MATCH_INFO game plans (S12, live 2026-10-22): plan at +0xE98 (home) / +0x10F0 (away), the order 0x1E0 after it.
+local MIS_PLAN_OFFSET = 0xE98
+local MIS_PLAN_STRIDE = 0x258
+local PLAN_BYTES = 0xA0
+local PLAN_VARIANT_BYTES = 0x21
+local PLAN_VARIANTS = 3
+local ORDER_OFFSET = 0x1E0
+local ORDER_BYTES = 40
+local MAX_ROLE = 12
+
 -- Stats block (S2, S4): private region of exactly STATS_REGION_SIZE bytes starting with u64 {0, 0x18FFE0, 1}.
 local STATS_REGION_SIZE = 0x190000
 local STATS_HEADER = { 0, 0x18FFE0, 1 }
@@ -49,9 +64,12 @@ local KINDS = math.floor((RECORD_SIZE - 8) / (KIND_WORDS * 4))
 local EXTRA_WORDS = { 0, 1 }
 for i = KIND_FIRST_WORD + KINDS * KIND_WORDS, RECORD_WORDS - 1 do EXTRA_WORDS[#EXTRA_WORDS + 1] = i end
 
--- Possession candidate (S9): two u32 ball-time counters (home, away) at this offset from the region base; their
--- sum equals the match-time counter. Full time 8680/8468 matched the screen's 50%/50% (one match; rounding inferred).
+-- Possession (S9): two u32 ball-time counters (home, away) at this offset from the region base; their sum equals
+-- the match-time counter. Their share matched the screen in 2 of 3 matches (a point off in the third), but in some
+-- matches the game never fills them (both 0 while the clock runs). The match time goes with every event so the
+-- collector can tell a filled pair from an empty one.
 local POSSESSION_OFFSET = 0x181A10
+local MATCH_TIME_OFFSET = 0xD4B80
 
 -- Team tables (S5–S6): [MATCH_MANAGER] + 0x1978 + side * 0x28. The pointers are only set at some moments,
 -- so the last valid table is kept and re-validated on every read.
@@ -82,6 +100,7 @@ local stats_region
 local stats_cur, stats_prev = {}, {}
 local team_cache, lineups = {}, {}
 local last_possession = {}
+local last_formation = {}
 
 local C
 local CURRENT_PROCESS
@@ -327,7 +346,7 @@ local function sample_all_stats()
     if home and away and (home ~= last_possession[1] or away ~= last_possession[2]) then
         last_possession = { home, away }
         local total = home + away
-        emit("possession", { home = home, away = away,
+        emit("possession", { home = home, away = away, time = u32(stats_region + MATCH_TIME_OFFSET),
             home_pct = total > 0 and math.floor(home * 1000 / total + 0.5) / 10 or nil })
     end
 end
@@ -388,6 +407,40 @@ local function sample_lineup(side)
     lineups[side] = slots
 end
 
+-- True when the bytes look like a game plan: roles 0..12, depth 1..60 and lateral 0..100 in every variant, and an
+-- order of 40 roster slots below 40. Anything else (MATCH_INFO not ready, freed) is not emitted.
+local function plan_is_valid(plan, order)
+    for v = 0, PLAN_VARIANTS - 1 do
+        local base = v * PLAN_VARIANT_BYTES
+        for i = 1, 10 do
+            if plan:byte(base + 1 + i) > MAX_ROLE then return false end
+        end
+        for i = 0, 10 do
+            local depth, lateral = plan:byte(base + 12 + i * 2), plan:byte(base + 13 + i * 2)
+            if depth < 1 or depth > 60 or lateral > 100 then return false end
+        end
+    end
+    for i = 1, ORDER_BYTES do
+        if order:byte(i) >= MAX_SQUAD then return false end
+    end
+    return true
+end
+
+local function sample_formation(side)
+    local mis = mis_address()
+    if not mis then return end
+    local base = mis + MIS_PLAN_OFFSET + side * MIS_PLAN_STRIDE
+    local plan, order = read(base, PLAN_BYTES), read(base + ORDER_OFFSET, ORDER_BYTES)
+    if not plan or not order or not plan_is_valid(plan, order) then return end
+    local key = plan .. order
+    if key == last_formation[side] then return end
+    last_formation[side] = key
+    local slots = {}
+    for i = 1, ORDER_BYTES do slots[i] = order:byte(i) end
+    local plan_hex = plan:gsub(".", function(c) return string.format("%02x", c:byte()) end)
+    emit("formation", { side = side, plan = plan_hex, order = slots })
+end
+
 local function sample()
     local st = match.stats()
     if not st then
@@ -404,7 +457,7 @@ local function sample()
         in_match = true
         squads = { [0] = read_squad(0), [1] = read_squad(1) }
         emit("stats_appeared", { sci = hex(stats_ptr()), squad_home = squads[0], squad_away = squads[1] })
-        stats_region, lineups, team_cache = nil, {}, {}
+        stats_region, lineups, team_cache, last_formation = nil, {}, {}, {}
         last_search_ms = 0
         last_snapshot_ms = t
     end
@@ -415,6 +468,8 @@ local function sample()
     sample_all_stats()
     sample_lineup(0)
     sample_lineup(1)
+    sample_formation(0)
+    sample_formation(1)
     local state = {
         home = st.home_score, away = st.away_score,
         pk_home = st.pk_home_score, pk_away = st.pk_away_score,
@@ -462,12 +517,12 @@ local function open_session(ctx)
     C.SCLP_CreateDirectoryA(session_dir, nil)
     ev_file = io.open(session_dir .. "\\events.ndjson", "a")
     seq, last_state, in_match, squads = 0, {}, false, {}
-    stats_region, lineups, team_cache, last_possession = nil, {}, {}, {}
+    stats_region, lineups, team_cache, last_possession, last_formation = nil, {}, {}, {}, {}
     emit("session", {
         home_team = ctx.home_team, away_team = ctx.away_team, tournament_id = ctx.tournament_id,
         match_time = ctx.match_time, extra_time = ctx.extra_time, penalties = ctx.penalties,
         substitutions = ctx.substitutions, difficulty = ctx.difficulty, mis = hex(mis_address()),
-        probe_version = 3,
+        probe_version = 4,
     })
 end
 
@@ -525,7 +580,7 @@ function m.init(ctx)
         m[handler_name] = guarded(m[event])
         ctx.register(event, m[handler_name])
     end
-    log("scl_probe ready (v3), output: " .. out_dir)
+    log("scl_probe ready (v4), output: " .. out_dir)
 end
 
 return m

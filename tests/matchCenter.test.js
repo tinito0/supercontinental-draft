@@ -1,7 +1,8 @@
 // Registro de partidos (utils/matchCenter.js) con un resumen sintético con la forma de scl.match/1.
 import {
-  buildLineups, buildTimeline, groupMatchesByDay, matchStartDate, minuteLabel, parseMatchDoc, playerStatRows, teamStatRows,
+  buildLineups, buildTimeline, groupMatchesByDay, matchStartDate, minuteLabel, parseMatchDoc, playerStatRows,
 } from '../utils/matchCenter.js';
+import { statSections } from '../utils/matchStats.js';
 
 const clock = (period, minute, second = 0) => ({ period, minute, second });
 
@@ -77,13 +78,13 @@ describe('buildTimeline', () => {
   });
 });
 
-describe('teamStatRows', () => {
+describe('statSections on a scl.match/1 summary', () => {
   it('lists only what was measured, with the pass accuracy derived and no invented possession', () => {
-    const rows = teamStatRows(summary);
+    const rows = statSections(summary).flatMap(section => section.rows);
     expect(rows.find(r => r.key === 'possession')).toBeUndefined();
-    expect(rows.find(r => r.key === 'passAccuracy')).toMatchObject({ home: 78, away: 75 });
+    expect(rows.find(r => r.key === 'passAccuracy')).toMatchObject({ home: { pct: 78 }, away: { pct: 75 } });
     expect(rows.find(r => r.key === 'corners')).toBeUndefined(); // not in teamStats
-    expect(teamStatRows({})).toEqual([]);
+    expect(statSections({})).toEqual([]);
   });
 });
 

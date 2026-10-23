@@ -159,6 +159,11 @@ describe('summarizeMatch', () => {
     expect(summary.possession).toBeNull();
   });
 
+  it('reads possession from the probe counters of this match only', () => {
+    const [m] = splitMatches(match([{ t: 'possession', ms: 3000, c: [2, 76, 53], home: 6536, away: 7553 }]));
+    expect(summarizeMatch(m).possession).toMatchObject({ home: 46, away: 54 });
+  });
+
   it('pairs a goal event that came long before the score change, but only when its score matches', () => {
     const [m] = splitMatches(match([
       { t: 'goal_scored', ms: 5000, c: [1, 19, 18], player_id: 1001, home_or_away: 0, home: 0, away: 0 },

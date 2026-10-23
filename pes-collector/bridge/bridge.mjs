@@ -14,8 +14,10 @@
 //                  status.json    state for the tray icon
 //                  bridge.log     log, rotated at 1 MB
 //                  paused         if this file exists, uploading is paused (the tray creates it)
-//   names        team and player names from the PES database and the save (config pesdbDir / editFile, default
-//                the repo's vendor/ copies), added to every summary as `names`.
+//   names        team and player names and registered positions from the PES database and the save (config
+//                pesdbDir / editFile, default the repo's vendor/ copies), added to every summary as `names`; the
+//                save's game plan of each team is added as `teamPlans` when it matches the kick-off XI (teamPlans.js).
+//                Point editFile at the save the game uses, or every plan comes out as 'differs'.
 //   --teams      JSON { "draftMap": { draftTeamId: gameTeamId }, "names": { draftTeamId: name } }; matches with a
 //                team outside it are ignored. Without it every match is kept, marked unassigned.
 //   --once       process the newest recording once (and upload what is pending) and exit
@@ -30,6 +32,7 @@ import { parseEventLines, splitMatches, summarizeMatch } from '../collector/matc
 import { describeStatus, matchFileName, parseTeamMap, pendingUploads, selectMatch } from './bridgeCore.js';
 import { createUploader } from './uploader.js';
 import { attachNames, buildNameIndex } from './nameIndex.js';
+import { attachTeamPlans, readTeamPlan } from './teamPlans.js';
 
 const POLL_MS = 2000;
 const SESSION_NAME = /^\d{8}_\d{6}$/;
@@ -106,7 +109,9 @@ function readSession(sessionDir, teamMap, names, state) {
   state.file = file;
   state.size = size;
   const summaries = splitMatches(parseEventLines(readFileSync(file, 'utf8'))).map(summarizeMatch);
-  return summaries.map(s => selectMatch(s, teamMap)).filter(Boolean).map(s => attachNames(s, names));
+  const planOf = names?.edit ? teamId => readTeamPlan(names.edit, teamId) : null;
+  return summaries.map(s => selectMatch(s, teamMap)).filter(Boolean)
+    .map(s => attachTeamPlans(attachNames(s, names), planOf));
 }
 
 function saveLocally(selected, outDir, state, log) {
@@ -135,7 +140,9 @@ function saveLocally(selected, outDir, state, log) {
 function savedMatches(outDir, names) {
   const dir = join(outDir, 'matches');
   return readdirSync(dir).filter(f => f.endsWith('.json')).map(f => readJson(join(dir, f), null)).filter(Boolean)
-    .map(match => attachNames(match, names));
+    // Matches saved with names stay byte for byte as saved: a changed hash would upload them again, which moves
+    // updatedAt and reopens the MVP vote of an old match (communityVote.js). Plans are only checked live.
+    .map(match => (match.names ? match : attachNames(match, names)));
 }
 
 /** Names for the summaries; without the files the bridge still works and the page shows ids. */

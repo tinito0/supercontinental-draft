@@ -2,8 +2,10 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MatchHeader, MatchTimeline } from '../components/league/match/MatchSummaryView.jsx';
-import { MatchLineups, MatchStats, PlayerStatsTable } from '../components/league/match/MatchDetailViews.jsx';
-import { buildLineups, buildTimeline, parseMatchDoc, playerStatRows, teamStatRows } from '../utils/matchCenter.js';
+import { MatchLineups, PlayerStatsTable } from '../components/league/match/MatchDetailViews.jsx';
+import { StatSections } from '../components/league/match/MatchStatSections.jsx';
+import { buildLineups, buildTimeline, parseMatchDoc, playerStatRows } from '../utils/matchCenter.js';
+import { statSections } from '../utils/matchStats.js';
 
 const clock = (period, minute, second = 0) => ({ period, minute, second });
 const summary = {
@@ -48,10 +50,11 @@ describe('match page views', () => {
   });
 
   it('stats, lineups and player table render what was measured', () => {
-    const stats = renderToStaticMarkup(<MatchStats rows={teamStatRows(match.summary)} match={match} />);
-    expect(stats).toContain('Precisión de pases');
-    expect(stats).toContain('75%');
-    expect(stats).toContain('La posesión todavía no se mide');
+    const stats = renderToStaticMarkup(<StatSections sections={statSections(match.summary)} match={match} />);
+    expect(stats).toContain('Pases precisos');
+    expect(stats).toContain('75 %');
+    expect(stats).toContain('60/80');
+    expect(stats).toContain('La posesión no aparece porque todavía no se mide');
     const lineups = renderToStaticMarkup(<MatchLineups lineups={buildLineups(match.summary)} match={match} />);
     expect(lineups).toContain('K. Havertz');
     expect(lineups).toContain('por D. Rice');

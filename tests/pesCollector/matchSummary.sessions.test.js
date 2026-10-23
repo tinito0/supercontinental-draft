@@ -58,6 +58,35 @@ describe.skipIf(!bayernReal)('Bayern 0-2 Real Madrid, then an unfinished replay 
   });
 });
 
+// The derived fields must add up to the game's own totals in every recorded match (research doc S10).
+const recorded = ['20261021_180553', '20261021_183131', '20261021_190934', '20261021_202647']
+  .flatMap(session => (load(session) || []).map((summary, index) => ({ label: `${session}#${index}`, summary })));
+
+describe.skipIf(!recorded.length)('shots, series and buckets reconcile with the totals (real recordings)', () => {
+  it.each(recorded)('$label', ({ summary }) => {
+    for (const side of ['home', 'away']) {
+      const stats = summary.teamStats[side];
+      const shots = summary.shots.filter(shot => shot.side === side);
+      const count = outcome => shots.filter(shot => shot.outcome === outcome).length;
+      const ownGoalsFor = summary.goals.filter(goal => goal.side === side && goal.ownGoal).length;
+      expect(shots).toHaveLength(stats.shots);
+      expect(count('goal') + count('on_target')).toBe(stats.shotsOnTarget);
+      expect(count('goal') + ownGoalsFor).toBe(summary.score[side]);
+      expect(shots.filter(shot => shot.penalty)).toHaveLength(stats.penaltyShots);
+      expect(stats.shortPasses + stats.throughPasses + stats.longPasses + stats.crosses).toBe(stats.passes);
+      expect(stats.shortPassesCompleted + stats.throughPassesCompleted + stats.longPassesCompleted + stats.crossesCompleted)
+        .toBe(stats.passesCompleted);
+      for (const [column, name] of summary.series.kinds.entries()) {
+        const offset = 2 + (side === 'home' ? 0 : summary.series.kinds.length) + column;
+        const perMinute = summary.series.rows.reduce((sum, row) => sum + row[offset], 0);
+        const perBucket = summary.buckets[side][name].reduce((sum, value) => sum + value, 0);
+        expect(perMinute, `${side} ${name} per minute`).toBe(stats[name] ?? perBucket);
+        expect(perBucket, `${side} ${name} per bucket`).toBe(perMinute);
+      }
+    }
+  });
+});
+
 describe.skipIf(!shootout)('Arsenal 1-1 Liverpool, 2-4 on penalties (probe v1: no per-player stats)', () => {
   it('records the shootout and the two goals with scorers', () => {
     const [m] = shootout;

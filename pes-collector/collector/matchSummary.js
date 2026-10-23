@@ -8,7 +8,12 @@
 //   An assist is only given when exactly one team-mate's assist count rose; otherwise it stays empty.
 // - A substitution is a pitch slot taken by a player who was not on the pitch (S6–S7); swaps are ignored.
 import { KIND, KIND_NAME, TEAM_STATS, kindTotal } from './statKinds.js';
+import { buildBuckets, buildSeries, buildShots } from './matchActions.js';
+import { buildFormations } from './formations.js';
+import { buildPossession } from './possession.js';
 
+// Fields added later (shots, series, buckets, formations, teamPlans) are optional: readers must handle summaries
+// without them, so the schema name stays and the match-feed function keeps accepting both.
 export const SCHEMA = 'scl.match/1';
 
 // The goal_scored event comes before the score change: 6 s on most goals, 18 s once (celebration and replay
@@ -284,7 +289,11 @@ export function summarizeMatch({ session, events }) {
     lineups,
     players: playersBySide,
     teamStats: buildTeamStats(playersBySide),
-    possession: null, // not in memory yet (S9); read it from the result screen
+    shots: buildShots(rises, { extraTime: Boolean(session?.extra_time) }),
+    series: buildSeries(rises, { extraTime: Boolean(session?.extra_time) }),
+    buckets: buildBuckets(players),
+    formations: buildFormations(events, warnings),
+    possession: buildPossession(events), // null when the game did not fill its counters (S9)
     warnings,
   };
 }

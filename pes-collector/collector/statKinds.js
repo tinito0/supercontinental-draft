@@ -5,6 +5,8 @@
 export const MATCH_WORDS = 8;
 
 // Names follow the post-match screens. Checked live against them over three matches unless marked.
+// The pass types (24–31) are not on any screen: their names are the getters' (research doc S1), and in all three
+// recorded matches short + through + long + cross = passes (22) and their completions add up to kind 23.
 export const KIND = {
   goals: 0,
   ownGoals: 1,
@@ -16,7 +18,14 @@ export const KIND = {
   penaltyShots: 21, // static name only; matched the in-play penalties of one match
   passes: 22,
   passesCompleted: 23,
+  shortPasses: 24,
+  shortPassesCompleted: 25,
+  throughPasses: 26,
+  throughPassesCompleted: 27,
+  longPasses: 28,
+  longPassesCompleted: 29,
   crosses: 30,
+  crossesCompleted: 31,
   tackles: 49, // individual screen "Duelos" X
   tacklesWon: 50, // individual "Duelos" (Y) and team screen "Entradas"
   clearances: 54,
@@ -42,6 +51,15 @@ export const KIND_NAME = Object.fromEntries(Object.entries(KIND).map(([name, kin
 export const TEAM_STATS = [
   'shots', 'shotsOnTarget', 'fouls', 'offsides', 'corners', 'freeKicks', 'passes', 'passesCompleted',
   'crosses', 'interceptions', 'tacklesWon', 'saves', 'yellowCards', 'redCards',
+  // Not on the team screen, but plain sums of the players like the rows above.
+  'shortPasses', 'shortPassesCompleted', 'throughPasses', 'throughPassesCompleted', 'longPasses',
+  'longPassesCompleted', 'crossesCompleted', 'tackles', 'clearances', 'dribbles', 'dribblesCompleted', 'touches',
+  'penaltyShots',
+];
+
+// Kinds kept per minute of play (summary.series): what the momentum chart and the period breakdown read.
+export const SERIES_STATS = [
+  'shots', 'shotsOnTarget', 'corners', 'crosses', 'throughPasses', 'passes', 'passesCompleted', 'touches',
 ];
 
 /** Match total of one kind (9 raw values as emitted by the probe). */

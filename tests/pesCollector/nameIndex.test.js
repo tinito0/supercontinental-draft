@@ -8,6 +8,7 @@ import { PESDB_DIR, EDIT_FILE, hasPesdb, hasEdit } from '../pes/fixtures.js';
 const index = {
   teams: new Map([[101, 'Arsenal'], [103, 'Liverpool']]),
   players: new Map([[1, 'A. Uno'], [2, 'B. Dos'], [3, 'C. Tres'], [4, 'D. Cuatro'], [99, 'Nadie']]),
+  positions: new Map([[1, 0], [4, 12], [99, 5]]),
 };
 
 const summary = {
@@ -24,6 +25,7 @@ describe('attachNames', () => {
     const named = attachNames(summary, index);
     expect(named.names.teams).toEqual({ home: 'Arsenal', away: null });
     expect(named.names.players).toEqual({ 1: 'A. Uno', 2: 'B. Dos', 3: 'C. Tres', 4: 'D. Cuatro' });
+    expect(named.names.positions).toEqual({ 1: 0, 4: 12 }); // registered positions of players in the match only
     expect(summary.names).toBeUndefined(); // the original is not mutated
   });
 

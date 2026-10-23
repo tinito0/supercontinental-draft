@@ -29,7 +29,8 @@ PES 2021 + Sider ── scl_probe.lua ──▶ E:\eFootball PES 2021\scl_probe\
 Un documento por partido, clave `<inicio UTC>_<equipo local>-<equipo visitante>` (ids de Team.bin, los mismos de
 Draft → PES): `status` (`live` / `finished` / `abandoned`), `score`, `clock`, ids y nombres de equipos, y el resumen
 completo como texto JSON en `summaryJson` (goles con autor y asistencia, tarjetas, cambios, formaciones, stats por
-jugador y por equipo). La posesión todavía no está (docs/PES_MATCH_DATA_RESEARCH.md). Nada de esto toca el torneo:
+jugador y por equipo, y la posesión cuando el juego llenó su contador; si no, `null`, nunca 0 %:
+docs/PES_MATCH_DATA_RESEARCH.md, S9). Nada de esto toca el torneo:
 vincular un partido a un cruce y cargar el resultado es un paso aparte, con revisión del admin.
 
 ## Seguridad
@@ -129,11 +130,16 @@ El camino es Macro Deck → `pes-collector/bridge/scl-obs.cmd` → `obs.mjs` →
 La web pública de la liga muestra todo lo que sube el bridge, estilo SofaScore:
 
 - **`/partidos`:** lista de partidos, los en vivo primero y después por día.
-- **`/partidos/:matchKey`:** encabezado con goleadores y pestañas Resumen (minuto a minuto), Estadísticas,
-  Alineaciones y Jugadores. Se actualiza en vivo.
-- **Lógica:** `utils/matchCenter.js`, que nunca inventa datos: la posesión no aparece porque todavía no se mide.
-- **Nombres:**
-  - el bridge (`pes-collector/bridge/nameIndex.js`) los agrega a cada resumen como `names`;
+- **`/partidos/:matchKey`:** encabezado con goleadores y pestañas Resumen (dominio, tiros, estadísticas
+  principales, minuto a minuto), Estadísticas, Alineaciones (cancha con las dos formaciones), Jugadores (ficha y
+  líderes), Táctica y Análisis (tramos de 15', fuente de cada dato). Se actualiza en vivo.
+- **Lógica:** `utils/matchCenter.js`, `utils/matchStats.js` y `utils/matchAnalysis.js`, que nunca inventan datos:
+  el xG y el mapa de tiros no aparecen porque el juego no los da, y la posesión solo cuando el juego la contó. Qué es dato, cálculo o modelo:
+  [MATCH_ANALYTICS.md](MATCH_ANALYTICS.md).
+- **Nombres y planes:**
+  - el bridge (`pes-collector/bridge/nameIndex.js`) agrega a cada resumen `names` (nombres y posición registrada) y
+    `teamPlans` (`teamPlans.js`: plan guardado, solo si coincide con el XI inicial);
+  - `editFile` tiene que apuntar al guardado que usa el juego, no a la copia de `vendor/`;
   - los saca de `Team.bin`/`Player.bin` del parche y del `EDIT00000000`, cuyos nombres de equipo ganan porque son los
     que muestra el juego;
   - por defecto usa las copias de `vendor/`; se cambia con `pesdbDir` y `editFile` en `config.json`;

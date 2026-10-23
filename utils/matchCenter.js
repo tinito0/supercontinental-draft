@@ -57,43 +57,7 @@ function statusOf(summary, doc) {
   return { kind: 'finished', label: 'Final' };
 }
 
-const TEAM_STAT_ROWS = [
-  { key: 'shots', label: 'Tiros' },
-  { key: 'shotsOnTarget', label: 'Tiros al arco' },
-  { key: 'passes', label: 'Pases' },
-  { key: 'passesCompleted', label: 'Pases completados' },
-  { key: 'passAccuracy', label: 'Precisión de pases', percent: true },
-  { key: 'crosses', label: 'Centros' },
-  { key: 'interceptions', label: 'Intercepciones' },
-  { key: 'tacklesWon', label: 'Entradas ganadas' },
-  { key: 'saves', label: 'Atajadas' },
-  { key: 'fouls', label: 'Faltas' },
-  { key: 'corners', label: 'Córners' },
-  { key: 'offsides', label: 'Fueras de juego' },
-  { key: 'freeKicks', label: 'Tiros libres' },
-  { key: 'yellowCards', label: 'Tarjetas amarillas' },
-  { key: 'redCards', label: 'Tarjetas rojas' },
-];
-
-const accuracy = stats => (stats?.passes ? Math.round((stats.passesCompleted / stats.passes) * 100) : null);
-
-/** Filas de estadísticas del equipo; solo las que el colector midió para los dos lados. */
-export function teamStatRows(summary) {
-  const home = summary?.teamStats?.home;
-  const away = summary?.teamStats?.away;
-  if (!home || !away) return [];
-  const value = (stats, key) => (key === 'passAccuracy' ? accuracy(stats) : stats[key]);
-  const rows = [];
-  if (summary.possession && Number.isFinite(summary.possession.home)) {
-    rows.push({ key: 'possession', label: 'Posesión', home: summary.possession.home, away: summary.possession.away, percent: true });
-  }
-  for (const row of TEAM_STAT_ROWS) {
-    const h = value(home, row.key);
-    const a = value(away, row.key);
-    if (Number.isFinite(h) && Number.isFinite(a)) rows.push({ ...row, home: h, away: a });
-  }
-  return rows;
-}
+// Las estadísticas de equipo por secciones están en utils/matchStats.js (statSections).
 
 /** Minuto a minuto: goles (con el marcador de ese momento), tarjetas y cambios, en orden. */
 export function buildTimeline(summary) {

@@ -3,56 +3,25 @@ import { ArrowDown, ArrowUp, Goal } from 'lucide-react';
 import { Tabs } from '../../ui/Tabs.jsx';
 import { CardMark } from './MatchParts.jsx';
 
-/* Estadísticas, alineaciones y jugadores del partido (screens/league/LeagueMatchScreen.jsx). Datos: utils/matchCenter.js. */
+/* Alineaciones y tabla de jugadores del partido (screens/league/LeagueMatchScreen.jsx). Datos: utils/matchCenter.js.
+   Las estadísticas de equipo están en MatchStatSections.jsx. */
 
-const formatValue = (value, percent) => (percent ? `${value}%` : value);
-
-/** Barras enfrentadas como en SofaScore: el lado que gana la fila va en azul. */
-export function MatchStats({ rows, match }) {
-  if (!rows.length) return <p className="panel px-4 py-8 text-center text-sm text-ink-3">Las estadísticas aparecen cuando arranca el partido.</p>;
-  return (
-    <div className="panel p-4 sm:p-5">
-      <div className="mb-3 grid grid-cols-2 text-sm font-semibold text-ink-2">
-        <span className="truncate">{match.home.name}</span>
-        <span className="truncate text-right">{match.away.name}</span>
-      </div>
-      <ul className="space-y-4">
-        {rows.map(row => {
-          const total = row.percent && row.key !== 'passAccuracy' ? 100 : (row.home + row.away) || 1;
-          const homeShare = row.key === 'passAccuracy' ? row.home : (row.home / total) * 100;
-          const awayShare = row.key === 'passAccuracy' ? row.away : (row.away / total) * 100;
-          const homeLeads = row.home > row.away;
-          const awayLeads = row.away > row.home;
-          return (
-            <li key={row.key}>
-              <div className="grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-baseline text-sm">
-                <span className={`num font-display text-base ${homeLeads ? 'font-bold text-ink' : 'text-ink-2'}`}>{formatValue(row.home, row.percent)}</span>
-                <span className="text-center text-xs text-ink-3">{row.label}</span>
-                <span className={`num font-display text-base text-right ${awayLeads ? 'font-bold text-ink' : 'text-ink-2'}`}>{formatValue(row.away, row.percent)}</span>
-              </div>
-              <div className="mt-1.5 grid grid-cols-2 gap-1.5" aria-hidden="true">
-                <div className="flex h-1.5 justify-end overflow-hidden rounded-full bg-raised">
-                  <div className={`h-full rounded-full ${homeLeads ? 'bg-accent' : 'bg-ink-3/60'}`} style={{ width: `${Math.min(100, homeShare)}%` }} />
-                </div>
-                <div className="flex h-1.5 overflow-hidden rounded-full bg-raised">
-                  <div className={`h-full rounded-full ${awayLeads ? 'bg-accent' : 'bg-ink-3/60'}`} style={{ width: `${Math.min(100, awayShare)}%` }} />
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="mt-5 text-xs text-ink-3">Datos tomados del juego en vivo. La posesión todavía no se mide.</p>
-    </div>
-  );
-}
-
-function PlayerPhoto({ id }) {
+export function PlayerPhoto({ id, size = 32 }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <span className="h-8 w-8 shrink-0 rounded-full bg-raised" aria-hidden="true" />;
+  const box = { width: size, height: size };
+  // A photo that already failed elsewhere on the page (same URL, cached failure) may never reach React's onError:
+  // check it on mount and listen on the element itself too.
+  const checkLoaded = img => {
+    if (!img) return;
+    const check = () => { if (img.complete && img.naturalWidth === 0) setFailed(true); };
+    check();
+    img.addEventListener('error', () => setFailed(true), { once: true });
+    img.addEventListener('load', check, { once: true });
+  };
+  if (failed) return <span className="shrink-0 rounded-full bg-raised" style={box} aria-hidden="true" />;
   return (
-    <img src={`/fotos_jugadores/${id}.webp`} alt="" width={32} height={32} loading="lazy"
-      className="h-8 w-8 shrink-0 rounded-full bg-raised object-cover" onError={() => setFailed(true)} />
+    <img ref={checkLoaded} src={`/fotos_jugadores/${id}.webp`} alt="" width={size} height={size} loading="lazy" style={box}
+      className="shrink-0 rounded-full bg-raised object-cover" onError={() => setFailed(true)} />
   );
 }
 
