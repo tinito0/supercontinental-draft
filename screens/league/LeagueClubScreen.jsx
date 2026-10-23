@@ -10,7 +10,7 @@ import { ClubHonours } from '../../components/league/club/ClubHonours.jsx';
 import { ClubSeasonCard, clubStanding } from '../../components/league/club/ClubSeasonCard.jsx';
 import { useLeagueContent, useLeagueTeams, useTournament } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
-import { clubStoryDocId, hasClubProfile } from '../../utils/leagueContent.js';
+import { clubChapters, clubStoryDocId, hasClubProfile } from '../../utils/leagueContent.js';
 
 /* Un club en la web de la liga: cabecera con su estadio, la ficha (estadio, DT, presidente, mánager) y tres pestañas:
    el club (historia), palmarés (títulos y campañas anteriores) y plantel (el plantel y la campaña del draft).
@@ -31,6 +31,7 @@ export default function LeagueClubScreen() {
   const { tournament } = useTournament();
   const team = teamsById?.[userId] || null;
   const profile = content?.profile || null;
+  const chapters = useMemo(() => clubChapters(content), [content]);
   const standing = useMemo(() => clubStanding(tournament, team?.teamName), [tournament, team?.teamName]);
   useDocumentTitle(team?.teamName || 'Equipos');
 
@@ -48,7 +49,7 @@ export default function LeagueClubScreen() {
             <section aria-labelledby="club-history" className="space-y-4">
               <h2 id="club-history" className="font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink">Historia del club</h2>
               <ClubStory
-                body={content?.body}
+                chapters={chapters}
                 loading={loading}
                 error={error}
                 emptyTitle="La historia de este club todavía no se cargó"

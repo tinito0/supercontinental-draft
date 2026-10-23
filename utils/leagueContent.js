@@ -228,13 +228,63 @@ export function normalizeClubProfile(profile = {}) {
   return { ok: true, value: { ...value, honours: honours.value, seasons: seasons.value } };
 }
 
-/** History and card of a club, validated together (they live in one document). */
-export function normalizeClub({ body, profile } = {}) {
-  const story = normalizeStory(body);
-  if (!story.ok) return story;
+export const MAX_ERA_LENGTH = 40;
+
+/** A new empty chapter of a club history (era, title, text; `closing` = the highlighted final chapter). */
+export function newClubChapter() {
+  chapterSeq += 1;
+  return { id: `cc-${Date.now().toString(36)}-${chapterSeq}`, era: '', title: '', body: '', closing: false };
+}
+
+/** Chapters ready to save: trimmed, empty ones dropped, only the last one may be the closing chapter. */
+function normalizeClubChapters(rows) {
+  const kept = (Array.isArray(rows) ? rows : [])
+    .map((row, index) => ({
+      id: String(row?.id || `cc-${index + 1}`),
+      era: cleanText(row?.era, MAX_ERA_LENGTH),
+      title: cleanText(row?.title, MAX_TITLE_LENGTH),
+      body: String(row?.body ?? '').replace(/\r\n?/g, '\n').trim(),
+      closing: Boolean(row?.closing),
+    }))
+    .filter(row => row.era || row.title || row.body);
+  if (kept.length > MAX_CHAPTERS) return { ok: false, error: `Máximo ${MAX_CHAPTERS} capítulos.` };
+  const misplaced = kept.findIndex((row, index) => row.closing && index !== kept.length - 1);
+  if (misplaced !== -1) return { ok: false, error: 'Solo el último capítulo puede ser el de cierre.' };
+  return { ok: true, value: kept };
+}
+
+/**
+ * History and card of a club, validated together (they live in one document). With `chapters`, `body` is rebuilt from
+ * their texts (plain, for previews and the home page); without them the history is the single `body` text.
+ */
+export function normalizeClub({ body, chapters, profile } = {}) {
   const card = normalizeClubProfile(profile);
   if (!card.ok) return card;
-  return { ok: true, value: { body: story.value.body, profile: card.value } };
+  if (chapters === undefined) {
+    const story = normalizeStory(body);
+    if (!story.ok) return story;
+    return { ok: true, value: { body: story.value.body, profile: card.value } };
+  }
+  const list = normalizeClubChapters(chapters);
+  if (!list.ok) return list;
+  const tooLong = list.value.findIndex(chapter => chapter.body.length > MAX_STORY_LENGTH);
+  if (tooLong !== -1) return { ok: false, error: `El capítulo ${tooLong + 1} supera los ${MAX_STORY_LENGTH.toLocaleString('es-AR')} caracteres.` };
+  const story = normalizeStory(list.value.map(chapter => chapter.body).filter(Boolean).join('\n\n'));
+  if (!story.ok) return { ok: false, error: `La historia completa supera los ${MAX_STORY_LENGTH.toLocaleString('es-AR')} caracteres.` };
+  return { ok: true, value: { body: story.value.body, chapters: list.value, profile: card.value } };
+}
+
+/**
+ * Chapters of a club history to show: the saved `chapters`, or (older histories) the `body` split by its `##` marks.
+ * @returns {Array<{ era: string, title: string, closing: boolean, paragraphs: string[] }>}
+ */
+export function clubChapters(content) {
+  if (Array.isArray(content?.chapters) && content.chapters.length) {
+    return content.chapters
+      .map(chapter => ({ era: chapter.era || '', title: chapter.title || '', closing: Boolean(chapter.closing), paragraphs: toParagraphs(chapter.body) }))
+      .filter(chapter => chapter.era || chapter.title || chapter.paragraphs.length);
+  }
+  return toChapters(content?.body);
 }
 
 /** Titles grouped by scope for the public page, with the total per group. Groups without titles are left out. */

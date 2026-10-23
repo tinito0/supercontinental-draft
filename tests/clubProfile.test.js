@@ -1,7 +1,7 @@
 // Ficha del club de la web pública (utils/leagueContent.js): estadio, autoridades, títulos y campañas. Datos sintéticos.
 import { describe, it, expect } from 'vitest';
 import {
-  cleanPhotoUrl, groupHonours, hasClubProfile, MAX_HONOURS, normalizeClub, normalizeClubProfile,
+  cleanPhotoUrl, clubChapters, groupHonours, hasClubProfile, MAX_HONOURS, normalizeClub, normalizeClubProfile,
 } from '../utils/leagueContent.js';
 
 describe('normalizeClubProfile', () => {
@@ -48,6 +48,30 @@ describe('normalizeClub', () => {
     const result = normalizeClub({ body: ' Historia ', profile: { coach: 'DT' } });
     expect(result).toMatchObject({ ok: true, value: { body: 'Historia', profile: { coach: 'DT' } } });
     expect(normalizeClub({ body: 'x'.repeat(20001), profile: {} }).ok).toBe(false);
+  });
+});
+
+describe('club chapters', () => {
+  it('saves chapters with a plain body derived from their texts', () => {
+    const result = normalizeClub({
+      chapters: [{ era: ' 1913 ', title: 'Fundación', body: 'Nació.' }, { title: '', body: '' }, { title: 'Hoy', body: 'Renace.', closing: true }],
+      profile: {},
+    });
+    expect(result.ok).toBe(true);
+    expect(result.value.body).toBe('Nació.\n\nRenace.');
+    expect(result.value.chapters.map(chapter => [chapter.era, chapter.title, chapter.closing])).toEqual([['1913', 'Fundación', false], ['', 'Hoy', true]]);
+  });
+
+  it('rejects a closing chapter that is not the last one', () => {
+    expect(normalizeClub({ chapters: [{ title: 'A', body: 'x', closing: true }, { title: 'B', body: 'y' }], profile: {} }).ok).toBe(false);
+  });
+
+  it('shows saved chapters, or the older body split by its ## marks', () => {
+    expect(clubChapters({ chapters: [{ era: '1913', title: 'Fundación', body: 'Uno\n\nDos' }] })).toEqual([
+      { era: '1913', title: 'Fundación', closing: false, paragraphs: ['Uno', 'Dos'] },
+    ]);
+    expect(clubChapters({ body: '## 1913 | Fundación\nUno' })[0]).toMatchObject({ era: '1913', title: 'Fundación', paragraphs: ['Uno'] });
+    expect(clubChapters(null)).toEqual([]);
   });
 });
 

@@ -1,11 +1,10 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
-import { toChapters } from '../../../utils/leagueContent.js';
 import { EmptyState } from '../../ui/EmptyState.jsx';
 import { Alert } from '../../ui/Alert.jsx';
 
-/* Historia del club como capítulos (utils/leagueContent.js toChapters): a la izquierda la época y el título con un
-   borde de acento, a la derecha el relato. El capítulo de cierre (`##!`) va a ancho completo y resaltado.
+/* Historia del club como capítulos (utils/leagueContent.js clubChapters): a la izquierda la época y el título con un
+   borde de acento, a la derecha el relato. El capítulo de cierre va a ancho completo y resaltado.
    Texto plano, nunca HTML. */
 
 function ChapterBody({ paragraphs, className = '' }) {
@@ -45,7 +44,7 @@ function ClosingChapter({ chapter }) {
   );
 }
 
-export function ClubStory({ body, loading, error, emptyTitle, emptyDescription }) {
+export function ClubStory({ chapters, loading, error, emptyTitle, emptyDescription }) {
   if (error) return <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
   if (loading) {
     return (
@@ -55,7 +54,6 @@ export function ClubStory({ body, loading, error, emptyTitle, emptyDescription }
       </div>
     );
   }
-  const chapters = toChapters(body);
   if (chapters.length === 0) return <EmptyState icon={FileText} title={emptyTitle} description={emptyDescription} />;
   return (
     <div className="space-y-6">

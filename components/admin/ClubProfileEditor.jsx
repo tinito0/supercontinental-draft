@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ImageOff, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ImageOff, Plus, Trash2 } from 'lucide-react';
 import { Field } from '../ui/Field.jsx';
 import { Alert } from '../ui/Alert.jsx';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import {
-  CLUB_PROFILE_FIELDS, HONOUR_SCOPES, MAX_CLUB_SEASONS, MAX_HONOURS, MAX_PHOTO_URL_LENGTH, MAX_STORY_LENGTH, SEASON_STATS,
-  cleanPhotoUrl, clubStoryDocId, newClubSeason, newHonour,
+  CLUB_PROFILE_FIELDS, HONOUR_SCOPES, MAX_CHAPTERS, MAX_CLUB_SEASONS, MAX_ERA_LENGTH, MAX_HONOURS, MAX_PHOTO_URL_LENGTH,
+  MAX_STORY_LENGTH, MAX_TITLE_LENGTH, SEASON_STATS, cleanPhotoUrl, clubChapters, clubStoryDocId, moveChapter, newClubChapter,
+  newClubSeason, newHonour,
 } from '../../utils/leagueContent.js';
 
 /* Administración → Web pública → Clubes: la ficha (estadio, autoridades, títulos, campañas) y la historia de un club.
@@ -17,7 +18,9 @@ function fromSaved(content) {
   const saved = content?.profile || {};
   const base = emptyProfile();
   return {
-    body: content?.body || '',
+    chapters: clubChapters(content).map(chapter => ({
+      ...newClubChapter(), era: chapter.era, title: chapter.title, closing: chapter.closing, body: chapter.paragraphs.join('\n\n'),
+    })),
     profile: {
       ...base,
       ...Object.fromEntries(Object.keys(base).filter(key => typeof saved[key] === 'string').map(key => [key, saved[key]])),
@@ -85,6 +88,8 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
   }));
   const addRow = (list, row) => setForm(prev => ({ ...prev, profile: { ...prev.profile, [list]: [...prev.profile[list], row] } }));
   const removeRow = (list, id) => setForm(prev => ({ ...prev, profile: { ...prev.profile, [list]: prev.profile[list].filter(row => row.id !== id) } }));
+  const setChapter = (id, patch) => setForm(prev => ({ ...prev, chapters: prev.chapters.map(row => (row.id === id ? { ...row, ...patch } : row)) }));
+  const moveChapterRow = (index, delta) => setForm(prev => ({ ...prev, chapters: moveChapter(prev.chapters, index, delta) }));
   const isDirty = JSON.stringify(form) !== JSON.stringify(saved);
 
   const handleSave = async () => {
@@ -164,10 +169,39 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
         ))}
       </RowList>
 
-      <Field label="Historia del club" help={`Cómo nació, su identidad, sus momentos en la liga. Separá los párrafos con una línea en blanco. Para armar capítulos, empezá una línea con «## Época | Título» (ej.: ## 1913 | La fundación); «##! Título» marca el capítulo final, destacado. ${form.body.length.toLocaleString('es-AR')} / ${MAX_STORY_LENGTH.toLocaleString('es-AR')} caracteres.`}>
-        <textarea className="input min-h-[16rem] py-2 leading-relaxed" value={form.body} maxLength={MAX_STORY_LENGTH}
-          onChange={event => setForm(prev => ({ ...prev, body: event.target.value }))} />
-      </Field>
+      <RowList title="Historia del club" max={MAX_CHAPTERS} addLabel="Agregar capítulo" rows={form.chapters}
+        help="Cómo nació, su identidad, sus momentos en la liga. Cada capítulo se muestra como una tarjeta: la época y el título a la izquierda, el relato a la derecha. Separá los párrafos con una línea en blanco. El último capítulo puede marcarse como cierre, destacado."
+        onAdd={() => setForm(prev => ({ ...prev, chapters: [...prev.chapters, newClubChapter()] }))}>
+        {form.chapters.map((row, index) => (
+          <li key={row.id} className="grid grid-cols-1 gap-3 rounded-xl border border-line/[0.12] bg-raised/40 p-4 sm:grid-cols-[9rem_minmax(0,1fr)_auto]">
+            <Field label="Época">
+              <input className="input" value={row.era} maxLength={MAX_ERA_LENGTH} placeholder="Ej.: 1913" onChange={event => setChapter(row.id, { era: event.target.value })} />
+            </Field>
+            <Field label="Título">
+              <input className="input" value={row.title} maxLength={MAX_TITLE_LENGTH} placeholder="Ej.: La fundación" onChange={event => setChapter(row.id, { title: event.target.value })} />
+            </Field>
+            <div className="flex items-end gap-1">
+              <button type="button" className="btn btn-ghost btn-icon min-h-11 min-w-11" aria-label={`Subir el capítulo ${index + 1}`}
+                disabled={index === 0} onClick={() => moveChapterRow(index, -1)}><ArrowUp className="h-4 w-4" aria-hidden="true" /></button>
+              <button type="button" className="btn btn-ghost btn-icon min-h-11 min-w-11" aria-label={`Bajar el capítulo ${index + 1}`}
+                disabled={index === form.chapters.length - 1} onClick={() => moveChapterRow(index, 1)}><ArrowDown className="h-4 w-4" aria-hidden="true" /></button>
+              <RemoveButton label={`Quitar el capítulo ${index + 1}`} onClick={() => setForm(prev => ({ ...prev, chapters: prev.chapters.filter(item => item.id !== row.id) }))} />
+            </div>
+            <div className="space-y-2 sm:col-span-3">
+              <Field label="Texto" help={`${row.body.length.toLocaleString('es-AR')} / ${MAX_STORY_LENGTH.toLocaleString('es-AR')} caracteres.`}>
+                <textarea className="input min-h-[10rem] py-2 leading-relaxed" value={row.body} maxLength={MAX_STORY_LENGTH}
+                  onChange={event => setChapter(row.id, { body: event.target.value })} />
+              </Field>
+              {index === form.chapters.length - 1 && (
+                <label className="flex min-h-11 items-center gap-2 text-sm text-ink-2">
+                  <input type="checkbox" checked={row.closing} onChange={event => setChapter(row.id, { closing: event.target.checked })} />
+                  Capítulo de cierre (ancho completo, destacado)
+                </label>
+              )}
+            </div>
+          </li>
+        ))}
+      </RowList>
 
       {renderSaveBar({ isDirty, isSaving, onSave: handleSave, publicHref: `/equipos/${teamId}` })}
     </div>
