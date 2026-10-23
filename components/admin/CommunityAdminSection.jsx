@@ -1,17 +1,16 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Lock, Star, Unlock, Vote } from 'lucide-react';
-import { deleteField, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase.js';
-import { APP_ID } from '../../utils/constants.js';
+import { setVotingClosed } from '../../services/communityAdminService.js';
 import { useLiveMatches, useMvpVotes, usePrediction } from '../../hooks/useLeagueData.js';
 import { mvpRanking, pickMvpMatch, predictionShares } from '../../utils/communityView.js';
 import { MVP_GRACE_MS } from '../../supabase/functions/_shared/communityVote.js';
 import { Alert } from '../ui/Alert.jsx';
 import { CupPollAdmin } from './CupPollAdmin.jsx';
+import { ResetVotesButton } from './ResetVotesButton.jsx';
 
 /* Administración → Comunidad: cómo van los votos del público (docs/COMMUNITY_PLATFORM.md). La predicción del partido
    al aire (se puede cerrar o reabrir a mano: closedAt), la votación del MVP del partido del juego y las encuestas de
-   las copas. Los votos los suma la función community-vote; acá solo se miran y se abre o cierra. */
+   las copas. Los votos los suma la función community-vote; acá se miran, se abren o cierran y se reinician. */
 
 const PREDICTION_LABELS = { home: 'Local', draw: 'Empate', away: 'Visitante' };
 
@@ -46,8 +45,7 @@ function PredictionStatus({ overlay, showStatusMessage }) {
     if (!matchId) return;
     setBusy(true);
     try {
-      await setDoc(doc(db, `artifacts/${APP_ID}/public/data/predictions/${matchId}`),
-        { closedAt: closed ? serverTimestamp() : deleteField(), updatedAt: serverTimestamp() }, { merge: true });
+      await setVotingClosed('prediction', matchId, closed);
       showStatusMessage?.('success', closed ? 'Predicción cerrada: ya no se puede votar.' : 'Predicción reabierta.');
     } catch (error) {
       console.error('[CommunityAdminSection] prediction', error);
@@ -87,6 +85,7 @@ function PredictionStatus({ overlay, showStatusMessage }) {
                 <Lock className="h-4 w-4" aria-hidden="true" /> Cerrar ahora
               </button>
             )}
+            {shares.total > 0 && <ResetVotesButton kind="prediction" target={matchId} label={`la predicción ${home} vs ${away}`} total={shares.total} showStatusMessage={showStatusMessage} />}
           </div>
         </>
       )}
@@ -94,11 +93,28 @@ function PredictionStatus({ overlay, showStatusMessage }) {
   );
 }
 
-function MvpStatus() {
+function MvpStatus({ showStatusMessage }) {
   const now = useClock();
   const { matches } = useLiveMatches();
-  const { match, open } = pickMvpMatch(matches, now);
+  const { match, open: inWindow } = pickMvpMatch(matches, now);
   const { data: votes } = useMvpVotes(match?.key || null);
+  const [busy, setBusy] = useState(false);
+  const closedByAdmin = Boolean(votes?.closedAt);
+  const open = inWindow && !closedByAdmin;
+  const total = Number(votes?.total) || 0;
+
+  const setClosed = async closed => {
+    setBusy(true);
+    try {
+      await setVotingClosed('mvp', match.key, closed);
+      showStatusMessage?.('success', closed ? 'Votación del MVP cerrada.' : 'Votación del MVP reabierta.');
+    } catch (error) {
+      console.error('[CommunityAdminSection] mvp', error);
+      showStatusMessage?.('error', 'No se pudo cambiar la votación del MVP. Revisá la conexión.');
+    } finally {
+      setBusy(false);
+    }
+  };
   const ranking = useMemo(() => mvpRanking(votes?.votes, match?.summary, 3), [votes, match?.summary]);
   const closesIn = match?.status.kind === 'finished' && Number.isFinite(match.finishedAtMs ?? match.updatedAtMs)
     ? Math.max(0, Math.ceil(((match.finishedAtMs ?? match.updatedAtMs) + MVP_GRACE_MS - now) / 60_000)) : null;
@@ -115,14 +131,27 @@ function MvpStatus() {
         <>
           <p className="text-sm text-ink-2">
             <span className="font-semibold text-ink">{match.home.name} {match.home.score}-{match.away.score} {match.away.name}</span>
-            {closesIn != null && <> · cierra en <span className="num font-semibold text-ink">{closesIn}</span> min</>}
-            {' · '}<span className="num font-semibold text-ink">{Number(votes?.total) || 0}</span> votos
+            {closesIn != null && !closedByAdmin && <> · cierra en <span className="num font-semibold text-ink">{closesIn}</span> min</>}
+            {closedByAdmin && ' · cerrada a mano'}
+            {' · '}<span className="num font-semibold text-ink">{total}</span> votos
           </p>
           {ranking.length > 0 && (
             <ol className="space-y-1 text-sm">
               {ranking.map((entry, index) => <li key={entry.id} className="text-ink"><span className="num font-bold">{index + 1}.</span> {entry.name} · <span className="num">{entry.pct}%</span></li>)}
             </ol>
           )}
+          <div className="flex flex-wrap gap-2">
+            {closedByAdmin ? (
+              <button type="button" className="btn btn-secondary min-h-11" disabled={busy} onClick={() => setClosed(false)}>
+                <Unlock className="h-4 w-4" aria-hidden="true" /> Reabrir MVP
+              </button>
+            ) : (
+              <button type="button" className="btn btn-secondary min-h-11" disabled={busy} onClick={() => setClosed(true)}>
+                <Lock className="h-4 w-4" aria-hidden="true" /> Cerrar ahora
+              </button>
+            )}
+            {total > 0 && <ResetVotesButton kind="mvp" target={match.key} label="el MVP del partido" total={total} showStatusMessage={showStatusMessage} />}
+          </div>
         </>
       )}
     </section>
@@ -138,7 +167,7 @@ export const CommunityAdminSection = memo(function CommunityAdminSection({ broad
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <PredictionStatus overlay={broadcastOverlayData} showStatusMessage={showStatusMessage} />
-        <MvpStatus />
+        <MvpStatus showStatusMessage={showStatusMessage} />
       </div>
       {!tournamentData && <Alert tone="info" title="Sin torneo cargado">Las encuestas de las copas sugieren equipos cuando hay tabla.</Alert>}
       <CupPollAdmin tournamentData={tournamentData} showStatusMessage={showStatusMessage} />

@@ -221,6 +221,8 @@ export async function castVote({ firestore, appId, vote, ipHash, deviceHash, now
         const live = (await tx.get(`${base}/live_matches/${vote.target}`))?.data;
         const window = mvpWindow(live ? { status: live.status, updatedAtMs: toMillis(live.updatedAt), finishedAtMs: toMillis(live.finishedAt) } : null, now);
         if (!window.open) throw new CommunityVoteError(window.reason, 409);
+        // El admin puede cerrarla antes de tiempo (Administración → Comunidad): closedAt en el doc de votos.
+        if (current?.data?.closedAt) throw new CommunityVoteError('La votación del MVP está cerrada.', 409);
         let summary = null;
         try { summary = JSON.parse(live.summaryJson); } catch { /* sin resumen no hay candidatos */ }
         if (!mvpCandidates(summary).has(vote.choice)) throw new CommunityVoteError('Ese jugador no jugó este partido.');

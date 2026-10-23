@@ -8,6 +8,7 @@ import { CUP_POLLS, pollResults } from '../../utils/communityView.js';
 import { buildPoll, POLL_LIMITS, suggestedPollTeams } from '../../utils/cupPoll.js';
 import { Field } from '../ui/Field.jsx';
 import { Alert } from '../ui/Alert.jsx';
+import { ResetVotesButton } from './ResetVotesButton.jsx';
 
 // Encuestas «¿quién gana la copa?» (public/data/polls/{id}): el admin elige la pregunta y los equipos, y la abre o la
 // cierra. Se vota en /en-vivo (función community-vote) y se ve en OBS con la tarjeta «Copa». mergeFields: guardar
@@ -91,6 +92,7 @@ function PollEditor({ config, tournamentData, showStatusMessage }) {
             <Lock className="h-4 w-4" aria-hidden="true" /> Cerrar
           </button>
         )}
+        {hasVotes && <ResetVotesButton kind="cup" target={config.id} label={`la encuesta ${config.label}`} total={results.total} showStatusMessage={showStatusMessage} />}
       </div>
       {state.error && <Alert tone="danger">{state.error}</Alert>}
     </div>

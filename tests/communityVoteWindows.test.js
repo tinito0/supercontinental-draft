@@ -95,6 +95,20 @@ describe('castVote: already voted', () => {
   });
 });
 
+describe('castVote: MVP closed by the admin', () => {
+  it('rejects the vote while the match is still inside its window', async () => {
+    const docs = {
+      'artifacts/x/public/data/mvp_votes/k1': { votes: {}, total: 0, closedAt: new Date(now) },
+      'artifacts/x/public/data/live_matches/k1': { status: 'live', updatedAt: new Date(now - 1000), summaryJson: JSON.stringify({ lineups: { home: { starting: [7] } } }) },
+    };
+    const firestore = { runTransaction: async fn => fn({ get: async path => (docs[path] ? { data: docs[path] } : null), create() {}, set() {} }) };
+    const vote = { kind: 'mvp', target: 'k1', choice: 7 };
+    const error = await castVote({ firestore, appId: 'x', vote, ipHash: 'i', deviceHash: 'd', now }).catch(e => e);
+    expect(error).toBeInstanceOf(CommunityVoteError);
+    expect(error.message).toMatch(/cerrada/);
+  });
+});
+
 describe('pickMvpMatch (página /en-vivo)', () => {
   const match = (key, kind, extra = {}) => ({ key, status: { kind }, ...extra });
   it('skips a live match without signal and offers the one that just finished', () => {

@@ -49,9 +49,11 @@ function ShareBar({ label, pct, isMine, isLeader }) {
 function PredictionPanel({ overlay, teamsById, matches }) {
   const matchId = overlay?.matchId || null;
   const { data: prediction } = usePrediction(matchId);
-  const [myVote, setMyVote] = useState(() => (matchId ? getMyVote('prediction', matchId) : null));
+  // round: cuántas veces el admin reinició esta votación; el voto recordado de otra ronda no cuenta.
+  const round = Number(prediction?.resetCount) || 0;
+  const [myVote, setMyVote] = useState(() => (matchId ? getMyVote('prediction', matchId, round) : null));
   const [state, setState] = useState({ busy: false, error: '' });
-  useEffect(() => { setMyVote(matchId ? getMyVote('prediction', matchId) : null); }, [matchId]);
+  useEffect(() => { setMyVote(matchId ? getMyVote('prediction', matchId, round) : null); }, [matchId, round]);
 
   const home = { name: prediction?.homeTeam || overlay?.homeTeamName || teamsById?.[overlay?.homeTeamId]?.teamName || 'Local', draftTeamId: overlay?.homeTeamId || null };
   const away = { name: prediction?.awayTeam || overlay?.awayTeamName || teamsById?.[overlay?.awayTeamId]?.teamName || 'Visitante', draftTeamId: overlay?.awayTeamId || null };
@@ -62,8 +64,8 @@ function PredictionPanel({ overlay, teamsById, matches }) {
 
   const vote = async choice => {
     setState({ busy: true, error: '' });
-    const result = await sendVote({ kind: 'prediction', matchId, choice });
-    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('prediction', matchId) || choice);
+    const result = await sendVote({ kind: 'prediction', matchId, choice }, { round });
+    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('prediction', matchId, round) || choice);
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
@@ -115,15 +117,17 @@ function PredictionPanel({ overlay, teamsById, matches }) {
 
 function CupPollPanel({ pollId, label }) {
   const { data: poll } = usePoll(pollId);
-  const [myVote, setMyVote] = useState(() => getMyVote('cup', pollId));
+  const round = Number(poll?.resetCount) || 0;
+  const [myVote, setMyVote] = useState(() => getMyVote('cup', pollId, round));
   const [state, setState] = useState({ busy: false, error: '' });
   const results = useMemo(() => pollResults(poll), [poll]);
+  useEffect(() => { setMyVote(getMyVote('cup', pollId, round)); }, [pollId, round]);
   if (!poll?.options?.length) return null;
 
   const vote = async choice => {
     setState({ busy: true, error: '' });
-    const result = await sendVote({ kind: 'cup', pollId, choice });
-    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('cup', pollId) || choice);
+    const result = await sendVote({ kind: 'cup', pollId, choice }, { round });
+    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('cup', pollId, round) || choice);
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
@@ -195,23 +199,26 @@ function PlayerOfTournamentPanel({ matches }) {
 
 function MvpPanel({ matches }) {
   const now = useNow();
-  const { match, open } = pickMvpMatch(matches, now);
+  const { match, open: inWindow } = pickMvpMatch(matches, now);
   const { data: votes } = useMvpVotes(match?.key || null);
+  // El admin puede cerrar el MVP antes de que termine la ventana (closedAt en el doc de votos).
+  const open = inWindow && !votes?.closedAt;
+  const round = Number(votes?.resetCount) || 0;
   const [selected, setSelected] = useState(null);
   const [myVote, setMyVote] = useState(null);
   const [state, setState] = useState({ busy: false, error: '' });
   useEffect(() => {
     setSelected(null);
-    setMyVote(match ? getMyVote('mvp', match.key) : null);
-  }, [match?.key]);
+    setMyVote(match ? getMyVote('mvp', match.key, round) : null);
+  }, [match?.key, round]);
 
   const options = useMemo(() => mvpOptions(match?.summary), [match?.summary]);
   const ranking = useMemo(() => mvpRanking(votes?.votes, match?.summary), [votes, match?.summary]);
 
   const vote = async () => {
     setState({ busy: true, error: '' });
-    const result = await sendVote({ kind: 'mvp', matchKey: match.key, choice: selected });
-    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('mvp', match.key) || String(selected));
+    const result = await sendVote({ kind: 'mvp', matchKey: match.key, choice: selected }, { round });
+    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('mvp', match.key, round) || String(selected));
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
