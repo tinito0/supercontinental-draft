@@ -195,16 +195,56 @@ export function roundStatus(data, n) {
 /** Id fijo de un partido generado: así la misma fecha nunca se agrega dos veces. */
 export const swissMatchId = (round, index) => `swiss-r${round}-${index + 1}`;
 
+const newSwissMatch = (round, index, homeTeam, awayTeam) => ({
+  id: swissMatchId(round, index), round: `Fecha ${round}`, homeTeam, awayTeam, homeScore: '', awayScore: '', date: '', time: '',
+  mvp: '', homeGoals: '', awayGoals: '', homeAssists: '', awayAssists: '', homeConfirmed: false, awayConfirmed: false,
+  status: 'scheduled', generated: true,
+});
+
+/** Número al azar en [0, 1) con crypto (Math.random no alcanza para un sorteo que se publica). */
+function cryptoRandom() {
+  const buffer = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(buffer);
+  return buffer[0] / 2 ** 32;
+}
+
+/**
+ * Sorteo de la Fecha 1 (decisión del usuario, 2026-10-23): el día que arranca la copa el admin sortea los cruces entre
+ * los clubes de la tabla; de la Fecha 2 en adelante se emparejan solos (applyAutomaticSwiss). Fisher-Yates y de a
+ * pares: el primero de cada par es local.
+ * @param {object} data el torneo
+ * @param {() => number} [random] para los tests
+ * @returns {{ ok: true, pairs: [string, string][], matches: object[] } | { ok: false, reason: string }}
+ */
+export function drawFirstRound(data, random = cryptoRandom) {
+  if ((data?.matches || []).some(match => roundNumber(match.round) === 1)) {
+    return { ok: false, reason: 'La Fecha 1 ya tiene partidos: para volver a sortear, borralos primero.' };
+  }
+  const names = leagueTeamNames(data?.league);
+  if (names.length < 2) return { ok: false, reason: 'Cargá los clubes en la tabla antes de sortear.' };
+  if (names.length % 2) return { ok: false, reason: `Hay ${names.length} clubes: el formato suizo necesita un número par (el reglamento no tiene fecha libre).` };
+  const keys = names.map(teamKey);
+  if (new Set(keys).size !== keys.length) return { ok: false, reason: 'Hay dos clubes con el mismo nombre en la tabla.' };
+  const order = [...names];
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const pairs = [];
+  for (let i = 0; i < order.length; i += 2) pairs.push([order[i], order[i + 1]]);
+  return { ok: true, pairs, matches: pairs.map(([home, away], index) => newSwissMatch(1, index, home, away)) };
+}
+
 /**
  * Cruces de la próxima fecha suiza con la tabla actual, sin repetir rivales (competitionRules.swissPairings) y con la
- * localía repartida (assignHomeAway). La fecha 1 la carga el admin: el orden inicial no está definido.
+ * localía repartida (assignHomeAway). La fecha 1 sale del sorteo (drawFirstRound).
  * @returns {{ ok: true, round: string, roundNumber: number, pairs: [string, string][], matches: object[] }
  *          | { ok: false, reason: string }}
  */
 export function suggestSwissRound(data) {
   const matches = data?.matches || [];
   const last = lastRound(matches);
-  if (last < 1) return { ok: false, reason: 'La fecha 1 la carga el admin: cargá sus partidos como «Fecha 1».' };
+  if (last < 1) return { ok: false, reason: 'Primero sorteá la Fecha 1 (botón «Sortear Fecha 1»).' };
   if (last >= LEAGUE_ROUNDS) return { ok: false, reason: `Ya están las ${LEAGUE_ROUNDS} fechas de la liga.` };
   const status = roundStatus(data, last);
   if (!status.complete) return { ok: false, reason: `Terminá la Fecha ${last} antes de armar la siguiente. ${status.reason}` };
@@ -224,11 +264,7 @@ export function suggestSwissRound(data) {
     round: `Fecha ${next}`,
     roundNumber: next,
     pairs,
-    matches: pairs.map(([homeTeam, awayTeam], index) => ({
-      id: swissMatchId(next, index), round: `Fecha ${next}`, homeTeam, awayTeam, homeScore: '', awayScore: '', date: '', time: '',
-      mvp: '', homeGoals: '', awayGoals: '', homeAssists: '', awayAssists: '', homeConfirmed: false, awayConfirmed: false,
-      status: 'scheduled', generated: true,
-    })),
+    matches: pairs.map(([homeTeam, awayTeam], index) => newSwissMatch(next, index, homeTeam, awayTeam)),
   };
 }
 

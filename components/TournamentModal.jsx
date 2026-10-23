@@ -27,6 +27,8 @@ import {
   buildAutomaticTournamentReport,
   rankLeague,
   suggestSwissRound,
+  drawFirstRound,
+  roundNumber,
 } from './tournament/index.js';
 import { Alert } from './ui/Alert.jsx';
 import { draftUrl } from '../utils/siteRoutes.js';
@@ -284,6 +286,25 @@ export const TournamentModal = memo(function TournamentModal({
     });
   }, [localData]);
 
+  // Fecha 1 por sorteo: el día que arranca la copa. Se ve el resultado antes de aceptarlo y se publica al Guardar; de
+  // la Fecha 2 en adelante los cruces se arman solos al terminar cada fecha.
+  const drawRoundOne = useCallback(() => {
+    const draw = drawFirstRound(localData);
+    if (!draw.ok) {
+      setSaveWarnings([draw.reason]);
+      return;
+    }
+    const list = draw.pairs.map(([home, away]) => `${home} vs ${away}`).join('
+');
+    if (!window.confirm(`Sorteo de la Fecha 1:
+${list}
+
+¿Usar este sorteo? Se publica al presionar Guardar. Si cancelás, podés volver a sortear.`)) return;
+    setSaveWarnings([]);
+    setLocalData(prev => ({ ...prev, matches: [...(prev.matches || []), ...draw.matches] }));
+  }, [localData]);
+  const needsRoundOneDraw = !(localData.matches || []).some(match => roundNumber(match.round) === 1);
+
   const removeTournamentMatch = useCallback((matchId) => {
     if (!window.confirm('¿Eliminar este partido? Se aplicará al presionar Guardar.')) return;
     setLocalData(prev => ({ ...prev, matches: (prev.matches || []).filter(match => match.id !== matchId) }));
@@ -444,6 +465,12 @@ export const TournamentModal = memo(function TournamentModal({
               {isAdmin && localData.swissStatus?.blocked && (
                 <Alert tone="warning" title={`No se pudo armar la Fecha ${localData.swissStatus.blocked.round}`}>
                   {localData.swissStatus.blocked.reason} Cargá esa fecha a mano con «Agregar partido».
+                </Alert>
+              )}
+              {isAdmin && isEditing && needsRoundOneDraw && (
+                <Alert tone="info" title="La Fecha 1 se sortea">
+                  <span className="mr-2">El día que arranca la copa, sorteá los cruces de la Fecha 1 entre los clubes de la tabla. Las fechas siguientes se arman solas al terminar cada una.</span>
+                  <button type="button" className="btn btn-primary btn-sm min-h-11 mt-2" onClick={drawRoundOne}>Sortear Fecha 1</button>
                 </Alert>
               )}
               {isAdmin && isEditing && <TieBreakEditor groups={liveTies} order={localData.tieBreakOrder || []} onChange={setTieBreakOrder} />}
