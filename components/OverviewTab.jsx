@@ -7,7 +7,7 @@ import { PageHeader, SectionHeader } from './ui/PageHeader.jsx';
 import { Stat } from './ui/Stat.jsx';
 import { Button } from './ui/Button.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
-import { teamMatchResult } from '../utils/competitionRules.js';
+import { GOLD_CUP_PLACES, LEAGUE_POINTS, LEAGUE_SIZE, teamMatchResult } from '../utils/competitionRules.js';
 
 const sameName = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
 const goalDiff = t => (Number(t.gf) || 0) - (Number(t.gc) || 0);
@@ -60,10 +60,12 @@ function MatchFocus({ match, teamName, getLogo }) {
   );
 }
 
+// Same zones as the tournament table (components/tournament/LeagueTableView.jsx): 1-8 Gold Cup, 9-12 Silver Cup.
 function StandingRow({ team, position, isUser, getLogo }) {
+  const isGold = position <= GOLD_CUP_PLACES;
   return (
-    <tr className={isUser ? 'bg-accent/10' : ''}>
-      <td className={`text-center num font-semibold ${position <= 4 ? 'text-success-soft' : 'text-ink-3'}`}>{position}</td>
+    <tr className={`border-l-[3px] ${isGold ? 'border-accent' : 'border-line/20'} ${isUser ? 'bg-accent/10' : ''}`}>
+      <td className={`text-center num font-semibold ${isGold ? 'text-accent-soft' : 'text-ink-3'}`}>{position}</td>
       <td>
         <span className="flex items-center gap-2.5 min-w-0">
           <Crest src={getLogo(team.name)} className="w-5 h-5 shrink-0" />
@@ -71,9 +73,11 @@ function StandingRow({ team, position, isUser, getLogo }) {
           {isUser && <span className="sr-only">(tu club)</span>}
         </span>
       </td>
-      <td className="text-center num">{team.pj}</td>
+      <td className="text-center num">{Number(team.pj) || 0}</td>
+      <td className="text-center num hidden sm:table-cell">{Number(team.pg) || 0}</td>
+      <td className="text-center num hidden sm:table-cell">{Number(team.gpen) || 0}</td>
       <td className="text-center num">{goalDiff(team)}</td>
-      <td className="text-right num font-display text-base font-bold text-ink">{team.pts}</td>
+      <td className="text-right num font-display text-base font-bold text-ink">{Number(team.pts) || 0}</td>
     </tr>
   );
 }
@@ -112,7 +116,8 @@ export const OverviewTab = memo(function OverviewTab({
     if (!Array.isArray(tournamentData?.league)) return [];
     return tournamentData.league
       // El orden guardado ya es el oficial (desempates del reglamento y orden manual del admin): no se reordena acá.
-      .filter(t => t.name && t.name !== 'Club...');
+      .filter(t => t.name && t.name !== 'Club...')
+      .slice(0, LEAGUE_SIZE);
   }, [tournamentData?.league]);
 
   const userRankIndex = useMemo(() => leagueTable.findIndex(t => sameName(t.name, teamName)), [leagueTable, teamName]);
@@ -208,19 +213,29 @@ export const OverviewTab = memo(function OverviewTab({
             {tournamentLoading ? <StandingsSkeleton /> : leagueTable.length > 0 ? (
               <div className="overflow-x-auto mt-3">
                 <table className="data-table table-fixed [&_td]:px-2 [&_th]:px-2 sm:[&_td]:px-3 sm:[&_th]:px-3">
-                  <caption className="sr-only">Primeros seis clubes de la liga{userRankIndex >= 6 ? ' y la posición de tu club' : ''}</caption>
+                  <caption className="sr-only">Tabla de la liga, en el orden oficial del torneo</caption>
                   <thead>
-                    <tr><th scope="col" className="w-10 !text-center">#</th><th scope="col">Club</th><th scope="col" className="w-12 !text-center">PJ</th><th scope="col" className="w-12 !text-center">DG</th><th scope="col" className="w-14 !text-right">Pts</th></tr>
+                    <tr>
+                      <th scope="col" className="w-10 !text-center">#</th>
+                      <th scope="col">Club</th>
+                      <th scope="col" className="w-12 !text-center">PJ</th>
+                      <th scope="col" className="w-12 !text-center hidden sm:table-cell"><abbr title="Ganados en los 90'" className="no-underline">G</abbr></th>
+                      <th scope="col" className="w-12 !text-center hidden sm:table-cell"><abbr title="Ganados por penales" className="no-underline">GP</abbr></th>
+                      <th scope="col" className="w-12 !text-center">DG</th>
+                      <th scope="col" className="w-14 !text-right">Pts</th>
+                    </tr>
                   </thead>
                   <tbody>
-                    {leagueTable.slice(0, 6).map((team, idx) => (
+                    {leagueTable.map((team, idx) => (
                       <StandingRow key={team.id || team.name} team={team} position={idx + 1} isUser={sameName(team.name, teamName)} getLogo={getLogo} />
                     ))}
-                    {userRankIndex >= 6 && userLeagueStats && (
-                      <StandingRow team={userLeagueStats} position={userRankIndex + 1} isUser getLogo={getLogo} />
-                    )}
                   </tbody>
                 </table>
+                <p className="px-5 sm:px-6 py-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-3 border-t border-line/[0.08]">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-accent" aria-hidden="true" />1-{GOLD_CUP_PLACES}: Copa de Oro</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-line/40" aria-hidden="true" />{GOLD_CUP_PLACES + 1}-{LEAGUE_SIZE}: Copa de Plata</span>
+                  <span>Victoria {LEAGUE_POINTS.REGULATION_WIN} pts · por penales {LEAGUE_POINTS.SHOOTOUT_WIN} · derrota {LEAGUE_POINTS.LOSS}</span>
+                </p>
               </div>
             ) : (
               <p className="px-6 py-8 text-center text-sm text-ink-3">Todavía no hay posiciones registradas.</p>

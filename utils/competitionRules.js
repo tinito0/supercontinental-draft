@@ -8,6 +8,10 @@
 
 export const LEAGUE_POINTS = { REGULATION_WIN: 2, SHOOTOUT_WIN: 1, LOSS: 0 };
 
+// Puestos 1-8 de la tabla: cuartos de la Copa de Oro; 9-12: Copa de Plata.
+export const GOLD_CUP_PLACES = 8;
+export const LEAGUE_SIZE = 12;
+
 /** Un marcador válido: entero y no negativo (un vacío o un -1 no es un resultado). */
 export const isScore = value => value !== '' && value != null && Number.isInteger(Number(value)) && Number(value) >= 0;
 
@@ -195,7 +199,7 @@ export function assignHomeAway(pairs, homeCounts = new Map()) {
 
 /** Cuartos de la Copa de Oro desde la tabla final: 1-8, 4-5, 2-7, 3-6 (el orden de bracketModel.js). */
 export function goldCupQuarterFinals(ranking) {
-  if (ranking.length < 8) throw new Error(`La Copa de Oro necesita 8 clasificados (hay ${ranking.length}).`);
+  if (ranking.length < GOLD_CUP_PLACES) throw new Error(`La Copa de Oro necesita ${GOLD_CUP_PLACES} clasificados (hay ${ranking.length}).`);
   const seed = position => ranking[position - 1].name;
   return [[1, 8], [4, 5], [2, 7], [3, 6]].map(([a, b]) => ({ teamA: seed(a), teamB: seed(b), seedA: a, seedB: b }));
 }

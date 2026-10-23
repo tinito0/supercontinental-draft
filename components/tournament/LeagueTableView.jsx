@@ -3,9 +3,8 @@ import { Trash2 } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { TournamentPanel, TournamentSectionTitle } from '../TournamentUI.jsx';
 import { TeamSelect } from './TournamentTeamsContext.jsx';
-import { teamMatchResult } from '../../utils/competitionRules.js';
+import { GOLD_CUP_PLACES, teamMatchResult } from '../../utils/competitionRules.js';
 
-const GOLD_CUP_PLACES = 8;
 // Forma reciente: victoria en los 90', definido por penales (ganado o perdido), derrota, o empate sin la tanda cargada.
 const FORM_STYLES = {
   win: { char: 'V', bg: 'bg-emerald-500 text-ink', label: 'Victoria' },

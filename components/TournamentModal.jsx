@@ -299,7 +299,8 @@ export const TournamentModal = memo(function TournamentModal({
     setSaveWarnings([]);
     setLocalData(prev => ({ ...prev, matches: [...(prev.matches || []), ...draw.matches] }));
   }, [localData]);
-  const needsRoundOneDraw = !(localData.matches || []).some(match => roundNumber(match.round) === 1);
+  // Antes del `if (!localData)` de abajo: el torneo todavía puede no haber cargado.
+  const needsRoundOneDraw = !(localData?.matches || []).some(match => roundNumber(match.round) === 1);
 
   const removeTournamentMatch = useCallback((matchId) => {
     if (!window.confirm('¿Eliminar este partido? Se aplicará al presionar Guardar.')) return;

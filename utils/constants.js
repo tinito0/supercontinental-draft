@@ -42,23 +42,27 @@ export const STATS_PORTERO = {
 };
 
 export const PLAYER_SKILLS_MAP = {
-  'Trickster': 'Elástico', 'MazingRun': 'Regate Veloz', 'SpeedingBullet': 'Carrera Veloz',
-  'IncisiveRun': 'Desmarque', 'LongBallExpert': 'Experto P. Largos', 'EarlyCross': 'Centro Temprano',
-  'LongRanger': 'Tiro Larga Dist.', 'ScissorsFeint': 'Bicicleta', 'DoubleTouch': 'Doble Toque',
-  'FlipFlap': 'Elástica Inversa', 'MarseilleTurn': 'Ruleta', 'Sombrero': 'Sombrero',
-  'CrossOverTurn': 'Croqueta', 'CutBehindAndTurn': 'Corte y Giro', 'ScotchMove': 'Amago Escocés',
-  'StepOnSkillcontrol': 'Control c/ Suela', 'HeadingSpecial': 'Cabeceador', 'LongRangeDrive': 'Disparo Potente',
-  'Chipshotcontrol': 'Vaselina', 'LongRangeShot': 'Remate Lejano', 'KnuckleShot': 'Tiro s/ Vira',
-  'DippingShots': 'Tiro con Rosca', 'RisingShots': 'Tiro Ascendente', 'AcrobaticFinishing': 'Remate Acrobático',
-  'HeelTrick': 'Taco', 'FirstTimeShot': 'Tiro al Primer Toque', 'OneTouchPass': 'Pase al Primer Toque',
-  'ThroughPassing': 'Pase en Profundidad', 'WeightedPass': 'Pase Medido',
-  'PinpointCrossing': 'Centro Preciso', 'OutsideCurler': 'Tiro c/ Exterior', 'Rabona': 'Rabona',
-  'NoLookPass': 'Pase sin Mirar', 'LowLoftedPass': 'Pase Bombeado Tenso', 'GKLowPunt': 'Saque de Puerta Bajo',
-  'GKHighPunt': 'Saque de Puerta Alto', 'LongThrow': 'Saque Largo', 'GKLongThrow': 'Saque de Meta Largo',
-  'PenaltySpecialist': 'Especialista Penales', 'GKPenaltySaver': 'Para-Penales', 'Gamesmanship': 'Pillería',
-  'ManMarking': 'Marcaje', 'TrackBack': 'Persecución', 'Interception': 'Interceptador',
-  'AcrobaticClear': 'Despeje Acrobático', 'Captaincy': 'Capitanía', 'SuperSub': 'Súper Suplente',
-  'FightingSpirit': 'Espíritu de Lucha'
+  // Names as PES 2021 shows them in Latin American Spanish: the first seven are COM playing styles
+  // (Estilos de juego COM), the rest player skills (Habilidades de jugador). LongRanger and LongRangeDrive
+  // are both «Cañonero» in the game.
+  'Trickster': 'Mago del balón', 'MazingRun': 'Esquivo', 'SpeedingBullet': 'Misil con el balón',
+  'IncisiveRun': 'Llegador', 'LongBallExpert': 'Experto pases largos', 'EarlyCross': 'Centrador',
+  'LongRanger': 'Cañonero',
+  'ScissorsFeint': 'Tijera', 'DoubleTouch': 'Doble toque',
+  'FlipFlap': 'Gambeta', 'MarseilleTurn': 'Marsellesa', 'Sombrero': 'Sombrerito',
+  'CrossOverTurn': 'Cortada', 'CutBehindAndTurn': 'Amago por detrás y giro', 'ScotchMove': 'Rebote interior',
+  'StepOnSkillcontrol': 'Pisar el balón', 'HeadingSpecial': 'Cabeceador', 'LongRangeDrive': 'Cañonero',
+  'Chipshotcontrol': 'Sombrero', 'LongRangeShot': 'Tiro de larga distancia', 'KnuckleShot': 'Tiro con empeine',
+  'DippingShots': 'Disparo descendente', 'RisingShots': 'Disparo ascendente', 'AcrobaticFinishing': 'Finaliz. acrobática',
+  'HeelTrick': 'Taconazo', 'FirstTimeShot': 'Remate primer toque', 'OneTouchPass': 'Pase al primer toque',
+  'ThroughPassing': 'Pase en profundidad', 'WeightedPass': 'Pase a profundidad',
+  'PinpointCrossing': 'Pase cruzado', 'OutsideCurler': 'Centro con rosca', 'Rabona': 'Rabona',
+  'NoLookPass': 'Pase sin mirar', 'LowLoftedPass': 'Pase bombeado bajo', 'GKLowPunt': 'Patadón en corto',
+  'GKHighPunt': 'Patadón en largo', 'LongThrow': 'Saque largo de banda', 'GKLongThrow': 'Saq. meta largo',
+  'PenaltySpecialist': 'Especialista en penales', 'GKPenaltySaver': 'Parapenales', 'Gamesmanship': 'Malicia',
+  'ManMarking': 'Marcaje', 'TrackBack': 'Delantero atrasado', 'Interception': 'Interceptador',
+  'AcrobaticClear': 'Despeje acrobático', 'Captaincy': 'Capitanía', 'SuperSub': 'Súper refuerzo',
+  'FightingSpirit': 'Espíritu de lucha'
 };
 
 export const COUNTRY_CODE_MAP = {

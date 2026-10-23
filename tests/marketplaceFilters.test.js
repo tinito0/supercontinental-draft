@@ -53,7 +53,7 @@ describe('marketplace search bar', () => {
   it('shows stat ranges and skills as chips and counts them (they used to be invisible in the toolbar)', () => {
     const filters = { ...baseFilters, SpeedMin: '85', skills: { Trickster: true } };
     const labels = getActiveFilterChips(filters).map(chip => chip.label);
-    expect(labels).toEqual(['Elástico', 'Velocidad 85–99']);
+    expect(labels).toEqual(['Mago del balón', 'Velocidad 85–99']);
     expect(countActiveFilters(filters)).toBe(2);
     const html = searchBar(filters);
     expect(html).toContain('Velocidad 85–99');
