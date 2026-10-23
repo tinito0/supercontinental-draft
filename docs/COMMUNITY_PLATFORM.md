@@ -137,3 +137,26 @@ visitante y cuál va ganando) y `cup` (la encuesta abierta, primero Oro).
 - además de lo de C1/C2, volver a desplegar `match-feed`, `overlay-control` y `community-vote`;
 - desplegar las reglas (`polls`);
 - desplegar el hosting.
+
+## Control del admin (2026-10-23)
+
+**Dónde:** Administración → Comunidad (`components/admin/CommunityAdminSection.jsx`). Las escrituras pasan por
+`services/communityAdminService.js`.
+
+**Cerrar y reabrir:**
+- **Predicción y MVP:** «Cerrar ahora» / «Reabrir» escribe `closedAt` en `predictions/{matchId}` o en
+  `mvp_votes/{matchKey}`. `community-vote` rechaza votos mientras exista ese campo. El MVP cerrado a mano igual
+  muestra los resultados en `/en-vivo`.
+- **Encuestas de copa:** se abren y cierran con `open`, como antes.
+
+**Reiniciar votos** (predicción, MVP y cada encuesta), siempre con confirmación:
+1. Pone `votes: {}` y `total: 0`, y suma 1 a `resetCount`, con `mergeFields` para que no queden conteos viejos.
+2. Borra las boletas y los topes por IP de esa votación (`community_ballots` y `community_ip`, buscados por prefijo
+   de id). Lo permite el catch-all de admin en las reglas.
+
+**El navegador:**
+- Recuerda el voto junto con la ronda (`{ choice, round }`). Si `resetCount` cambió, lo olvida y se puede volver a
+  votar.
+- Los votos guardados antes de esta versión, como texto plano, cuentan como ronda 0.
+
+**Tests:** `tests/communityService.test.js` y el caso «MVP closed by the admin» en `tests/communityVoteWindows.test.js`.

@@ -88,3 +88,16 @@ confirmes.**
 4. Fecha 1 suiza: ¿orden inicial por sorteo, por el draft, otro?
 5. Partidos de Plata: ¿también en la Konami Cup (otro torneo del juego) o como amistosos? Afecta cómo distingue el
    colector un partido de Oro de uno de Plata (hoy los dos serían tournament_id 48).
+
+## 7. Cambios del 2026-10-23
+
+**Editor del torneo:**
+- `rankLeague` solo marca empates sin resolver (`unresolvedTies`) si al menos uno de esos clubes ya jugó, sumó puntos
+  o hizo goles. Antes de la primera fecha ya no aparecen los 12 clubes «empatados».
+- `TieBreakEditor` pliega en `<details>` los grupos de más de 4 clubes.
+- La cabecera del modal tiene alto máximo y su propio scroll, así que ya no tapa la pantalla.
+
+**Fixture público:**
+- `utils/leagueFixtures.js` agrega `roundLabel` (la ronda de la copa, p. ej. «Cuartos de final») y `tieLabel` (la
+  llave).
+- `/partidos` agrupa las copas por ronda y muestra los penales al lado del marcador.
