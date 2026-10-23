@@ -30,6 +30,7 @@ export function MatchHeader({ match, timeline, teamsById }) {
   );
   return (
     <header className="panel p-5 sm:p-6">
+      <h1 className="sr-only">{match.home.name} {match.home.score}-{match.away.score} {match.away.name}</h1>
       <p className="eyebrow text-center first-letter:uppercase">{match.competition} · {date}</p>
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 sm:gap-6">
         {team('home', '')}
@@ -39,7 +40,7 @@ export function MatchHeader({ match, timeline, teamsById }) {
           </div>
           <MatchStatus status={match.status} className="mt-2 text-sm" />
           {match.shootout && (
-            <p className="mt-1 text-xs text-ink-3">Penales <span className="num text-ink-2">{match.shootout.home}-{match.shootout.away}</span></p>
+            <p className="mt-1 text-sm text-ink-2">Penales <span className="num font-semibold text-ink">{match.shootout.home}-{match.shootout.away}</span></p>
           )}
         </div>
         {team('away', '')}

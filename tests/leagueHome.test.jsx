@@ -51,7 +51,8 @@ describe('StandingsCard', () => {
     const league = Array.from({ length: 12 }, (_, i) => ({ id: String(i), name: `Club ${i + 1}`, pj: 1, pts: 12 - i, gf: 1, gc: 0 }));
     const html = render(<StandingsCard tournament={{ league }} clubOf={clubOf} />);
     expect(html.indexOf('Club 1<')).toBeLessThan(html.indexOf('Club 2<'));
-    expect(html).toContain('1-8 Copa de Oro');
-    expect(html.match(/bg-accent text-white/g)).toHaveLength(8); // las 8 posiciones de la Copa de Oro
+    expect(html).toContain('1.° a 8.°: Copa de Oro');
+    expect(html.match(/, zona Copa de Oro/g)).toHaveLength(8); // las 8 posiciones de la Copa de Oro
+    expect(html.match(/, zona Copa de Plata/g)).toHaveLength(4);
   });
 });

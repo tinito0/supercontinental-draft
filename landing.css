@@ -93,14 +93,13 @@
 }
 .landing-root .eyebrow {
   font-size: 0.75rem;
-  color: rgb(var(--c-accent-soft));
 }
 
 /* ── Club page hero ──────────────────────────────────────────── */
 /* With a stadium photo the text sits on a dark scrim (bottom-heavy, so the name stays legible on any photo); without
-   one, the league's navy with the crest as a faint watermark on the right. */
+   one, the plain surface. The scrim is for legibility, not decoration. */
 .club-hero {
-  background: radial-gradient(120% 90% at 85% 10%, rgb(0 95 189 / 0.28), transparent 60%), rgb(var(--c-surface));
+  background: rgb(var(--c-surface));
 }
 .club-hero--photo {
   background: rgb(var(--c-canvas));
@@ -112,20 +111,11 @@
   z-index: -1;
   background: linear-gradient(180deg, rgb(8 11 20 / 0.15) 0%, rgb(8 11 20 / 0.55) 45%, rgb(8 11 20 / 0.94) 100%);
 }
-.club-hero__watermark {
-  right: -4rem;
-  top: 50%;
-  width: min(28rem, 70vw);
-  height: min(28rem, 70vw);
-  transform: translateY(-50%);
-  opacity: 0.08;
-  filter: grayscale(1);
-}
 
 /* ── Lineup pitch (match page) ───────────────────────────────── */
-/* A dark grass tone with soft mowing stripes, so the players' photos read on top. */
+/* The same grass as the formation Pitch (components/Pitch.jsx), solid: no stripes or gradients. */
 .lineup-pitch {
-  background:
-    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.025) 0 10%, transparent 10% 20%),
-    linear-gradient(180deg, #123524, #0e2a1d);
+  background: #183624;
+  border: 1px solid rgb(6 78 59 / 0.4);
 }
+

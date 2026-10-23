@@ -55,9 +55,9 @@ export default function LeagueClubScreen() {
                 emptyDescription="Mientras tanto, mirá su palmarés y su plantel en las otras pestañas."
               />
             </section>
-            <aside className="space-y-4">
+            <div className="space-y-4">
               <ClubSeasonCard standing={standing} />
-            </aside>
+            </div>
           </div>
         )}
         {tab === 'palmares' && (

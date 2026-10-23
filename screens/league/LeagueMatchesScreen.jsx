@@ -88,7 +88,7 @@ function FixtureList({ teams, teamsById }) {
     <div className="space-y-8">
       {groups.live.length > 0 && (
         <section aria-label="En vivo">
-          <h2 className="eyebrow mb-2 text-danger-soft">En vivo</h2>
+          <h2 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold uppercase leading-none text-danger-soft"><span className="h-2.5 w-2.5 rounded-full bg-danger animate-pulse" aria-hidden="true" />En vivo</h2>
           <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
             {groups.live.map(fixture => <FixtureRow key={fixture.id} fixture={fixture} clubOf={clubOf} />)}
           </ul>
@@ -105,7 +105,7 @@ function FixtureList({ teams, teamsById }) {
       {rounds.length === 0 && <p className="text-base text-ink-2">Esta competición todavía no tiene partidos.</p>}
       {rounds.map(round => (
         <section key={round.key} aria-label={round.title}>
-          <h2 className="eyebrow mb-2">{round.title}</h2>
+          <h2 className="mb-3 font-display text-2xl font-bold uppercase leading-none text-ink">{round.title}</h2>
           <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
             {round.fixtures.map(fixture => <FixtureRow key={fixture.id} fixture={fixture} clubOf={clubOf} showCompetition={false} />)}
           </ul>
@@ -163,7 +163,7 @@ function GameLog({ teamsById }) {
       <div className="space-y-8">
         {groups.map(group => (
           <section key={group.label} aria-label={group.label}>
-            <h2 className="eyebrow mb-2 first-letter:uppercase">{group.label}</h2>
+            <h2 className="mb-3 font-display text-xl font-bold uppercase leading-none text-ink">{group.label}</h2>
             <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
               {group.matches.map(match => <MatchRow key={match.key} match={match} teamsById={teamsById} />)}
             </ul>

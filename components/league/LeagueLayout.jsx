@@ -18,10 +18,10 @@ export const LEAGUE_NAV_LINKS = [
 ];
 
 const linkClass = ({ isActive }) =>
-  `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'text-ink' : 'text-ink-2 hover:text-ink'}`;
+  `relative rounded-lg px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:-bottom-[13px] after:h-0.5 after:rounded-full after:transition-colors ${isActive ? 'text-ink after:bg-accent-soft' : 'text-ink-2 after:bg-transparent hover:text-ink'}`;
 
 const mobileLinkClass = ({ isActive }) =>
-  `flex min-h-11 items-center rounded-lg px-3 text-base font-medium transition-colors ${isActive ? 'bg-overlay text-ink' : 'text-ink-2 hover:bg-white/[0.04] hover:text-ink'}`;
+  `flex min-h-11 items-center rounded-lg border-l-2 px-3 text-base font-medium transition-colors ${isActive ? 'border-accent-soft bg-overlay text-ink' : 'border-transparent text-ink-2 hover:bg-white/[0.04] hover:text-ink'}`;
 
 function LeagueNav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -86,8 +86,9 @@ export function LeagueLayout() {
 
   return (
     <div className="landing-root flex min-h-[100dvh] flex-col overflow-x-hidden bg-canvas font-sans text-ink">
+      <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:font-semibold focus:text-on-accent">Saltar al contenido</a>
       <LeagueNav />
-      <main className="flex-1 pt-16">
+      <main id="contenido" tabIndex={-1} className="flex-1 pt-16 outline-none">
         <Suspense fallback={pageFallback}>
           <Outlet />
         </Suspense>

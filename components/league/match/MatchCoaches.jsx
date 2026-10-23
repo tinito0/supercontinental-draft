@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Gamepad2, UserRound } from 'lucide-react';
+import { DEFAULT_LOGO } from '../../../utils/constants.js';
 import { teamCrestUrl } from '../../../utils/teamCrest.js';
 
 /* Debajo de la cancha: el director técnico y el mánager de cada club, de su ficha (Administración → Web pública →
@@ -15,7 +16,7 @@ function CoachCard({ team, teamId, profile, align }) {
     <div className={`flex min-w-0 flex-col gap-3 ${align === 'right' ? 'sm:items-end sm:text-right' : ''}`}>
       {teamId ? (
         <Link to={`/equipos/${teamId}`} className="inline-flex min-h-11 min-w-0 items-center gap-2 font-display text-lg font-bold uppercase text-ink hover:text-accent-soft">
-          <img src={teamCrestUrl(team)} alt="" className="h-7 w-7 shrink-0 object-contain" />
+          <img src={teamCrestUrl(team)} alt="" onError={event => { if (!event.currentTarget.src.endsWith(DEFAULT_LOGO)) event.currentTarget.src = DEFAULT_LOGO; }} width={28} height={28} className="h-7 w-7 shrink-0 object-contain" />
           <span className="truncate">{team?.teamName}</span>
         </Link>
       ) : null}

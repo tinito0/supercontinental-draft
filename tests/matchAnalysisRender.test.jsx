@@ -83,7 +83,7 @@ describe('match analysis views (full summary)', () => {
     const analysis = html(<MatchAnalysisView summary={match.summary} match={match} />);
     expect(analysis).toContain("0&#x27;–15&#x27;");
     expect(analysis).toContain('Modelo propio, no un dato del juego');
-    expect(analysis).toContain('No disponible');
+    expect(analysis).not.toContain('De dónde sale cada dato');
   });
 });
 

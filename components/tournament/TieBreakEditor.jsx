@@ -34,7 +34,7 @@ export const TieBreakEditor = memo(function TieBreakEditor({ groups, order = [],
       <div className="space-y-3">
         {groups.map(group => {
           const sorted = sortGroup(group);
-          return (
+          const list = (
             <ol key={group.join('|')} className="space-y-1" aria-label={`Empate entre ${group.join(', ')}`}>
               {sorted.map((name, index) => (
                 <li key={name} className="flex min-h-11 items-center gap-2 rounded-lg bg-white/[0.04] pl-3">
@@ -49,6 +49,16 @@ export const TieBreakEditor = memo(function TieBreakEditor({ groups, order = [],
                 </li>
               ))}
             </ol>
+          );
+          // Un empate grande (p. ej. media tabla igualada) arranca plegado para no ocupar toda la pantalla.
+          if (group.length <= 4) return list;
+          return (
+            <details key={group.join('|')} className="rounded-lg bg-white/[0.03] px-3">
+              <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-ink">
+                <span className="num mr-1">{group.length}</span> clubes empatados · ordenar
+              </summary>
+              <div className="pb-3">{list}</div>
+            </details>
           );
         })}
       </div>

@@ -392,7 +392,8 @@ export const TournamentModal = memo(function TournamentModal({
       <div className={`${tournamentBackdropClass} z-0`}></div>
       <div className="relative z-10 w-full h-full flex flex-col" onClick={e => e.stopPropagation()}>
           {!isObsMode && (
-            <div className={`flex flex-col shrink-0 gap-4 ${isPage ? 'pb-4' : 'px-4 sm:px-6 py-4 border-b border-line/10'}`}>
+            // Los avisos (empates, errores) no pueden tapar todo: la cabecera tiene un alto máximo y scrollea sola.
+            <div className={`flex flex-col shrink-0 gap-4 max-h-[55dvh] overflow-y-auto custom-scrollbar ${isPage ? 'pb-4' : 'px-4 sm:px-6 py-4 border-b border-line/10'}`}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <p className="eyebrow mb-1.5">Competición</p>

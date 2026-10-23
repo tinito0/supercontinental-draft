@@ -160,8 +160,14 @@ describe('rankLeague (desempates del reglamento, T3)', () => {
 
   it('reports ties no criterion breaks instead of deciding them', async () => {
     const { rankLeague } = await import('../components/tournament/tournamentEngine.js');
-    const twin = { pts: 2, pg: 1, gpen: 0, gf: 1, gc: 0 };
+    const twin = { pj: 1, pts: 2, pg: 1, gpen: 0, gf: 1, gc: 0 };
     expect(rankLeague([{ name: 'Y', ...twin }, { name: 'X', ...twin }]).unresolvedTies).toEqual([['X', 'Y']]);
+  });
+
+  it('does not report a tie before anyone has played (the whole table is level at 0)', async () => {
+    const { rankLeague } = await import('../components/tournament/tournamentEngine.js');
+    const league = Array.from({ length: 12 }, (_, i) => ({ name: `Club ${i + 1}`, pj: 0, pts: 0 }));
+    expect(rankLeague(league).unresolvedTies).toEqual([]);
   });
 });
 

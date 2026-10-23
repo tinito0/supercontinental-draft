@@ -29,7 +29,7 @@ export function clubStanding(tournament, teamName) {
 export function ClubSeasonCard({ standing, title = 'Esta temporada' }) {
   if (!standing) return null;
   return (
-    <section aria-labelledby="club-current" className="rounded-2xl border border-line/10 bg-surface p-5">
+    <section aria-labelledby="club-current" className="panel p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="club-current" className="font-display text-lg font-bold uppercase tracking-wide text-ink">{title}</h2>
@@ -40,7 +40,7 @@ export function ClubSeasonCard({ standing, title = 'Esta temporada' }) {
           <span className="block text-sm font-medium text-ink-2">de {standing.teams}{standing.zone ? ` · ${standing.zone}` : ''}</span>
         </p>
       </div>
-      <dl className="mt-4 grid grid-cols-7 gap-1 rounded-xl bg-raised p-3 text-center">
+      <dl className="mt-4 grid grid-cols-7 gap-1 border-t border-line/10 pt-4 text-center">
         {standing.stats.map(([label, value]) => (
           <div key={label}>
             <dt className="text-xs font-semibold text-ink-2">{label}</dt>

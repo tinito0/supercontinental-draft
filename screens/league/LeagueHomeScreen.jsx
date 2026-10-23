@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, BookOpen } from 'lucide-react';
+import { BookOpen, ChevronRight, ScrollText, Shield, Trophy } from 'lucide-react';
+import { Stat } from '../../components/ui/Stat.jsx';
 import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { FollowLeague } from '../../components/landing/FollowLeague.jsx';
@@ -11,8 +12,9 @@ import { StoryText } from '../../components/league/StoryText.jsx';
 import { MatchCentre } from '../../components/league/home/MatchCentre.jsx';
 import { StandingsCard } from '../../components/league/home/StandingsCard.jsx';
 import { CupsCard } from '../../components/league/home/CupsCard.jsx';
+import { FeaturedMatch, pickFeatured } from '../../components/league/home/FeaturedMatch.jsx';
 import { makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
-import { useLeagueContent, useLeagueTeams } from '../../hooks/useLeagueData.js';
+import { useClubProfiles, useLeagueContent, useLeagueTeams } from '../../hooks/useLeagueData.js';
 import { useLeagueFixtures } from '../../hooks/useLeagueFixtures.js';
 import { currentRound } from '../../utils/leagueFixtures.js';
 import { LEAGUE_HISTORY_DOC, toParagraphs } from '../../utils/leagueContent.js';
@@ -23,61 +25,92 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 
 const SECTION_CLASS = 'mx-auto max-w-6xl scroll-mt-20 px-4 py-12 sm:px-6 md:py-16';
 
-function Hero({ teams, stage, liveCount }) {
+const SEE_ALL = 'inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent-soft hover:text-ink';
+
+function StageLine({ stage, liveCount }) {
+  if (!stage) return null;
   return (
-    <section aria-labelledby="hero-title" className="overflow-hidden">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-6 pt-10 sm:px-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:pb-10 md:pt-14">
+    <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-base" role="status">
+      {liveCount > 0 && (
+        <span className="inline-flex items-center gap-2 font-semibold text-danger-soft">
+          <span className="h-2 w-2 rounded-full bg-danger animate-pulse" aria-hidden="true" />
+          {liveCount === 1 ? '1 partido en vivo' : `${liveCount} partidos en vivo`}
+        </span>
+      )}
+      <span className="font-display text-lg font-bold uppercase leading-none text-ink">{stage.label}</span>
+      {stage.detail && <span className="text-ink-2">{stage.detail}</span>}
+    </p>
+  );
+}
+
+function Hero({ teams, stage, liveCount, featured, clubOf, prediction }) {
+  return (
+    <section aria-labelledby="hero-title" className="league-hero overflow-hidden border-b border-line/10">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-10 pt-10 sm:px-6 md:pt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-12 lg:pb-14">
         <div className="landing-enter">
-          <p className="eyebrow mb-4 text-accent-soft">Liga de eFootball PES 2021</p>
-          <h1 id="hero-title" className="font-display text-[2.6rem] font-bold uppercase leading-[0.92] tracking-tight text-ink [text-wrap:balance] sm:text-6xl lg:text-7xl">
+          <p className="eyebrow mb-3">Liga de eFootball PES 2021</p>
+          <h1 id="hero-title" className="font-display text-[2.6rem] font-bold uppercase leading-[0.92] tracking-tight text-ink [text-wrap:balance] sm:text-6xl">
             {LEAGUE_NAME}
           </h1>
-          {stage && (
-            <div className="league-stage mt-6" role="status">
-              {liveCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-danger-soft">
-                  <span className="h-2 w-2 rounded-full bg-danger animate-pulse" aria-hidden="true" />
-                  {liveCount === 1 ? 'Partido en vivo' : `${liveCount} en vivo`}
-                </span>
-              )}
-              <span className="whitespace-nowrap font-display text-lg font-bold uppercase leading-none text-ink">{stage.label}</span>
-              <span className="text-sm text-ink-2">{stage.detail}</span>
-            </div>
-          )}
-          <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-ink-2 sm:text-lg">
+          <StageLine stage={stage} liveCount={liveCount} />
+          <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-ink-2 [text-wrap:pretty]">
             {teams.length > 0 && <><span className="num font-semibold text-ink">{teams.length}</span> clubes. </>}Resultados, tabla, copas y la historia de cada club, en un solo lugar.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <a href="#partidos" className="btn btn-primary btn-lg">
-              Partidos <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </a>
-            <Link to="/torneo" className="btn btn-secondary btn-lg">Tabla y copas</Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link to="/torneo" className="btn btn-secondary btn-lg"><Trophy className="h-4 w-4" aria-hidden="true" /> Tabla y copas</Link>
+            <Link to="/equipos" className="btn btn-ghost btn-lg"><Shield className="h-4 w-4" aria-hidden="true" /> Los clubes</Link>
           </div>
         </div>
-        <div className="hidden md:block">
-          <CrestRing teams={teams} />
+        <div className="landing-enter">
+          {featured
+            ? <FeaturedMatch featured={featured} clubOf={clubOf} prediction={prediction} />
+            : <div className="hidden md:block"><CrestRing teams={teams} /></div>}
         </div>
       </div>
     </section>
   );
 }
 
-/** The first paragraphs of the league's history, when it has been written. */
-function HistoryTeaser() {
-  const { content, loading, error } = useLeagueContent(LEAGUE_HISTORY_DOC);
-  if (loading || error || toParagraphs(content?.body).length === 0) return null;
-
+/** «La liga»: el comienzo de la historia, el reglamento y los números de la temporada, en una sola franja. */
+function LeagueAbout({ teamsCount }) {
+  const { content, loading } = useLeagueContent(LEAGUE_HISTORY_DOC);
+  const hasHistory = !loading && toParagraphs(content?.body).length > 0;
+  const facts = [
+    { value: teamsCount || 12, label: 'Clubes' },
+    { value: 4, label: 'Fechas suizas' },
+    { value: 2, label: 'Copas' },
+  ];
   return (
-    <section aria-labelledby="historia" className={SECTION_CLASS}>
-      <Reveal>
-        <SectionHeading id="historia" title="Cómo empezó todo" />
-      </Reveal>
-      <Reveal delay={100}>
-        <StoryText body={content.body} limit={2} />
-        <Link to="/historia" className="btn btn-secondary btn-lg mt-8">
-          Leer la historia <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
-      </Reveal>
+    <section aria-labelledby="la-liga" className={SECTION_CLASS}>
+      <Reveal><SectionHeading id="la-liga" title="La liga" /></Reveal>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <Reveal>
+          <div className="panel flex h-full flex-col p-5 sm:p-7">
+            <h3 className="flex items-center gap-2 font-display text-xl font-bold uppercase text-ink"><ScrollText className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Cómo empezó todo</h3>
+            <div className="mt-4 flex-1">
+              {hasHistory
+                ? <StoryText body={content.body} limit={2} />
+                : <p className="text-lg text-ink-2">La historia de la liga se publica pronto.</p>}
+            </div>
+            {hasHistory && <Link to="/historia" className={`${SEE_ALL} mt-4 self-start`}>Leer la historia completa <ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>}
+          </div>
+        </Reveal>
+        <Reveal>
+          <div className="panel flex h-full flex-col p-5 sm:p-7">
+            <div className="grid grid-cols-3 gap-4">
+              {facts.map(fact => <Stat key={fact.label} label={fact.label} value={fact.value} />)}
+            </div>
+            <Link to="/reglamento" className="group mt-6 flex min-h-11 items-center gap-3 border-t border-line/10 pt-5">
+              <BookOpen className="h-5 w-5 shrink-0 text-accent-soft" aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-ink group-hover:text-accent-soft">Reglamento de la temporada</span>
+                <span className="block text-sm text-ink-2">Formato, puntos, desempates y cómo se arman las copas.</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-ink-2" aria-hidden="true" />
+            </Link>
+          </div>
+        </Reveal>
+      </div>
     </section>
   );
 }
@@ -88,13 +121,15 @@ export default function LeagueHomeScreen() {
   const { tournament, fixtures, groups, stage, prediction, loading, error, liveError } = useLeagueFixtures(teamsById);
   const round = useMemo(() => currentRound(fixtures), [fixtures]);
   const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
+  const { byTeamId: profiles } = useClubProfiles();
+  const featured = loading ? null : pickFeatured(groups);
 
   return (
     <>
-      <Hero teams={teams} stage={loading ? null : stage} liveCount={groups.live.length} />
+      <Hero teams={teams} stage={loading ? null : stage} liveCount={groups.live.length} featured={featured} clubOf={clubOf} prediction={prediction} />
 
-      <section id="partidos" aria-labelledby="partidos-title" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-12 sm:px-6 md:pb-16">
-        <h2 id="partidos-title" className="sr-only">Partidos</h2>
+      <section id="partidos" aria-labelledby="partidos-title" className={SECTION_CLASS}>
+        <SectionHeading id="partidos-title" title="Partidos y tabla" />
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
           <div className="space-y-6">
             <MatchCentre groups={groups} round={round} clubOf={clubOf} loading={loading} error={error} liveError={liveError} prediction={prediction} />
@@ -106,27 +141,16 @@ export default function LeagueHomeScreen() {
 
       <section aria-labelledby="clubes" className={SECTION_CLASS}>
         <Reveal>
-          <SectionHeading id="clubes" title="Los clubes">
-            Cada club de la liga: su historia, su plantel y su campaña en el torneo.
+          <SectionHeading id="clubes" title="Los clubes" action={<Link to="/equipos" className={SEE_ALL}>Ver todos <ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>}>
+            Su estadio, su gente, sus títulos y su plantel.
           </SectionHeading>
         </Reveal>
-        <Reveal delay={100}>
-          <ClubGrid teams={teams} loading={teamsLoading} error={teamsError} />
+        <Reveal>
+          <ClubGrid teams={teams} loading={teamsLoading} error={teamsError} profiles={profiles} />
         </Reveal>
       </section>
 
-      <HistoryTeaser />
-
-      <section aria-labelledby="reglamento-link" className="mx-auto max-w-6xl px-4 sm:px-6">
-        <Link to="/reglamento" className="group flex items-center gap-4 border-y border-line/10 py-5 transition-colors hover:border-line/30">
-          <BookOpen className="h-5 w-5 shrink-0 text-accent-soft" aria-hidden="true" />
-          <span className="min-w-0 flex-1">
-            <span id="reglamento-link" className="block font-display text-xl font-bold uppercase text-ink">Reglamento de la temporada</span>
-            <span className="block text-sm text-ink-2">Formato, puntos, desempates y cómo se arman las copas.</span>
-          </span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-ink-3 transition-colors group-hover:text-ink" aria-hidden="true" />
-        </Link>
-      </section>
+      <LeagueAbout teamsCount={teams.length} />
 
       <section aria-labelledby="seguinos" className={SECTION_CLASS}>
         <Reveal>

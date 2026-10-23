@@ -37,8 +37,10 @@ export function StandingsCard({ tournament, clubOf, loading }) {
               const club = clubOf(row.name);
               return (
                 <tr key={row.id || row.name} className={`border-t ${index === GOLD_CUP_PLACES ? 'border-line/30' : 'border-line/10'}`}>
-                  <td className="py-2 pl-4">
-                    <span className={`num inline-grid h-6 w-6 place-items-center rounded font-display text-sm font-bold ${isGold ? 'bg-accent text-white' : 'bg-raised text-ink-2'}`}>{index + 1}</span>
+                  <td className="relative py-2 pl-4">
+                    <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${isGold ? 'bg-accent' : 'bg-ink-3'}`} aria-hidden="true" />
+                    <span className="num font-display text-base font-bold text-ink">{index + 1}</span>
+                    <span className="sr-only">{isGold ? ', zona Copa de Oro' : ', zona Copa de Plata'}</span>
                   </td>
                   <td className="max-w-0 py-2">
                     {club ? (
@@ -61,9 +63,9 @@ export function StandingsCard({ tournament, clubOf, loading }) {
             })}
           </tbody>
         </table>
-        <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line/10 px-4 py-3 text-xs text-ink-3">
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-accent" aria-hidden="true" />1-8 Copa de Oro</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-raised ring-1 ring-line/30" aria-hidden="true" />9-12 Copa de Plata</span>
+        <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line/10 px-4 py-3 text-sm text-ink-2">
+          <span className="inline-flex items-center gap-2"><span className="h-3 w-1 rounded bg-accent" aria-hidden="true" />1.° a 8.°: Copa de Oro</span>
+          <span className="inline-flex items-center gap-2"><span className="h-3 w-1 rounded bg-ink-3" aria-hidden="true" />9.° a 12.°: Copa de Plata</span>
           {!played && <span>Sin partidos jugados todavía</span>}
         </p>
       </div>

@@ -54,7 +54,8 @@ export const CupBracketView = memo(function CupBracketView({
   return (
     <div className="flex flex-col items-center py-4 w-full">
       {showTitle && <TournamentSectionTitle title="SUPERCONTINENTAL LEAGUE" subtitle={cup.subtitle.toUpperCase()} />}
-      <div ref={containerRef} className="w-full overflow-x-auto custom-scrollbar pb-6">
+      {/* Con teclado también se desplaza (tabIndex): en el teléfono el cuadro es más ancho que la pantalla. */}
+      <div ref={containerRef} className="w-full overflow-x-auto custom-scrollbar pb-6 focus-visible:outline-2 focus-visible:outline-accent-soft" tabIndex={0} role="region" aria-label={`Cuadro de la ${cup.name}`}>
         <BracketBoard
           className="w-max mx-auto pt-2"
           columns={columns}

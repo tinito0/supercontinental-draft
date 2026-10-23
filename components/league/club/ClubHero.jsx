@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { MapPin } from 'lucide-react';
+import { DEFAULT_LOGO } from '../../../utils/constants.js';
 import { teamCrestUrl } from '../../../utils/teamCrest.js';
 
 /* Cabecera de la página del club en la web de la liga: la foto del estadio a todo el ancho (si el admin la cargó),
-   el escudo en un cuadrado blanco como en la transmisión, el nombre grande y de dónde es. Sin foto queda la banda
-   de la liga con el escudo de fondo, nunca un hueco. */
+   el escudo en un cuadrado blanco como en la transmisión, el nombre grande y de dónde es. Sin foto, la superficie
+   lisa: nada decorativo. */
 
 function placeLine(profile) {
   const place = [profile?.city, profile?.country].filter(Boolean).join(', ');
@@ -26,10 +27,7 @@ export function ClubHero({ team, profile, loading = false }) {
       {photo ? (
         <img src={photo} alt={profile?.stadium ? `Estadio ${profile.stadium}` : ''} className="absolute inset-0 -z-10 h-full w-full object-cover"
           referrerPolicy="no-referrer" fetchpriority="high" onError={() => setPhotoFailed(true)} />
-      ) : (
-        team && <img src={teamCrestUrl(team)} alt="" aria-hidden="true" className="club-hero__watermark absolute -z-10 object-contain" />
-      )}
-      <div className="league-band absolute inset-x-0 top-0" aria-hidden="true" />
+      ) : null}
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-8 pt-24 sm:flex-row sm:items-end sm:gap-7 sm:px-6 sm:pb-10 sm:pt-40">
         {loading && !team ? (
           <>
@@ -38,8 +36,8 @@ export function ClubHero({ team, profile, loading = false }) {
           </>
         ) : (
           <>
-            <div className="grid h-24 w-24 shrink-0 place-items-center rounded-2xl bg-white p-3 shadow-lg sm:h-32 sm:w-32">
-              <img src={teamCrestUrl(team)} alt={`Escudo de ${name}`} width="112" height="112" className="h-full w-full object-contain" />
+            <div className="grid h-24 w-24 shrink-0 place-items-center rounded-2xl bg-white p-3 sm:h-32 sm:w-32">
+              <img src={teamCrestUrl(team)} alt={`Escudo de ${name}`} onError={event => { if (!event.currentTarget.src.endsWith(DEFAULT_LOGO)) event.currentTarget.src = DEFAULT_LOGO; }} width="112" height="112" className="h-full w-full object-contain" />
             </div>
             <div className="min-w-0 space-y-2">
               {profile?.nickname && <p className="font-display text-lg font-semibold uppercase tracking-wide text-accent-soft sm:text-xl">«{profile.nickname}»</p>}

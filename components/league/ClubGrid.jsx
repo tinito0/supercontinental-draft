@@ -38,7 +38,7 @@ export function ClubGrid({ teams, loading, error, profiles = null }) {
           <li key={team.id}>
             <Link
               to={`/equipos/${team.id}`}
-              className="group flex min-h-[88px] items-center gap-4 rounded-2xl border border-line/10 bg-surface p-4 transition-[background-color,border-color,transform] duration-150 hover:border-line/30 hover:bg-raised active:scale-[0.99]"
+              className="group flex min-h-[88px] items-center gap-4 rounded-2xl border border-line/10 bg-surface p-4 transition-[background-color,border-color] duration-150 hover:border-line/30 hover:bg-raised"
             >
               <img
                 src={teamCrestUrl(team)}

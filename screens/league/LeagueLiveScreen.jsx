@@ -78,7 +78,7 @@ function PredictionPanel({ overlay, teamsById, matches }) {
       ) : myVote || isClosed ? (
         <div className="space-y-3">
           {outcome && (
-            <div className="rounded-xl border border-accent/30 bg-accent-deep/50 p-4" role="status">
+            <div className="border-b border-line/10 pb-4" role="status">
               <p className="font-display text-xl font-bold uppercase text-ink">
                 Final: {home.name} <span className="num">{outcome.match.home.score}-{outcome.match.away.score}</span> {away.name}
               </p>
@@ -223,10 +223,10 @@ function MvpPanel({ matches }) {
     body = ranking.length ? (
       <div className="space-y-4">
       {winner && (
-        <div className="flex items-center gap-4 rounded-xl border border-warning/30 bg-warning/10 p-4" role="status">
+        <div className="flex items-center gap-4 border-b border-line/10 pb-4" role="status">
           <img src={`/fotos_jugadores/${winner.id}.webp`} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-full bg-white object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
           <div className="min-w-0">
-            <p className="text-sm font-semibold uppercase tracking-wide text-warning-soft">MVP del partido</p>
+            <p className="eyebrow">MVP del partido</p>
             <p className="truncate font-display text-2xl font-bold text-ink">{winner.name}</p>
             <p className="text-sm text-ink-2"><span className="num">{winner.pct}%</span> de los votos</p>
           </div>

@@ -10,21 +10,21 @@ function TrophyCabinet({ honours }) {
   const groups = groupHonours(honours);
   if (!groups.length) return null;
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="panel grid grid-cols-1 divide-y divide-line/10 md:grid-cols-3 md:divide-x md:divide-y-0">
       {groups.map(group => (
-        <section key={group.id} aria-labelledby={`honours-${group.id}`} className="rounded-2xl border border-line/10 bg-surface p-5">
+        <section key={group.id} aria-labelledby={`honours-${group.id}`} className="p-5">
           <div className="flex items-baseline justify-between gap-3 border-b border-line/10 pb-3">
             <h3 id={`honours-${group.id}`} className="font-display text-lg font-bold uppercase tracking-wide text-ink">{group.label}</h3>
-            <span className="num font-display text-4xl font-bold leading-none text-warning-soft" aria-label={`${group.total} títulos`}>{group.total}</span>
+            <span className="num font-display text-4xl font-bold leading-none text-ink" aria-label={`${group.total} títulos`}>{group.total}</span>
           </div>
           <ul className="mt-3 space-y-3">
             {group.items.map(item => (
               <li key={item.id} className="flex gap-3">
-                <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-warning-soft" aria-hidden="true" />
+                <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-accent-soft" aria-hidden="true" />
                 <div className="min-w-0">
                   <p className="font-semibold text-ink">
                     {item.name}
-                    {Number(item.count) > 1 && <span className="num ml-2 rounded-md bg-raised px-1.5 py-0.5 text-sm font-bold text-ink">×{item.count}</span>}
+                    {Number(item.count) > 1 && <span className="num ml-1.5 font-normal text-ink-2">×{item.count}</span>}
                   </p>
                   {item.years && <p className="text-sm text-ink-2">{item.years}</p>}
                 </div>
@@ -42,7 +42,7 @@ function CampaignTable({ seasons }) {
   return (
     <>
       {/* Escritorio: tabla. Celular: una tarjeta por campaña, sin scroll horizontal. */}
-      <div className="hidden overflow-hidden rounded-2xl border border-line/10 bg-surface md:block">
+      <div className="panel hidden overflow-hidden md:block">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-line/10 text-sm text-ink-2">
@@ -66,7 +66,7 @@ function CampaignTable({ seasons }) {
       </div>
       <ul className="space-y-3 md:hidden">
         {seasons.map(row => (
-          <li key={row.id} className="rounded-2xl border border-line/10 bg-surface p-4">
+          <li key={row.id} className="panel p-4">
             <div className="flex items-baseline justify-between gap-3">
               <span className="num font-display text-xl font-bold text-ink">{row.season}</span>
               <span className="text-right font-semibold text-ink">{row.result}</span>

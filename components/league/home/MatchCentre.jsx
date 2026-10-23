@@ -87,14 +87,13 @@ export function MatchCentre({ groups, round, clubOf, loading, error, liveError, 
 
   return (
     <div className="panel overflow-hidden p-0">
-      <div className="league-band" aria-hidden="true" />
       <div className="flex flex-col gap-3 border-b border-line/10 px-4 pb-2 pt-4 sm:flex-row sm:items-end sm:justify-between">
         <Tabs label="Partidos" value={tab} onChange={setChosen} tabs={tabs} />
         <Link to="/partidos" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink">
           Todos los partidos <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>
-      {liveError && !error && <p className="px-4 pt-3 text-xs text-warning-soft">No se pudo conectar con los partidos en vivo; el fixture sí está actualizado.</p>}
+      {liveError && !error && <p className="px-4 pt-3 text-sm text-warning-soft">No se pudo conectar con los partidos en vivo; el fixture sí está actualizado.</p>}
       {body}
     </div>
   );

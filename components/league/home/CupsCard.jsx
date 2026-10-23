@@ -52,7 +52,7 @@ export function CupsCard({ tournament, clubOf }) {
       {cups.map(({ cupId, cup, summary }) => (
         <section key={cupId} aria-label={cup.name}>
           <p className="eyebrow flex items-center gap-1.5">
-            <Trophy className={`h-3.5 w-3.5 ${cupId === CUP_IDS.ORO ? 'text-warning-soft' : 'text-ink-3'}`} aria-hidden="true" />
+            <Trophy className={`h-3.5 w-3.5 ${cupId === CUP_IDS.ORO ? 'text-accent-soft' : 'text-ink-2'}`} aria-hidden="true" />
             {cup.name}{summary.round ? ` · ${summary.round.label}` : ''}
           </p>
           {summary.champion ? (

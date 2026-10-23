@@ -11,7 +11,7 @@ const GOLD_CUP_PLACES = 8;
 const SILVER_CUP_PLACES = 12;
 
 const zoneOf = index => (index < GOLD_CUP_PLACES ? 'oro' : index < SILVER_CUP_PLACES ? 'plata' : null);
-const ZONE_BAR = { oro: 'bg-warning', plata: 'bg-ink-2' };
+const ZONE_BAR = { oro: 'bg-accent', plata: 'bg-ink-3' };
 
 const COLUMNS = [
   { key: 'pj', label: 'PJ', title: 'Partidos jugados', always: true },
@@ -29,7 +29,7 @@ const COLUMNS = [
 export function StandingsTable({ rows, clubOf }) {
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-2xl border border-line/10 bg-surface">
+      <div className="panel overflow-hidden">
         <table className="w-full text-left">
           <caption className="sr-only">Tabla de posiciones de la Supercontinental League</caption>
           <thead>
@@ -78,8 +78,8 @@ export function StandingsTable({ rows, clubOf }) {
         </table>
       </div>
       <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-2" aria-label="Referencias">
-        <li className="flex items-center gap-2"><span className="h-3 w-1 rounded bg-warning" aria-hidden="true" />1.° a 8.°: Copa de Oro</li>
-        <li className="flex items-center gap-2"><span className="h-3 w-1 rounded bg-ink-2" aria-hidden="true" />9.° a 12.°: Copa de Plata</li>
+        <li className="flex items-center gap-2"><span className="h-3 w-1 rounded bg-accent" aria-hidden="true" />1.° a 8.°: Copa de Oro</li>
+        <li className="flex items-center gap-2"><span className="h-3 w-1 rounded bg-ink-3" aria-hidden="true" />9.° a 12.°: Copa de Plata</li>
         <li>Ganado en los 90: {LEAGUE_POINTS.REGULATION_WIN} pts · ganado por penales (GP): {LEAGUE_POINTS.SHOOTOUT_WIN} pt · perdido: {LEAGUE_POINTS.LOSS}</li>
       </ul>
     </div>

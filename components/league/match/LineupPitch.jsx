@@ -37,7 +37,7 @@ function Miniface({ player, side }) {
   const ring = side === 'home' ? 'ring-accent' : 'ring-ink-2';
   if (failed || player.id == null) {
     return (
-      <span className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold shadow-md ring-2 sm:h-12 sm:w-12 ${ring} ${side === 'home' ? 'bg-accent text-on-accent' : 'bg-ink-2 text-canvas'}`}>
+      <span className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold ring-2 sm:h-12 sm:w-12 ${ring} ${side === 'home' ? 'bg-accent text-on-accent' : 'bg-ink-2 text-canvas'}`}>
         <span className="num">{player.number ?? player.role}</span>
       </span>
     );
@@ -45,7 +45,7 @@ function Miniface({ player, side }) {
   return (
     <img src={`/fotos_jugadores/${player.id}.webp`} alt="" loading="lazy" decoding="async" width="48" height="48"
       onError={() => setFailed(true)}
-      className={`h-10 w-10 rounded-full bg-white object-cover object-top shadow-md ring-2 sm:h-12 sm:w-12 ${ring}`} />
+      className={`h-10 w-10 rounded-full bg-white object-cover object-top ring-2 sm:h-12 sm:w-12 ${ring}`} />
   );
 }
 
@@ -64,7 +64,7 @@ function Marker({ player, side, vertical }) {
       <span className="relative">
         <Miniface player={player} side={side} />
         {player.goals > 0 && (
-          <span className="absolute -right-2.5 -top-1 flex items-center gap-0.5 rounded-full bg-canvas/85 py-0.5 pl-0.5 pr-1 shadow" aria-hidden="true">
+          <span className="absolute -right-2.5 -top-1 flex items-center gap-0.5 rounded-full bg-canvas/85 py-0.5 pl-0.5 pr-1" aria-hidden="true">
             <BallIcon className="h-4 w-4" />
             {player.goals > 1 && <span className="num text-[11px] font-bold leading-none text-ink">{player.goals}</span>}
           </span>
@@ -75,7 +75,7 @@ function Marker({ player, side, vertical }) {
           </span>
         )}
         {player.subbedOff && (
-          <span className="absolute -bottom-1 -right-1.5 grid h-5 w-5 place-items-center rounded-full bg-surface shadow" title={`Salió ${player.subbedOff}`} aria-hidden="true">
+          <span className="absolute -bottom-1 -right-1.5 grid h-5 w-5 place-items-center rounded-full bg-surface" title={`Salió ${player.subbedOff}`} aria-hidden="true">
             <ArrowDown className="h-3.5 w-3.5 text-danger-soft" />
           </span>
         )}

@@ -136,8 +136,12 @@ export function rankLeague(league, tieBreakOrder = []) {
   const order = (Array.isArray(tieBreakOrder) ? tieBreakOrder : []).map(teamKey);
   const ordered = [...ranking];
   const stillTied = [];
+  // Antes de jugar, todos empatan en 0: no hay nada que desempatar ni que avisar (el editor mostraba los 12 clubes).
+  const hasPlayed = team => ['pj', 'pts', 'gf', 'gc'].some(field => Number(team[field]) > 0);
+  const playedKeys = new Set(teams.filter(hasPlayed).map(team => teamKey(team.name)));
   for (const group of unresolvedTies) {
     const keys = group.map(teamKey);
+    if (!keys.some(key => playedKeys.has(key))) continue;
     if (!keys.every(key => order.includes(key))) {
       stillTied.push(group);
       continue;

@@ -5,12 +5,32 @@ import { LEAGUE_NAME } from './leagueLinks.js';
 /* Pieces shared by the two public fronts, so they look the same: the draft landing (screens/LandingPage.jsx)
    and the league site (screens/league/). Styles in landing.css. */
 
-/** Big uppercase section title with an optional one-paragraph intro. */
-export function SectionHeading({ id, title, children, as: Tag = 'h2' }) {
+/** Big uppercase section title with an optional one-paragraph intro and an optional link on the right («Ver todo»). */
+export function SectionHeading({ id, title, children, as: Tag = 'h2', action = null }) {
+  if (action) {
+    return (
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 md:mb-8">
+        <div className="max-w-[65ch]">
+          <Tag id={id} className="font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink [text-wrap:balance] md:text-4xl">{title}</Tag>
+          {children && <p className="mt-3 text-lg leading-relaxed text-ink-2 [text-wrap:pretty]">{children}</p>}
+        </div>
+        <div className="shrink-0">{action}</div>
+      </div>
+    );
+  }
+  if (Tag === 'h1') {
+    // Título de una página interna: el título grande y una línea que separa el contenido.
+    return (
+      <div className="mb-8 border-b border-line/10 pb-8 md:mb-10 md:pb-10">
+        <h1 id={id} className="font-display text-4xl font-bold uppercase leading-none tracking-tight text-ink [text-wrap:balance] md:text-5xl">{title}</h1>
+        {children && <p className="mt-4 max-w-[65ch] text-lg leading-relaxed text-ink-2 [text-wrap:pretty]">{children}</p>}
+      </div>
+    );
+  }
   return (
     <div className="mb-8 max-w-[65ch] md:mb-10">
-      <Tag id={id} className="font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink md:text-4xl">{title}</Tag>
-      {children && <p className="mt-3 text-base leading-relaxed text-ink-2">{children}</p>}
+      <Tag id={id} className="font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink [text-wrap:balance] md:text-4xl">{title}</Tag>
+      {children && <p className="mt-3 text-lg leading-relaxed text-ink-2 [text-wrap:pretty]">{children}</p>}
     </div>
   );
 }

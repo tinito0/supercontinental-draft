@@ -96,7 +96,9 @@ function cupFixtures(cupId, bracket) {
         id: entry.key,
         sourceId: entry.key,
         competition: cupId,
-        roundLabel: entry.title,
+        // La ronda («Cuartos de final») agrupa los partidos de copa como una fecha; la llave («Cuartos 2») va aparte.
+        roundLabel: round.label,
+        tieLabel: entry.title,
         roundOrder: 100 + roundPosition,
         order: entry.index,
         home: { name: clean(entry.match.teamA) },
