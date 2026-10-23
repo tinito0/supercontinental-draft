@@ -19,10 +19,10 @@ export function PlayerPhoto({ id, size = 32 }) {
     img.addEventListener('error', () => setFailed(true), { once: true });
     img.addEventListener('load', check, { once: true });
   };
-  if (failed) return <span className="shrink-0 rounded-full bg-raised" style={box} aria-hidden="true" />;
+  if (failed) return <span className="shrink-0 rounded-lg bg-raised" style={box} aria-hidden="true" />;
   return (
     <img ref={checkLoaded} src={`/fotos_jugadores/${id}.webp`} alt="" width={size} height={size} loading="lazy" style={box}
-      className="shrink-0 rounded-full bg-raised object-cover" onError={() => setFailed(true)} />
+      className="shrink-0 rounded-lg bg-raised object-cover object-top" onError={() => setFailed(true)} />
   );
 }
 
@@ -109,14 +109,14 @@ export function PlayerStatsTable({ rows, match }) {
         />
       </div>
       <div className="overflow-x-auto">
-        <table className="data-table w-full min-w-[560px] text-sm">
+        <table className="data-table w-full min-w-[640px] text-base">
           <thead>
             <tr>
-              <th scope="col" className="text-left">Jugador</th>
+              <th scope="col" className="!px-4 !text-xs !text-ink-2">Jugador</th>
               {PLAYER_COLUMNS.map(column => (
-                <th key={column.key} scope="col" className="text-right" aria-sort={sortKey === column.key ? 'descending' : 'none'}>
+                <th key={column.key} scope="col" className="!px-2 text-right !text-xs !text-ink-2 last:!pr-4" aria-sort={sortKey === column.key ? 'descending' : 'none'}>
                   <button type="button" title={column.title} onClick={() => setSortKey(column.key)}
-                    className={`min-h-11 px-1 ${sortKey === column.key ? 'text-ink' : ''}`}>
+                    className={`inline-flex min-h-11 w-full items-center justify-end ${sortKey === column.key ? 'text-ink' : ''}`}>
                     {column.label}
                   </button>
                 </th>
@@ -126,11 +126,11 @@ export function PlayerStatsTable({ rows, match }) {
           <tbody>
             {visible.map(row => (
               <tr key={row.id}>
-                <th scope="row" className="text-left font-medium text-ink">
-                  <span className="flex items-center gap-2 min-w-0"><PlayerPhoto id={row.id} /><span className="truncate">{row.name}</span></span>
+                <th scope="row" className="border-b border-line/[0.07] px-4 py-2.5 text-left font-medium text-ink">
+                  <span className="flex min-w-0 items-center gap-3"><PlayerPhoto id={row.id} size={36} /><span className="truncate">{row.name}</span></span>
                 </th>
                 {PLAYER_COLUMNS.map(column => (
-                  <td key={column.key} className="num text-right text-ink-2">{column.render ? column.render(row) : row[column.key]}</td>
+                  <td key={column.key} className="num !px-2 text-right text-ink last:!pr-4">{column.render ? column.render(row) : row[column.key]}</td>
                 ))}
               </tr>
             ))}

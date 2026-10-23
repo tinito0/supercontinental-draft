@@ -37,7 +37,7 @@ function Miniface({ player, side }) {
   const ring = side === 'home' ? 'ring-accent' : 'ring-ink-2';
   if (failed || player.id == null) {
     return (
-      <span className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold ring-2 sm:h-12 sm:w-12 ${ring} ${side === 'home' ? 'bg-accent text-on-accent' : 'bg-ink-2 text-canvas'}`}>
+      <span className={`grid h-10 w-10 place-items-center rounded-lg text-sm font-bold ring-2 sm:h-12 sm:w-12 ${ring} ${side === 'home' ? 'bg-accent text-on-accent' : 'bg-ink-2 text-canvas'}`}>
         <span className="num">{player.number ?? player.role}</span>
       </span>
     );
@@ -45,7 +45,7 @@ function Miniface({ player, side }) {
   return (
     <img src={`/fotos_jugadores/${player.id}.webp`} alt="" loading="lazy" decoding="async" width="48" height="48"
       onError={() => setFailed(true)}
-      className={`h-10 w-10 rounded-full bg-white object-cover object-top ring-2 sm:h-12 sm:w-12 ${ring}`} />
+      className={`h-10 w-10 rounded-lg bg-white object-cover object-top ring-2 sm:h-12 sm:w-12 ${ring}`} />
   );
 }
 

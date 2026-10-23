@@ -92,7 +92,17 @@ export default function LeagueMatchScreen() {
           tabs={TABS}
         />
         {tab === 'resumen' && <SummaryTab match={match} views={views} />}
-        {tab === 'estadisticas' && <StatSections sections={views.sections} match={match} />}
+        {tab === 'estadisticas' && (
+          <div className="space-y-8">
+            <StatSections sections={views.sections} match={match} />
+            {views.players.length > 0 && (
+              <section aria-labelledby="per-player" className="space-y-3">
+                <h2 id="per-player" className="font-display text-2xl font-bold uppercase leading-none text-ink">Por jugador</h2>
+                <PlayerStatsTable rows={views.players} match={match} />
+              </section>
+            )}
+          </div>
+        )}
         {tab === 'alineaciones' && (
           <div className="space-y-4">
             <LineupPitch layout={views.pitch} match={match} />
@@ -103,7 +113,6 @@ export default function LeagueMatchScreen() {
         {tab === 'jugadores' && (
           <div className="space-y-4">
             <PlayerAnalysis rows={views.players} summary={summary} match={match} />
-            {views.players.length > 0 && <PlayerStatsTable rows={views.players} match={match} />}
           </div>
         )}
         {tab === 'tactica' && <MatchTacticsView summary={summary} match={match} />}

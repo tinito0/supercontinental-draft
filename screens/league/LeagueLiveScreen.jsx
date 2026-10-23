@@ -181,7 +181,7 @@ function PlayerOfTournamentPanel({ matches }) {
           <li key={entry.playerId} className="flex min-h-14 items-center gap-3 py-2">
             <span className={`num w-6 text-center font-display text-lg ${index === 0 ? 'text-accent-soft' : 'text-ink-3'}`}>{index + 1}</span>
             <img src={`/fotos_jugadores/${entry.playerId}.webp`} alt="" width={36} height={36} loading="lazy"
-              className="h-9 w-9 shrink-0 rounded-full bg-overlay object-cover" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
+              className="h-9 w-9 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-ink">{entry.name}</span>
               {entry.team && <span className="block truncate text-sm text-ink-2">{entry.team}</span>}
@@ -232,7 +232,7 @@ function MvpPanel({ matches }) {
       <div className="space-y-4">
       {winner && (
         <div className="flex items-center gap-4 border-b border-line/10 pb-4" role="status">
-          <img src={`/fotos_jugadores/${winner.id}.webp`} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-full bg-white object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
+          <img src={`/fotos_jugadores/${winner.id}.webp`} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-lg bg-white object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
           <div className="min-w-0">
             <p className="eyebrow">MVP del partido</p>
             <p className="truncate font-display text-2xl font-bold text-ink">{winner.name}</p>
@@ -260,7 +260,7 @@ function MvpPanel({ matches }) {
                 <button key={player.id} type="button" aria-pressed={selected === player.id} onClick={() => setSelected(player.id)}
                   className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-[border-color,background-color,transform] duration-150 ease-out active:scale-[0.98] ${selected === player.id ? 'border-accent bg-accent-deep/60 text-ink' : 'border-line/[0.16] bg-raised text-ink hover:border-line/30'}`}>
                   <img src={`/fotos_jugadores/${player.id}.webp`} alt="" width={28} height={28} loading="lazy"
-                    className="h-7 w-7 shrink-0 rounded-full bg-overlay object-cover" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
+                    className="h-7 w-7 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
                   <span className="min-w-0 flex-1 truncate">{player.name}</span>
                   {selected === player.id && <Check className="h-4 w-4 shrink-0 text-accent-soft" aria-hidden="true" />}
                 </button>
