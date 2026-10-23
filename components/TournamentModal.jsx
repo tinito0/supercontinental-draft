@@ -294,12 +294,8 @@ export const TournamentModal = memo(function TournamentModal({
       setSaveWarnings([draw.reason]);
       return;
     }
-    const list = draw.pairs.map(([home, away]) => `${home} vs ${away}`).join('
-');
-    if (!window.confirm(`Sorteo de la Fecha 1:
-${list}
-
-¿Usar este sorteo? Se publica al presionar Guardar. Si cancelás, podés volver a sortear.`)) return;
+    const list = draw.pairs.map(([home, away]) => `${home} vs ${away}`).join('\n');
+    if (!window.confirm(`Sorteo de la Fecha 1:\n${list}\n\n¿Usar este sorteo? Se publica al presionar Guardar. Si cancelás, podés volver a sortear.`)) return;
     setSaveWarnings([]);
     setLocalData(prev => ({ ...prev, matches: [...(prev.matches || []), ...draw.matches] }));
   }, [localData]);
