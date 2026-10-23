@@ -52,7 +52,11 @@ Deno.serve(async (req: Request) => {
     const result = await castVote({ firestore, appId: APP_ID, vote, ipHash, deviceHash, now: Date.now() });
     return reply(200, { ok: true, ...result });
   } catch (error) {
-    if (error instanceof CommunityVoteError) return reply(error.status, { ok: false, error: error.message, alreadyVoted: /Ya votaste/.test(error.message) });
+    if (error instanceof CommunityVoteError) {
+      // Código estable (no el texto en castellano) y la opción que quedó contada para este navegador.
+      const alreadyVoted = error.code === 'ALREADY_VOTED';
+      return reply(error.status, { ok: false, error: error.message, code: error.code, alreadyVoted, ...(alreadyVoted ? { choice: error.choice } : {}) });
+    }
     if (error instanceof SyntaxError) return reply(400, { ok: false, error: 'JSON inválido.' });
     console.error('community-vote: failed', error);
     return reply(502, { ok: false, error: 'No se pudo registrar el voto. Probá de nuevo.' });

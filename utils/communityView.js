@@ -1,6 +1,6 @@
 // Página /en-vivo (screens/league/LeagueLiveScreen.jsx): qué partido mostrar, porcentajes de la predicción y ranking
 // del MVP. Las reglas de las ventanas son las mismas que aplica el servidor (supabase/functions/_shared/communityVote.js).
-import { MVP_GRACE_MS, mvpCandidates } from '../supabase/functions/_shared/communityVote.js';
+import { mvpCandidates, mvpWindow } from '../supabase/functions/_shared/communityVote.js';
 import { playerName } from './matchCenter.js';
 
 /** Encuestas «¿quién gana la copa?» (public/data/polls/{id}); en este orden se elige la que muestra el overlay. */
@@ -11,9 +11,11 @@ export const CUP_POLLS = [
 
 /** El partido del juego para votar el MVP: el que está en vivo, o el último terminado hace menos de 15 minutos. */
 export function pickMvpMatch(matches, now) {
-  const live = matches.find(match => match.status.kind === 'live');
+  // La misma ventana que aplica el servidor (mvpWindow): en vivo con señal, o terminado hace menos de 15 min desde finishedAt.
+  const isOpen = match => mvpWindow({ status: match.status.kind, updatedAtMs: match.updatedAtMs, finishedAtMs: match.finishedAtMs }, now).open;
+  const live = matches.find(match => match.status.kind === 'live' && isOpen(match));
   if (live) return { match: live, open: true };
-  const recent = matches.find(match => match.status.kind === 'finished' && Number.isFinite(match.updatedAtMs) && now - match.updatedAtMs <= MVP_GRACE_MS);
+  const recent = matches.find(match => match.status.kind === 'finished' && isOpen(match));
   return recent ? { match: recent, open: true } : { match: null, open: false };
 }
 

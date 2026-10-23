@@ -90,22 +90,25 @@ export function useTournament() {
 
 const LIVE_MATCHES = `artifacts/${APP_ID}/public/data/live_matches`;
 const MATCH_LIST_LIMIT = 40;
+/** Tope para lo que suma toda la temporada (Jugador del Torneo): una temporada tiene unos 40 partidos oficiales. */
+export const SEASON_MATCH_LIMIT = 300;
 
 /**
  * Partidos que subió el bridge del PES (registro de partidos), los más nuevos primero, en vivo.
+ * @param {number} [max] cuántos partidos traer (los más nuevos)
  * @returns {{ matches: Array<object>, loading: boolean, error: string }} matches ya pasados por parseMatchDoc
  */
-export function useLiveMatches() {
+export function useLiveMatches(max = MATCH_LIST_LIMIT) {
   const [state, setState] = useState({ matches: [], loading: true, error: '' });
 
   useEffect(() => onSnapshot(
-    query(collection(db, LIVE_MATCHES), orderBy('startedAt', 'desc'), limit(MATCH_LIST_LIMIT)),
+    query(collection(db, LIVE_MATCHES), orderBy('startedAt', 'desc'), limit(max)),
     (snap) => setState({ matches: snap.docs.map(d => parseMatchDoc(d.data())).filter(Boolean), loading: false, error: '' }),
     (err) => {
       console.error('[useLiveMatches]', err);
       setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar los partidos.' }));
     },
-  ), []);
+  ), [max]);
 
   return state;
 }

@@ -5,7 +5,7 @@ import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { MatchStatus, TeamMark } from '../../components/league/match/MatchParts.jsx';
-import { useAllMvpVotes, useBroadcastOverlay, useLeagueTeams, useLiveMatches, useMvpVotes, usePoll, usePrediction } from '../../hooks/useLeagueData.js';
+import { useAllMvpVotes, useBroadcastOverlay, useLeagueTeams, useLiveMatches, useMvpVotes, SEASON_MATCH_LIMIT, usePoll, usePrediction } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { rankPlayerOfTournament } from '../../utils/playerOfTournament.js';
 import { getMyVote, sendVote } from '../../services/communityService.js';
@@ -198,7 +198,7 @@ function MvpPanel({ matches }) {
   const vote = async () => {
     setState({ busy: true, error: '' });
     const result = await sendVote({ kind: 'mvp', matchKey: match.key, choice: selected });
-    if (result.ok || result.alreadyVoted) setMyVote(String(selected));
+    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('mvp', match.key) || String(selected));
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
@@ -264,7 +264,8 @@ function MvpPanel({ matches }) {
 export default function LeagueLiveScreen() {
   useDocumentTitle('En vivo');
   const { data: overlay } = useBroadcastOverlay();
-  const { matches, error } = useLiveMatches();
+  // Toda la temporada, no los últimos 40: el Jugador del Torneo suma los MVP de todos los partidos terminados.
+  const { matches, error } = useLiveMatches(SEASON_MATCH_LIMIT);
   const { teamsById } = useLeagueTeams();
 
   return (

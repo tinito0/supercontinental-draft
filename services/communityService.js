@@ -64,8 +64,10 @@ export async function sendVote(vote) {
       rememberVote(vote.kind, target, vote.choice);
       return body;
     }
-    if (body.alreadyVoted) rememberVote(vote.kind, target, vote.choice);
-    return { ok: false, error: body.error || 'No se pudo registrar el voto.', alreadyVoted: Boolean(body.alreadyVoted) };
+    // Ya había votado: se recuerda la opción que contó el servidor (body.choice), no la que se tocó ahora. Una
+    // respuesta sin choice (función vieja) no guarda nada, así no se marca una opción que no fue la contada.
+    if (body.alreadyVoted && body.choice != null) rememberVote(vote.kind, target, body.choice);
+    return { ok: false, error: body.error || 'No se pudo registrar el voto.', alreadyVoted: Boolean(body.alreadyVoted), choice: body.choice ?? null };
   } catch {
     return { ok: false, error: 'Sin conexión: probá de nuevo.' };
   }

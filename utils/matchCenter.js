@@ -144,6 +144,8 @@ export function playerStatRows(summary) {
  * Vista de un partido (doc de live_matches).
  * @returns {null | { key, startedAt, status, competition, home, away, shootout, summary }}
  */
+const timeMs = value => (typeof value?.toMillis === 'function' ? value.toMillis() : value instanceof Date ? value.getTime() : null);
+
 export function parseMatchDoc(doc) {
   if (!doc?.matchKey) return null;
   const summary = parseSummary(doc);
@@ -152,7 +154,9 @@ export function parseMatchDoc(doc) {
     key: doc.matchKey,
     startedAt: matchStartDate(doc.matchKey),
     // Última subida del bridge (Timestamp de Firestore o Date): cierra la votación del MVP 15 min después del final.
-    updatedAtMs: typeof doc.updatedAt?.toMillis === 'function' ? doc.updatedAt.toMillis() : doc.updatedAt instanceof Date ? doc.updatedAt.getTime() : null,
+    updatedAtMs: timeMs(doc.updatedAt),
+    // Primera subida con el partido terminado (match-feed la escribe una vez): desde ahí cuentan los 15 min del MVP.
+    finishedAtMs: timeMs(doc.finishedAt),
     status: statusOf(summary, doc),
     competition: competitionLabel(summary?.match),
     home: { name: teamName(summary, doc, 'home'), score: score.home, draftTeamId: summary?.teams?.home?.draftTeamId ?? doc.homeDraftTeamId ?? null },

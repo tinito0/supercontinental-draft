@@ -10,7 +10,7 @@ import { SignJWT, importPKCS8 } from 'npm:jose@6.2.12';
 import { createFirestore } from '../_shared/firestoreRest.js';
 import { createServiceAccountTokenProvider } from '../_shared/googleAuth.js';
 import { buildLiveMatchDoc, isBridgeToken, MatchFeedError } from '../_shared/matchFeed.js';
-import { predictionClosure } from '../_shared/communityVote.js';
+import { finishedAtFor, predictionClosure } from '../_shared/communityVote.js';
 import { DEFAULT_SITE_URL, liveOverlayUpdate } from '../_shared/overlayControl.js';
 import { APP_ID } from '../_shared/marketConstants.js';
 
@@ -43,15 +43,20 @@ Deno.serve(async (req: Request) => {
     await firestore.runTransaction(async tx => {
       const overlayPath = `${base}/broadcast/overlay`;
       const overlay = (await tx.get(overlayPath))?.data;
+      const livePath = `${base}/live_matches/${doc.matchKey}`;
+      // finishedAt se escribe una sola vez, la primera vez que llega el partido terminado: la ventana del MVP cuenta
+      // desde ahí y no se corre con cada subida posterior del bridge.
+      const finished = finishedAtFor((await tx.get(livePath))?.data, doc.status);
+      if (finished.keep) doc.finishedAt = finished.keep;
       // Partido en vivo → se cierra la predicción del partido al aire (docs/COMMUNITY_PLATFORM.md).
       let closure = null;
       if (doc.status === 'live' && overlay?.matchId) {
         const prediction = await tx.get(`${base}/predictions/${overlay.matchId}`);
-        closure = predictionClosure({ liveStatus: doc.status, matchKey: doc.matchKey, overlay, prediction: prediction?.data });
+        closure = predictionClosure({ liveStatus: doc.status, matchKey: doc.matchKey, overlay, prediction: prediction?.data, liveDoc: doc });
       }
       // Escenas con datos en vivo y popup «Votá el MVP» en el entretiempo y al final (solo los campos que cambian).
       const overlayUpdate = liveOverlayUpdate({ doc, overlay, siteUrl, now: Date.now() });
-      tx.set(`${base}/live_matches/${doc.matchKey}`, doc, { serverTimestamps: ['updatedAt'] });
+      tx.set(livePath, doc, { serverTimestamps: finished.stamp ? ['updatedAt', 'finishedAt'] : ['updatedAt'] });
       if (closure) tx.set(`${base}/predictions/${closure.matchId}`, closure.data, { serverTimestamps: ['closedAt', 'updatedAt'] });
       if (overlayUpdate) tx.set(overlayPath, overlayUpdate.data, { mask: overlayUpdate.mask });
     });
