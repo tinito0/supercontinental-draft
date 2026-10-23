@@ -27,6 +27,35 @@ export function toParagraphs(text) {
     .filter(Boolean);
 }
 
+/**
+ * A club history split into chapters. A line starting with `## ` opens a chapter: `## 1913 | La fundación`
+ * (era | title; without `|` it is only the title). `##! Título` marks the closing chapter, shown highlighted.
+ * Text before the first heading becomes an untitled chapter, so histories without markers still work.
+ * @returns {Array<{ era: string, title: string, closing: boolean, paragraphs: string[] }>}
+ */
+export function toChapters(text) {
+  const chapters = [];
+  let current = null;
+  const flush = () => {
+    if (current && (current.title || current.era || current.lines.length)) {
+      chapters.push({ era: current.era, title: current.title, closing: current.closing, paragraphs: toParagraphs(current.lines.join('\n')) });
+    }
+  };
+  for (const line of String(text || '').replace(/\r\n?/g, '\n').split('\n')) {
+    const heading = /^##(!?)\s+(.*)$/.exec(line.trim());
+    if (heading) {
+      flush();
+      const [era, ...rest] = heading[2].includes('|') ? heading[2].split('|') : ['', heading[2]];
+      current = { era: era.trim(), title: rest.join('|').trim(), closing: heading[1] === '!', lines: [] };
+    } else {
+      current = current || { era: '', title: '', closing: false, lines: [] };
+      current.lines.push(line);
+    }
+  }
+  flush();
+  return chapters.filter(chapter => chapter.title || chapter.era || chapter.paragraphs.length);
+}
+
 const cleanText = (value, max) => String(value ?? '').replace(/\r\n?/g, '\n').trim().slice(0, max);
 
 /**

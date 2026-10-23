@@ -6,6 +6,7 @@ import {
   newChapter,
   normalizeSeasonRules,
   normalizeStory,
+  toChapters,
   toParagraphs,
 } from '../utils/leagueContent.js';
 
@@ -88,5 +89,22 @@ describe('ids', () => {
 
   it('gives each new chapter a distinct id', () => {
     expect(newChapter().id).not.toBe(newChapter().id);
+  });
+});
+
+describe('toChapters', () => {
+  it('splits on ## headings with era | title and a closing ##! chapter', () => {
+    const text = 'Intro\n\n## 1913 | La fundación\nNació.\n\nSe mudó.\n## Los años duros\nCayó.\n##! Hoy\nRenace.';
+    expect(toChapters(text)).toEqual([
+      { era: '', title: '', closing: false, paragraphs: ['Intro'] },
+      { era: '1913', title: 'La fundación', closing: false, paragraphs: ['Nació.', 'Se mudó.'] },
+      { era: '', title: 'Los años duros', closing: false, paragraphs: ['Cayó.'] },
+      { era: '', title: 'Hoy', closing: true, paragraphs: ['Renace.'] },
+    ]);
+  });
+
+  it('keeps a history without markers as one untitled chapter and returns nothing for empty text', () => {
+    expect(toChapters('Uno\n\nDos')).toHaveLength(1);
+    expect(toChapters('  ')).toEqual([]);
   });
 });

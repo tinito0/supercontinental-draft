@@ -164,7 +164,7 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
         ))}
       </RowList>
 
-      <Field label="Historia del club" help={`Cómo nació, su identidad, sus momentos en la liga. Separá los párrafos con una línea en blanco. ${form.body.length.toLocaleString('es-AR')} / ${MAX_STORY_LENGTH.toLocaleString('es-AR')} caracteres.`}>
+      <Field label="Historia del club" help={`Cómo nació, su identidad, sus momentos en la liga. Separá los párrafos con una línea en blanco. Para armar capítulos, empezá una línea con «## Época | Título» (ej.: ## 1913 | La fundación); «##! Título» marca el capítulo final, destacado. ${form.body.length.toLocaleString('es-AR')} / ${MAX_STORY_LENGTH.toLocaleString('es-AR')} caracteres.`}>
         <textarea className="input min-h-[16rem] py-2 leading-relaxed" value={form.body} maxLength={MAX_STORY_LENGTH}
           onChange={event => setForm(prev => ({ ...prev, body: event.target.value }))} />
       </Field>

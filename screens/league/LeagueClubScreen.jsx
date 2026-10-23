@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { BookOpen, Trophy, Users } from 'lucide-react';
 import TeamScreen from '../TeamScreen.jsx';
 import { Tabs } from '../../components/ui/Tabs.jsx';
-import { StoryText } from '../../components/league/StoryText.jsx';
+import { ClubStory } from '../../components/league/club/ClubStory.jsx';
 import { ClubHero } from '../../components/league/club/ClubHero.jsx';
 import { ClubFacts } from '../../components/league/club/ClubFacts.jsx';
 import { ClubHonours } from '../../components/league/club/ClubHonours.jsx';
@@ -47,7 +47,7 @@ export default function LeagueClubScreen() {
           <div role="tabpanel" aria-label="El club" className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <section aria-labelledby="club-history" className="space-y-4">
               <h2 id="club-history" className="font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink">Historia del club</h2>
-              <StoryText
+              <ClubStory
                 body={content?.body}
                 loading={loading}
                 error={error}
