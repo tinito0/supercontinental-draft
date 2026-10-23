@@ -1,5 +1,5 @@
 // Datos en vivo de las escenas Previa, Entretiempo y Final del overlay de OBS: utils/overlayLive.js.
-import { buildOverlayLive } from '../utils/overlayLive.js';
+import { buildOverlayLive, communityCardStatus } from '../utils/overlayLive.js';
 import { parseMatchDoc } from '../utils/matchCenter.js';
 
 const summary = {
@@ -53,5 +53,28 @@ describe('buildOverlayLive', () => {
     expect(buildOverlayLive({ polls: [{ ...plata, open: false }, oro] }).cup).toMatchObject({ title: oro.title, total: 6 });
     expect(buildOverlayLive({ polls: [{ ...plata, open: false }, oro] }).cup.options.map(o => o.id)).toEqual(['e', 'a', 'b', 'c']);
     expect(buildOverlayLive({ polls: [null, { ...oro, options: [] }] }).cup).toBeNull();
+  });
+});
+
+describe('communityCardStatus (botones de la capa de la comunidad)', () => {
+  it('says why each card will not show without votes', () => {
+    const empty = buildOverlayLive({});
+    expect(communityCardStatus(empty, {})).toEqual({
+      mvp: { ready: false, note: 'No hay partido del juego en vivo' },
+      prediction: { ready: false, note: 'No hay partido al aire' },
+      cup: { ready: false, note: 'No hay encuesta de copa cargada' },
+    });
+    expect(communityCardStatus(empty, { matchId: 'league-1', liveMatchKey: 'k' }).prediction.note).toBe('Todavía nadie votó la predicción');
+    expect(communityCardStatus(empty, { matchId: 'league-1', liveMatchKey: 'k' }).mvp.note).toBe('Todavía nadie votó al MVP');
+  });
+
+  it('marks a card ready as soon as it has a vote', () => {
+    const live = buildOverlayLive({
+      prediction: { votes: { home: 1 } },
+      polls: [{ title: 'Copa', open: true, options: [{ id: 'a', name: 'A' }], votes: { a: 2 } }],
+    });
+    const status = communityCardStatus(live, { matchId: 'league-1' });
+    expect(status.prediction).toEqual({ ready: true, note: '1 voto' });
+    expect(status.cup).toEqual({ ready: true, note: '2 votos · abierta' });
   });
 });

@@ -1,7 +1,12 @@
-import React, { memo, useState } from 'react';
-import { Copy, EyeOff, Keyboard, Users } from 'lucide-react';
+import React, { memo, useMemo, useState } from 'react';
+import { CircleAlert, CircleCheck, Copy, EyeOff, Keyboard, Users } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
 import { OBS_SCENES } from '../../utils/obsScenes.js';
+import { useLiveMatch, useMvpVotes, usePoll, usePrediction } from '../../hooks/useLeagueData.js';
+import { useNow } from '../../hooks/useNow.js';
+import { buildOverlayLive, communityCardStatus } from '../../utils/overlayLive.js';
+import { timedRemainingMs } from '../../utils/overlayPopup.js';
+import { CUP_POLLS } from '../../utils/communityView.js';
 
 // Capa de la comunidad sobre el overlay de OBS (tarjetas y popup automático) y la guía de Macro Deck. Esto se publica
 // al instante, como los botones de Macro Deck (función overlay-control): no pasa por el borrador del editor de
@@ -89,8 +94,26 @@ function MacroDeckGuide() {
  * Tarjetas de la comunidad y la llave «Automático». Publican al instante.
  * @param {{ overlay?: object, onPersist: (patch: object, message: string) => Promise<boolean> }} props
  */
+/** Los mismos datos que dibuja el overlay (BroadcastOverlayLive): para saber si cada tarjeta se va a ver. */
+function useCardStatus(overlay) {
+  const liveMatchKey = overlay?.liveMatchKey || null;
+  const { match } = useLiveMatch(liveMatchKey);
+  const { data: prediction } = usePrediction(overlay?.matchId || null);
+  const { data: mvpVotes } = useMvpVotes(liveMatchKey);
+  const { data: oroPoll } = usePoll(CUP_POLLS[0].id);
+  const { data: plataPoll } = usePoll(CUP_POLLS[1].id);
+  return useMemo(() => communityCardStatus(
+    buildOverlayLive({ match: liveMatchKey ? match : null, prediction, mvpVotes, polls: [oroPoll, plataPoll] }),
+    overlay,
+  ), [liveMatchKey, match, prediction, mvpVotes, oroPoll, plataPoll, overlay]);
+}
+
 export const CommunityLayerControl = memo(function CommunityLayerControl({ overlay, onPersist }) {
   const [busy, setBusy] = useState('');
+  const status = useCardStatus(overlay);
+  const now = useNow(1000);
+  const onAir = overlay?.card?.visible ? timedRemainingMs(overlay.card, now) : 0;
+  const onAirCard = onAir !== 0 ? COMMUNITY_CARDS.find(card => card.kind === overlay?.card?.kind) : null;
   const isAuto = overlay?.autoPopup !== false;
   const run = async (key, patch, message) => {
     setBusy(key);
@@ -117,22 +140,36 @@ export const CommunityLayerControl = memo(function CommunityLayerControl({ overl
         </label>
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-        {COMMUNITY_CARDS.map(card => (
-          <button key={card.kind} type="button" disabled={Boolean(busy)}
-            onClick={() => run(`card-${card.kind}`, { card: { visible: true, kind: card.kind, autoHideSec: CARD_SECONDS, shownAt: serverTimestamp() } }, `OBS: tarjeta ${card.label} (${CARD_SECONDS} s).`)}
-            className="min-h-14 rounded-xl border border-line/[0.16] bg-raised px-3 py-2 text-left text-ink-2 transition-[border-color,transform] duration-150 ease-out hover:border-line/40 active:scale-[0.97]">
-            <span className="block font-display text-base font-bold text-ink">{card.label}</span>
-            <span className="block text-xs text-ink-3">{busy === `card-${card.kind}` ? 'Mostrando…' : card.hint}</span>
-          </button>
-        ))}
+        {COMMUNITY_CARDS.map(card => {
+          // Sin votos la tarjeta no se dibuja en OBS (CommunityCard): el botón lo dice y no publica a ciegas.
+          const { ready, note } = status[card.kind];
+          const StatusIcon = ready ? CircleCheck : CircleAlert;
+          return (
+            <button key={card.kind} type="button" disabled={Boolean(busy) || !ready}
+              title={ready ? undefined : `No se va a ver en OBS: ${note.toLowerCase()}.`}
+              onClick={() => run(`card-${card.kind}`, { card: { visible: true, kind: card.kind, autoHideSec: CARD_SECONDS, shownAt: serverTimestamp() } }, `OBS: tarjeta ${card.label} (${CARD_SECONDS} s).`)}
+              className="min-h-14 rounded-xl border border-line/[0.16] bg-raised px-3 py-2 text-left text-ink-2 transition-[border-color,transform] duration-150 ease-out hover:border-line/40 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-100 disabled:hover:border-line/[0.16] disabled:active:scale-100">
+              <span className={`block font-display text-base font-bold ${ready ? 'text-ink' : 'text-ink-2'}`}>{card.label}</span>
+              <span className={`mt-0.5 flex items-center gap-1.5 text-sm ${ready ? 'text-success-soft' : 'text-warning-soft'}`}>
+                <StatusIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {busy === `card-${card.kind}` ? 'Mostrando…' : note}
+              </span>
+            </button>
+          );
+        })}
         <button type="button" disabled={Boolean(busy) || !overlay?.card?.visible}
           onClick={() => run('card-off', { card: { ...(overlay?.card || {}), visible: false } }, 'Tarjeta oculta.')}
           className="btn btn-ghost min-h-14">
           <EyeOff className="h-4 w-4" aria-hidden="true" /> Ocultar
         </button>
       </div>
-      <p className="text-xs text-ink-3">
-        Automático: el popup «Votá el MVP» sale en el entretiempo y al final, la predicción al arrancar y el MVP en vivo desde el minuto 70. Sin votos, la tarjeta no aparece.
+      <p className="text-sm text-ink" role="status">
+        {onAirCard
+          ? <>En OBS ahora: <strong>{onAirCard.label}</strong>{onAir ? <> · se oculta en <span className="num">{Math.ceil(onAir / 1000)}</span> s</> : null}</>
+          : 'Ninguna tarjeta en pantalla.'}
+      </p>
+      <p className="text-sm text-ink-2">
+        Automático: el popup «Votá el MVP» sale en el entretiempo y al final, la predicción al arrancar y el MVP en vivo desde el minuto 70. Una tarjeta sin votos no aparece: los votos llegan desde /en-vivo.
       </p>
     </div>
   );
