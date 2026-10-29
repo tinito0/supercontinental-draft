@@ -50,6 +50,6 @@
     { "source": "/team/:rest*", "destination": "/draft/team/:rest*", "statusCode": 301 }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/" }
   ]
 }
