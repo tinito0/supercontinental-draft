@@ -159,7 +159,7 @@ export const MatchCenter = memo(function MatchCenter({
                         </span>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
                               isCompleted
                                 ? 'bg-success/15 text-success-soft border border-success/30'
                                 : match.status === 'postponed'
@@ -192,7 +192,7 @@ export const MatchCenter = memo(function MatchCenter({
                               alt=""
                               width={24}
                               height={24}
-                              className="w-6 h-6 object-contain shrink-0 drop-shadow"
+                              className="w-6 h-6 object-contain shrink-0"
                               onError={e => { e.currentTarget.src = DEFAULT_LOGO; }}
                             />
                             {isEditing ? (
@@ -239,7 +239,7 @@ export const MatchCenter = memo(function MatchCenter({
                               alt=""
                               width={24}
                               height={24}
-                              className="w-6 h-6 object-contain shrink-0 drop-shadow"
+                              className="w-6 h-6 object-contain shrink-0"
                               onError={e => { e.currentTarget.src = DEFAULT_LOGO; }}
                             />
                             {isEditing ? (
@@ -314,7 +314,7 @@ export const MatchCenter = memo(function MatchCenter({
                             </span>
                           </div>
                         ) : (
-                          <span className="italic text-[10px] text-ink-3">Sin goles registrados</span>
+                          <span className="italic text-[11px] text-ink-3">Sin goles registrados</span>
                         )}
                         <div className="flex items-center gap-2 shrink-0">
                           {match.mvp && (
@@ -344,7 +344,7 @@ export const MatchCenter = memo(function MatchCenter({
                       {isEditing && (
                         <div className="mt-3 pt-3 border-t border-line/[0.12] grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">Fecha</label>
+                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Fecha</label>
                             <input
                               type="date"
                               value={match.date || ''}
@@ -353,7 +353,7 @@ export const MatchCenter = memo(function MatchCenter({
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">Hora</label>
+                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Hora</label>
                             <input
                               type="time"
                               value={match.time || ''}
@@ -362,7 +362,7 @@ export const MatchCenter = memo(function MatchCenter({
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">Jornada</label>
+                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Jornada</label>
                             <input
                               type="text"
                               value={match.round || ''}
@@ -372,7 +372,7 @@ export const MatchCenter = memo(function MatchCenter({
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">Estado</label>
+                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Estado</label>
                             <select
                               value={match.status || 'scheduled'}
                               onChange={event => onUpdate(match.id, 'status', event.target.value)}
@@ -384,7 +384,7 @@ export const MatchCenter = memo(function MatchCenter({
                             </select>
                           </div>
                           <div>
-                            <label className="text-[10px] text-ink-3 font-bold uppercase block mb-1">MVP</label>
+                            <label className="text-[11px] text-ink-3 font-bold block mb-1">MVP</label>
                             <input
                               value={match.mvp || ''}
                               onChange={event => onUpdate(match.id, 'mvp', event.target.value)}
@@ -394,7 +394,7 @@ export const MatchCenter = memo(function MatchCenter({
                           </div>
                           {EDIT_FIELDS.map(({ field, label, placeholder }) => (
                             <label key={field} className="block">
-                              <span className="text-[10px] text-ink-3 font-bold uppercase block mb-1">{label}</span>
+                              <span className="text-[11px] text-ink-3 font-bold uppercase block mb-1">{label}</span>
                               <input
                                 value={match[field] || ''}
                                 onChange={event => onUpdate(match.id, field, event.target.value)}
@@ -403,7 +403,7 @@ export const MatchCenter = memo(function MatchCenter({
                               />
                             </label>
                           ))}
-                          <p className="col-span-2 text-[10px] text-ink-3">{SCORERS_HINT}</p>
+                          <p className="col-span-2 text-[11px] text-ink-3">{SCORERS_HINT}</p>
                         </div>
                       )}
                     </article>

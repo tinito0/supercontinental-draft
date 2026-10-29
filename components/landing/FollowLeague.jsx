@@ -43,7 +43,7 @@ export function FollowLeague() {
             height="540"
             loading="lazy"
             decoding="async"
-            className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
+            className="aspect-video w-full object-cover transition-transform duration-move group-hover:scale-[1.02] motion-reduce:transition-none"
           />
         </div>
         <div className="flex flex-1 items-center justify-between gap-4 p-4 sm:p-5">

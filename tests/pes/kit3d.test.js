@@ -7,7 +7,7 @@ import { parseKitConfig, getKitValue } from '../../pes/kits/kitConfig.js';
 import { SYNTHETIC_KIT_CONFIG } from './fixtures.js';
 import { readerFromFiles } from '../../components/pes/kit3d/gameFolder.js';
 
-const PACK = path.resolve(__dirname, '../../public/pes/kitpack.bin');
+const PACK = path.resolve(__dirname, '../../public/kit3d/kitpack.bin');
 
 describe('kit models for the 3D preview', () => {
   let pack;

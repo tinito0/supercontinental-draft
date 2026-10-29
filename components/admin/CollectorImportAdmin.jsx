@@ -6,6 +6,7 @@ import { APP_ID } from '../../utils/constants.js';
 import { useLiveMatches, usePesTeamMap } from '../../hooks/useLeagueData.js';
 import { applyCollectorImport, gameTeamIds, planCollectorImport } from '../../utils/collectorImport.js';
 import { Alert } from '../ui/Alert.jsx';
+import { confirmAction } from '../ui/ConfirmDialog.jsx';
 
 // Partidos del juego → torneo (docs/TOURNAMENT_DATA_FLOW_AUDIT.md, punto 4): lista los partidos terminados que subió
 // el bridge, propone a qué partido de liga o cruce de copa van (utils/collectorImport.js) y, con el OK del admin, los
@@ -86,7 +87,14 @@ export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournam
   };
 
   const importMatch = async (match, plan) => {
-    if (!window.confirm(`¿Importar ${match.home.name} ${match.home.score}-${match.away.score} ${match.away.name} a ${plan.label}?`)) return;
+    const isConfirmed = await confirmAction({
+      title: '¿Importar el resultado?',
+      details: [`${match.home.name} ${match.home.score}-${match.away.score} ${match.away.name}`],
+      message: `Se carga en ${plan.label} del torneo oficial.`,
+      confirmLabel: 'Importar',
+      tone: 'primary',
+    });
+    if (!isConfirmed) return;
     setBusyKey(match.key);
     try {
       // Mismo guardado que el gestor del torneo (services/tournamentService.js): fusiona con lo último guardado,
@@ -108,9 +116,9 @@ export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournam
   return (
     <section className="panel p-5 space-y-4" aria-labelledby="collector-import-title">
       <div className="flex flex-col gap-1">
-        <h3 id="collector-import-title" className="section-title flex items-center gap-2.5">
+        <h2 id="collector-import-title" className="section-title flex items-center gap-2.5">
           <Gamepad2 className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Partidos del juego
-        </h3>
+        </h2>
         <p className="text-xs text-ink-3">Los partidos que registró el colector. Importalos al fixture o a la copa: se revisa antes de guardar y nunca pisa un resultado cargado.</p>
       </div>
       {error && <Alert tone="danger">{error}</Alert>}

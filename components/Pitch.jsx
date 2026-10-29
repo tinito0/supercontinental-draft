@@ -151,7 +151,7 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
         <div className="flex flex-col items-center">
           <div className={`rounded-full border-2 border-dashed flex items-center justify-center
             transition-colors
-            ${holdingPlayer ? 'animate-pulse border-emerald-400/80 bg-success/20' : 'border-white/30 bg-white/5'}
+            ${holdingPlayer ? 'border-emerald-400/80 bg-success/20' : 'border-white/30 bg-white/5'}
             ${!isReadOnly ? 'group-hover:bg-white/15 group-hover:border-white/60' : ''}`}
             style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
           >

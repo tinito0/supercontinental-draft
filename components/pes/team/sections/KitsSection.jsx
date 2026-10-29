@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shirt, FolderX } from 'lucide-react';
-import { Card, Pill } from '../../PesUi.jsx';
+import { Card, Pill, ModifiedDot } from '../../PesUi.jsx';
 import { Alert } from '../../../ui/Alert.jsx';
 import { EmptyState } from '../../../ui/EmptyState.jsx';
 import { KIT_EDITABLE_KEYS, COLOR_KEYS, TEXTURE_KEYS, kitPreviewModel } from '../../../../pes/kits/kitConfig.js';
@@ -23,23 +23,23 @@ export function kitLabel(kit, category) {
 
 /** Colour schematic built only from config.txt values (not a texture render). */
 function KitSchematic({ model }) {
-  const c = v => (/^#[0-9A-F]{6}$/i.test(v || '') ? v : '#334155');
+  const c = v => (/^#[0-9A-F]{6}$/i.test(v || '') ? v : '#4a5468');
   return (
     <figure className="flex flex-col items-center gap-2">
       <svg viewBox="0 0 120 150" className="w-36 h-44" role="img" aria-label="Esquema de colores del kit">
-        <path d="M35 10 L50 4 Q60 12 70 4 L85 10 L110 30 L98 48 L88 40 L88 92 L32 92 L32 40 L22 48 L10 30 Z" fill={c(model.shirtColor1)} stroke="#0f172a" strokeWidth="1.5" />
+        <path d="M35 10 L50 4 Q60 12 70 4 L85 10 L110 30 L98 48 L88 40 L88 92 L32 92 L32 40 L22 48 L10 30 Z" fill={c(model.shirtColor1)} stroke="rgb(var(--c-canvas))" strokeWidth="1.5" />
         <path d="M50 4 Q60 12 70 4 L72 14 Q60 22 48 14 Z" fill={c(model.shirtColor2)} />
         <rect x="32" y="92" width="56" height="8" fill={c(model.undershirtColor)} opacity="0.85" />
-        <path d="M32 100 L88 100 L92 124 L64 124 L60 112 L56 124 L28 124 Z" fill={c(model.shortsColor)} stroke="#0f172a" strokeWidth="1.5" />
+        <path d="M32 100 L88 100 L92 124 L64 124 L60 112 L56 124 L28 124 Z" fill={c(model.shortsColor)} stroke="rgb(var(--c-canvas))" strokeWidth="1.5" />
         <rect x="34" y="127" width="14" height="20" rx="2" fill={c(model.socksColor)} />
         <rect x="72" y="127" width="14" height="20" rx="2" fill={c(model.socksColor)} />
       </svg>
-      <figcaption className="text-[10px] text-ink-3 text-center max-w-[12rem]">
+      <figcaption className="text-xs text-ink-3 text-center max-w-[12rem]">
         Esquema con los colores del config.txt. No es la textura del kit.
       </figcaption>
-      <div className="flex gap-2 text-[10px] text-ink-3">
-        <span className="flex items-center gap-1"><i className="w-3 h-3 rounded-sm inline-block" style={{ background: c(model.menuColor1) }} />UniColor 1</span>
-        <span className="flex items-center gap-1"><i className="w-3 h-3 rounded-sm inline-block" style={{ background: c(model.menuColor2) }} />UniColor 2</span>
+      <div className="flex gap-3 text-xs text-ink-3">
+        <span className="flex items-center gap-1"><i className="w-3 h-3 rounded-sm inline-block border border-line/30" style={{ background: c(model.menuColor1) }} />UniColor 1</span>
+        <span className="flex items-center gap-1"><i className="w-3 h-3 rounded-sm inline-block border border-line/30" style={{ background: c(model.menuColor2) }} />UniColor 2</span>
       </div>
     </figure>
   );
@@ -62,20 +62,22 @@ function KitValueInput({ line, readOnly, modified, onCommit }) {
     el.addEventListener('change', onNativeChange);
     return () => el.removeEventListener('change', onNativeChange);
   }, [line.key]);
-  const base = 'w-full input min-h-9';
+  const base = `w-full input ${modified ? 'border-accent/50' : ''}`;
   let control;
   if (COLOR_KEYS.includes(line.key)) {
     control = (
-      <div className="flex gap-1">
-        <input ref={colourRef} type="color" value={/^#[0-9A-F]{6}$/i.test(draft) ? draft : '#000000'} disabled={!editable} onChange={e => setDraft(e.target.value.toUpperCase())} aria-label={`${line.key}: color`} className="w-8 h-7 bg-transparent" />
-        <input value={draft} disabled={!editable} onChange={e => setDraft(e.target.value)} onBlur={() => commit(draft)} className={base} />
+      <div className="flex gap-2">
+        <input ref={colourRef} type="color" value={/^#[0-9A-F]{6}$/i.test(draft) ? draft : '#000000'} disabled={!editable} onChange={e => setDraft(e.target.value.toUpperCase())} aria-label={`${line.key}: color`}
+          className="w-11 h-10 shrink-0 rounded-lg border border-line/[0.16] bg-raised p-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60" />
+        <input value={draft} disabled={!editable} onChange={e => setDraft(e.target.value)} onBlur={() => commit(draft)}
+          onKeyDown={e => { if (e.key === 'Enter') commit(draft); if (e.key === 'Escape') setDraft(line.value); }} aria-label={`${line.key}: valor`} className={`${base} num uppercase`} />
       </div>
     );
   } else if (line.constraint?.type === 'enum') {
     control = (
-      <select value={draft} disabled={!editable} onChange={e => { setDraft(e.target.value); commit(e.target.value); }} className="w-full select min-h-9">
+      <select value={draft} disabled={!editable} onChange={e => { setDraft(e.target.value); commit(e.target.value); }} className={`select ${modified ? 'border-accent/50' : ''}`}>
         {!line.constraint.values.map(String).includes(draft) && <option value={draft}>{draft} (fuera de lista)</option>}
-        {line.constraint.values.map(v => <option key={v} value={String(v)}>{v}{line.constraint.labels[v] ? ` — ${line.constraint.labels[v]}` : ''}</option>)}
+        {line.constraint.values.map(v => <option key={v} value={String(v)}>{v}{line.constraint.labels[v] ? `: ${line.constraint.labels[v]}` : ''}</option>)}
       </select>
     );
   } else {
@@ -83,11 +85,16 @@ function KitValueInput({ line, readOnly, modified, onCommit }) {
     // A cleared number field goes back to its value instead of committing 0.
     const commitNumberOrText = () => (isNum && String(draft).trim() === '' ? setDraft(line.value) : commit(draft));
     control = <input type={isNum ? 'number' : 'text'} min={line.constraint?.min} max={line.constraint?.max} value={draft} disabled={!editable}
-      onChange={e => setDraft(e.target.value)} onBlur={commitNumberOrText} onKeyDown={e => e.key === 'Enter' && commitNumberOrText()} className={base} />;
+      onChange={e => setDraft(e.target.value)} onBlur={commitNumberOrText}
+      onKeyDown={e => { if (e.key === 'Enter') commitNumberOrText(); if (e.key === 'Escape') setDraft(line.value); }} className={`${base} ${isNum ? 'num' : ''}`} />;
   }
   return (
-    <label className={`flex flex-col gap-1 text-[11px] ${modified ? 'text-accent-soft' : 'text-ink-3'}`}>
-      <span title={line.comment}>{line.key}{line.constraint?.type === 'range' && <span className="text-ink-3"> ({line.constraint.min}–{line.constraint.max})</span>}{modified && ' •'}</span>
+    <label className={`flex flex-col gap-1 text-xs ${modified ? 'text-accent-soft' : 'text-ink-2'}`}>
+      <span className="flex items-center gap-1.5 min-w-0" title={line.comment}>
+        <span className="truncate font-mono">{line.key}</span>
+        {modified && <ModifiedDot />}
+        {line.constraint?.type === 'range' && <span className="num ml-auto shrink-0 text-ink-3">{line.constraint.min}–{line.constraint.max}</span>}
+      </span>
       {control}
     </label>
   );

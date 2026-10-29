@@ -5,11 +5,11 @@ import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { MatchStatus, TeamMark } from '../../components/league/match/MatchParts.jsx';
-import { useAllMvpVotes, useBroadcastOverlay, useLeagueTeams, useLiveMatches, useMvpVotes, SEASON_MATCH_LIMIT, usePoll, usePrediction } from '../../hooks/useLeagueData.js';
+import { useAllMvpVotes, useBroadcastOverlay, useLeagueTeams, useLiveMatches, useMvpVotes, SEASON_MATCH_LIMIT, usePoll, usePrediction, useTournament } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { rankPlayerOfTournament } from '../../utils/playerOfTournament.js';
 import { getMyVote, sendVote } from '../../services/communityService.js';
-import { CUP_POLLS, mvpOptions, mvpRanking, pickMvpMatch, pollResults, predictionOutcome, predictionShares } from '../../utils/communityView.js';
+import { CUP_POLLS, fixtureIsPredictable, mvpOptions, mvpRanking, pickMvpMatch, pollResults, predictionOutcome, predictionShares } from '../../utils/communityView.js';
 
 /* /en-vivo, la página del QR del stream: predicción del partido al aire, voto del MVP del partido en juego y la
    encuesta «¿quién gana la copa?».
@@ -17,7 +17,7 @@ import { CUP_POLLS, mvpOptions, mvpRanking, pickMvpMatch, pollResults, predictio
 
 
 // Botón de una opción de voto: se hunde apenas al tocarlo (feedback inmediato en el celular).
-const CHOICE_BUTTON = 'flex items-center justify-center rounded-xl border border-line/[0.16] bg-raised transition-[border-color,background-color,transform] duration-150 ease-out hover:border-accent/60 hover:bg-overlay active:scale-[0.97] disabled:opacity-60';
+const CHOICE_BUTTON = 'flex items-center justify-center rounded-xl border border-line/[0.16] bg-raised transition-[border-color,background-color,transform] duration-fast ease-out hover:border-accent/60 hover:bg-overlay active:scale-[0.97] disabled:opacity-60';
 
 function useNow(intervalMs = 30_000) {
   const [now, setNow] = useState(() => Date.now());
@@ -46,8 +46,8 @@ function ShareBar({ label, pct, isMine, isLeader }) {
   );
 }
 
-function PredictionPanel({ overlay, teamsById, matches }) {
-  const matchId = overlay?.matchId || null;
+/** matchId: el partido al aire, solo si está en el torneo con los dos clubes (si no, no hay nada que predecir). */
+function PredictionPanel({ matchId, overlay, teamsById, matches }) {
   const { data: prediction, loading: predictionLoading } = usePrediction(matchId);
   // round: cuántas veces el admin reinició esta votación; el voto recordado de otra ronda no cuenta. null mientras carga:
   // se muestra lo recordado y no se vota hasta saber la ronda.
@@ -123,7 +123,8 @@ function CupPollPanel({ pollId, label }) {
   const [state, setState] = useState({ busy: false, error: '' });
   const results = useMemo(() => pollResults(poll), [poll]);
   useEffect(() => { setMyVote(getMyVote('cup', pollId, round)); }, [pollId, round]);
-  if (!poll?.options?.length) return null;
+  // Cerrada y sin votos no tiene nada que contar (p. ej. la de la temporada anterior antes del sorteo).
+  if (!poll?.options?.length || (!poll.open && !results?.total)) return null;
 
   const vote = async choice => {
     setState({ busy: true, error: '' });
@@ -258,7 +259,7 @@ function MvpPanel({ matches }) {
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {options[side].map(player => (
                 <button key={player.id} type="button" aria-pressed={selected === player.id} onClick={() => setSelected(player.id)}
-                  className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-[border-color,background-color,transform] duration-150 ease-out active:scale-[0.98] ${selected === player.id ? 'border-accent bg-accent-deep/60 text-ink' : 'border-line/[0.16] bg-raised text-ink hover:border-line/30'}`}>
+                  className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-[border-color,background-color,transform] duration-fast ease-out active:scale-[0.98] ${selected === player.id ? 'border-accent bg-accent-deep/60 text-ink' : 'border-line/[0.16] bg-raised text-ink hover:border-line/30'}`}>
                   <img src={`/fotos_jugadores/${player.id}.webp`} alt="" width={28} height={28} loading="lazy"
                     className="h-7 w-7 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
                   <span className="min-w-0 flex-1 truncate">{player.name}</span>
@@ -303,6 +304,9 @@ export default function LeagueLiveScreen() {
   // Toda la temporada, no los últimos 40: el Jugador del Torneo suma los MVP de todos los partidos terminados.
   const { matches, error } = useLiveMatches(SEASON_MATCH_LIMIT);
   const { teamsById } = useLeagueTeams();
+  const { tournament, loading: tournamentLoading } = useTournament();
+  // El overlay puede seguir apuntando a un partido de otra temporada o a un cruce sin equipos: eso no se vota.
+  const predictionMatchId = !tournamentLoading && overlay?.matchId && fixtureIsPredictable(tournament, overlay.matchId) ? overlay.matchId : null;
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 md:py-16">
@@ -313,7 +317,7 @@ export default function LeagueLiveScreen() {
       </Reveal>
       {error && <Alert tone="danger" title={error} className="mb-4">Recargá la página para intentar de nuevo.</Alert>}
       <div className="space-y-5">
-        <PredictionPanel overlay={overlay} teamsById={teamsById} matches={matches} />
+        <PredictionPanel matchId={predictionMatchId} overlay={overlay} teamsById={teamsById} matches={matches} />
         <MvpPanel matches={matches} />
         {CUP_POLLS.map(poll => <CupPollPanel key={poll.id} pollId={poll.id} label={poll.label} />)}
         <PlayerOfTournamentPanel matches={matches} />

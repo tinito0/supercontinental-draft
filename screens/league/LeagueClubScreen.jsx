@@ -1,14 +1,17 @@
 import React, { useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { BookOpen, Trophy, Users } from 'lucide-react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { BookOpen, Shield, Trophy, Users } from 'lucide-react';
 import TeamScreen from '../TeamScreen.jsx';
 import { Tabs } from '../../components/ui/Tabs.jsx';
+import { EmptyState } from '../../components/ui/EmptyState.jsx';
+import { ShareClubButton } from '../../components/league/club/ShareClubButton.jsx';
 import { ClubStory } from '../../components/league/club/ClubStory.jsx';
 import { ClubHero } from '../../components/league/club/ClubHero.jsx';
 import { ClubFacts } from '../../components/league/club/ClubFacts.jsx';
 import { ClubHonours } from '../../components/league/club/ClubHonours.jsx';
 import { ClubSeasonCard, clubStanding } from '../../components/league/club/ClubSeasonCard.jsx';
-import { useLeagueContent, useLeagueTeams, useTournament } from '../../hooks/useLeagueData.js';
+import { ClubFranchise } from '../../components/league/club/ClubFranchise.jsx';
+import { useFranchisePlayers, useLeagueContent, useLeagueTeams, useTournament } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { clubChapters, clubStoryDocId, hasClubProfile } from '../../utils/leagueContent.js';
 
@@ -27,8 +30,9 @@ export default function LeagueClubScreen() {
   const [params, setParams] = useSearchParams();
   const tab = TABS.some(item => item.id === params.get('tab')) ? params.get('tab') : 'club';
   const { content, loading, error } = useLeagueContent(userId ? clubStoryDocId(userId) : null);
-  const { teamsById, loading: teamsLoading } = useLeagueTeams();
+  const { teamsById, loading: teamsLoading, error: teamsError } = useLeagueTeams();
   const { tournament } = useTournament();
+  const { byTeamId: franchiseByTeam, loading: franchiseLoading } = useFranchisePlayers();
   const team = teamsById?.[userId] || null;
   const profile = content?.profile || null;
   const chapters = useMemo(() => clubChapters(content), [content]);
@@ -37,9 +41,25 @@ export default function LeagueClubScreen() {
 
   const setTab = next => setParams(next === 'club' ? {} : { tab: next }, { replace: true });
 
+  if (!teamsLoading && !teamsError && !team) {
+    return (
+      <section className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+        <h1 className="sr-only">Club no encontrado</h1>
+        <EmptyState icon={Shield} title="Este club no existe" description="Puede que el link esté mal o que el club ya no juegue en la liga.">
+          <Link to="/equipos" className="btn btn-primary btn-lg mt-5">Ver los clubes</Link>
+        </EmptyState>
+      </section>
+    );
+  }
+
   return (
     <article>
-      <ClubHero team={team} profile={profile} loading={teamsLoading || loading} />
+      <ClubHero
+        team={team}
+        profile={profile}
+        loading={teamsLoading || loading}
+        action={team && <ShareClubButton teamId={userId} teamName={team.teamName} />}
+      />
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 sm:py-10">
         {hasClubProfile(profile) && <ClubFacts profile={profile} />}
         <Tabs tabs={TABS} value={tab} onChange={setTab} label="Secciones del club" />
@@ -57,6 +77,7 @@ export default function LeagueClubScreen() {
               />
             </section>
             <div className="space-y-4">
+              <ClubFranchise player={franchiseByTeam[userId] || null} loading={franchiseLoading} />
               <ClubSeasonCard standing={standing} />
             </div>
           </div>

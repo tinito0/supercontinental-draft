@@ -82,7 +82,7 @@ describe('league_editors (editor de la web pública)', () => {
     const db = asEditor();
     const profile = {
       nickname: 'El Santo', stadium: 'La Cabeza', capacity: '40.000', coach: 'R. Gómez', president: 'M. Díaz', manager: 'Santi',
-      stadiumPhotoUrl: 'https://example.com/estadio.jpg',
+      stadiumPhotoUrl: 'https://example.com/estadio.jpg', stadiumPhotoFrame: { x: 30, y: 72.5, zoom: 1.4 },
       honours: [{ id: 'h1', scope: 'nacional', name: 'Liga', count: 3, years: '2019, 2021, 2023' }],
       seasons: [{ id: 's1', season: '2025', competition: 'Supercontinental', result: 'Campeón' }],
     };
@@ -94,6 +94,9 @@ describe('league_editors (editor de la web pública)', () => {
     const db = asEditor();
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { stadiumPhotoUrl: 'http://example.com/a.jpg' } })));
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { stadiumPhotoUrl: 'javascript:alert(1)' } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { stadiumPhotoFrame: { x: 50, y: 50, zoom: 5 } } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { stadiumPhotoFrame: { x: '50', y: 50, zoom: 1 } } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { stadiumPhotoFrame: { x: 50, y: 50, zoom: 1, extra: 1 } } })));
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { budget: 999 } })));
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { coach: 'x'.repeat(81) } })));
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { honours: Array.from({ length: 31 }, (_, i) => ({ id: String(i) })) } })));

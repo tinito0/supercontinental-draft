@@ -122,8 +122,29 @@ El camino es Macro Deck → `pes-collector/bridge/scl-obs.cmd` → `obs.mjs` →
 - **Necesita:** Node en el PATH y `%APPDATA%\scl-bridge\config.json`, creado por `setup.mjs`.
 - **Si falla:** el resultado queda en `_bridge\obs.log`.
 - **Mismas acciones desde la web:** Admin → Overlay, en «Escena en OBS» y en «Popup para la comunidad».
-- **Escenas de OBS** (cámaras, fuentes): se siguen cambiando con el plugin OBS WebSocket de Macro Deck. La fuente de
-  navegador del overlay va sin `?scene=` para que siga la escena elegida con estos botones.
+- **Escenas de OBS** (cámaras, fuentes): se siguen cambiando con el plugin OBS WebSocket de Macro Deck.
+
+## Fuentes de navegador en OBS
+
+Una fuente por escena de OBS, 1920×1080 (Admin → Torneo y transmisión → Conectar OBS las lista para copiar).
+`utils/obsScenes.js` `sceneForSource` decide qué dibuja cada una:
+
+- **Escena del juego:** `/draft/overlay?follow=partido`. Sigue la escena al aire solo si es de partido (En partido,
+  Previa, Entretiempo, Final); si al aire hay una del torneo queda limpia. Antes la escena del juego usaba
+  `?scene=live`, que es fija: con ella Previa, Entretiempo y Final nunca salían, aunque el admin las mandara al aire.
+- **Tabla y copas:** fijas en su propia escena de OBS (`?scene=tabla`, `bracket`, `repechaje`, …). Los enlaces viejos
+  `/torneo?mode=obs&view=…` siguen andando.
+- **Una sola fuente para todo:** `/draft/overlay`, sin parámetros.
+
+Qué pasa si algo falla en la fuente (`screens/ObsScreen.jsx`, `components/broadcast/OverlayErrorBoundary.jsx`):
+
+- **Una escena o la capa de la comunidad tira un error:** esa capa queda transparente y se reintenta a los 5 s o
+  cuando llegan datos nuevos. Antes salía al aire la página opaca de error de la app.
+- **Popup y tarjetas que aparecen con la fuente abierta:** se cuentan desde que llegan, con el reloj de esa PC. El
+  `shownAt` del servidor solo cuenta al abrir o refrescar la fuente. La PC del stream no sincroniza la hora con
+  Windows: un reloj corrido hacía que el popup se fuera al instante o no se fuera.
+- **Verificado con Chrome headless a 1920×1080, no dentro de OBS.** El OBS instalado (32.2.2) trae CEF/Chromium 127, y
+  el CSS del overlay no usa nada más nuevo que eso.
 
 ## Registro de partidos (`/partidos`)
 

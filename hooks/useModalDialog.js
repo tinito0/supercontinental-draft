@@ -32,7 +32,11 @@ export function useModalDialog(dialogRef, isOpen, onClose) {
     openDialogs.push(dialogToken);
     const isTopDialog = () => openDialogs[openDialogs.length - 1] === dialogToken;
     const previouslyFocused = document.activeElement;
-    const getFocusableElements = () => dialogRef.current?.querySelectorAll(FOCUSABLE) || [];
+    // Only what Tab can reach: a tab list keeps its unselected tabs at tabindex -1, and hidden controls (a
+    // sm:hidden action bar) take no focus. Counting them, the real last control never matched and Tab left the dialog.
+    const isTabbable = el => !(el.tabIndex < 0) && !el.closest?.('[inert]')
+      && (typeof el.getClientRects !== 'function' || el.getClientRects().length > 0);
+    const getFocusableElements = () => Array.from(dialogRef.current?.querySelectorAll(FOCUSABLE) || []).filter(isTabbable);
 
     const handleKeyDown = (e) => {
       if (!isTopDialog()) return;

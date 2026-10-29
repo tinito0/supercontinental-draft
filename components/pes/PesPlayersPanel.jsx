@@ -78,11 +78,16 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
           <EmptyState icon={Users} title="Elegí un jugador"
             description={canEdit ? 'Buscalo por nombre o id. Los cambios quedan como borrador hasta que los guardes en «Cambios y exportación».' : 'Tu rol puede ver los jugadores pero no editarlos.'} />
         )}
-        {inBin && (
-          <BinPlayer table={table} playerId={playerId} fieldOf={fieldOf} canEdit={canEdit} modified={modified} onApply={onApply}
-            appPlayer={appById.get(playerId)} countries={countries} countryName={countryName} />
+        {playerId != null && (
+          // Keyed by player: the profile fades in, so picking another player reads as a new record, not an edit.
+          <div key={playerId} className="animate-in fade-in space-y-4 lg:space-y-6">
+            {inBin && (
+              <BinPlayer table={table} playerId={playerId} fieldOf={fieldOf} canEdit={canEdit} modified={modified} onApply={onApply}
+                appPlayer={appById.get(playerId)} countries={countries} countryName={countryName} />
+            )}
+            {inEdit && <EditPlayer ws={ws} playerId={playerId} canEdit={canEdit} modified={modified} onApply={onApply} bare={!inBin} />}
+          </div>
         )}
-        {inEdit && <EditPlayer ws={ws} playerId={playerId} canEdit={canEdit} modified={modified} onApply={onApply} bare={!inBin} />}
       </div>
     </div>
   );

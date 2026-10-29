@@ -199,7 +199,7 @@ export const LeagueContentAdminSection = memo(function LeagueContentAdminSection
   return (
     <section className="panel space-y-5 p-5" aria-labelledby="league-content-title">
       <div>
-        <h3 id="league-content-title" className="section-title">Web pública de la liga</h3>
+        <h2 id="league-content-title" className="section-title">Web pública de la liga</h2>
         <p className="mt-1 text-xs text-ink-3">
           Lo que se ve en la portada del sitio. Cada texto se publica al guardarlo; si queda vacío, la web muestra que todavía no se cargó.
         </p>

@@ -37,17 +37,39 @@ const CUP_PATHS = {
  * Poner al aire un partido ya jugado (p. ej. para la escena Final) no debe abrir una predicción.
  */
 export function fixtureIsFinished(tournament, matchId) {
-  if (!tournament || !matchId) return false;
+  const fixture = findFixture(tournament, matchId);
+  return Boolean(fixture) && isScoreValue(fixture.homeScore) && isScoreValue(fixture.awayScore) && fixture.completed !== false;
+}
+
+const FIXTURE_MATCH_ID = /^(league-.+|(oro|plata)-[a-z0-9]+-\d+)$/;
+
+/**
+ * El partido del fixture con ese id (league-{id} u oro|plata-{ronda}-{n}), o null si no está en el torneo.
+ * @returns {{ home: string, away: string, homeScore: unknown, awayScore: unknown, completed?: boolean } | null}
+ */
+export function findFixture(tournament, matchId) {
+  if (!tournament || !matchId) return null;
   if (matchId.startsWith('league-')) {
     const match = (tournament.matches || []).find(item => item?.id === matchId.slice('league-'.length));
-    return Boolean(match) && match.status === 'completed' && isScoreValue(match.homeScore) && isScoreValue(match.awayScore);
+    return match ? { home: String(match.homeTeam || '').trim(), away: String(match.awayTeam || '').trim(), homeScore: match.homeScore, awayScore: match.awayScore, completed: match.status === 'completed' } : null;
   }
   const found = /^(oro|plata)-([a-z0-9]+)-(\d+)$/.exec(matchId);
   const path = found && CUP_PATHS[`${found[1]}-${found[2]}`];
-  if (!path) return false;
+  if (!path) return null;
   const node = path.reduce((acc, key) => (acc == null ? undefined : acc[key]), tournament.bracket);
   const tie = Array.isArray(node) ? node[Number(found[3])] : node;
-  return Boolean(tie) && isScoreValue(tie.scoreA) && isScoreValue(tie.scoreB);
+  return tie ? { home: String(tie.teamA || '').trim(), away: String(tie.teamB || '').trim(), homeScore: tie.scoreA, awayScore: tie.scoreB } : null;
+}
+
+/**
+ * Si se puede predecir ese partido según el torneo: un id del fixture tiene que estar en el torneo con los dos clubes
+ * definidos. Sin el torneo, o con un id que no es del fixture, no se puede saber y no se bloquea.
+ * El overlay puede quedar apuntando a un partido de otra temporada o a un cruce todavía sin equipos («Ganador 2°…»).
+ */
+export function fixtureIsPredictable(tournament, matchId) {
+  if (!tournament || !FIXTURE_MATCH_ID.test(String(matchId || ''))) return true;
+  const fixture = findFixture(tournament, matchId);
+  return Boolean(fixture?.home && fixture?.away);
 }
 
 const fail = (message, status) => { throw new CommunityVoteError(message, status); };
@@ -88,6 +110,7 @@ export function predictionWindow({ overlay, prediction, matchId, tournament = nu
   if (!overlay || overlay.matchId !== matchId) return { open: false, reason: 'Ese partido no está por jugarse ahora.' };
   if (prediction?.closedAt) return { open: false, reason: 'El partido ya empezó: la predicción está cerrada.' };
   if (fixtureIsFinished(tournament, matchId)) return { open: false, reason: 'Ese partido ya se jugó.' };
+  if (!fixtureIsPredictable(tournament, matchId)) return { open: false, reason: 'Ese partido todavía no tiene los dos equipos definidos.' };
   return { open: true, homeTeam: overlay.homeTeamName || '', awayTeam: overlay.awayTeamName || '' };
 }
 

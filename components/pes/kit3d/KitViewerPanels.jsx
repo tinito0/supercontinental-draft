@@ -1,6 +1,6 @@
 import React from 'react';
 import { FolderOpen, Save, CloudUpload, CheckCircle2, AlertTriangle, XCircle, Info, CircleDashed } from 'lucide-react';
-import { Button } from '../PesUi.jsx';
+import { Button, Disclosure } from '../PesUi.jsx';
 import { LIGHT_PRESETS } from './kitRenderer.js';
 import { FABRICS } from '../../../pes/kits/fabricMaps.js';
 import { describeAsset } from '../../../pes/kits/kitAssetResolver.js';
@@ -271,10 +271,9 @@ export function DiagnosticsPanel({ assets, notes, local, cloud, share, canShare,
         <Section title="config.txt en la vista">
           {warnings.length > 0 ? <NoteList notes={warnings} /> : <p className="text-[11px] text-ink-3">Sin advertencias.</p>}
           {infos.length > 0 && (
-            <details className="text-[11px] text-ink-3">
-              <summary className="cursor-pointer min-h-9 flex items-center">Detalles ({infos.length})</summary>
+            <Disclosure className="text-xs text-ink-3" summary={`Detalles (${infos.length})`}>
               <div className="pt-1"><NoteList notes={infos} /></div>
-            </details>
+            </Disclosure>
           )}
         </Section>
       )}

@@ -60,7 +60,7 @@ export const SearchBar = memo(function SearchBar({
 
   return (
     <div data-app-tour="search"
-      className="flex flex-col gap-3 mb-4 md:sticky md:-top-5 lg:-top-7 md:z-20 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 md:py-3 md:bg-canvas/95 md:backdrop-blur md:border-b md:border-line/10">
+      className="flex flex-col gap-3 mb-4 md:sticky md:-top-5 lg:-top-7 md:z-20 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 md:py-3 md:bg-canvas/95 md: md:border-b md:border-line/10">
       <div className="flex flex-col md:flex-row gap-2 md:gap-3">
         <form onSubmit={applySearchNow} role="search" className="relative flex-grow">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-3 pointer-events-none" aria-hidden="true" />

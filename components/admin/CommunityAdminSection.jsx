@@ -1,9 +1,11 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Lock, Star, Unlock, Vote } from 'lucide-react';
+import { serverTimestamp } from 'firebase/firestore';
+import { ExternalLink, Lock, Star, Unlock, Vote, X } from 'lucide-react';
 import { setVotingClosed } from '../../services/communityAdminService.js';
 import { useLiveMatches, useMvpVotes, usePrediction } from '../../hooks/useLeagueData.js';
 import { mvpRanking, pickMvpMatch, predictionShares } from '../../utils/communityView.js';
-import { MVP_GRACE_MS } from '../../supabase/functions/_shared/communityVote.js';
+import { EMPTY_OVERLAY_MATCH } from '../../utils/broadcastMatches.js';
+import { fixtureIsPredictable, MVP_GRACE_MS } from '../../supabase/functions/_shared/communityVote.js';
 import { Alert } from '../ui/Alert.jsx';
 import { CupPollAdmin } from './CupPollAdmin.jsx';
 import { ResetVotesButton } from './ResetVotesButton.jsx';
@@ -25,17 +27,30 @@ function useClock(intervalMs = 30_000) {
 
 function StatusBadge({ isOpen, openLabel = 'Abierta', closedLabel = 'Cerrada' }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${isOpen ? 'bg-success/15 text-success-soft' : 'bg-raised text-ink-2'}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold ${isOpen ? 'bg-success/15 text-success-soft' : 'bg-raised text-ink-2'}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${isOpen ? 'bg-success' : 'bg-ink-3'}`} aria-hidden="true" />
       {isOpen ? openLabel : closedLabel}
     </span>
   );
 }
 
-function PredictionStatus({ overlay, showStatusMessage }) {
+function PredictionStatus({ overlay, tournament, onUpdateBroadcastOverlay, showStatusMessage }) {
   const matchId = overlay?.matchId || null;
   const { data: prediction } = usePrediction(matchId);
   const [busy, setBusy] = useState(false);
+  // Un cruce sin los dos equipos («Ganador 2° Red.») o de otra temporada: la web no lo deja votar, pero OBS lo sigue
+  // mostrando hasta que se quita del aire.
+  const isPredictable = fixtureIsPredictable(tournament, matchId);
+
+  const clearMatch = async () => {
+    if (!onUpdateBroadcastOverlay) return;
+    setBusy(true);
+    try {
+      await onUpdateBroadcastOverlay({ ...EMPTY_OVERLAY_MATCH, updatedAt: serverTimestamp(), updatedBy: 'admin' }, 'Partido quitado del aire.');
+    } finally {
+      setBusy(false);
+    }
+  };
   const shares = predictionShares(prediction?.votes);
   const isClosed = Boolean(prediction?.closedAt);
   const home = prediction?.homeTeam || overlay?.homeTeamName || PREDICTION_LABELS.home;
@@ -58,7 +73,7 @@ function PredictionStatus({ overlay, showStatusMessage }) {
   return (
     <section className="panel space-y-4 p-5" aria-labelledby="admin-prediction">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 id="admin-prediction" className="section-title flex items-center gap-2"><Vote className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Predicción «¿Quién gana?»</h3>
+        <h2 id="admin-prediction" className="section-title flex items-center gap-2"><Vote className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Predicción «¿Quién gana?»</h2>
         {matchId && <StatusBadge isOpen={!isClosed} />}
       </div>
       {!matchId ? (
@@ -69,6 +84,12 @@ function PredictionStatus({ overlay, showStatusMessage }) {
             <span className="font-semibold text-ink">{home}</span> vs <span className="font-semibold text-ink">{away}</span>
             {' · '}Se cierra sola cuando el colector manda el partido en vivo.
           </p>
+          {!isPredictable && (
+            <Alert tone="warning" title="Este partido no se puede votar">
+              El cruce todavía no tiene los dos equipos, o ya no está en el torneo. El público no lo ve en /en-vivo, pero sigue
+              al aire en OBS hasta que lo quites.
+            </Alert>
+          )}
           <dl className="grid grid-cols-4 gap-2 rounded-xl bg-raised p-3 text-center">
             {[['Local', shares.home], ['Empate', shares.draw], ['Visitante', shares.away]].map(([label, pct]) => (
               <div key={label}><dt className="text-xs font-semibold text-ink-2">{label}</dt><dd className="num font-display text-xl font-bold text-ink">{pct}%</dd></div>
@@ -86,6 +107,11 @@ function PredictionStatus({ overlay, showStatusMessage }) {
               </button>
             )}
             {shares.total > 0 && <ResetVotesButton kind="prediction" target={matchId} label={`la predicción ${home} vs ${away}`} total={shares.total} showStatusMessage={showStatusMessage} />}
+            {onUpdateBroadcastOverlay && (
+              <button type="button" className="btn btn-ghost min-h-11" disabled={busy} onClick={clearMatch}>
+                <X className="h-4 w-4" aria-hidden="true" /> Quitar partido del aire
+              </button>
+            )}
           </div>
         </>
       )}
@@ -122,7 +148,7 @@ function MvpStatus({ showStatusMessage }) {
   return (
     <section className="panel space-y-4 p-5" aria-labelledby="admin-mvp">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 id="admin-mvp" className="section-title flex items-center gap-2"><Star className="h-5 w-5 text-accent-soft" aria-hidden="true" /> MVP del partido</h3>
+        <h2 id="admin-mvp" className="section-title flex items-center gap-2"><Star className="h-5 w-5 text-accent-soft" aria-hidden="true" /> MVP del partido</h2>
         {match && <StatusBadge isOpen={open} />}
       </div>
       {!match ? (
@@ -158,7 +184,7 @@ function MvpStatus({ showStatusMessage }) {
   );
 }
 
-export const CommunityAdminSection = memo(function CommunityAdminSection({ broadcastOverlayData, tournamentData, showStatusMessage }) {
+export const CommunityAdminSection = memo(function CommunityAdminSection({ broadcastOverlayData, tournamentData, onUpdateBroadcastOverlay, showStatusMessage }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -166,7 +192,7 @@ export const CommunityAdminSection = memo(function CommunityAdminSection({ broad
         <a href="/en-vivo" target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm min-h-11"><ExternalLink className="h-4 w-4" aria-hidden="true" /> Ver /en-vivo</a>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PredictionStatus overlay={broadcastOverlayData} showStatusMessage={showStatusMessage} />
+        <PredictionStatus overlay={broadcastOverlayData} tournament={tournamentData} onUpdateBroadcastOverlay={onUpdateBroadcastOverlay} showStatusMessage={showStatusMessage} />
         <MvpStatus showStatusMessage={showStatusMessage} />
       </div>
       {!tournamentData && <Alert tone="info" title="Sin torneo cargado">Las encuestas de las copas sugieren equipos cuando hay tabla.</Alert>}

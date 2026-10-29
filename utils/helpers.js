@@ -128,10 +128,10 @@ export function getStatAndOvrColorClass(value) {
 
 export function getPosColor(valorAptitud) {
   const apt = Number(valorAptitud);
-  if (apt === 3) return { bgColor: '#00b34a', textColor: '#ffffff' };
+  if (apt === 3) return { bgColor: '#00b34a', textColor: '#1e1e1e' };
   if (apt === 2) return { bgColor: '#a0dd00', textColor: '#1e1e1e' };
   if (apt === 1) return { bgColor: '#ffc400', textColor: '#1e1e1e' };
-  return { bgColor: '#333', textColor: '#777' };
+  return { bgColor: '#333', textColor: '#9ca3af' };
 }
 
 export function getFlagCode(countryId) {

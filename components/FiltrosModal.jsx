@@ -304,7 +304,7 @@ export const FiltrosModal = memo(function FiltrosModal({
                 {filterColors.map(color => (
                   <button key={color.id} type="button" role="radio" aria-checked={selectedColor === color.id} aria-label={color.label} title={color.label}
                     onClick={() => setSelectedColor(color.id)}
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center border transition-colors ${selectedColor === color.id ? 'border-ink/60 bg-overlay' : 'border-transparent hover:bg-white/[0.05]'}`}>
+                    className={`w-11 h-11 rounded-lg flex items-center justify-center border transition-colors ${selectedColor === color.id ? 'border-ink/60 bg-overlay' : 'border-transparent hover:bg-white/[0.05]'}`}>
                     <span className={`w-4 h-4 rounded-full ${color.dot}`} aria-hidden="true" />
                   </button>
                 ))}

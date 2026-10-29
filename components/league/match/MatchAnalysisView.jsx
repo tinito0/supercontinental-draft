@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MOMENTUM_DECAY, MOMENTUM_WEIGHTS, bucketRows, halfTotals, momentum } from '../../../utils/matchAnalysis.js';
 import { MomentumChart } from './MomentumChart.jsx';
+import { Heatmap } from './Heatmap.jsx';
+import { Tabs } from '../../ui/Tabs.jsx';
 
 /* Pestaña Análisis: dominio con su método, los tramos de 15 minutos y los tiempos, y de dónde sale cada dato.
    Datos: utils/matchAnalysis.js. */
@@ -46,6 +48,23 @@ function PeriodTable({ rows, match, caption }) {
   );
 }
 
+/** Mapa de calor de cada equipo, uno por vez. Nada en partidos sin posiciones. */
+function TeamHeatmaps({ heatmaps, match }) {
+  const [side, setSide] = useState('home');
+  if (!heatmaps?.teams) return null;
+  return (
+    <section className="panel p-4 sm:p-5" aria-labelledby="heat-title">
+      <h3 id="heat-title" className="section-title mb-3">Mapas de calor</h3>
+      <Tabs label="Equipo" value={side} onChange={setSide} tabs={[{ id: 'home', label: match.home.name }, { id: 'away', label: match.away.name }]} />
+      <Heatmap className="mt-3" cells={heatmaps.teams[side]} cols={heatmaps.cols} rows={heatmaps.rows} label={`Mapa de calor de ${match[side].name}`} />
+      <p className="mt-3 text-sm text-ink-2">
+        Dónde estuvieron los jugadores de campo y el arquero, con el equipo atacando hacia la derecha en los dos tiempos.
+        El juego actualiza la posición de cada jugador cada 2 o 3 segundos. El de cada jugador está en Jugadores.
+      </p>
+    </section>
+  );
+}
+
 export function MatchAnalysisView({ summary, match }) {
   const buckets = bucketRows(summary);
   const halves = halfTotals(summary);
@@ -61,6 +80,7 @@ export function MatchAnalysisView({ summary, match }) {
           pesos se eligieron a mano y no están calibrados.
         </p>
       </section>
+      <TeamHeatmaps heatmaps={summary.heatmaps} match={match} />
       <section className="panel p-0" aria-labelledby="buckets-title">
         <h3 id="buckets-title" className="section-title px-4 pt-4 sm:px-5">Por tramos de 15 minutos</h3>
         {buckets.length ? (

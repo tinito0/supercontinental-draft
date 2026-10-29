@@ -36,7 +36,7 @@ function Chapter({ chapter }) {
 function ClosingChapter({ chapter }) {
   const { era, title, paragraphs } = chapter;
   return (
-    <section className="panel border-accent/40 bg-gradient-to-r from-accent/15 to-transparent p-6 text-center sm:p-10">
+    <section className="panel border-accent/40 bg-accent-deep/40 p-6 text-center sm:p-10">
       {era && <p className="text-sm font-semibold uppercase tracking-wider text-accent-soft">{era}</p>}
       {title && <h3 className="mt-1 font-display text-3xl font-bold uppercase leading-tight tracking-tight text-ink sm:text-4xl">{title}</h3>}
       <ChapterBody paragraphs={paragraphs} className="mx-auto mt-4 max-w-[68ch]" />

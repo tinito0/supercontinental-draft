@@ -74,10 +74,10 @@ export function CrestRing({ teams }) {
                   height={crestSize}
                   loading="lazy"
                   decoding="async"
-                  className="h-full w-full object-contain transition-transform duration-150 ease-out group-hover:scale-110 group-focus-visible:scale-110 motion-reduce:transition-none"
+                  className="h-full w-full object-contain transition-transform duration-fast ease-out group-hover:scale-110 group-focus-visible:scale-110 motion-reduce:transition-none"
                 />
                 <span
-                  className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-line/20 bg-overlay px-2 py-1 text-xs font-semibold text-ink opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+                  className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-line/20 bg-overlay px-2 py-1 text-xs font-semibold text-ink opacity-0 shadow-md transition-opacity duration-fast group-hover:opacity-100 group-focus-visible:opacity-100"
                   aria-hidden="true"
                 >
                   {team.teamName}
@@ -88,6 +88,25 @@ export function CrestRing({ teams }) {
         })}
       </ul>
     </div>
+  );
+}
+
+/**
+ * The phone version of the ring: the club crests in a grid of six, each a 48 px link to its club. The ring needs
+ * ~480 px to breathe, so below md the hero shows this strip instead of hiding the clubs altogether.
+ */
+export function CrestStrip({ teams }) {
+  if (!teams.length) return null;
+  return (
+    <ul aria-label="Clubes de la liga" className="grid grid-cols-6 gap-1.5 border-t border-line/10 pt-5">
+      {teams.map(team => (
+        <li key={team.id} className="grid place-items-center">
+          <Link to={`/equipos/${team.id}`} aria-label={team.teamName} className="grid h-12 w-12 place-items-center rounded-lg active:bg-overlay">
+            <img src={teamCrestUrl(team)} alt="" width="40" height="40" loading="lazy" decoding="async" className="h-10 w-10 object-contain" />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 

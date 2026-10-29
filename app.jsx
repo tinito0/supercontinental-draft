@@ -31,13 +31,14 @@ import { useSquadSync } from './hooks/useSquadSync.js';
 import { isMarketOpen as isMarketOpenFor } from './supabase/functions/_shared/market.js';
 import { parseOpenTime } from './supabase/functions/_shared/marketTime.js';
 import { useKeyboardShortcuts, isTyping } from './hooks/useKeyboardShortcuts.js';
-import { hasOpenBaseModal } from './components/ui/BaseModal.jsx';
+import { BaseModal, hasOpenBaseModal } from './components/ui/BaseModal.jsx';
 import { useScrollRestore } from './hooks/useScrollRestore.js';
 import { useStoredChoice } from './hooks/useStoredChoice.js';
 import { calculateSmartRecommendations } from './utils/recommendations.js';
 import { handleListenerError } from './utils/listenerErrorHandler.js';
 import { KeyboardShortcutsHelp } from './components/ui/KeyboardShortcutsHelp.jsx';
 import { Alert } from './components/ui/Alert.jsx';
+import { ConfirmHost, confirmAction } from './components/ui/ConfirmDialog.jsx';
 import { MarketplaceView } from './components/marketplace/MarketplaceView.jsx';
 import { playerPlaceholder } from './utils/playerPlaceholder.js';
 
@@ -187,7 +188,7 @@ const InfoPill = memo(function InfoPill({ label, value, colorClass = '', icon })
   return (
     <span
       className={`
-                bg-overlay text-ink border border-line/20 rounded-full px-3 py-1 text-sm font-medium 
+                bg-overlay text-ink border border-line/20 rounded-md px-3 py-1 text-sm font-medium 
                 flex items-center space-x-1 whitespace-nowrap shadow-sm
                 ${colorClass}
             `}
@@ -230,7 +231,7 @@ const MiniPlayerCard = memo(function MiniPlayerCard({ player, countryMap, onRemo
             <span className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full font-bold text-xs ${ovrColorClass}`}>
               {player.OVR_CALCULADO}
             </span>
-            <span className={`text-xs font-bold text-slate-900 px-2 py-0.5 rounded-full ${posClass}`}>
+            <span className={`text-xs font-bold text-slate-900 px-2 py-0.5 rounded-md ${posClass}`}>
               {player.POS_NOMBRE}
             </span>
           </div>
@@ -316,6 +317,12 @@ function App() {
       navigate(location.state?.from || fallback, { replace: true });
     }
   }, [location.pathname, location.state, modalRoute, navigate]);
+
+  // The guide stays on /modal/tutorial and swaps the section underneath through state.from (see currentTabPath).
+  const showTutorialSection = useCallback((path) => {
+    if (modalRoute !== 'tutorial' || currentTabPath === path) return;
+    navigate('/modal/tutorial', { replace: true, state: { from: path } });
+  }, [modalRoute, currentTabPath, navigate]);
 
   const [allPlayers, setAllPlayers] = useState([]);
   const [countryMap, setCountryMap] = useState({});
@@ -663,7 +670,7 @@ function App() {
       // Si llegamos a 2, solo avisamos, NO abrimos el modal automáticamente.
       if (newList.length === 2) {
         openModalRoute('compare');
-        showStatusMessage('success', 'Listo para comparar. Pulsa el botón "Comparar" abajo.');
+        showStatusMessage('success', 'Listo para comparar: tocá «Comparar» abajo.');
         // setIsComparisonModalVisible(true); <--- LÍNEA ELIMINADA
       }
 
@@ -1535,7 +1542,12 @@ function App() {
       return;
     }
 
-    const confirmed = alreadyConfirmed || window.confirm(`¿Estás seguro de que deseas liberar a ${player.Name || 'este jugador'} de tu equipo? Su bloqueo quedará disponible para otros managers.`);
+    const confirmed = alreadyConfirmed || await confirmAction({
+      title: '¿Liberar al jugador?',
+      player,
+      message: 'Sale de tu plantel y vuelve al mercado: cualquier manager lo puede fichar.',
+      confirmLabel: 'Liberar',
+    });
     if (!confirmed) return;
 
     try {
@@ -1619,7 +1631,7 @@ function App() {
     }
 
     if (!tournamentData)
-      return <div role="status" className="min-h-screen bg-canvas flex items-center justify-center gap-2 text-white font-bold tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando Torneo...</div>;
+      return <div role="status" className="min-h-screen bg-canvas flex items-center justify-center gap-2 text-white font-bold tracking-wider uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando Torneo...</div>;
 
     return (
       <div className="min-h-screen bg-canvas text-slate-200">
@@ -1713,7 +1725,7 @@ function App() {
         <div
           role="alert"
           aria-live="assertive"
-          className="fixed top-0 left-0 right-0 z-[999] bg-danger text-ink px-4 py-2 text-sm font-semibold flex items-center justify-between gap-3 shadow-lg animate-in slide-in-from-top"
+          className="fixed top-0 left-0 right-0 z-[999] bg-danger text-ink px-4 py-2 text-sm font-semibold flex items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top"
         >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
@@ -2003,7 +2015,7 @@ function App() {
                   );
                 }
                 return (
-                  <div key={p.Id} className="relative animate-in zoom-in-90">
+                  <div key={p.Id} className="relative animate-in fade-in zoom-in-90">
                     <img src={`/fotos_jugadores/${p.Id}.webp`} alt="" width={56} height={56}
                       className="w-14 h-14 rounded-xl object-cover object-top bg-raised border border-line/15"
                       onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
@@ -2039,8 +2051,10 @@ function App() {
       <TutorialModal
         isVisible={isTutorialVisible || modalRoute === 'tutorial'}
         onClose={() => closeModalRoute(setIsTutorialVisible)}
+        onShowSection={showTutorialSection}
         budget={userProfile?.budget || DEFAULT_BUDGET}
       />
+      <ConfirmHost />
 
       <FiltrosModal
         isVisible={isFiltrosModalVisible || modalRoute === 'filters'}
@@ -2257,24 +2271,19 @@ function App() {
         onNotifClick={handleNotificationClick}
       />
 
-      {/* BUDGET ALERT MODAL */}
-      {showBudgetAlert && (
-        <div role="alertdialog" aria-modal="true" aria-labelledby="budget-alert-title" className="fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in" onClick={() => setShowBudgetAlert(false)}>
-          <div className="panel w-full sm:max-w-sm p-6 rounded-b-none sm:rounded-2xl animate-in slide-in-from-bottom sm:zoom-in-95" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-11 h-11 rounded-xl bg-warning/[0.14] flex items-center justify-center text-warning-soft shrink-0">
-                <AlertTriangle className="w-5 h-5" aria-hidden="true" />
-              </span>
-              <h2 id="budget-alert-title" className="font-display text-xl font-bold text-ink">Presupuesto casi agotado</h2>
-            </div>
-            <p className="text-sm text-ink-2">Te quedan</p>
-            <p className="font-display num text-4xl font-bold text-warning-soft leading-tight mb-5">${(remainingBudget / 1000000).toFixed(1)}M</p>
-            <button type="button" onClick={() => setShowBudgetAlert(false)} className="btn btn-primary w-full min-h-12">
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Budget alert: a BaseModal, so focus moves in and Escape closes it. */}
+      <BaseModal
+        isOpen={showBudgetAlert}
+        onClose={() => setShowBudgetAlert(false)}
+        size="sm"
+        title="Presupuesto casi agotado"
+        icon={AlertTriangle}
+        showClose={false}
+        footer={<button type="button" onClick={() => setShowBudgetAlert(false)} className="btn btn-primary w-full min-h-12">Entendido</button>}
+      >
+        <p className="text-sm text-ink-2">Te quedan</p>
+        <p className="font-display num text-4xl font-bold text-warning-soft leading-tight">${(remainingBudget / 1000000).toFixed(1)}M</p>
+      </BaseModal>
 
       {/* TOASTS — global feedback and rivals' signings, one stack */}
       <ToastStack

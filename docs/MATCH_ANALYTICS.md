@@ -11,13 +11,13 @@ ni con una estimación sin decirlo.
 
 | Capa | Archivo | Qué hace |
 |---|---|---|
-| Probe (juego) | `pes-collector/sider/scl_probe.lua` (v4) | Estadísticas por jugador cada 2 s, XI, eventos, y desde v4 la formación (`formation`) |
-| Colector | `pes-collector/collector/matchSummary.js`, `matchActions.js`, `formations.js`, `statKinds.js` | Resumen `scl.match/1`: los campos nuevos son opcionales |
+| Probe (juego) | `pes-collector/sider/scl_probe.lua` (v5) | Estadísticas por jugador cada 2 s, XI, eventos, la formación (`formation`, v4) y las posiciones (`pos`, v5) |
+| Colector | `pes-collector/collector/matchSummary.js`, `matchActions.js`, `formations.js`, `pitchData.js`, `statKinds.js` | Resumen `scl.match/1`: los campos nuevos son opcionales |
 | Bridge | `pes-collector/bridge/nameIndex.js`, `teamPlans.js` | Nombres, posición registrada, plan guardado (solo si coincide con el XI) |
 | Página | `utils/matchStats.js`, `utils/matchAnalysis.js`, `components/league/match/*`, `screens/league/LeagueMatchScreen.jsx` | Seis pestañas |
 
 Campos agregados al resumen (todos opcionales; los partidos viejos no los tienen y la página lo dice):
-`shots`, `series`, `buckets`, `formations`, `teamPlans`, `possession`, `names.positions`, y en `teamStats` los tipos de pase,
+`shots` (desde v5 con `x`, `y`, `xg`), `series`, `buckets`, `formations`, `teamPlans`, `possession`, `xg`, `ratings`, `heatmaps`, `names.positions`, y en `teamStats` los tipos de pase,
 duelos, despejes, gambetas, toques y penales en juego.
 
 ## Fuente de cada dato
@@ -37,9 +37,12 @@ duelos, despejes, gambetas, toques y penales en juego.
 | Dorsales, estrategia, instrucciones | Del archivo de guardado | Solo si el plan coincide con el XI |
 | Posición registrada | Base de datos / guardado | Atributo del jugador, no el puesto que jugó |
 | Posesión | Calculado (del juego) | Dos contadores de tiempo con la pelota (S9): local = trunc(local / total × 100), visitante = 100 − local. Coincidió con la pantalla en 3 de 4 controles (1 punto de diferencia en el otro). Algunos partidos dejan los contadores en 0: entonces no se muestra. Sin la tanda de penales |
-| xG, mapa de tiros | No disponible | El juego no expone dónde se pateó |
-| Calificaciones | No disponible | No se encontraron en memoria |
-| Mapas de calor, distancia, zonas de ataque, PPDA, bloque defensivo | No disponible | Hace falta la posición de cada jugador en la cancha |
+| Valoraciones | Del juego | Estadística 179, primer valor como float (S15). Coincidió con la pantalla final (Raya 7,0, Saliba 6,0) |
+| Posiciones | Del juego (probe v5) | Foto de las 22 posiciones que el juego refresca de a un equipo, cada jugador cada 2–3 s (S15). No es un recorrido |
+| Mapas de calor | Del juego | Grilla 21 × 14 de las posiciones refrescadas, por jugador y por equipo, siempre atacando hacia la derecha |
+| Posición de cada tiro | Calculado | Última posición refrescada del pateador antes de la muestra que contó el tiro (hasta 2 s tarde): unos metros de error |
+| xG | **Modelo** | Ver abajo |
+| Distancia recorrida, sprints, PPDA, bloque defensivo | No disponible | Hace falta la posición en cada cuadro, no cada 2–3 s |
 
 ## Cálculos
 
@@ -65,6 +68,20 @@ dominio(m)     = acciones(local) − acciones(visitante) + 0,5 · dominio(m − 
 
 Positivo = domina el local. Un tiro al arco suma 2 (tiro + al arco). Los pesos se eligieron a mano y no están
 calibrados contra nada; la página lo dice. Partidos sin serie por minuto no muestran el gráfico.
+
+## xG (modelo)
+
+No lo da el juego. Por tiro, con la posición aproximada del pateador (x hacia el arco rival, en metros):
+
+```
+distancia = metros hasta el centro del arco; ángulo = ángulo que abarcan los dos palos (radianes)
+xG        = 1 / (1 + e^-(−1,1 + 1,4·ángulo − 0,075·distancia))      penal: 0,76 fijo
+```
+
+Da ~0,53 desde el área chica, ~0,26 desde el punto penal y ~0,07 desde 25 m. Coeficientes elegidos a mano para
+parecerse a los modelos públicos de distancia y ángulo; no están ajustados con tiros de PES, y el juego no da la
+parte del cuerpo, el tipo de pase previo ni los defensores. El xG del equipo es la suma de sus tiros, y queda «—»
+si algún tiro no tiene posición (una suma parcial se leería como total).
 
 ## Cancha (coordenadas)
 

@@ -47,7 +47,7 @@ export const AdvancedInstructionsPanel = memo(function AdvancedInstructionsPanel
                 const isReplacing = replacing?.side === side && replacing.index === i;
                 return (
                   <li key={i} className={`min-h-14 rounded-lg border px-2 py-1.5 text-xs ${isReplacing ? 'border-warning/60 bg-warning/10' : ins ? 'border-accent/40 bg-accent/10' : 'border-dashed border-line/20 text-ink-3'}`}>
-                    <span className="block text-[10px] uppercase tracking-wide text-ink-3">{slot} {i + 1}</span>
+                    <span className="block text-[11px] uppercase tracking-wide text-ink-3">{slot} {i + 1}</span>
                     {ins ? (
                       <div className="flex items-start justify-between gap-1">
                         <span className="font-semibold text-ink leading-tight">{ins.name}</span>
@@ -59,7 +59,7 @@ export const AdvancedInstructionsPanel = memo(function AdvancedInstructionsPanel
                         </span>
                       </div>
                     ) : <span>Sin elegir</span>}
-                    {isReplacing && <span className="block mt-0.5 text-[10px] text-warning-soft">Elegí la instrucción que la reemplaza.</span>}
+                    {isReplacing && <span className="block mt-0.5 text-[11px] text-warning-soft">Elegí la instrucción que la reemplaza.</span>}
                   </li>
                 );
               })}
@@ -74,7 +74,7 @@ export const AdvancedInstructionsPanel = memo(function AdvancedInstructionsPanel
                     className={`text-left rounded-lg border px-2.5 py-2 transition-colors ${selected ? 'border-accent/60 bg-accent/15' : blocked ? 'border-line/[0.08] opacity-50' : 'border-line/[0.12] hover:border-line/30'}`}>
                     <span className="flex items-center justify-between gap-2 text-sm font-medium text-ink">
                       {ins.name}
-                      {!ins.verified && <span className="chip text-[10px]" title="PES Editor Rebuilt lo marca como probable">probable</span>}
+                      {!ins.verified && <span className="chip text-[11px]" title="PES Editor Rebuilt lo marca como probable">probable</span>}
                     </span>
                     <span className="block text-[11px] text-ink-3 leading-snug mt-0.5">{ins.description}</span>
                   </button>

@@ -3,6 +3,7 @@ import { X, Eye, MinusCircle, DollarSign, Lock, CheckCircle, ChevronRight, PieCh
 import { Radar, Bar, Doughnut } from 'react-chartjs-2';
 import '../utils/chartSetup.js';
 import { BaseModal } from './ui/BaseModal.jsx';
+import { useModalDialog } from '../hooks/useModalDialog.js';
 import {
   getPosColorClass,
   getStatAndOvrColorClass,
@@ -250,7 +251,8 @@ export const getSimilarPlayers = (targetPlayer, allPlayers, limit = 4) => {
   return candidates.slice(0, limit);
 };
 
-const CONFETTI_COLORS = ['#4ade80', '#facc15', '#60a5fa', '#f472b6', '#a78bfa', '#fb923c'];
+// Club colours of the app (index.css tokens), not a party palette.
+const CONFETTI_COLORS = ['accent', 'accent-soft', 'ink', 'success-soft', 'warning-soft'].map(name => `rgb(var(--c-${name}))`);
 const CONFETTI_COUNT = 30;
 
 /** Pieces that fall across the screen within the 2.5 s the celebration stays open (keyframes in index.css). */
@@ -273,6 +275,9 @@ function buildConfetti() {
 }
 
 const CelebrationPopup = memo(function CelebrationPopup({ player, onDismiss }) {
+  // A dialog over the sheet: Escape and the close button dismiss it, and screen readers hear «¡Fichado!».
+  const dialogRef = useRef(null);
+  useModalDialog(dialogRef, true, onDismiss);
   useEffect(() => {
     const timer = setTimeout(onDismiss, 2500);
     return () => clearTimeout(timer);
@@ -283,22 +288,21 @@ const CelebrationPopup = memo(function CelebrationPopup({ player, onDismiss }) {
   const confetti = useMemo(() => (prefersReducedMotion() ? [] : buildConfetti()), []);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in" onClick={onDismiss}>
-      <button onClick={onDismiss} className="absolute top-6 right-6 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-ink transition"><X size={24} /></button>
-      <div className="flex flex-col items-center gap-6 animate-in zoom-in-75" onClick={e => e.stopPropagation()}>
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="celebration-title" tabIndex={-1} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 animate-in fade-in" onClick={onDismiss}>
+      <button type="button" onClick={onDismiss} aria-label="Cerrar" className="absolute top-6 right-6 z-50 w-11 h-11 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-ink transition-colors"><X size={24} aria-hidden="true" /></button>
+      <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in-90" onClick={e => e.stopPropagation()}>
         <div className="relative">
-          <div className="absolute inset-0 bg-green-500 rounded-full blur-3xl opacity-30"></div>
-          <img src={`/fotos_jugadores/${player.Id}.webp`} alt={player.Name}
-            className="w-36 h-36 rounded-full object-cover border-4 border-green-500 shadow-2xl relative z-10"
+          <img src={`/fotos_jugadores/${player.Id}.webp`} alt=""
+            className="w-36 h-36 rounded-full object-cover border-4 border-accent shadow-lg relative z-10"
             onError={(e) => { e.target.onerror = null; e.target.src = playerPlaceholder(player.Name.substring(0,1)); }} />
           <div className={`absolute -bottom-2 -right-2 w-14 h-14 flex items-center justify-center rounded-full font-bold text-2xl shadow-lg border-2 border-slate-900 z-20 !text-black ${ovrColorClass}`}>
             {player.OVR_CALCULADO}
           </div>
         </div>
         <div className="text-center">
-          <div className="font-display text-6xl font-bold text-success-soft tracking-tight mb-2">¡Fichado!</div>
-          <div className="text-3xl font-bold text-ink uppercase tracking-wider">{player.Name}</div>
-          <span className={`inline-block mt-3 px-4 py-1 rounded-full text-sm font-bold !text-black ${posColorClass}`}>{player.POS_NOMBRE}</span>
+          <h2 id="celebration-title" className="font-display text-6xl font-bold text-ink tracking-tight mb-2">¡Fichado!<span className="sr-only"> {player.Name}</span></h2>
+          <div className="text-3xl font-bold text-ink" aria-hidden="true">{player.Name}</div>
+          <span className={`inline-block mt-3 px-4 py-1 rounded-md text-sm font-bold !text-black ${posColorClass}`}>{player.POS_NOMBRE}</span>
         </div>
       </div>
       {/* Confetti over the whole screen, outside the zooming column (its transform would be the pieces' frame while
@@ -407,7 +411,6 @@ export const PlayerModal = memo(function PlayerModal({
   // after the first one succeeded).
   const signingRef = useRef(false);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
   const [showProposalModal, setShowProposalModal] = useState(false);
 
@@ -415,7 +418,6 @@ export const PlayerModal = memo(function PlayerModal({
   useEffect(() => {
     setIsSigning(false);
     setShowCelebration(false);
-    setShowReleaseConfirm(false);
     setIsReleasing(false);
     setShowProposalModal(false);
   }, [player?.Id]);
@@ -469,13 +471,14 @@ export const PlayerModal = memo(function PlayerModal({
     }
   };
 
+  // The confirmation is the shared one in handleRemoveFromCart (app.jsx), the same as from the squad list.
   const handleRelease = async () => {
+    if (isReleasing) return;
     setIsReleasing(true);
     try {
-      await onRemoveFromCart(player, { confirmed: true });
+      await onRemoveFromCart(player);
     } catch (e) { console.error(e); }
     setIsReleasing(false);
-    setShowReleaseConfirm(false);
   };
 
   const renderActionButton = () => {
@@ -520,7 +523,7 @@ export const PlayerModal = memo(function PlayerModal({
         );
       }
       return (
-        <button type="button" onClick={() => setShowReleaseConfirm(true)} className="btn btn-danger btn-lg w-full sm:w-auto">
+        <button type="button" onClick={handleRelease} disabled={isReleasing} className="btn btn-danger btn-lg w-full sm:w-auto">
           <Trash2 className="w-4 h-4" aria-hidden="true" />
           Liberar jugador
         </button>
@@ -533,14 +536,14 @@ export const PlayerModal = memo(function PlayerModal({
         return (
           <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
             <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-raised text-ink-3 border border-line/[0.12] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro manager">
-              <div className="flex items-center text-[10px] text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
+              <div className="flex items-center text-[11px] text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
                 <Lock className="w-3 h-3 mr-1" />
                 <span>Fichado por</span>
               </div>
               <span className="text-ink text-sm font-bold">{lockedTeamName || 'Otro equipo'}</span>
             </div>
             <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-accent/[0.08] text-accent-soft border border-accent/30 w-full sm:w-auto cursor-not-allowed" aria-disabled="true" title="Jugador Franquicia">
-              <div className="flex items-center text-[10px] text-accent-soft uppercase tracking-wider mb-0.5 font-semibold">
+              <div className="flex items-center text-[11px] text-accent-soft uppercase tracking-wider mb-0.5 font-semibold">
                 <Crown className="w-3 h-3 mr-1" />
                 <span>Jugador Franquicia</span>
               </div>
@@ -552,7 +555,7 @@ export const PlayerModal = memo(function PlayerModal({
       return (
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
           <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-raised text-ink-3 border border-line/[0.12] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro manager">
-            <div className="flex items-center text-[10px] text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
+            <div className="flex items-center text-[11px] text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
               <Lock className="w-3 h-3 mr-1" />
               <span>Fichado por</span>
             </div>
@@ -603,7 +606,7 @@ export const PlayerModal = memo(function PlayerModal({
       } else if (meetsFranchiseCriteria && userProfile?.franchisePlayerUsed) {
         return (
           <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
-            <button type="button" disabled title="Ya has fichado a tu Jugador Franquicia esta temporada" className="btn btn-secondary btn-lg w-full sm:w-auto">
+            <button type="button" disabled title="Ya fichaste a tu jugador franquicia esta temporada" className="btn btn-secondary btn-lg w-full sm:w-auto">
               <Lock className="w-4 h-4" aria-hidden="true" />
               Cupo Utilizado
             </button>
@@ -644,7 +647,7 @@ export const PlayerModal = memo(function PlayerModal({
               <span className="text-ink-3">Restante estimado:</span>
               <div className="flex items-center gap-1.5">
                 <span className={`font-semibold tabular-nums ${afterColor}`}>${budgetAfterM}M</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
                   budgetAfterPercent > 50 ? 'bg-success/15 text-success-soft' :
                   budgetAfterPercent > 20 ? 'bg-warning/15 text-warning-soft' :
                   'bg-danger/15 text-danger-soft'
@@ -666,7 +669,7 @@ export const PlayerModal = memo(function PlayerModal({
         {canAfford && (
           <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden mt-2">
             <div
-              className="h-full rounded-full transition-[width] duration-300 ease-out"
+              className="h-full rounded-full transition-[width] duration-move ease-out"
               style={{ width: `${budgetAfterPercent}%`, background: barColor }}
             />
           </div>
@@ -712,6 +715,7 @@ export const PlayerModal = memo(function PlayerModal({
       onClose={onClose}
       size="2xl"
       showClose={false}
+      ariaLabel={player.Name}
       className="!p-0 !bg-surface !max-w-6xl"
       contentClassName="!p-0 !overflow-hidden flex flex-col"
     >
@@ -844,7 +848,7 @@ export const PlayerModal = memo(function PlayerModal({
                 <p className="col-span-full text-sm text-ink-3">No hay jugadores de perfil parecido en el catálogo.</p>
               ) : similarPlayers === null ? (
                 [...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-raised rounded-xl p-3 border border-line/15 animate-pulse h-[106px] flex flex-col justify-between">
+                  <div key={i} className="bg-raised rounded-xl p-3 border border-line/15 skeleton h-[106px] flex flex-col justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-10 h-10 rounded-lg bg-raised" />
                       <div className="space-y-1.5 flex-1">
@@ -875,7 +879,7 @@ export const PlayerModal = memo(function PlayerModal({
                             className="w-10 h-10 rounded-lg object-cover bg-canvas border border-line/20 transition-colors"
                             onError={(e) => { e.target.onerror = null; e.target.src = playerPlaceholder(simPlayer.Name.substring(0, 1)); }}
                           />
-                          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold tabular-nums !text-black ${getStatAndOvrColorClass(simPlayer.OVR_CALCULADO)}`}>
+                          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold tabular-nums !text-black ${getStatAndOvrColorClass(simPlayer.OVR_CALCULADO)}`}>
                             {simPlayer.OVR_CALCULADO}
                           </div>
                         </div>
@@ -885,7 +889,7 @@ export const PlayerModal = memo(function PlayerModal({
                             {simPlayer.Name}
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold !text-black ${getPosColorClass(simPlayer.POS_NOMBRE)}`}>
+                            <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold !text-black ${getPosColorClass(simPlayer.POS_NOMBRE)}`}>
                               {simPlayer.POS_NOMBRE}
                             </span>
                             <span className="text-xs text-ink-3">
@@ -900,7 +904,7 @@ export const PlayerModal = memo(function PlayerModal({
                           {formatPriceShort(simPlayer.Precio)}
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[10px] font-medium px-1 rounded ${ovrDiff > 0 ? 'text-success-soft bg-success/10' : ovrDiff < 0 ? 'text-ink-3 bg-white/[0.04]' : 'text-ink-3'}`}>
+                          <span className={`text-[11px] font-medium px-1 rounded ${ovrDiff > 0 ? 'text-success-soft bg-success/10' : ovrDiff < 0 ? 'text-ink-3 bg-white/[0.04]' : 'text-ink-3'}`}>
                             {ovrDiff > 0 ? `+${ovrDiff}` : ovrDiff === 0 ? '=' : ovrDiff} OVR
                           </span>
                           <span className="text-xs text-ink-3 font-medium tabular-nums">
@@ -918,25 +922,6 @@ export const PlayerModal = memo(function PlayerModal({
       </div>
     </BaseModal>
 
-    {/* Release confirmation: a BaseModal stacked over the sheet (rendered after it, so it sits on top;
-        Escape closes only this one). */}
-    <BaseModal
-      isOpen={showReleaseConfirm}
-      onClose={() => setShowReleaseConfirm(false)}
-      size="sm"
-      title="Liberar jugador"
-      icon={AlertTriangle}
-      footer={(
-        <>
-          <button type="button" onClick={() => setShowReleaseConfirm(false)} className="btn btn-secondary">Cancelar</button>
-          <button type="button" onClick={handleRelease} disabled={isReleasing} title={isReleasing ? 'Hay una operación en curso' : undefined} className="btn btn-danger">
-            {isReleasing ? 'Liberando…' : 'Liberar'}
-          </button>
-        </>
-      )}
-    >
-      <p className="text-sm text-ink-2">¿Seguro que querés liberar a <span className="font-semibold text-ink">{player.Name}</span>?</p>
-    </BaseModal>
       {showProposalModal && (
         <TransferProposalModal
           isVisible={showProposalModal}

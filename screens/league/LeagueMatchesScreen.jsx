@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, Gamepad2 } from 'lucide-react';
 import { Tabs } from '../../components/ui/Tabs.jsx';
 import { FixtureRow, makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
+import { LeagueLeaders } from '../../components/league/match/LeagueLeaders.jsx';
 import { useLeagueFixtures } from '../../hooks/useLeagueFixtures.js';
 import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
@@ -135,6 +136,7 @@ export default function LeagueMatchesScreen() {
           El fixture con los resultados oficiales del torneo, y el minuto a minuto de cada partido jugado en el juego.
         </SectionHeading>
       </Reveal>
+      <LeagueLeaders />
       <div className="mb-6">
         <Tabs label="Vista" value={view} onChange={id => setSearchParams(id === 'registro' ? { vista: 'registro' } : {}, { replace: true })} tabs={VIEWS} />
       </div>

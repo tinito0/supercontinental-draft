@@ -5,9 +5,35 @@ import { EmptyState } from '../../ui/EmptyState.jsx';
 import { LeagueCrest } from '../match/FixtureRow.jsx';
 
 /* Tabla de la liga en la portada: el orden guardado del torneo (ya con los desempates del reglamento), con las
-   zonas de clasificación: 1-8 Copa de Oro, 9-12 Copa de Plata. */
+   zonas de clasificación: 1-8 Copa de Oro, 9-12 Copa de Plata. Antes del primer partido el orden es solo el de
+   carga, así que se muestran los clubes inscriptos sin puestos ni zonas. */
 
 const GOLD_CUP_PLACES = 8;
+
+function ClubName({ name, club }) {
+  const label = (
+    <>
+      <LeagueCrest name={name} club={club} size="sm" />
+      <span className="truncate font-medium text-ink">{name}</span>
+    </>
+  );
+  return club
+    ? <Link to={`/equipos/${club.id}`} className="flex min-h-11 min-w-0 items-center gap-2.5 hover:[&>span]:text-accent-soft">{label}</Link>
+    : <span className="flex min-h-11 min-w-0 items-center gap-2.5">{label}</span>;
+}
+
+function EntrantsList({ rows, clubOf }) {
+  return (
+    <>
+      <ul className="grid grid-cols-1 gap-x-4 px-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        {rows.map(row => <li key={row.id || row.name} className="min-w-0 border-t border-line/10"><ClubName name={row.name} club={clubOf(row.name)} /></li>)}
+      </ul>
+      <p className="border-t border-line/10 px-4 py-3 text-sm text-ink-2">
+        La tabla arranca con el primer partido. Del 1.° al {GOLD_CUP_PLACES}.° van a la Copa de Oro; el resto, a la Copa de Plata.
+      </p>
+    </>
+  );
+}
 
 export function StandingsCard({ tournament, clubOf, loading }) {
   const rows = (tournament?.league || []).filter(row => row?.name && row.name !== 'Club...').slice(0, 12);
@@ -16,6 +42,7 @@ export function StandingsCard({ tournament, clubOf, loading }) {
   let body;
   if (loading) body = <div className="space-y-2 p-4" aria-busy="true">{[0, 1, 2, 3].map(i => <div key={i} className="h-9 skeleton" />)}</div>;
   else if (!rows.length) body = <div className="p-4"><EmptyState icon={LayoutGrid} title="La tabla todavía no está armada" description="Aparece cuando se cargan los clubes del torneo." /></div>;
+  else if (!played) body = <EntrantsList rows={rows} clubOf={clubOf} />;
   else {
     body = (
       <div className="overflow-x-auto">
@@ -42,19 +69,7 @@ export function StandingsCard({ tournament, clubOf, loading }) {
                     <span className="num font-display text-base font-bold text-ink">{index + 1}</span>
                     <span className="sr-only">{isGold ? ', zona Copa de Oro' : ', zona Copa de Plata'}</span>
                   </td>
-                  <td className="max-w-0 py-2">
-                    {club ? (
-                      <Link to={`/equipos/${club.id}`} className="flex min-w-0 items-center gap-2.5 hover:text-ink">
-                        <LeagueCrest name={row.name} club={club} size="sm" />
-                        <span className="truncate font-medium text-ink">{row.name}</span>
-                      </Link>
-                    ) : (
-                      <span className="flex min-w-0 items-center gap-2.5">
-                        <LeagueCrest name={row.name} club={null} size="sm" />
-                        <span className="truncate font-medium text-ink">{row.name}</span>
-                      </span>
-                    )}
-                  </td>
+                  <td className="max-w-0"><ClubName name={row.name} club={club} /></td>
                   <td className="num py-2 text-center text-ink-2">{Number(row.pj) || 0}</td>
                   <td className="num py-2 text-center text-ink-2">{diff > 0 ? `+${diff}` : diff}</td>
                   <td className="num py-2 pr-4 text-right font-display text-base font-bold text-ink">{Number(row.pts) || 0}</td>
@@ -66,7 +81,6 @@ export function StandingsCard({ tournament, clubOf, loading }) {
         <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line/10 px-4 py-3 text-sm text-ink-2">
           <span className="inline-flex items-center gap-2"><span className="h-3 w-1 rounded bg-accent" aria-hidden="true" />1.° a 8.°: Copa de Oro</span>
           <span className="inline-flex items-center gap-2"><span className="h-3 w-1 rounded bg-ink-3" aria-hidden="true" />9.° a 12.°: Copa de Plata</span>
-          {!played && <span>Sin partidos jugados todavía</span>}
         </p>
       </div>
     );
@@ -75,7 +89,7 @@ export function StandingsCard({ tournament, clubOf, loading }) {
   return (
     <div className="panel overflow-hidden p-0">
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
-        <h3 className="section-title">Tabla</h3>
+        <h3 className="section-title">{!loading && rows.length && !played ? 'Clubes inscriptos' : 'Tabla'}</h3>
         <Link to="/torneo" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink">
           Tabla completa <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Link>

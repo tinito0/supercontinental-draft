@@ -80,7 +80,8 @@ export const AdminModal = memo(function AdminModal({
       )}
       {activeTab === 'comunidad' && (
         <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>
-          <CommunityAdminSection broadcastOverlayData={props.broadcastOverlayData} tournamentData={tournamentData} showStatusMessage={props.showStatusMessage} />
+          <CommunityAdminSection broadcastOverlayData={props.broadcastOverlayData} tournamentData={tournamentData}
+            onUpdateBroadcastOverlay={props.onUpdateBroadcastOverlay} showStatusMessage={props.showStatusMessage} />
         </Suspense>
       )}
       {activeTab === 'web' && (

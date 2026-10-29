@@ -11,7 +11,7 @@ import { KitFont } from '../../components/pes/kit3d/kitDecals.js';
 
 // Real config.txt from the patch (content/kit-server/2. Bundesliga/1860 München/g1, written by Kit Studio 2021).
 const REAL = fs.readFileSync(path.resolve(__dirname, 'fixtures/kitstudio-config.txt'), 'utf8');
-const PACK = path.resolve(__dirname, '../../public/pes/kitpack.bin');
+const PACK = path.resolve(__dirname, '../../public/kit3d/kitpack.bin');
 const KIT_SERVER = 'E:/eFootball PES 2021/content/kit-server';
 const edit = (text, values) => Object.entries(values).reduce((cfg, [k, v]) => setKitValue(cfg, k, v).cfg, parseKitConfig(text));
 const withLine = (text, key, line) => text.replace(new RegExp(`^${key}=.*$`, 'm'), line);

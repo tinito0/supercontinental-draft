@@ -304,7 +304,7 @@ export const TeamsModal = memo(function TeamsModal({
                                       {isTopStar && <Star className="w-3.5 h-3.5 shrink-0 fill-current text-warning-soft" aria-label="Figura del plantel" />}
                                     </span>
                                     <span className="flex items-center gap-2 mt-0.5 text-xs text-ink-3">
-                                      <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                                      <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                                       <img src={getFlagUrl(player.Country1)} className="w-4 h-3 rounded-[2px] shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} alt="" />
                                       {player.Age ? <span>{player.Age} años</span> : null}
                                       <span className="num">{formatPriceShort(player.Precio)}</span>

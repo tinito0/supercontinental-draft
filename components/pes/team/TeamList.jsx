@@ -79,7 +79,7 @@ export function TeamList({ rows, loading, selectedId, onSelect, hasLeague, kitMa
           <p className="text-xs text-ink-3" aria-hidden="true">{countText}</p>
           <label className="flex items-center gap-2 text-xs text-ink-3">
             Orden
-            <select value={sort} onChange={e => onSort(e.target.value)} className="select min-h-9 py-1 text-xs w-auto">
+            <select value={sort} onChange={e => onSort(e.target.value)} className="select py-1 text-xs w-auto">
               <option value="name">Nombre</option>
               <option value="id">Id</option>
             </select>
@@ -103,7 +103,7 @@ export function TeamList({ rows, loading, selectedId, onSelect, hasLeague, kitMa
               return (
                 <li key={r.id}>
                   <button type="button" ref={selected ? selectedRef : undefined} onClick={() => onSelect(r.id)} aria-current={selected || undefined}
-                    className={`w-full flex items-center gap-3 min-h-11 px-3 py-1.5 rounded-lg text-left border-l-2 transition-colors ${selected ? 'bg-accent-deep border-accent text-ink' : 'border-transparent text-ink-2 hover:bg-overlay hover:text-ink'}`}>
+                    className={`w-full flex items-center gap-3 min-h-11 px-3 py-1.5 rounded-lg text-left transition-colors ${selected ? 'bg-accent-deep text-ink' : 'text-ink-2 hover:bg-overlay hover:text-ink'}`}>
                     <TeamBadge abbr={r.abbr} colours={r.colours} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold" title={r.name}>{r.name || '(sin nombre)'}</span>

@@ -32,7 +32,8 @@
   --c-accent-deep: 22 36 74;    /* #16244a fondos teñidos de azul */
   --c-on-accent: 255 255 255;   /* texto sobre el azul */
   /* Lavanda del escudo: solo marcas de la competición (no para interacción) */
-  --c-crest-lavender: 123 120 176; /* #7b78b0 */
+  --c-crest-lavender: 123 120 176; /* #7b78b0 tinte y borde (texto encima: 4,1:1, no alcanza) */
+  --c-crest-lavender-soft: 179 176 224; /* #b3b0e0 texto lavanda: 9,0:1 en surface, 7,4:1 en overlay */
   /* Semánticos */
   --c-success: 34 197 94;       /* #22c55e */
   --c-success-soft: 74 222 128;
@@ -41,27 +42,8 @@
   --c-danger: 239 68 68;        /* #ef4444 */
   --c-danger-soft: 248 113 113;
 
-  /* Compatibilidad con los nombres anteriores (--app-*) */
-  --app-bg: rgb(var(--c-canvas));
-  --app-surface: rgb(var(--c-surface));
-  --app-surface-elevated: rgb(var(--c-raised));
-  --app-border: rgb(var(--c-line) / 0.14);
-  --app-border-hover: rgb(var(--c-line) / 0.3);
-  --app-accent: rgb(var(--c-accent));
-  --app-accent-hover: rgb(var(--c-accent-hover));
   --app-focus: rgb(var(--c-accent-soft));
   --app-focus-offset: 2px;
-  --app-text-primary: rgb(var(--c-ink));
-  --app-text-secondary: rgb(var(--c-ink-2));
-  --app-text-muted: rgb(var(--c-ink-3));
-  --app-success: rgb(var(--c-success));
-  --app-success-muted: rgb(var(--c-success) / 0.15);
-  --app-warning: rgb(var(--c-warning));
-  --app-warning-muted: rgb(var(--c-warning) / 0.15);
-  --app-danger: rgb(var(--c-danger));
-  --app-danger-muted: rgb(var(--c-danger) / 0.15);
-  --app-info: rgb(var(--c-accent));
-  --app-info-muted: rgb(var(--c-accent) / 0.15);
 
   /* Radios: chicos adentro, más suaves en contenedores */
   --app-radius-sm: 4px;
@@ -220,7 +202,7 @@
   /* ── Tipografía ─────────────────────────────────────────────── */
   .font-display { font-family: 'Barlow Condensed', 'Barlow', ui-sans-serif, system-ui, sans-serif; }
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3;
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3;
   }
   .page-title {
     @apply font-display text-[28px] sm:text-[32px] font-bold leading-none text-ink tracking-tight;
@@ -245,7 +227,7 @@
   /* ── Botones ───────────────────────────────────────────────── */
   .btn {
     @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-lg text-sm font-semibold whitespace-nowrap select-none
-      transition-[background-color,border-color,color,transform,box-shadow] duration-150
+      transition-[background-color,border-color,color,transform,box-shadow] duration-fast
       disabled:opacity-45 disabled:cursor-not-allowed active:scale-[0.97];
   }
   .btn-sm { @apply min-h-8 px-3 text-xs rounded-md gap-1.5; }
@@ -278,10 +260,11 @@
   .field-error {
     @apply mt-1 text-xs font-medium text-danger-soft;
   }
+  /* El borde es lo que delimita el campo, así que llega a 3:1 contra el fondo (WCAG 1.4.11): 55 % de line sobre raised = 3,03:1. */
   .input {
-    @apply w-full min-h-10 px-3 rounded-lg bg-raised text-ink text-sm border border-line/[0.16]
-      transition-colors duration-150 outline-none
-      hover:border-line/30 focus:border-accent focus:ring-2 focus:ring-accent/25
+    @apply w-full min-h-10 px-3 rounded-lg bg-raised text-ink text-sm border border-line/[0.55]
+      transition-colors duration-fast outline-none
+      hover:border-line/70 focus:border-accent focus:ring-2 focus:ring-accent/25
       disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .input[aria-invalid="true"] { @apply border-danger/60 focus:ring-danger/25; }
@@ -297,6 +280,13 @@
   }
   .tab-list {
     @apply inline-flex items-center gap-1 p-1 rounded-lg bg-raised border border-line/[0.12];
+    scrollbar-width: none;
+  }
+  .tab-list::-webkit-scrollbar { display: none; }
+  /* Más pestañas fuera de vista a la derecha (Tabs.jsx): el borde se desvanece para que se note que sigue. */
+  .tab-list--more {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
   }
   .tab {
     @apply inline-flex items-center gap-1.5 min-h-8 px-3 rounded-md text-xs font-semibold text-ink-2 transition-colors hover:text-ink;
@@ -426,6 +416,78 @@
 /* Spinners: con movimiento reducido siguen girando, lento, para que se vea que algo está en curso. */
 .animate-spin { --animation-reduced: spin 2.4s linear infinite; }
 
+/* Estado que cambia de texto en el lugar (autoguardado de la pizarra, jugador en mano): transitions.dev «Text states
+   swap». El texto viejo sale 4 px hacia arriba y el nuevo entra desde abajo, para leerlo como un paso
+   (hooks/useStatusSwap.js). Con movimiento reducido, solo el fundido. */
+.status-swap {
+  display: inline-flex;
+  animation: status-enter var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+}
+.status-swap[data-leaving] {
+  animation: status-exit var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
+}
+@keyframes status-enter { from { opacity: 0; translate: 0 4px; filter: blur(2px); } }
+@keyframes status-exit { to { opacity: 0; translate: 0 -4px; filter: blur(2px); } }
+
+/* Valor que cambia porque cambió el dato (fuerza del equipo al mover el once): transitions.dev «Text swap soft». Los
+   dos números comparten la celda y se cruzan sin moverse (components/ui/SoftValue.jsx). */
+.soft-swap { display: inline-grid; justify-items: end; }
+.soft-swap > span { grid-area: 1 / 1; white-space: pre; }
+.soft-swap-old {
+  animation: soft-swap-out var(--dur-base) var(--ease-in-out) both;
+  --animation-reduced: app-fade-out var(--dur-base) var(--ease-in-out) both;
+}
+.soft-swap-new {
+  animation: soft-swap-in var(--dur-base) var(--ease-in-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-in-out) both;
+}
+@keyframes soft-swap-in { from { opacity: 0; filter: blur(2px); } }
+@keyframes soft-swap-out { to { opacity: 0; filter: blur(2px); } }
+
+/* Barra de fuerza por línea (components/formation/TeamStrength.jsx): crece con scale, nunca con width. */
+.strength-bar-fill {
+  transform-origin: left center;
+  transition: scale var(--dur-move) var(--ease-out);
+}
+
+/* Barra de un atributo del editor PES (PesPlayerProfile StatRow): como la de fuerza, crece con scale. */
+.meter-fill {
+  transform-origin: left center;
+  transition: scale var(--dur-move) var(--ease-out);
+}
+
+/* Desplegables (<details>) del editor PES: sin el triángulo nativo, con un chevron que se da vuelta (scaleY, funciona
+   en todos los navegadores). El contenido aparece sin animar la altura. */
+.disclosure > summary { list-style: none; }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure-chevron { transition: scale var(--dur-fast) var(--ease-out); }
+.disclosure[open] > summary .disclosure-chevron { scale: 1 -1; }
+
+/* Barra de guardado de un equipo (components/pes/team/TeamSaveBar.jsx): entra subiendo 8 px y, al guardar o
+   descartar, sale bajando 8 px antes de desmontarse. */
+.save-bar {
+  --enter-opacity: 0;
+  --enter-ty: 8px;
+  animation: app-enter var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+}
+.save-bar[data-closing] {
+  --exit-ty: 8px;
+  animation: app-exit var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
+  pointer-events: none;
+}
+
+/* Editor PES en pantallas táctiles: los botones chicos y los campos llegan a 44 px (en mouse siguen compactos). */
+/* Touch screens get 44 px targets everywhere (docs/DESIGN_SYSTEM.md, principle 8); the mouse keeps the dense sizes. */
+@media (pointer: coarse) {
+  /* Compound selectors: Tailwind emits no native layers, so .btn-icon.btn-sm (two classes) would win otherwise. */
+  .btn, .btn.btn-sm, .input, .select { min-height: 2.75rem; }
+  .btn.btn-icon, .btn.btn-icon.btn-sm { min-width: 2.75rem; min-height: 2.75rem; }
+}
+
 /* Avisos (components/ToastStack.jsx): entran subiendo 8 px y salen bajando 4 px. La salida corre mientras el aviso
    sigue montado (hooks/usePresence.js) y lo desmonta al terminar. */
 .toast {
@@ -444,7 +506,7 @@
 /* --- Paleta de Colores para Estadísticas (Píldoras) --- */
 .stat-c-90 {
   background-color: #1ec9a4 !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 .stat-c-80 {
@@ -464,7 +526,7 @@
 
 .stat-c-50 {
   background-color: #ff4d4d !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 .stat-c-default {
@@ -475,7 +537,7 @@
 /* --- Paleta de Colores para OVR (Tarjetas Antiguas) --- */
 .ovr-c-90 {
   background-color: #ff4d4d !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 /* Red */
@@ -493,13 +555,13 @@
 /* Light Green */
 .ovr-c-60 {
   background-color: #00b34a !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 /* Green */
 .ovr-c-50 {
   background-color: #00aeff !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 /* Blue */
@@ -532,7 +594,7 @@
 
 /* Verde esmeralda */
 .ovr-text-50 {
-  color: #4d7ad6 !important;
+  color: rgb(var(--c-accent-soft)) !important;
 }
 
 /* Azul claro */
@@ -545,17 +607,17 @@
 /* --- Paleta de Colores para Posiciones (Píldoras y Tarjetas) --- */
 .pos-delantero {
   background-color: #ff4d4d;
-  color: #ffffff;
+  color: #1e1e1e;
 }
 
 .pos-medio {
   background-color: #00b34a;
-  color: #ffffff;
+  color: #1e1e1e;
 }
 
 .pos-defensa {
   background-color: #00aeff;
-  color: #ffffff;
+  color: #1e1e1e;
 }
 
 /* CORREGIDO: 'ffc400' en lugar de 'ffc4al' */
@@ -580,12 +642,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgb(var(--c-overlay));
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgb(var(--c-line) / 0.4);
 }
 
 /* Fondo de la barra lateral en celular */
@@ -631,9 +693,10 @@
   border-radius: 50%;
   font-weight: bold;
   font-size: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
+  box-shadow: var(--app-shadow-sm);
+  border: 2px solid rgb(var(--c-ink) / 0.1);
+  transition: background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -642,8 +705,8 @@
 
 /* Desktop: inline sidebar (default) */
 .sidebar {
-  background: var(--app-surface, #06080d);
-  border-right: 1px solid var(--app-border, rgba(255, 255, 255, 0.07));
+  background: rgb(var(--c-surface));
+  border-right: 1px solid rgb(var(--c-line) / 0.14);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -655,13 +718,13 @@
   box-shadow: none;
   /* El ancho cambia de una vez en escritorio: animarlo recalculaba el layout de todo el contenido (y la grilla
      virtualizada del mercado) durante 280 ms. En celular la barra se desliza con transform (abajo). */
-  transition: background-color var(--dur-base) ease;
+  transition: background-color var(--dur-base) var(--ease-out);
 }
 
 .sidebar--open {
   width: 232px;
   min-width: 232px;
-  box-shadow: 1px 0 0 var(--app-border, rgba(255, 255, 255, 0.07));
+  box-shadow: 1px 0 0 rgb(var(--c-line) / 0.14);
 }
 
 /* Hide X button on desktop */
@@ -684,13 +747,15 @@
     width: 260px !important;
     min-width: 260px !important;
     transform: translateX(-100%);
-    transition: transform var(--dur-move) var(--ease-in-out);
+    /* Cerrar es más corto que abrir; las dos con --ease-out para que el panel arranque ya en movimiento. */
+    transition: transform var(--dur-base) var(--ease-out);
     z-index: 60;
-    box-shadow: 8px 0 32px rgb(2 6 12 / 0.6);
+    box-shadow: var(--app-shadow-lg);
   }
 
   .sidebar--open {
     transform: translateX(0);
+    transition-duration: var(--dur-move);
   }
 
   .sidebar-close-btn {
@@ -704,20 +769,19 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    transition: background var(--dur-fast), color var(--dur-fast);
+    transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
   }
 
   .sidebar-close-btn:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.06);
+    color: rgb(var(--c-ink));
+    background: rgb(var(--c-ink) / 0.06);
   }
 
   .sidebar-backdrop {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
+    background: rgb(var(--c-canvas) / 0.8);
     z-index: 55;
     animation: fadeIn var(--dur-base) var(--ease-out);
   }
@@ -728,9 +792,9 @@
   min-height: 0;
   height: 100%;
   scrollbar-width: auto;
-  scrollbar-color: rgba(34, 211, 238, 0.55) rgba(15, 23, 42, 0.55);
+  scrollbar-color: rgb(var(--c-accent-soft) / 0.55) rgb(var(--c-surface) / 0.55);
   -webkit-overflow-scrolling: touch;
-  background: #020712;
+  background: rgb(var(--c-canvas));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -742,17 +806,17 @@
 }
 
 .manager-chat-scroll::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.55);
+  background: rgb(var(--c-surface) / 0.55);
 }
 
 .manager-chat-scroll::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.55);
-  border: 3px solid rgba(15, 23, 42, 0.85);
+  background: rgb(var(--c-accent-soft) / 0.55);
+  border: 3px solid rgb(var(--c-surface) / 0.85);
   border-radius: 999px;
 }
 
 .manager-chat-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.8);
+  background: rgb(var(--c-accent-soft) / 0.8);
 }
 
 .manager-chat-message {
@@ -783,7 +847,7 @@
 }
 
 .manager-chat-composer {
-  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 -1px 0 rgb(var(--c-ink) / 0.05);
 }
 
 @media (max-width: 767px) {
@@ -825,80 +889,24 @@
   }
 }
 
-.scout-help-panel {
-  animation: scoutHelpIn var(--dur-base) var(--ease-out) both;
-}
-
+.scout-help-panel,
 .scout-help-step {
-  animation: scoutHelpIn var(--dur-move) var(--ease-out) both;
-}
-
-.scout-guide-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  pointer-events: auto;
-}
-
-.scout-guide-backdrop {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-}
-
-.scout-guide-ring {
-  position: fixed;
-  z-index: 121;
-  border: 2px solid rgba(58, 102, 196, 0.95);
-  border-radius: 12px;
-  box-shadow:
-    0 0 0 9999px rgba(0, 0, 0, 0.02),
-    0 0 28px rgba(58, 102, 196, 0.34);
-  pointer-events: none;
-  transition: left var(--dur-base) var(--ease-out), top var(--dur-base) var(--ease-out), width var(--dur-base) var(--ease-out), height var(--dur-base) var(--ease-out);
-}
-
-.scout-guide-popover {
-  position: fixed;
-  z-index: 122;
-  max-width: min(340px, calc(100vw - 24px));
-  border: 1px solid rgba(58, 102, 196, 0.28);
-  border-radius: 14px;
-  background: rgba(12, 16, 23, 0.96);
-  padding: 16px;
-  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(14px);
   animation: scoutHelpIn var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
 }
 
-.scout-guide-skip {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  min-width: 48px;
-  min-height: 44px;
-  border-radius: 10px;
-  color: #9ca3af;
-  font-size: 12px;
-  font-weight: 900;
-  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
-}
-
-.scout-guide-skip:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.app-guide-layer {
+/* Guía paso a paso (components/TutorialModal.jsx y components/ScoutAssignmentsPanel.jsx): un anillo sobre el elemento
+   explicado y un globo con el texto. Crest blue como el resto de la app, sin brillo ni desenfoque. El anillo sí
+   anima left/top/width/height: es un único elemento chico y fijo que sigue a otro, y animar transform no
+   permite cambiar de tamaño sin deformar el borde. */
+.guide-layer {
   position: fixed;
   inset: 0;
   z-index: 140;
   pointer-events: auto;
 }
 
-.app-guide-backdrop {
+.guide-backdrop {
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -906,50 +914,69 @@
   pointer-events: none;
 }
 
-.app-guide-ring {
+.guide-ring {
   position: fixed;
   z-index: 141;
-  border: 2px solid rgba(34, 211, 238, 0.95);
+  border: 2px solid rgb(var(--c-accent-soft));
   border-radius: 12px;
-  box-shadow: 0 0 30px rgba(34, 211, 238, 0.34);
   pointer-events: none;
   transition: left var(--dur-base) var(--ease-out), top var(--dur-base) var(--ease-out), width var(--dur-base) var(--ease-out), height var(--dur-base) var(--ease-out);
 }
 
-.app-guide-popover {
+.guide-popover {
   position: fixed;
   z-index: 142;
   max-width: min(360px, calc(100vw - 24px));
-  border: 1px solid rgba(34, 211, 238, 0.28);
-  border-radius: 16px;
-  background: rgba(8, 12, 18, 0.97);
+  border: 1px solid rgb(var(--c-accent) / 0.4);
+  border-radius: var(--app-radius-2xl);
+  background: rgb(var(--c-surface));
   padding: 16px;
-  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(14px);
+  box-shadow: var(--app-shadow-lg);
   animation: scoutHelpIn var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+  transition: left var(--dur-move) var(--ease-out), top var(--dur-move) var(--ease-out);
 }
 
-.app-guide-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+.guide-chapters {
+  display: flex;
+  width: 100%;
+}
+
+.guide-chapters .tab {
+  flex: 1;
+  justify-content: center;
+  padding-inline: 6px;
+}
+
+/* Cada paso entra con un cambio corto de texto (sube 4px y se enfoca) en vez de reemplazarse de golpe. */
+.guide-step {
+  animation: guideStepIn var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+}
+
+@keyframes guideStepIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(2px);
+  }
+}
+
+.guide-close {
+  flex-shrink: 0;
   min-height: 44px;
-  min-width: 72px;
-  padding: 0 10px;
-  border-radius: 10px;
-  color: #9ca3af;
-  font-size: 12px;
-  font-weight: 900;
+  min-width: 44px;
+  border-radius: var(--app-radius-lg);
+  color: rgb(var(--c-ink-3));
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
-.app-guide-close:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+.guide-close:hover {
+  color: rgb(var(--c-ink));
+  background: rgb(var(--c-ink) / 0.06);
 }
 
 @media (max-width: 767px) {
@@ -965,26 +992,14 @@
     font-size: 14px;
   }
 
-  .scout-guide-popover {
-    max-width: none;
-    width: auto;
-    border-radius: 16px 16px 18px 18px;
-    padding: 16px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
-  }
-
-  .scout-guide-ring {
-    border-radius: 10px;
-  }
-
-  .app-guide-popover {
+  .guide-popover {
     max-width: none;
     width: auto;
     border-radius: 16px 16px 18px 18px;
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
 
-  .app-guide-ring {
+  .guide-ring {
     border-radius: 10px;
   }
 }

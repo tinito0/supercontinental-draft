@@ -58,7 +58,7 @@ function PollEditor({ config, tournamentData, showStatusMessage }) {
   return (
     <div className="well p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="font-display text-lg font-bold text-ink">{config.label}</h4>
+        <h3 className="font-display text-lg font-bold text-ink">{config.label}</h3>
         <span className={`text-sm font-semibold ${isOpen ? 'text-success-soft' : 'text-ink-2'}`}>
           {poll ? (isOpen ? 'Abierta' : 'Cerrada') : 'Sin crear'}{hasVotes && ` · ${results.total} ${results.total === 1 ? 'voto' : 'votos'}`}
         </span>
@@ -107,9 +107,9 @@ export const CupPollAdmin = memo(function CupPollAdmin({ tournamentData, showSta
   return (
     <section className="panel p-5 space-y-4" aria-labelledby="cup-poll-title">
       <div className="flex flex-col gap-1">
-        <h3 id="cup-poll-title" className="section-title flex items-center gap-2.5">
+        <h2 id="cup-poll-title" className="section-title flex items-center gap-2.5">
           <Trophy className="h-5 w-5 text-accent-soft" aria-hidden="true" /> ¿Quién gana la copa?
-        </h3>
+        </h2>
         <p className="text-xs text-ink-3">Encuesta para el público en /en-vivo. En OBS se muestra con la tarjeta «Copa».</p>
       </div>
       {CUP_POLLS.map(config => (

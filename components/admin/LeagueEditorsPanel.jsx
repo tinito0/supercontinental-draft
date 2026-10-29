@@ -5,6 +5,7 @@ import { Field } from '../ui/Field.jsx';
 import { Alert } from '../ui/Alert.jsx';
 import { isTeamApproved } from '../../supabase/functions/_shared/membership.js';
 import { grantLeagueEditor, revokeLeagueEditor, subscribeLeagueEditors } from '../../services/leagueEditorService.js';
+import { confirmAction } from '../ui/ConfirmDialog.jsx';
 
 /* Administración → Web pública (solo admin): quién más puede editar los textos de la web. Un editor entra a
    /draft/admin y ve únicamente esta sección; firestore.rules no le dejan tocar nada más. */
@@ -48,18 +49,23 @@ export const LeagueEditorsPanel = memo(function LeagueEditorsPanel({ allTeams, s
     if (ok) setChoice('');
   };
 
-  const revoke = editor => {
+  const revoke = async editor => {
     const name = editor.teamName || allTeams?.[editor.uid]?.teamName || 'Este manager';
-    if (!window.confirm(`¿Quitarle a ${name} el permiso para editar la web pública?`)) return;
+    const isConfirmed = await confirmAction({
+      title: `¿Quitarle a ${name} el permiso de edición?`,
+      message: 'Deja de poder editar los textos de la web pública. Se lo podés volver a dar cuando quieras.',
+      confirmLabel: 'Quitar permiso',
+    });
+    if (!isConfirmed) return;
     run(editor.uid, () => revokeLeagueEditor(editor.uid), `${name} ya no edita la web pública.`);
   };
 
   return (
     <div className="well space-y-3 p-4" aria-labelledby="league-editors-title">
       <div>
-        <h4 id="league-editors-title" className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <h3 id="league-editors-title" className="flex items-center gap-2 text-sm font-semibold text-ink">
           <PenLine className="h-4 w-4 text-accent-soft" aria-hidden="true" /> Editores de la web
-        </h4>
+        </h3>
         <p className="mt-1 text-xs text-ink-3">
           Managers que pueden editar estos textos sin ser admin. Entran por Administración y ven solo esta sección: no pueden tocar el mercado, el torneo ni la transmisión.
         </p>

@@ -134,6 +134,8 @@ export function playerStatRows(summary) {
         passes: s.passes ?? 0, passesCompleted: s.passesCompleted ?? 0,
         dribbles: s.dribbles ?? 0, dribblesCompleted: s.dribblesCompleted ?? 0,
         tacklesWon: s.tacklesWon ?? 0, interceptions: s.interceptions ?? 0, saves: s.saves ?? 0,
+        // Valoración del juego (stat 179, probe v4+); null si el resumen no la trae.
+        rating: Number.isFinite(summary?.ratings?.[entry.id]) ? summary.ratings[entry.id] : null,
       });
     }
   }

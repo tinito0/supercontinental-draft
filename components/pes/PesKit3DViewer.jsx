@@ -17,7 +17,7 @@ import { ViewPanel, ShirtPanel, LetteringPanel, FabricPanel, DiagnosticsPanel } 
 let packPromise = null;
 /** Garment models (≈1.6 MB), downloaded the first time a kit is shown. */
 function loadPack() {
-  packPromise ??= fetch('/pes/kitpack.bin')
+  packPromise ??= fetch('/kit3d/kitpack.bin')
     .then(r => { if (!r.ok) throw new Error(`No se pudieron descargar los modelos 3D (${r.status}).`); return r.arrayBuffer(); })
     .then(b => parseKitPack(new Uint8Array(b)))
     .catch(e => { packPromise = null; throw e; });
@@ -215,13 +215,13 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
           <canvas ref={canvasRef} tabIndex={0} aria-label={`Kit ${kit} en 3D. Arrastrá para girar, rueda o +/− para acercar, flechas para mover, doble clic para volver al frente.`}
             className="w-full aspect-[4/5] max-h-[72vh] rounded-xl bg-canvas cursor-grab active:cursor-grabbing focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
           {(!pack || assets.loading) && !error && (
-            <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-1 text-[11px] text-ink-2">
+            <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-md bg-canvas/85 px-2 py-1 text-xs text-ink-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />{pack ? 'Buscando texturas…' : 'Cargando modelos 3D…'}
             </span>
           )}
-          {error && <p className="absolute inset-x-3 top-3 text-xs text-danger-soft bg-black/70 rounded-lg p-2" role="alert">{error.message}</p>}
+          {error && <p className="absolute inset-x-3 top-3 text-xs text-danger-soft bg-canvas/90 border border-danger/30 rounded-lg p-2" role="alert">{error.message}</p>}
           <Button className="absolute bottom-3 right-3" onClick={() => { Object.assign(viewRef.current, DEFAULT_VIEW); draw(); }} aria-label="Volver al frente">
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-4 h-4" aria-hidden="true" />
           </Button>
         </div>
         <KitStatusLine kitAsset={kitAsset} loading={assets.loading} warnCount={warnCount} onShowDiagnostics={() => setTab('diag')} />
@@ -267,7 +267,7 @@ function KitStatusLine({ kitAsset, loading, warnCount, onShowDiagnostics }) {
     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
       <span className={kitAsset.status === 'found' ? 'text-ink-3' : 'text-warning-soft'}>{text}</span>
       {warnCount > 0 && (
-        <button type="button" onClick={onShowDiagnostics} className="flex items-center gap-1 min-h-9 text-warning-soft hover:underline">
+        <button type="button" onClick={onShowDiagnostics} className="flex items-center gap-1 min-h-10 rounded-md text-warning-soft hover:underline underline-offset-2">
           <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />{warnCount} aviso(s) · ver diagnóstico
         </button>
       )}

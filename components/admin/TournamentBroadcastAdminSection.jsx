@@ -1,11 +1,23 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Maximize2, Trophy } from 'lucide-react';
+import { Clapperboard, Maximize2, Trophy, Users } from 'lucide-react';
 import { ObsSceneStudio } from './obs/ObsSceneStudio.jsx';
 import { CollectorImportAdmin } from './CollectorImportAdmin.jsx';
+import { Tabs } from '../ui/Tabs.jsx';
 
-// "Torneo y transmisión": el resumen del torneo, los partidos del colector y el editor de escenas de OBS
-// (components/admin/obs/ObsSceneStudio.jsx, con las fuentes para OBS y la guía de Macro Deck).
+// Matchday from the phone: scenes first, one job per view (it used to be one long scroll of four).
+const VIEWS = [
+  { id: 'scenes', label: 'Escenas', icon: Clapperboard },
+  { id: 'community', label: 'Capa y popup', icon: Users },
+  { id: 'tournament', label: 'Torneo', icon: Trophy },
+];
+const VIEW_KEY = 'scl.admin.broadcastView';
+const readView = () => {
+  try { return VIEWS.some(v => v.id === sessionStorage.getItem(VIEW_KEY)) ? sessionStorage.getItem(VIEW_KEY) : 'scenes'; } catch { return 'scenes'; }
+};
+
+// "Torneo y transmisión", en tres vistas: Escenas (editor de escenas de OBS, components/admin/obs/ObsSceneStudio.jsx,
+// con las fuentes para OBS y la guía de Macro Deck), Comunidad (capa y popup) y Torneo (resumen y partidos del colector).
 
 function TournamentSummary({ tournamentData, onOpenTournamentModal }) {
   const navigate = useNavigate();
@@ -20,7 +32,7 @@ function TournamentSummary({ tournamentData, onOpenTournamentModal }) {
         <div className="flex items-center gap-2.5 min-w-0">
           <Trophy className="w-5 h-5 text-accent-soft shrink-0" aria-hidden="true" />
           <div className="min-w-0">
-            <h3 id="tournament-summary-title" className="section-title">Torneo</h3>
+            <h2 id="tournament-summary-title" className="section-title">Torneo</h2>
             <p className="text-xs text-ink-3">Resultados, tabla, copas y goleadores se cargan en el gestor del torneo.</p>
           </div>
         </div>
@@ -62,20 +74,33 @@ export const TournamentBroadcastAdminSection = memo(function TournamentBroadcast
   onUpdateTournament,
   showStatusMessage,
 }) {
+  const [view, setView] = useState(readView);
+  const changeView = (next) => {
+    setView(next);
+    try { sessionStorage.setItem(VIEW_KEY, next); } catch { /* sin sessionStorage */ }
+  };
+
   return (
     <div className="space-y-6">
-      <TournamentSummary tournamentData={tournamentData} onOpenTournamentModal={onOpenTournamentModal} />
-      {onUpdateTournament && (
-        <CollectorImportAdmin tournamentData={tournamentData} onUpdateTournament={onUpdateTournament} showStatusMessage={showStatusMessage} />
+      <Tabs tabs={VIEWS} value={view} onChange={changeView} label="Torneo y transmisión" />
+      {view === 'tournament' ? (
+        <>
+          <TournamentSummary tournamentData={tournamentData} onOpenTournamentModal={onOpenTournamentModal} />
+          {onUpdateTournament && (
+            <CollectorImportAdmin tournamentData={tournamentData} onUpdateTournament={onUpdateTournament} showStatusMessage={showStatusMessage} />
+          )}
+        </>
+      ) : (
+        <ObsSceneStudio
+          view={view}
+          allTeams={allTeams}
+          tournamentData={tournamentData}
+          broadcastOverlayData={broadcastOverlayData}
+          onUpdateBroadcastOverlay={onUpdateBroadcastOverlay}
+          showStatusMessage={showStatusMessage}
+          onOpenTournamentModal={onOpenTournamentModal}
+        />
       )}
-      <ObsSceneStudio
-        allTeams={allTeams}
-        tournamentData={tournamentData}
-        broadcastOverlayData={broadcastOverlayData}
-        onUpdateBroadcastOverlay={onUpdateBroadcastOverlay}
-        showStatusMessage={showStatusMessage}
-        onOpenTournamentModal={onOpenTournamentModal}
-      />
     </div>
   );
 });

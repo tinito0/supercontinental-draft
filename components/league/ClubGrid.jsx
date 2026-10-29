@@ -18,8 +18,11 @@ function ClubGridSkeleton({ count }) {
   );
 }
 
-/** Every club with its crest, linking to its page; with `profiles` (useClubProfiles) also its stadium and manager. */
-export function ClubGrid({ teams, loading, error, profiles = null }) {
+/**
+ * Every club with its crest, linking to its page; with `profiles` (useClubProfiles) also its stadium and manager,
+ * with `franchise` (useFranchisePlayers) its Jugador Franquicia.
+ */
+export function ClubGrid({ teams, loading, error, profiles = null, franchise = null }) {
   if (error) return <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
   if (loading && teams.length === 0) return <ClubGridSkeleton count={12} />;
   if (teams.length === 0) {
@@ -30,6 +33,7 @@ export function ClubGrid({ teams, loading, error, profiles = null }) {
     <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {teams.map(team => {
         const profile = profiles?.[team.id] || null;
+        const franchiseName = franchise?.[team.id]?.name || '';
         const details = [
           profile?.stadium && { icon: Building2, text: profile.stadium, label: 'Estadio' },
           profile?.manager && { icon: Gamepad2, text: profile.manager, label: 'Mánager' },
@@ -38,7 +42,7 @@ export function ClubGrid({ teams, loading, error, profiles = null }) {
           <li key={team.id}>
             <Link
               to={`/equipos/${team.id}`}
-              className="group flex min-h-[88px] items-center gap-4 rounded-2xl border border-line/10 bg-surface p-4 transition-[background-color,border-color] duration-150 hover:border-line/30 hover:bg-raised"
+              className="group flex min-h-[88px] items-center gap-4 rounded-2xl border border-line/10 bg-surface p-4 transition-[background-color,border-color] duration-fast hover:border-line/30 hover:bg-raised"
             >
               <img
                 src={teamCrestUrl(team)}
@@ -58,6 +62,12 @@ export function ClubGrid({ teams, loading, error, profiles = null }) {
                     <span className="sr-only">{label}: </span><span className="truncate">{text}</span>
                   </span>
                 ))}
+                {franchiseName && (
+                  <span className="mt-1 flex min-w-0 items-baseline gap-1.5 text-sm">
+                    <span className="shrink-0 font-semibold text-crest-soft">Franquicia</span>
+                    <span className="truncate text-ink-2">{franchiseName}</span>
+                  </span>
+                )}
               </span>
               <ChevronRight className="h-5 w-5 shrink-0 text-ink-3 transition-colors group-hover:text-ink" aria-hidden="true" />
             </Link>

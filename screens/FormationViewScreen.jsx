@@ -97,9 +97,9 @@ export default function FormationViewScreen() {
   });
 
   return (
-    <div className="min-h-screen bg-canvas text-ink transition-colors duration-200">
+    <div className="min-h-screen bg-canvas text-ink transition-colors duration-base">
       {/* Header */}
-      <div className="border-b border-line/20 bg-surface/90 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-line/20 bg-surface/90 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-3.5 flex items-center gap-3.5">
           <button
             onClick={() => navigate('/')}
@@ -143,7 +143,7 @@ export default function FormationViewScreen() {
                     <p className="truncate text-xs font-bold text-ink">{player.name}</p>
                     <p className="text-[11px] text-ink-3">{player.pos}{player.dorsal ? ` · #${player.dorsal}` : ''}</p>
                   </div>
-                  <span className="text-xs font-bold text-accent tabular-nums">{player.ovr}</span>
+                  <span className="text-xs font-bold text-accent-soft tabular-nums">{player.ovr}</span>
                 </div>
               ))}
             </div>

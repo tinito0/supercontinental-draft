@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../../utils/constants.js';
 import { teamCrestUrl } from '../../../utils/teamCrest.js';
+import { photoFrameStyle } from '../../../utils/leagueContent.js';
 
 /* Cabecera de la página del club en la web de la liga: la foto del estadio a todo el ancho (si el admin la cargó),
    el escudo en un cuadrado blanco como en la transmisión, el nombre grande y de dónde es. Sin foto, la superficie
@@ -14,9 +15,10 @@ function placeLine(profile) {
 }
 
 /**
- * @param {{ team: object | null, profile: object | null, loading?: boolean }} props
+ * @param {{ team: object | null, profile: object | null, loading?: boolean, action?: React.ReactNode }} props
+ *   action: a control at the end of the title row (the share button)
  */
-export function ClubHero({ team, profile, loading = false }) {
+export function ClubHero({ team, profile, loading = false, action = null }) {
   const [photoFailed, setPhotoFailed] = useState(false);
   const photo = !photoFailed && profile?.stadiumPhotoUrl ? profile.stadiumPhotoUrl : '';
   const name = team?.teamName || '';
@@ -26,9 +28,9 @@ export function ClubHero({ team, profile, loading = false }) {
     <header className={`club-hero relative isolate overflow-hidden border-b border-line/10 ${photo ? 'club-hero--photo' : ''}`}>
       {photo ? (
         <img src={photo} alt={profile?.stadium ? `Estadio ${profile.stadium}` : ''} className="absolute inset-0 -z-10 h-full w-full object-cover"
-          referrerPolicy="no-referrer" fetchpriority="high" onError={() => setPhotoFailed(true)} />
+          style={photoFrameStyle(profile?.stadiumPhotoFrame)} referrerPolicy="no-referrer" fetchpriority="high" onError={() => setPhotoFailed(true)} />
       ) : null}
-      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-8 pt-24 sm:flex-row sm:items-end sm:gap-7 sm:px-6 sm:pb-10 sm:pt-40">
+      <div className={`mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-8 sm:flex-row sm:items-end sm:gap-7 sm:px-6 sm:pb-10 ${photo ? 'pt-24 sm:pt-40' : 'pt-8 sm:pt-12'}`}>
         {loading && !team ? (
           <>
             <div className="skeleton h-24 w-24 rounded-2xl sm:h-32 sm:w-32" aria-hidden="true" />
@@ -39,7 +41,7 @@ export function ClubHero({ team, profile, loading = false }) {
             <div className="grid h-24 w-24 shrink-0 place-items-center rounded-2xl bg-white p-3 sm:h-32 sm:w-32">
               <img src={teamCrestUrl(team)} alt={`Escudo de ${name}`} onError={event => { if (!event.currentTarget.src.endsWith(DEFAULT_LOGO)) event.currentTarget.src = DEFAULT_LOGO; }} width="112" height="112" className="h-full w-full object-contain" />
             </div>
-            <div className="min-w-0 space-y-2">
+            <div className="min-w-0 flex-1 space-y-2">
               {profile?.nickname && <p className="font-display text-lg font-semibold uppercase tracking-wide text-accent-soft sm:text-xl">«{profile.nickname}»</p>}
               <h1 className="font-display text-[2.75rem] font-bold uppercase leading-[0.9] tracking-tight text-ink [text-wrap:balance] sm:text-7xl">{name}</h1>
               {(place || founded) && (
@@ -49,6 +51,7 @@ export function ClubHero({ team, profile, loading = false }) {
                 </p>
               )}
             </div>
+            {action && <div className="shrink-0">{action}</div>}
           </>
         )}
       </div>

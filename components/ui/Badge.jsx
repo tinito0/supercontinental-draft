@@ -13,7 +13,7 @@ const VARIANT_MAP = {
 };
 
 const SIZE_MAP = {
-  xs: 'text-[10px] px-1.5 py-0.5 rounded gap-1',
+  xs: 'text-[11px] px-1.5 py-0.5 rounded gap-1',
   sm: 'text-[11px] px-2 py-0.5 rounded-md gap-1.5',
   md: 'text-xs px-2.5 py-1 rounded-md gap-1.5',
 };

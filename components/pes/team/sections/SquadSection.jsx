@@ -73,7 +73,7 @@ export function SquadSection({ ws, version, teamId, access, modified, apply }) {
                         <DorsalInput value={r.bin.number} label={`Dorsal de ${name} en Team.bin`} disabled={!access.data}
                           modified={modified.has(opKey({ type: 'bin.assignment.set', target: { assignmentId: r.bin.assignmentId }, field: 'shirtNumber' }))}
                           onCommit={value => apply(() => [{ type: 'bin.assignment.set', target: { assignmentId: r.bin.assignmentId }, field: 'shirtNumber', value }])} />
-                      ) : <span className="text-ink-3">—</span>}
+                      ) : <span className="text-ink-3" title="No figura en este archivo">no figura</span>}
                     </td>
                   )}
                   {hasEdit && (
@@ -82,7 +82,7 @@ export function SquadSection({ ws, version, teamId, access, modified, apply }) {
                         <DorsalInput value={r.edit.number} label={`Dorsal de ${name} en el EDIT`} disabled={!access.data}
                           modified={modified.has(opKey({ type: 'edit.roster.number', target: { teamId, slot: r.edit.slot } }))}
                           onCommit={value => apply(() => [{ type: 'edit.roster.number', target: { teamId, slot: r.edit.slot }, value }])} />
-                      ) : <span className="text-ink-3">—</span>}
+                      ) : <span className="text-ink-3" title="No figura en este archivo">no figura</span>}
                     </td>
                   )}
                   <td className="text-ink font-medium">{name}</td>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { resetCommunityVotes } from '../../services/communityAdminService.js';
+import { confirmAction } from '../ui/ConfirmDialog.jsx';
 
 /**
  * «Reiniciar votos» de una votación del público: pide confirmación porque borra los votos y no se puede deshacer.
@@ -14,7 +15,13 @@ export function ResetVotesButton({ kind, target, label, total, showStatusMessage
   const reset = async () => {
     const count = Number(total) || 0;
     const votes = `${count} ${count === 1 ? 'voto' : 'votos'}`;
-    if (!window.confirm(`¿Reiniciar los votos de ${label}?\n\nSe borran los ${votes} y todos pueden volver a votar. No se puede deshacer.`)) return;
+    const isConfirmed = await confirmAction({
+      title: `¿Reiniciar los votos de ${label}?`,
+      message: `Se borran los ${votes} y todos pueden volver a votar.`,
+      confirmLabel: 'Reiniciar votos',
+      irreversible: true,
+    });
+    if (!isConfirmed) return;
     setBusy(true);
     try {
       await resetCommunityVotes(kind, target);

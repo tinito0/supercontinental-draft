@@ -31,6 +31,7 @@ import {
   roundNumber,
 } from './tournament/index.js';
 import { Alert } from './ui/Alert.jsx';
+import { confirmAction } from './ui/ConfirmDialog.jsx';
 import { draftUrl } from '../utils/siteRoutes.js';
 
 export {
@@ -171,24 +172,36 @@ export const TournamentModal = memo(function TournamentModal({
   }, []);
 
   // «Armar Copa de Oro»: cuartos 1-8, 4-5, 2-7, 3-6 con la tabla final; desde ahí los ganadores pasan solos.
-  const seedGoldCup = () => {
+  const seedGoldCup = async () => {
     const result = seedGoldCupBracket(localData.bracket, finalRanking);
     if (!result.ok) {
       setSaveWarnings([result.reason]);
       return;
     }
-    const list = result.bracket.quarters.map(match => `${match.teamA} vs ${match.teamB}`).join('\n');
-    if (!window.confirm(`Cuartos de la Copa de Oro:\n${list}\n\nSe publican al presionar Guardar.`)) return;
+    const isConfirmed = await confirmAction({
+      title: '¿Armar los cuartos de la Copa de Oro?',
+      details: result.bracket.quarters.map(match => `${match.teamA} vs ${match.teamB}`),
+      message: 'Se publican cuando presiones Guardar.',
+      confirmLabel: 'Armar cuartos',
+      tone: 'primary',
+    });
+    if (!isConfirmed) return;
     setLocalData(prev => ({ ...prev, bracket: result.bracket }));
   };
 
-  const handleCancelEditing = () => {
-    if (hasUnsavedChanges() && !window.confirm('¿Descartar los cambios sin guardar del torneo?')) return;
+  const confirmDiscard = () => confirmAction({
+    title: '¿Descartar los cambios?',
+    message: 'Lo que editaste del torneo y no guardaste se pierde.',
+    confirmLabel: 'Descartar cambios',
+  });
+
+  const handleCancelEditing = async () => {
+    if (hasUnsavedChanges() && !(await confirmDiscard())) return;
     setIsEditing(false); // el efecto de sincronización vuelve a cargar los datos guardados
   };
 
-  const handleClose = () => {
-    if (hasUnsavedChanges() && !window.confirm('Hay cambios del torneo sin guardar. ¿Cerrar y descartarlos?')) return;
+  const handleClose = async () => {
+    if (hasUnsavedChanges() && !(await confirmDiscard())) return;
     setIsEditing(false);
     onClose?.();
   };
@@ -271,14 +284,20 @@ export const TournamentModal = memo(function TournamentModal({
 
   // La fecha suiza se arma sola al guardar el último resultado de una fecha. Este botón es el respaldo manual (por
   // ejemplo si el admin borró una fecha generada para rehacerla): mismos ids fijos, así que nunca la duplica.
-  const suggestNextRound = useCallback(() => {
+  const suggestNextRound = useCallback(async () => {
     const suggestion = suggestSwissRound(localData);
     if (!suggestion.ok) {
       setSaveWarnings([suggestion.reason]);
       return;
     }
-    const list = suggestion.pairs.map(([home, away]) => `${home} vs ${away}`).join('\n');
-    if (!window.confirm(`${suggestion.round} sugerida:\n${list}\n\n¿Agregar estos partidos? Se guardan al presionar Guardar.`)) return;
+    const isConfirmed = await confirmAction({
+      title: `¿Agregar la ${suggestion.round}?`,
+      details: suggestion.pairs.map(([home, away]) => `${home} vs ${away}`),
+      message: 'Se guardan cuando presiones Guardar.',
+      confirmLabel: 'Agregar partidos',
+      tone: 'primary',
+    });
+    if (!isConfirmed) return;
     setSaveWarnings([]);
     setLocalData(prev => {
       const ids = new Set((prev.matches || []).map(match => match.id));
@@ -288,22 +307,33 @@ export const TournamentModal = memo(function TournamentModal({
 
   // Fecha 1 por sorteo: el día que arranca la copa. Se ve el resultado antes de aceptarlo y se publica al Guardar; de
   // la Fecha 2 en adelante los cruces se arman solos al terminar cada fecha.
-  const drawRoundOne = useCallback(() => {
+  const drawRoundOne = useCallback(async () => {
     const draw = drawFirstRound(localData);
     if (!draw.ok) {
       setSaveWarnings([draw.reason]);
       return;
     }
-    const list = draw.pairs.map(([home, away]) => `${home} vs ${away}`).join('\n');
-    if (!window.confirm(`Sorteo de la Fecha 1:\n${list}\n\n¿Usar este sorteo? Se publica al presionar Guardar. Si cancelás, podés volver a sortear.`)) return;
+    const isConfirmed = await confirmAction({
+      title: '¿Usar este sorteo de la Fecha 1?',
+      details: draw.pairs.map(([home, away]) => `${home} vs ${away}`),
+      message: 'Se publica cuando presiones Guardar. Si cancelás, podés volver a sortear.',
+      confirmLabel: 'Usar sorteo',
+      tone: 'primary',
+    });
+    if (!isConfirmed) return;
     setSaveWarnings([]);
     setLocalData(prev => ({ ...prev, matches: [...(prev.matches || []), ...draw.matches] }));
   }, [localData]);
   // Antes del `if (!localData)` de abajo: el torneo todavía puede no haber cargado.
   const needsRoundOneDraw = !(localData?.matches || []).some(match => roundNumber(match.round) === 1);
 
-  const removeTournamentMatch = useCallback((matchId) => {
-    if (!window.confirm('¿Eliminar este partido? Se aplicará al presionar Guardar.')) return;
+  const removeTournamentMatch = useCallback(async (matchId) => {
+    const isConfirmed = await confirmAction({
+      title: '¿Eliminar el partido?',
+      message: 'Se aplica cuando presiones Guardar.',
+      confirmLabel: 'Eliminar partido',
+    });
+    if (!isConfirmed) return;
     setLocalData(prev => ({ ...prev, matches: (prev.matches || []).filter(match => match.id !== matchId) }));
   }, []);
 

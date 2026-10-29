@@ -13,6 +13,11 @@ export function percent(made, total) {
   return Math.round((made / total) * 100);
 }
 
+/** 0.23 → «0,23»; null → «—». */
+export function formatDecimal(value, digits = 2) {
+  return Number.isFinite(value) ? value.toFixed(digits).replace('.', ',') : '—';
+}
+
 const ratio = (made, total) => (isCount(made) && isCount(total) ? { made, total, pct: percent(made, total) } : null);
 const count = value => (isCount(value) ? value : null);
 
@@ -25,6 +30,12 @@ function shotGoals(summary, side) {
 
 /** Filas de estadísticas: get(ctx) devuelve un número, { made, total, pct } o null (no medido). */
 export const STAT_ROWS = {
+  xg: {
+    label: 'Goles esperados (xG)',
+    help: 'Suma del xG de cada tiro: modelo propio de distancia y ángulo con la posición aproximada del pateador; penal 0,76. No es un dato del juego.',
+    get: c => (Number.isFinite(c.xg) ? c.xg : null),
+    format: value => formatDecimal(value),
+  },
   shots: { label: 'Tiros', help: 'Remates del equipo (penales en juego incluidos, la tanda no).', get: c => count(c.stats.shots) },
   shotsOnTarget: { label: 'Tiros al arco', help: 'Remates que iban al arco, goles incluidos.', get: c => count(c.stats.shotsOnTarget) },
   shotsOffTarget: {
@@ -66,8 +77,8 @@ export const STAT_ROWS = {
 };
 
 export const STAT_SECTIONS = [
-  { id: 'principales', title: 'Estadísticas principales', rows: ['shots', 'shotsOnTarget', 'passes', 'passAccuracy', 'corners', 'fouls', 'saves', 'yellowCards'] },
-  { id: 'tiros', title: 'Tiros', rows: ['shots', 'shotsOnTarget', 'shotsOffTarget', 'shotGoals', 'onTargetRate', 'conversion', 'penaltyShots'] },
+  { id: 'principales', title: 'Estadísticas principales', rows: ['xg', 'shots', 'shotsOnTarget', 'passes', 'passAccuracy', 'corners', 'fouls', 'saves', 'yellowCards'] },
+  { id: 'tiros', title: 'Tiros', rows: ['xg', 'shots', 'shotsOnTarget', 'shotsOffTarget', 'shotGoals', 'onTargetRate', 'conversion', 'penaltyShots'] },
   { id: 'pases', title: 'Pases', rows: ['passes', 'passAccuracy', 'shortPasses', 'throughPasses', 'longPasses', 'crosses', 'freeKicks', 'corners'] },
   { id: 'defensa', title: 'Defensa', rows: ['interceptions', 'tacklesWon', 'clearances', 'saves'] },
   { id: 'duelos', title: 'Duelos y pelota', rows: ['duels', 'dribbles', 'touches'] },
@@ -94,9 +105,17 @@ function buildRow(key, contexts) {
   const a = numeric(away) ?? 0;
   // Barras: un porcentaje se dibuja contra 100; una cantidad, contra la suma de los dos lados.
   const scale = isRatio ? 100 : (h + a) || 1;
+  // Un lado sin medir no se compara: con «—» de un lado, la barra del otro se leería como ventaja.
+  if (home == null || away == null) {
+    return {
+      key, label: spec.label, help: spec.help, home, away,
+      display: { home: (spec.format || formatStat)(home), away: (spec.format || formatStat)(away) },
+      share: { home: 0, away: 0 }, leader: null,
+    };
+  }
   return {
     key, label: spec.label, help: spec.help, home, away,
-    display: { home: formatStat(home), away: formatStat(away) },
+    display: { home: (spec.format || formatStat)(home), away: (spec.format || formatStat)(away) },
     share: { home: (h / scale) * 100, away: (a / scale) * 100 },
     leader: h > a ? 'home' : a > h ? 'away' : null,
   };
@@ -105,7 +124,7 @@ function buildRow(key, contexts) {
 /** Secciones con sus filas medidas; vacío sin estadísticas de equipo. */
 export function statSections(summary) {
   if (!summary?.teamStats?.home || !summary?.teamStats?.away) return [];
-  const contexts = Object.fromEntries(SIDES.map(side => [side, { stats: summary.teamStats[side], shotGoals: shotGoals(summary, side) }]));
+  const contexts = Object.fromEntries(SIDES.map(side => [side, { stats: summary.teamStats[side], shotGoals: shotGoals(summary, side), xg: summary.xg?.[side] }]));
   const sections = STAT_SECTIONS.map(section => ({
     id: section.id, title: section.title, rows: section.rows.map(key => buildRow(key, contexts)).filter(Boolean),
   }));
@@ -141,7 +160,36 @@ export function shotRows(summary) {
     outcome: shot.outcome,
     outcomeLabel: SHOT_OUTCOMES[shot.outcome] || shot.outcome,
     penalty: Boolean(shot.penalty),
+    // Posición aproximada (atacando hacia la derecha, metros) y xG: solo desde el probe v5; si no, null.
+    x: Number.isFinite(shot.x) ? shot.x : null,
+    y: Number.isFinite(shot.y) ? shot.y : null,
+    xg: Number.isFinite(shot.xg) ? shot.xg : null,
   }));
+}
+
+/** Valoración del juego (summary.ratings, 5,0–10,0) o null. */
+export function playerRating(summary, id) {
+  const value = summary?.ratings?.[id];
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** Promedio de las valoraciones de los que jugaron (titulares y los que entraron), un decimal; null sin datos. */
+export function teamRating(summary, side) {
+  const played = [
+    ...(summary?.lineups?.[side]?.starting || []),
+    ...(summary?.substitutions || []).filter(sub => sub.side === side).map(sub => sub.onId),
+  ];
+  const values = played.map(id => playerRating(summary, id)).filter(value => value != null);
+  if (!values.length) return null;
+  return Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10;
+}
+
+/** Ids con la valoración más alta del partido (más de uno si empatan); [] sin valoraciones. */
+export function bestRated(summary) {
+  const entries = Object.entries(summary?.ratings || {}).filter(([, value]) => Number.isFinite(value) && value > 0);
+  if (!entries.length) return [];
+  const top = Math.max(...entries.map(([, value]) => value));
+  return entries.filter(([, value]) => value === top).map(([id]) => Number(id));
 }
 
 /** Minuto final de lo jugado: el reloj del resumen (90 o 120 al terminar). */
@@ -204,6 +252,9 @@ export function playerProfile(summary, side, id) {
     number: summary?.teamPlans?.[side]?.numbers?.[id] ?? null,
     position: summary?.names?.positions?.[id] ?? null,
     minutes: minutesPlayed(summary, side, id),
+    rating: playerRating(summary, id),
+    isBest: bestRated(summary).includes(id),
+    heat: summary?.heatmaps?.players?.[id] || null,
     hasStats: Boolean(entry),
     groups,
     shots: shotRows(summary).filter(shot => shot.playerId === id && shot.side === side),

@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Database, Users, Shield, ListChecks, KeyRound, LayoutGrid, Lock, ArrowRightLeft, FolderOpen } from 'lucide-react';
 import { usePesWorkspace } from '../hooks/usePesWorkspace.js';
-import { Card, Pill, ErrorText } from '../components/pes/PesUi.jsx';
+import { Card, Pill, StatePill, ErrorText, plural } from '../components/pes/PesUi.jsx';
+import { SoftValue } from '../components/ui/SoftValue.jsx';
 import { Page } from '../components/ui/Page.jsx';
 import { PageHeader } from '../components/ui/PageHeader.jsx';
 import { Tabs } from '../components/ui/Tabs.jsx';
@@ -28,31 +29,45 @@ const TABS = [
   { id: 'roles', label: 'Roles', icon: KeyRound, show: c => c.has('roles.manage') },
 ];
 
+/** The one state that matters most right now, most urgent first. The other facts stay plain text. */
+function primaryState({ drafts, validation, missing, caps }) {
+  const n = drafts.length;
+  if (validation && !validation.passed) {
+    const e = validation.errors.length;
+    return { tone: 'red', text: `${e} ${plural(e, 'error', 'errores')} de validación` };
+  }
+  if (n) return { tone: 'amber', text: `${n} ${plural(n, 'cambio sin guardar', 'cambios sin guardar')}` };
+  if (missing.length) return { tone: 'amber', text: `${missing.length} ${plural(missing.length, 'fuente sin cargar', 'fuentes sin cargar')}` };
+  if (caps.has('export') && validation?.passed) return { tone: 'accent', text: 'Listo para exportar' };
+  return { tone: 'green', text: 'Todo guardado' };
+}
+
 /**
- * One line with what matters before exporting: unsaved drafts, validation and export state.
+ * One line with what matters before exporting: a single state (it steps to the next one in place) and plain counts.
  * The rest (files, history) lives in «Resumen» and «Cambios».
  */
 function StatusLine({ pes, modified }) {
-  const { wsDoc, ws, drafts, validation, missing, caps } = pes;
+  const { wsDoc, ws, validation } = pes;
   if (!wsDoc) return null;
   const files = [];
   if (ws?.bin) files.push(...Object.values(ws.bin.tables).map(t => t.file), ...Object.keys(ws.bin.passthrough));
   if (ws?.edit) files.push('EDIT00000000');
   if (ws?.kits) files.push(`kit-server (${ws.kits.configs.size} kits)`);
-  const exportReady = caps.has('export') && validation?.passed && drafts.length === 0;
   const openWarnings = (validation?.warnings.length || 0) + (validation?.preexisting.length || 0);
+  const state = primaryState(pes);
   return (
-    <div role="status" className="flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-line/[0.08] py-3 text-sm">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-line/[0.08] py-3 text-sm">
       <span className="text-ink-2 min-w-0">
         <span className="font-semibold text-ink">{wsDoc.name}</span>
-        <span className="text-ink-3" title={files.join(', ')}> · <span className="num">{files.length}</span> archivo(s)</span>
+        <span className="text-ink-3" title={files.join(', ')}> · <span className="num">{files.length}</span> {plural(files.length, 'archivo', 'archivos')}</span>
       </span>
-      {missing.length > 0 && <Pill tone="amber">{missing.length} fuente(s) sin cargar en este navegador</Pill>}
-      <span className="text-ink-3"><span className="num text-ink-2">{modified.size}</span> campo(s) modificados</span>
-      <Pill tone={drafts.length ? 'amber' : 'green'}>{drafts.length ? `${drafts.length} cambio(s) sin guardar` : 'Todo guardado'}</Pill>
-      {validation && <Pill tone={validation.passed ? 'green' : 'red'}>{validation.passed ? 'Validación correcta' : `${validation.errors.length} error(es) de validación`}</Pill>}
-      {openWarnings > 0 && <Pill tone="amber">{openWarnings} advertencia(s)</Pill>}
-      {exportReady && <Pill tone="accent">Listo para exportar</Pill>}
+      <span className="text-ink-3">
+        <SoftValue value={modified.size} className="num text-ink-2" /> {plural(modified.size, 'campo modificado', 'campos modificados')}
+      </span>
+      {openWarnings > 0 && (
+        <span className="text-ink-3"><span className="num text-ink-2">{openWarnings}</span> {plural(openWarnings, 'advertencia', 'advertencias')}</span>
+      )}
+      <span role="status" className="sm:ml-auto"><StatePill tone={state.tone}>{state.text}</StatePill></span>
     </div>
   );
 }
@@ -131,7 +146,7 @@ export default function PesWorkspaceScreen({ userId, isAdmin, allTeams, appPlaye
   const needsWorkspace = ['draft', 'teams', 'players'].includes(tab) && !pes.ws;
 
   return (
-    <Page>
+    <Page className="pes-editor">
       <PageHeader eyebrow="Gestión" title="Editor PES 2021"
         description={`Base de datos, plantillas y kits del juego. Tu rol: ${roleText}.`}
         actions={(pes.busy || pes.loading) && <Spinner size="sm" label={pes.busy || pes.loadingMessage || 'Cargando copia de trabajo…'} />} />
@@ -139,21 +154,24 @@ export default function PesWorkspaceScreen({ userId, isAdmin, allTeams, appPlaye
       <Tabs tabs={tabs} value={tab} onChange={setTab} label="Secciones del editor PES" />
       <ErrorText error={pes.error} />
       <ErrorText error={applyError} />
-      {tab === 'sources' && <PesSourcesPanel pes={view} />}
-      {tab === 'overview' && <Overview pes={view} />}
-      {tab === 'draft' && pes.ws && <PesDraftPanel pes={view} />}
-      {tab === 'teams' && pes.ws && (
-        <PesTeamWorkspace pes={view} allTeams={allTeams} teamId={teamId} section={section}
-          onTeamChange={id => setParam({ team: id, section: null, tab: 'teams' }, true)}
-          onSectionChange={id => setParam({ section: id, tab: 'teams' })} />
-      )}
-      {tab === 'players' && pes.ws && <PesPlayersPanel pes={view} onApply={safeApply} appPlayers={appPlayers} />}
-      {tab === 'changes' && pes.wsDoc && <PesChangesPanel pes={view} />}
-      {tab === 'roles' && <PesRolesPanel actorUid={userId} allTeams={allTeams} />}
-      {needsWorkspace && (
-        <EmptyState icon={FolderOpen} title="Primero cargá las fuentes" description="Elegí un espacio de trabajo y cargá sus archivos en «Fuentes»."
-          actionLabel="Ir a Fuentes" onAction={() => setTab('sources')} />
-      )}
+      {/* Keyed by tab: the new view fades in, so a tab change reads as "this content was replaced". */}
+      <div key={tab} className="animate-in fade-in">
+        {tab === 'sources' && <PesSourcesPanel pes={view} />}
+        {tab === 'overview' && <Overview pes={view} />}
+        {tab === 'draft' && pes.ws && <PesDraftPanel pes={view} />}
+        {tab === 'teams' && pes.ws && (
+          <PesTeamWorkspace pes={view} allTeams={allTeams} teamId={teamId} section={section}
+            onTeamChange={id => setParam({ team: id, section: null, tab: 'teams' }, true)}
+            onSectionChange={id => setParam({ section: id, tab: 'teams' })} />
+        )}
+        {tab === 'players' && pes.ws && <PesPlayersPanel pes={view} onApply={safeApply} appPlayers={appPlayers} />}
+        {tab === 'changes' && pes.wsDoc && <PesChangesPanel pes={view} />}
+        {tab === 'roles' && <PesRolesPanel actorUid={userId} allTeams={allTeams} />}
+        {needsWorkspace && (
+          <EmptyState icon={FolderOpen} title="Primero cargá las fuentes" description="Elegí un espacio de trabajo y cargá sus archivos en «Fuentes»."
+            actionLabel="Ir a Fuentes" onAction={() => setTab('sources')} />
+        )}
+      </div>
     </Page>
   );
 }

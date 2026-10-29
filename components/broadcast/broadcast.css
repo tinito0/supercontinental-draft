@@ -19,6 +19,8 @@
   --scl-frame: linear-gradient(100deg, #022a5e 8%, #00489a 38%, #005fbd 55%, #4f6db5 75%, #7a7bb7 95%);
   --scl-bar: linear-gradient(90deg, #022a5e, #00489a 55%, #0d6ac4);
   --scl-stripe: linear-gradient(90deg, #7a7bb7, #b6b6ec);
+  /* Movimiento de la transmisión: una sola curva para entrar, moverse y salir. */
+  --scl-ease: cubic-bezier(0.16, 1, 0.3, 1);
   font-family: Barlow Condensed, Barlow, ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0.01em;
 }
@@ -390,6 +392,18 @@
   color: var(--scl-navy);
 }
 .broadcast-rankings { display: grid; gap: 8px; }
+/* Goles y asistencias lado a lado: columnas de 570 px, así que el valor ocupa menos y el nombre se corta antes. */
+.broadcast-leader-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.broadcast-leader-columns .broadcast-ranking-row { grid-template-columns: 52px 1fr 96px; }
+.broadcast-leader-columns .broadcast-ranking-name small { display: none; }
+.broadcast-leader-title {
+  margin: 0 0 12px;
+  color: var(--scl-periwinkle);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 .broadcast-ranking-row {
   height: 56px;
   display: grid;
@@ -431,141 +445,161 @@
   font-weight: 800;
 }
 
-/* ---- Popup con QR (OverlayPopup.jsx) ---- */
-.scl-popup {
+/* ---- Lo que ve el público sobre el juego: popup con QR (OverlayPopup.jsx) y tarjetas de la comunidad
+   (CommunityCard.jsx), con el marco compacto de CommunityFrame.jsx. Anclados abajo: arriba están el marcador y el reloj
+   del juego. Con el lower third en pantalla (escenas con rótulos) suben para no pisarlo. ---- */
+.scl-pop {
   position: absolute;
-  top: 200px;
-  width: 460px;
-  padding: 12px 22px 22px;
-  border-radius: 0 0 34px 34px;
-  animation: scl-popup-unfold 560ms cubic-bezier(.16, 1, .3, 1) backwards;
+  bottom: 96px;
+  width: 680px;
+  border-radius: 0 0 28px 28px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(2, 10, 30, 0.5);
 }
-.scl-popup .scl-frame-stripe { height: 8px; }
-.scl-popup .scl-frame-ball { right: -120px; bottom: -140px; width: 340px; height: 340px; }
-.scl-popup[data-position=right] { right: 64px; }
-.scl-popup[data-position=left] { left: 64px; }
-.scl-popup[data-position=center] { left: 50%; margin-left: -230px; }
-.scl-popup .scl-frame-head { min-height: 58px; margin: 8px 0 14px; gap: 12px; }
-.scl-popup .scl-badge { width: 50px; height: 50px; }
-.scl-popup .scl-badge img { width: 40px; height: 40px; }
-.scl-popup .scl-frame-title { font-size: 34px; line-height: 1; white-space: normal; text-transform: none; }
-.scl-popup .scl-panel {
+.scl-pop[data-position=right] { right: 64px; }
+.scl-pop[data-position=left] { left: 64px; }
+/* translate (no transform) para centrar: las animaciones usan transform y no lo pisan. */
+.scl-pop[data-position=center] { left: 50%; translate: -50% 0; }
+.broadcast-overlay-root:has(.broadcast-lower) .scl-pop { bottom: 268px; }
+
+.scl-pop-head {
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 14px;
-  padding: 24px 24px 22px;
-  border-radius: 0 0 24px 24px;
-  text-align: center;
+  min-height: 84px;
+  padding: 18px 24px 14px;
+  background: var(--scl-frame);
+  overflow: hidden;
 }
-.scl-popup-text { color: var(--scl-navy); font-size: 25px; line-height: 1.15; font-weight: 700; }
-.scl-popup-qr { position: relative; line-height: 0; }
+.scl-pop-edge { position: absolute; inset: 0 0 auto 0; height: 6px; background: var(--scl-stripe); transform-origin: left; }
+.scl-pop .scl-frame-ball { right: -90px; bottom: -160px; width: 300px; height: 300px; }
+.scl-pop .scl-badge { position: relative; z-index: 1; width: 52px; height: 52px; }
+.scl-pop .scl-badge img { width: 42px; height: 42px; }
+.scl-pop-titles { position: relative; z-index: 1; flex: 1; display: grid; min-width: 0; color: #ffffff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); }
+/* «Comunidad» a la izquierda y la llamada (Votá en /en-vivo, Ganan: …) a la derecha: el título queda con todo el ancho. */
+.scl-pop-kicker {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--scl-lilac);
+}
+/* Hasta dos líneas: el título de la encuesta de la copa no entra en una al lado del chip. */
+.scl-pop-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.scl-pop-aside { flex: none; color: #ffffff; letter-spacing: 0.06em; }
+.scl-pop-body { background: #ffffff; color: var(--scl-ink); padding: 20px 24px 22px; border-radius: 0 0 28px 28px; }
+
+/* Popup: el QR a la izquierda y el texto al lado, para ocupar poco alto sobre el partido. */
+.scl-popup .scl-pop-body { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; }
+.scl-popup-qr { position: relative; padding: 10px; border: 2px solid var(--scl-row); line-height: 0; }
+.scl-popup-copy { display: grid; gap: 10px; min-width: 0; }
+.scl-popup-text { margin: 0; color: var(--scl-navy); font-size: 28px; line-height: 1.12; font-weight: 700; }
+.scl-popup-hint { color: var(--scl-navy); font-size: 26px; line-height: 1.12; font-weight: 700; }
 .scl-popup-url {
-  width: 100%;
-  padding: 8px 12px;
+  justify-self: start;
+  max-width: 100%;
+  padding: 6px 12px;
   background: var(--scl-bar);
   color: #ffffff;
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
-/* ---- Tarjeta de la comunidad (CommunityCard.jsx): mismo marco y entrada que el popup, a la izquierda. Las barras
-   crecen con transform (no width) y la del primero se pinta con el degradé del marco. ---- */
+/* Tarjeta: filas con nombre, porcentaje y una barra fina; la del primero lleva el degradé del marco. Las barras
+   crecen con transform (no width). */
 .scl-card { width: 520px; }
-.scl-card .scl-frame-kicker { font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.85; }
-.scl-card .scl-panel { align-items: stretch; text-align: left; gap: 12px; padding: 20px 24px 20px; }
-.scl-card-aside {
-  align-self: flex-start;
-  padding: 4px 12px;
-  background: var(--scl-navy);
-  color: #ffffff;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.scl-card-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.scl-card-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
 .scl-card-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--scl-ink); }
 .scl-card-row-name {
   min-width: 0;
-  font-size: 27px;
+  font-size: 26px;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-transform: uppercase;
 }
-.scl-card-row-pct { flex-shrink: 0; font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--scl-muted); }
+.scl-card-row-pct { flex-shrink: 0; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--scl-muted); }
+.scl-card-row-pct > span { display: inline-block; }
 .scl-card-row.is-leader .scl-card-row-name,
 .scl-card-row.is-leader .scl-card-row-pct { color: var(--scl-navy); font-weight: 800; }
-.scl-card-bar { height: 12px; margin-top: 4px; overflow: hidden; background: var(--scl-row); }
+.scl-card-bar { height: 8px; margin-top: 6px; border-radius: 4px; overflow: hidden; background: var(--scl-row); }
 .scl-card-bar span {
   display: block;
   height: 100%;
   background: var(--scl-lilac);
   transform-origin: left;
-  transition: transform 700ms cubic-bezier(.16, 1, .3, 1);
+  transition: transform 800ms var(--scl-ease);
 }
 .scl-card-row.is-leader .scl-card-bar span { background: var(--scl-frame); }
-.scl-card-footer { font-size: 20px; font-weight: 700; color: var(--scl-muted); text-align: right; font-variant-numeric: tabular-nums; }
-.scl-card-rows li { animation: scl-popup-rise 380ms ease-out backwards; }
-.scl-card-rows li:nth-child(1) { animation-delay: 480ms; }
-.scl-card-rows li:nth-child(2) { animation-delay: 560ms; }
-.scl-card-rows li:nth-child(3) { animation-delay: 640ms; }
-.scl-card-rows li:nth-child(4) { animation-delay: 720ms; }
-.scl-card-bar span { animation: scl-card-grow 700ms 700ms cubic-bezier(.16, 1, .3, 1) backwards; }
-@keyframes scl-card-grow { from { transform: scaleX(0); } }
+.scl-card-footer { margin-top: 14px; color: var(--scl-muted); font-size: 19px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 
-/* Entrada en secuencia (~1,6 s): el marco se despliega desde la franja, entra el encabezado, el QR crece con un
-   pequeño rebote y lo recorre una línea de escaneo, y la barra del enlace se abre de izquierda a derecha. Después el
-   QR late suave para llamar la atención. Al vencer el tiempo, el marco se pliega hacia arriba (.is-leaving).
-   fill-mode backwards: al terminar no queda un clip-path que recorte la sombra. */
-.scl-popup .scl-frame-stripe { transform-origin: left; animation: scl-popup-stripe 420ms 120ms cubic-bezier(.2, .8, .2, 1) backwards; }
-.scl-popup .scl-frame-head { animation: scl-popup-slide 420ms 300ms cubic-bezier(.16, 1, .3, 1) backwards; }
-.scl-popup-text { animation: scl-popup-rise 380ms 480ms ease-out backwards; }
-.scl-popup-qr { animation: scl-popup-qr-pop 560ms 620ms cubic-bezier(.34, 1.56, .64, 1) backwards, scl-popup-qr-pulse 2.6s 2.4s ease-in-out infinite; }
-.scl-popup-scan {
+/* Movimiento (~1,2 s, todo suave): el marco sube 20 px desde un desenfoque, la franja se dibuja, el encabezado y cada
+   línea entran de a una (--i) y las barras crecen detrás. El QR se aclara desde 94 % sin rebote y su anillo late tres
+   veces; después todo queda quieto, porque con autoHideSec = 0 puede seguir en pantalla el partido entero. Un
+   porcentaje que cambia se funde en el lugar. La salida es más corta que la entrada y baja en vez de subir. */
+.scl-pop { animation: scl-pop-in 640ms var(--scl-ease) backwards; }
+.scl-pop.is-leaving { animation: scl-pop-out 280ms var(--scl-ease) forwards; }
+.scl-pop-edge { animation: scl-popup-stripe 620ms 80ms var(--scl-ease) backwards; }
+.scl-pop-head > .scl-badge,
+.scl-pop-titles { animation: scl-pop-rise 520ms 180ms var(--scl-ease) backwards; }
+.scl-popup-copy > *,
+.scl-card-row,
+.scl-card-footer { animation: scl-pop-rise 520ms calc(320ms + var(--i, 0) * 70ms) var(--scl-ease) backwards; }
+.scl-popup-qr { animation: scl-pop-qr-in 680ms 280ms var(--scl-ease) backwards; }
+.scl-popup-qr::after {
+  content: "";
   position: absolute;
-  left: -6px;
-  right: -6px;
-  top: 0;
-  height: 18px;
-  background: linear-gradient(180deg, transparent, rgba(0, 95, 189, 0.55), transparent);
+  inset: -2px;
+  box-shadow: 0 0 0 8px rgba(122, 123, 183, 0.32);
   opacity: 0;
-  animation: scl-popup-scan 900ms 1100ms ease-in-out both;
   pointer-events: none;
+  animation: scl-popup-qr-pulse 2.4s 1.6s ease-in-out 3;
 }
-.scl-popup-url { animation: scl-popup-wipe 460ms 950ms cubic-bezier(.16, 1, .3, 1) backwards; }
-.scl-popup.is-leaving { animation: scl-popup-fold 280ms cubic-bezier(.23, 1, .32, 1) forwards; }
+.scl-card-bar span { animation: scl-card-grow 900ms calc(480ms + var(--i, 0) * 90ms) var(--scl-ease) backwards; }
+.scl-card-row-pct > span { animation: scl-pop-swap 380ms var(--scl-ease); }
 
-@keyframes scl-popup-unfold {
-  from { opacity: 0; transform: translateY(24px); clip-path: inset(0 0 100% 0); }
+@keyframes scl-pop-in { from { opacity: 0; transform: translateY(20px); filter: blur(6px); } }
+@keyframes scl-pop-out { to { opacity: 0; transform: translateY(10px); filter: blur(4px); } }
+@keyframes scl-pop-rise { from { opacity: 0; transform: translateY(8px); filter: blur(3px); } }
+@keyframes scl-pop-qr-in { from { opacity: 0; transform: scale(0.94); filter: blur(4px); } }
+@keyframes scl-pop-swap { from { opacity: 0; filter: blur(3px); } }
+@keyframes scl-popup-qr-pulse {
+  0%, 100% { opacity: 0; transform: scale(0.97); }
+  50% { opacity: 1; transform: none; }
+}
+@keyframes scl-card-grow { from { transform: scaleX(0); } }
+@keyframes scl-popup-stripe { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Entrada de cada escena (BroadcastOverlay.jsx, .scl-scene con key = escena): el mismo despliegue que el popup, más
+   corto, y la franja que se dibuja. Solo transform, opacity y clip-path: no recalcula el layout del lienzo. */
+.scl-scene { position: absolute; inset: 0; animation: scl-scene-in 480ms var(--scl-ease) backwards; }
+.scl-scene .scl-frame-stripe { transform-origin: left; animation: scl-popup-stripe 380ms 140ms var(--scl-ease) backwards; }
+@keyframes scl-scene-in {
+  from { opacity: 0; transform: translateY(18px); clip-path: inset(0 0 12% 0); }
   to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
 }
-@keyframes scl-popup-fold {
-  from { opacity: 1; clip-path: inset(0 0 0 0); }
-  to { opacity: 0; transform: translateY(-16px); clip-path: inset(0 0 100% 0); }
-}
-@keyframes scl-popup-stripe { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes scl-popup-slide { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-@keyframes scl-popup-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-@keyframes scl-popup-qr-pop { from { opacity: 0; transform: scale(0.55) rotate(-4deg); } to { opacity: 1; transform: none; } }
-@keyframes scl-popup-qr-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(122, 123, 183, 0); }
-  50% { box-shadow: 0 0 0 10px rgba(122, 123, 183, 0.35); }
-}
-@keyframes scl-popup-scan {
-  0% { opacity: 0; transform: translateY(0); }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(232px); }
-}
-@keyframes scl-popup-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
 @media (prefers-reduced-motion: reduce) {
-  .scl-popup, .scl-popup *, .scl-popup.is-leaving { animation: none !important; }
-  .scl-popup-scan { display: none; }
+  .scl-scene, .scl-scene .scl-frame-stripe { animation: none !important; }
+  .scl-pop, .scl-pop *, .scl-pop.is-leaving { animation: none !important; }
+  .scl-popup-qr::after { display: none; }
   .scl-card-bar span { transition: none; }
 }
 

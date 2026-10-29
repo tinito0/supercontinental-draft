@@ -2,17 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ImageOff, Plus, Trash2 } from 'lucide-react';
 import { Field } from '../ui/Field.jsx';
 import { Alert } from '../ui/Alert.jsx';
+import { PhotoFramer } from './PhotoFramer.jsx';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import {
-  CLUB_PROFILE_FIELDS, HONOUR_SCOPES, MAX_CHAPTERS, MAX_CLUB_SEASONS, MAX_ERA_LENGTH, MAX_HONOURS, MAX_PHOTO_URL_LENGTH,
-  MAX_STORY_LENGTH, MAX_TITLE_LENGTH, SEASON_STATS, cleanPhotoUrl, clubChapters, clubStoryDocId, moveChapter, newClubChapter,
+  CLUB_PROFILE_FIELDS, DEFAULT_PHOTO_FRAME, HONOUR_SCOPES, MAX_CHAPTERS, MAX_CLUB_SEASONS, MAX_ERA_LENGTH, MAX_HONOURS, MAX_PHOTO_URL_LENGTH,
+  MAX_STORY_LENGTH, MAX_TITLE_LENGTH, SEASON_STATS, cleanPhotoFrame, cleanPhotoUrl, clubChapters, clubStoryDocId, moveChapter, newClubChapter,
   newClubSeason, newHonour,
 } from '../../utils/leagueContent.js';
 
 /* Administración → Web pública → Clubes: la ficha (estadio, autoridades, títulos, campañas) y la historia de un club.
    Se guardan juntas porque viven en el mismo documento (utils/leagueContent.js normalizeClub). */
 
-const emptyProfile = () => ({ ...Object.fromEntries(CLUB_PROFILE_FIELDS.map(([key]) => [key, ''])), stadiumPhotoUrl: '', honours: [], seasons: [] });
+const emptyProfile = () => ({ ...Object.fromEntries(CLUB_PROFILE_FIELDS.map(([key]) => [key, ''])), stadiumPhotoUrl: '', stadiumPhotoFrame: { ...DEFAULT_PHOTO_FRAME }, honours: [], seasons: [] });
 
 function fromSaved(content) {
   const saved = content?.profile || {};
@@ -24,13 +25,14 @@ function fromSaved(content) {
     profile: {
       ...base,
       ...Object.fromEntries(Object.keys(base).filter(key => typeof saved[key] === 'string').map(key => [key, saved[key]])),
+      stadiumPhotoFrame: cleanPhotoFrame(saved.stadiumPhotoFrame),
       honours: (saved.honours || []).map(item => ({ ...newHonour(), ...item, count: String(item.count ?? 1) })),
       seasons: (saved.seasons || []).map(item => ({ ...newClubSeason(), ...item })),
     },
   };
 }
 
-function PhotoPreview({ url }) {
+function PhotoPreview({ url, frame, onFrameChange }) {
   const clean = cleanPhotoUrl(url);
   const [failed, setFailed] = useState(false);
   useEffect(() => { setFailed(false); }, [clean]);
@@ -43,7 +45,7 @@ function PhotoPreview({ url }) {
       </p>
     );
   }
-  return <img src={clean} alt="Vista previa del estadio" className="aspect-[16/7] w-full rounded-xl object-cover" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
+  return <PhotoFramer url={clean} frame={frame} onChange={onFrameChange} onError={() => setFailed(true)} />;
 }
 
 function RowList({ title, help, rows, max, onAdd, addLabel, children }) {
@@ -83,6 +85,8 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
   if (error) return <Alert tone="danger" title={error} />;
 
   const setField = (key, value) => setForm(prev => ({ ...prev, profile: { ...prev.profile, [key]: value } }));
+  // Otra foto, otro encuadre: el anterior no tiene por qué servirle.
+  const setPhotoUrl = url => setForm(prev => ({ ...prev, profile: { ...prev.profile, stadiumPhotoUrl: url, stadiumPhotoFrame: { ...DEFAULT_PHOTO_FRAME } } }));
   const setRow = (list, id, patch) => setForm(prev => ({
     ...prev, profile: { ...prev.profile, [list]: prev.profile[list].map(row => (row.id === id ? { ...row, ...patch } : row)) },
   }));
@@ -111,11 +115,11 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
             </Field>
           ))}
         </div>
-        <Field label="Foto del estadio" help="Pegá el link directo a una foto (https://…). Se muestra grande en la cabecera del club.">
+        <Field label="Foto del estadio" help="Pegá el link directo a una foto (https://…). Se muestra grande en la cabecera del club; abajo elegís qué parte se ve.">
           <input className="input" type="url" inputMode="url" value={profile.stadiumPhotoUrl} maxLength={MAX_PHOTO_URL_LENGTH}
-            placeholder="https://…/estadio.jpg" onChange={event => setField('stadiumPhotoUrl', event.target.value)} />
+            placeholder="https://…/estadio.jpg" onChange={event => setPhotoUrl(event.target.value)} />
         </Field>
-        <PhotoPreview url={profile.stadiumPhotoUrl} />
+        <PhotoPreview url={profile.stadiumPhotoUrl} frame={profile.stadiumPhotoFrame} onFrameChange={frame => setField('stadiumPhotoFrame', frame)} />
       </fieldset>
 
       <RowList title="Palmarés" help="Títulos del club: de la Supercontinental, de su liga y copas nacionales, e internacionales."

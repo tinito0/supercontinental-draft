@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { BallIcon } from './BallIcon.jsx';
 import { Tabs } from '../../ui/Tabs.jsx';
-import { SHOT_OUTCOMES } from '../../../utils/matchStats.js';
+import { SHOT_OUTCOMES, formatDecimal } from '../../../utils/matchStats.js';
+import { ShotMap } from './ShotMap.jsx';
 
-/* Tiros del partido (utils/matchStats.js shotRows) con filtros y el detalle del elegido. No hay mapa: el juego no
-   expone dónde se pateó cada tiro, así que no se dibuja ninguna ubicación. */
+/* Tiros del partido (utils/matchStats.js shotRows) con filtros, el mapa y el detalle del elegido. El mapa y el xG
+   solo existen en partidos grabados con el probe v5 (posiciones); antes, la lista sola. */
 
 const PERIODS = { 1: 'Primer tiempo', 2: 'Segundo tiempo', 3: 'Alargue', 4: 'Alargue' };
 const OUTCOME_STYLE = { goal: 'bg-accent text-on-accent', on_target: 'bg-raised text-ink', off_target: 'bg-raised text-ink-3' };
@@ -44,6 +45,7 @@ export function ShotsPanel({ shots, match, compact = false }) {
   const shown = compact ? visible.slice(-6) : visible;
   const detail = shots.find(s => s.index === selected) || null;
   const teamName = s => (s.side === 'home' ? match.home.name : match.away.name);
+  const hasXg = shots.some(s => s.xg != null);
   return (
     <div className="space-y-3">
       {!compact && (
@@ -58,12 +60,13 @@ export function ShotsPanel({ shots, match, compact = false }) {
           </div>
         </div>
       )}
+      {!compact && <ShotMap shots={visible} match={match} selected={selected} onSelect={setSelected} />}
       {shown.length === 0 && <p className="py-4 text-center text-sm text-ink-3">Ningún tiro con esos filtros.</p>}
       <ul className="divide-y divide-line/10">
         {shown.map(shot => (
           <li key={shot.index}>
             <button type="button" onClick={() => setSelected(shot.index === selected ? null : shot.index)} aria-pressed={shot.index === selected}
-              className={`grid min-h-11 w-full grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.03] ${shot.index === selected ? 'bg-overlay' : ''}`}>
+              className={`grid min-h-11 w-full ${hasXg ? 'grid-cols-[2.75rem_minmax(0,1fr)_auto_auto]' : 'grid-cols-[2.75rem_minmax(0,1fr)_auto]'} items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.03] ${shot.index === selected ? 'bg-overlay' : ''}`}>
               <span className="num font-display text-sm font-semibold text-ink-2">{shot.minute}</span>
               <span className="min-w-0">
                 <span className="block truncate text-sm text-ink">{shot.name}{shot.penalty ? ' (penal)' : ''}</span>
@@ -72,6 +75,7 @@ export function ShotsPanel({ shots, match, compact = false }) {
                   {teamName(shot)}
                 </span>
               </span>
+              {hasXg && <span className="num w-10 text-right text-sm text-ink-2" title="Goles esperados">{formatDecimal(shot.xg)}</span>}
               <OutcomeMark shot={shot} />
             </button>
           </li>
@@ -83,10 +87,17 @@ export function ShotsPanel({ shots, match, compact = false }) {
           <div><dt className="text-xs text-ink-3">Minuto</dt><dd className="num font-semibold text-ink">{detail.minute}</dd></div>
           <div><dt className="text-xs text-ink-3">Resultado</dt><dd className="font-semibold text-ink">{detail.outcomeLabel}</dd></div>
           <div><dt className="text-xs text-ink-3">Tipo</dt><dd className="font-semibold text-ink">{detail.penalty ? 'Penal' : 'En juego'}</dd></div>
+          {detail.xg != null && <div><dt className="text-xs text-ink-3">xG</dt><dd className="num font-semibold text-ink">{formatDecimal(detail.xg)}</dd></div>}
+          {detail.x != null && !detail.penalty && (
+            <div><dt className="text-xs text-ink-3">Distancia al arco</dt><dd className="num font-semibold text-ink">~{Math.round(Math.hypot(105 - detail.x, detail.y - 34))} m</dd></div>
+          )}
         </dl>
       )}
       <p className="text-xs text-ink-3">
-        Sin mapa de tiros ni goles esperados (xG): el juego no expone desde dónde se pateó. «Afuera» incluye los tiros bloqueados.
+        {hasXg
+          ? 'xG: modelo propio de distancia y ángulo (penal 0,76), no un dato del juego. La posición es la última que el juego registró del pateador antes del tiro, con unos metros de error. '
+          : 'Sin mapa ni xG: el partido se grabó antes de leer las posiciones. '}
+        «Afuera» incluye los tiros bloqueados.
       </p>
     </div>
   );

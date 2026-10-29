@@ -261,7 +261,7 @@ export const OverviewTab = memo(function OverviewTab({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink group-hover:text-accent-soft transition-colors">{player.Name}</span>
                       <span className="flex items-center gap-2 text-xs text-ink-3 mt-0.5">
-                        <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                        <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                         {player.Age > 0 && <span>{player.Age} años</span>}
                         <span className="num">{formatPriceShort(player.Precio)}</span>
                       </span>

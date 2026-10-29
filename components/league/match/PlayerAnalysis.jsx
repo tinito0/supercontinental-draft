@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { getPosColorClass } from '../../../utils/helpers.js';
 import { roleLabel } from '../../../utils/matchAnalysis.js';
-import { formatStat, playerLeaders, playerProfile } from '../../../utils/matchStats.js';
+import { bestRated, formatStat, playerLeaders, playerProfile } from '../../../utils/matchStats.js';
 import { PlayerPhoto } from './MatchDetailViews.jsx';
 import { Tabs } from '../../ui/Tabs.jsx';
+import { RatingChip } from './MatchParts.jsx';
+import { Heatmap } from './Heatmap.jsx';
 
 /* Pestaña Jugadores: la lista de un equipo por vez (selector arriba) y, al lado, la ficha del elegido y los que más
    hicieron cada cosa. Datos: utils/matchStats.js. Debajo de lg es maestro → detalle
@@ -18,6 +20,7 @@ function PositionChip({ position }) {
 
 function PlayerList({ rows, match, summary, selected, onSelect, side, onSide }) {
   const teams = ['home', 'away'].map(id => ({ id, label: match[id].name }));
+  const best = bestRated(summary);
   return (
     <div className="space-y-3">
       <Tabs tabs={teams} value={side} onChange={onSide} label="Equipo" className="w-full" />
@@ -31,6 +34,7 @@ function PlayerList({ rows, match, summary, selected, onSelect, side, onSide }) 
                 <span className="num w-6 shrink-0 text-right text-sm text-ink-2">{summary.teamPlans?.[side]?.numbers?.[row.id] ?? ''}</span>
                 <span className="min-w-0 flex-1 truncate text-base text-ink">{row.name}</span>
                 <PositionChip position={summary.names?.positions?.[row.id]} />
+                <RatingChip value={row.rating} isBest={best.includes(row.id)} />
               </button>
             </li>
           );
@@ -40,7 +44,7 @@ function PlayerList({ rows, match, summary, selected, onSelect, side, onSide }) 
   );
 }
 
-function Profile({ profile, match, onBack }) {
+function Profile({ profile, match, heatmaps, onBack }) {
   return (
     <div className="space-y-4">
       <button type="button" onClick={onBack} className="btn btn-ghost btn-sm min-h-11 -ml-2 lg:hidden">
@@ -56,6 +60,12 @@ function Profile({ profile, match, onBack }) {
             <PositionChip position={profile.position} />
           </p>
         </div>
+        {profile.rating != null && (
+          <div className="flex flex-col items-end gap-1">
+            <RatingChip value={profile.rating} isBest={profile.isBest} size="lg" />
+            <span className="text-sm text-ink-2">{profile.isBest ? 'la mejor nota' : 'nota del juego'}</span>
+          </div>
+        )}
         <div className="text-right">
           <span className="num block font-display text-4xl font-bold leading-none text-ink">{profile.minutes ?? '—'}</span>
           <span className="text-sm text-ink-2">minutos</span>
@@ -90,7 +100,17 @@ function Profile({ profile, match, onBack }) {
           </ul>
         </section>
       )}
-      <p className="text-sm text-ink-2">Sin calificación: el juego no la deja leer y no se inventa. Los minutos se calculan con los cambios y las rojas.</p>
+      {profile.heat && heatmaps && (
+        <section aria-label="Mapa de calor">
+          <h4 className="eyebrow mb-1">Mapa de calor</h4>
+          <Heatmap cells={profile.heat} cols={heatmaps.cols} rows={heatmaps.rows} label={`Mapa de calor de ${profile.name}`} />
+        </section>
+      )}
+      <p className="text-sm text-ink-2">
+        {profile.rating == null ? 'Sin valoración: el partido se grabó antes de leerla. ' : ''}
+        {profile.heat ? 'El mapa sale de las posiciones que el juego actualiza cada 2 o 3 segundos: muestra por dónde anduvo, no cada paso. ' : ''}
+        Los minutos se calculan con los cambios y las rojas.
+      </p>
     </div>
   );
 }
@@ -139,7 +159,7 @@ export function PlayerAnalysis({ rows, summary, match }) {
         {/* Escritorio: la ficha y «Los que más» comparten la columna de la derecha, al lado de la lista. */}
         <div className="space-y-4">
           <div className={`panel p-5 sm:p-6 ${selected ? '' : 'hidden lg:block'}`}>
-            <Profile profile={profile} match={match} onBack={() => setSelected(null)} />
+            <Profile profile={profile} match={match} heatmaps={summary.heatmaps} onBack={() => setSelected(null)} />
           </div>
           <Leaders summary={summary} match={match} className="hidden lg:block" />
         </div>

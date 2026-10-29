@@ -74,27 +74,27 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
   if (!collars.length) return <p className="text-[11px] text-ink-3">Los modelos 3D no tienen cuellos para este kit.</p>;
   return (
     <div className="space-y-2">
-      <div role="listbox" aria-label="Cuellos disponibles" className="grid grid-cols-3 gap-1.5 max-h-72 overflow-y-auto pr-1">
+      <div role="group" aria-label="Cuellos disponibles" className="grid grid-cols-3 gap-1.5 max-h-72 overflow-y-auto pr-1">
         {collars.map(n => (
-          <button key={n} type="button" role="option" aria-selected={n === current} title={`Cuello ${n}${n === saved ? ' (guardado)' : ''}`}
+          <button key={n} type="button" aria-pressed={n === current} aria-label={`Cuello ${n}${n === saved ? ', guardado' : ''}`} title={`Cuello ${n}${n === saved ? ' (guardado)' : ''}`}
             onClick={() => onPreview(n === saved ? null : n)}
-            className={`relative rounded-lg border p-0.5 transition-colors ${n === current ? 'border-accent bg-accent/10' : 'border-line/[0.12] hover:border-line/30'}`}>
+            className={`relative rounded-lg border p-0.5 transition-[border-color,background-color,scale] duration-fast active:scale-[0.97] ${n === current ? 'border-accent bg-accent-deep' : 'border-line/[0.12] hover:border-line/30'}`}>
             <canvas ref={el => { if (el) thumbs.current.set(n, el); else thumbs.current.delete(n); }} width={THUMB * 2} height={THUMB * 2} className="w-full aspect-square rounded-md bg-canvas" />
-            <span className="absolute bottom-1 left-1 num text-[10px] font-semibold text-ink bg-black/55 rounded px-1">{n}</span>
+            <span className="absolute bottom-1 left-1 num text-[11px] font-semibold text-ink bg-canvas/85 rounded px-1">{n}</span>
             {n === saved && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-success-soft" aria-label="guardado" />}
           </button>
         ))}
       </div>
       {preview != null && preview !== saved && (
-        <div className="space-y-1.5">
-          <p className="flex items-center gap-1 text-[11px] text-ink-2"><Eye className="w-3.5 h-3.5" />Viendo el cuello {preview} (sin guardar).</p>
+        <div className="animate-in fade-in space-y-2">
+          <p className="flex items-center gap-1.5 text-xs text-ink-2" role="status"><Eye className="w-3.5 h-3.5" aria-hidden="true" />Viendo el cuello {preview} (sin guardar).</p>
           {onUse && (
             <>
-              <label className="flex items-center gap-2"><input type="checkbox" checked={winter} onChange={e => setWinter(e.target.checked)} />También como cuello de invierno (WinterCollar)</label>
-              <Button variant="primary" disabled={busy} onClick={use}><Check className="w-3.5 h-3.5" />{busy ? 'Guardando…' : `Usar el cuello ${preview}`}</Button>
+              <label className="flex items-center gap-2 min-h-10 text-xs text-ink-2 cursor-pointer"><input type="checkbox" checked={winter} onChange={e => setWinter(e.target.checked)} className="w-4 h-4 accent-[rgb(var(--c-accent))]" />También como cuello de invierno (WinterCollar)</label>
+              <Button variant="primary" disabled={busy} onClick={use}><Check className="w-4 h-4" aria-hidden="true" />{busy ? 'Guardando…' : `Usar el cuello ${preview}`}</Button>
             </>
           )}
-          <Button onClick={() => onPreview(null)}><Undo2 className="w-3.5 h-3.5" />Volver al guardado{saved ? ` (${saved})` : ''}</Button>
+          <Button onClick={() => onPreview(null)}><Undo2 className="w-4 h-4" aria-hidden="true" />Volver al guardado{saved ? ` (${saved})` : ''}</Button>
           {!onUse && <p className="text-[11px] text-ink-3">Solo lectura: podés ver los cuellos pero no cambiar el config.txt.</p>}
         </div>
       )}

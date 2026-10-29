@@ -83,6 +83,7 @@ export function MatchLineups({ lineups, match }) {
 }
 
 const PLAYER_COLUMNS = [
+  { key: 'rating', label: 'Nota', title: 'Valoración del juego', render: r => (r.rating == null ? '—' : r.rating.toFixed(1).replace('.', ',')) },
   { key: 'goals', label: 'G', title: 'Goles' },
   { key: 'assists', label: 'A', title: 'Asistencias' },
   { key: 'shots', label: 'Tiros', title: 'Tiros (al arco)', render: r => `${r.shots} (${r.shotsOnTarget})` },
@@ -97,7 +98,9 @@ export function PlayerStatsTable({ rows, match }) {
   const [side, setSide] = useState('home');
   const [sortKey, setSortKey] = useState('goals');
   if (!rows.length) return <p className="panel px-4 py-8 text-center text-sm text-ink-3">Las estadísticas de los jugadores aparecen al arrancar el partido.</p>;
-  const visible = rows.filter(row => row.side === side).sort((a, b) => (b[sortKey] - a[sortKey]) || a.name.localeCompare(b.name, 'es'));
+  // Sin valoraciones (partidos grabados antes) la columna no aparece.
+  const columns = rows.some(row => row.rating != null) ? PLAYER_COLUMNS : PLAYER_COLUMNS.filter(column => column.key !== 'rating');
+  const visible = rows.filter(row => row.side === side).sort((a, b) => ((b[sortKey] ?? -1) - (a[sortKey] ?? -1)) || a.name.localeCompare(b.name, 'es'));
   return (
     <div className="panel p-0">
       <div className="p-3">
@@ -113,7 +116,7 @@ export function PlayerStatsTable({ rows, match }) {
           <thead>
             <tr>
               <th scope="col" className="!px-4 !text-xs !text-ink-2">Jugador</th>
-              {PLAYER_COLUMNS.map(column => (
+              {columns.map(column => (
                 <th key={column.key} scope="col" className="!px-2 text-right !text-xs !text-ink-2 last:!pr-4" aria-sort={sortKey === column.key ? 'descending' : 'none'}>
                   <button type="button" title={column.title} onClick={() => setSortKey(column.key)}
                     className={`inline-flex min-h-11 w-full items-center justify-end ${sortKey === column.key ? 'text-ink' : ''}`}>
@@ -129,7 +132,7 @@ export function PlayerStatsTable({ rows, match }) {
                 <th scope="row" className="border-b border-line/[0.07] px-4 py-2.5 text-left font-medium text-ink">
                   <span className="flex min-w-0 items-center gap-3"><PlayerPhoto id={row.id} size={36} /><span className="truncate">{row.name}</span></span>
                 </th>
-                {PLAYER_COLUMNS.map(column => (
+                {columns.map(column => (
                   <td key={column.key} className="num !px-2 text-right text-ink last:!pr-4">{column.render ? column.render(row) : row[column.key]}</td>
                 ))}
               </tr>

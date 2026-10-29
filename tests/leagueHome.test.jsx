@@ -38,9 +38,20 @@ describe('MatchCentre', () => {
     expect(render(<MatchCentre groups={groupsOf([match('1')])} clubOf={clubOf} prediction={{ votes: {} }} />)).not.toContain('¿Quién gana?');
   });
 
+  it('shows one pre-season line instead of empty tabs when no match is loaded', () => {
+    const html = render(<MatchCentre groups={groupsOf([])} clubOf={clubOf} />);
+    expect(html).toContain('La temporada arranca cuando se cargue la fecha 1.');
+    expect(html).not.toContain('role="tablist"');
+  });
+
+  it('hides the results tab until there is a result', () => {
+    const html = render(<MatchCentre groups={groupsOf([match('1')])} clubOf={clubOf} />);
+    expect(html).toMatch(/aria-selected="true"[^>]*>[\s\S]*?Próximos/);
+    expect(html).not.toContain('Resultados');
+  });
+
   it('shows designed empty, loading and error states', () => {
     const empty = groupsOf([]);
-    expect(render(<MatchCentre groups={empty} clubOf={clubOf} />)).toContain('No hay partidos programados');
     expect(render(<MatchCentre groups={empty} clubOf={clubOf} loading />)).toContain('aria-busy="true"');
     expect(render(<MatchCentre groups={empty} clubOf={clubOf} error="No se pudo cargar el torneo." />)).toContain('No se pudo cargar el torneo.');
   });
@@ -54,5 +65,14 @@ describe('StandingsCard', () => {
     expect(html).toContain('1.° a 8.°: Copa de Oro');
     expect(html.match(/, zona Copa de Oro/g)).toHaveLength(8); // las 8 posiciones de la Copa de Oro
     expect(html.match(/, zona Copa de Plata/g)).toHaveLength(4);
+  });
+
+  it('lists the entrants without places or zones before the first match', () => {
+    const league = Array.from({ length: 12 }, (_, i) => ({ id: String(i), name: `Club ${i + 1}`, pj: 0, pts: 0 }));
+    const html = render(<StandingsCard tournament={{ league }} clubOf={clubOf} />);
+    expect(html).toContain('Clubes inscriptos');
+    expect(html).toContain('Club 12');
+    expect(html).not.toContain('zona Copa de Oro');
+    expect(html).not.toContain('<table');
   });
 });

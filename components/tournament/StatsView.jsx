@@ -37,7 +37,7 @@ export const StatsView = memo(function StatsView({
               return (
                 <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-amber-500 text-ink shadow-sm' : idx === 1 ? ' bg-overlay text-ink-2' : idx === 2 ? 'bg-amber-700/70 text-ink' : ' text-ink-3'}`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-amber-500 text-[#1e1e1e] shadow-sm' : idx === 1 ? ' bg-overlay text-ink-2' : idx === 2 ? 'bg-amber-700/70 text-ink' : ' text-ink-3'}`}>
                       {idx + 1}
                     </div>
 
@@ -75,9 +75,9 @@ export const StatsView = memo(function StatsView({
                   </div>
                   <div className="flex items-center gap-2 pl-3">
                     {isEditing ? (
-                      <input type="number" value={player.goals} onChange={e => updateStat('topScorers', idx, 'goals', e.target.value)} className="w-14 bg-accent-deep/40 text-accent text-center font-bold text-base rounded p-1 border border-accent-deep" />
+                      <input type="number" value={player.goals} onChange={e => updateStat('topScorers', idx, 'goals', e.target.value)} className="w-14 bg-accent-deep/40 text-accent-soft text-center font-bold text-base rounded p-1 border border-accent-deep" />
                     ) : (
-                      <div className="min-w-[32px] text-right font-bold text-sm sm:text-base text-accent tabular-nums">
+                      <div className="min-w-[32px] text-right font-bold text-sm sm:text-base text-accent-soft tabular-nums">
                         {player.goals || 0}
                       </div>
                     )}

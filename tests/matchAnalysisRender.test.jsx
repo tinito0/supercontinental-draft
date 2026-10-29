@@ -63,7 +63,7 @@ describe('match analysis views (full summary)', () => {
     expect(out).toContain('V. Gyökeres');
     expect(out).toContain("21&#x27;");
     expect(out).toContain('Afuera');
-    expect(out).toContain('Sin mapa de tiros');
+    expect(out).toContain('Sin mapa ni xG');
   });
 
   it('pitch: the confirmed side is drawn with shirt numbers, the other one says why it is not', () => {
@@ -75,7 +75,7 @@ describe('match analysis views (full summary)', () => {
   it('players, tactics and analysis render what was measured', () => {
     const players = html(<PlayerAnalysis rows={playerStatRows(match.summary)} summary={match.summary} match={match} />);
     expect(players).toContain('Los que más');
-    expect(players).toContain('Sin calificación');
+    expect(players).toContain('Sin valoración');
     const tactics = html(<MatchTacticsView summary={match.summary} match={match} />);
     expect(tactics).toContain('Posesión');
     expect(tactics).toContain('Tiqui-taca');
@@ -96,5 +96,39 @@ describe('match analysis views (summary recorded before the new fields)', () => 
     expect(html(<LineupPitch layout={pitchLayout(match.summary)} match={match} />)).toContain('no tiene plan');
     expect(html(<MatchTacticsView summary={match.summary} match={match} />)).toContain('antes de medir los tipos de pase');
     expect(html(<MatchAnalysisView summary={match.summary} match={match} />)).toContain('antes de guardar los tramos');
+  });
+});
+
+describe('match analysis views (probe v5: ratings, positions, xG)', () => {
+  const cells = Array.from({ length: 96 }, (_, i) => (i === 40 ? 9 : i % 7));
+  const v5 = {
+    ...full,
+    shots: [{ side: 'home', playerId: 9, outcome: 'goal', penalty: false, clock: clock(1, 20), x: 95, y: 30, xg: 0.31 }],
+    xg: { home: 0.31, away: 0 },
+    ratings: { 1: 6, 9: 7.5, 101: 5.5 },
+    heatmaps: { cols: 12, rows: 8, length: 105, width: 68, players: { 1: cells, 9: cells }, teams: { home: cells, away: cells } },
+  };
+  const match = doc(v5);
+
+  it('shots: map, per-shot xG and the model note', () => {
+    const out = html(<ShotsPanel shots={shotRows(match.summary)} match={match} />);
+    expect(out).toContain('Mapa de tiros');
+    expect(out).toContain('0,31');
+    expect(out).toContain('modelo propio de distancia y ángulo');
+  });
+
+  it('pitch: ratings on the players, the best one marked, team averages', () => {
+    const out = html(<LineupPitch layout={pitchLayout(match.summary)} match={match} />);
+    expect(out).toContain('Valoración 7,5, la mejor del partido');
+    expect(out).toContain('Valoración 6,8'); // home average of 6 and 7.5
+  });
+
+  it('players and analysis: rating, player and team heat maps', () => {
+    const rows = playerStatRows(match.summary);
+    const players = html(<PlayerAnalysis rows={rows} summary={match.summary} match={match} />);
+    expect(players).toContain('Mapa de calor de');
+    expect(players).not.toContain('Sin valoración');
+    const analysis = html(<MatchAnalysisView summary={match.summary} match={match} />);
+    expect(analysis).toContain('Mapas de calor');
   });
 });

@@ -1,7 +1,8 @@
 // Ficha del club de la web pública (utils/leagueContent.js): estadio, autoridades, títulos y campañas. Datos sintéticos.
 import { describe, it, expect } from 'vitest';
 import {
-  cleanPhotoUrl, clubChapters, groupHonours, hasClubProfile, MAX_HONOURS, normalizeClub, normalizeClubProfile,
+  cleanPhotoFrame, cleanPhotoUrl, clubChapters, DEFAULT_PHOTO_FRAME, groupHonours, hasClubProfile, MAX_HONOURS, MAX_PHOTO_ZOOM,
+  normalizeClub, normalizeClubProfile, photoFrameStyle,
 } from '../utils/leagueContent.js';
 
 describe('normalizeClubProfile', () => {
@@ -20,6 +21,18 @@ describe('normalizeClubProfile', () => {
     expect(cleanPhotoUrl('http://example.com/a.jpg')).toBeNull();
     expect(cleanPhotoUrl('javascript:alert(1)')).toBeNull();
     expect(normalizeClubProfile({ stadiumPhotoUrl: 'ftp://x' }).ok).toBe(false);
+  });
+
+  it('keeps the photo frame inside its range and defaults it when missing or broken', () => {
+    expect(normalizeClubProfile({}).value.stadiumPhotoFrame).toEqual(DEFAULT_PHOTO_FRAME);
+    expect(cleanPhotoFrame({ x: 12.345, y: -20, zoom: 9 })).toEqual({ x: 12.3, y: 0, zoom: MAX_PHOTO_ZOOM });
+    expect(cleanPhotoFrame({ x: 'a', y: null, zoom: 0.2 })).toEqual({ x: 50, y: 50, zoom: 1 });
+    expect(cleanPhotoFrame('texto')).toEqual(DEFAULT_PHOTO_FRAME);
+  });
+
+  it('turns the photo frame into the same object-position and zoom origin', () => {
+    expect(photoFrameStyle({ x: 20, y: 80, zoom: 1.5 })).toEqual({ objectPosition: '20% 80%', transformOrigin: '20% 80%', transform: 'scale(1.5)' });
+    expect(photoFrameStyle(undefined).transform).toBeUndefined();
   });
 
   it('drops empty title rows, defaults the count to 1 and rejects bad counts', () => {

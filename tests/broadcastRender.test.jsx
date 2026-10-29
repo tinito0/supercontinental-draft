@@ -123,10 +123,10 @@ describe('ObsSceneStudio (Admin → Escenas de OBS)', () => {
 });
 
 describe('TournamentBroadcastAdminSection (Torneo y transmisión)', () => {
-  it('shows the tournament summary, the scene studio and one recommended OBS source', async () => {
+  const renderSection = async () => {
     const { MemoryRouter } = await import('react-router-dom');
     const { TournamentBroadcastAdminSection } = await import('../components/admin/TournamentBroadcastAdminSection.jsx');
-    const html = renderToStaticMarkup(
+    return renderToStaticMarkup(
       <MemoryRouter>
         <TournamentBroadcastAdminSection
           allTeams={{}}
@@ -135,12 +135,31 @@ describe('TournamentBroadcastAdminSection (Torneo y transmisión)', () => {
         />
       </MemoryRouter>,
     );
-    expect(html).toContain('Abrir gestor del torneo');
-    expect(html).toContain('Cavani');
+  };
+
+  it('opens on the scenes, with the match source first, and keeps the other jobs behind tabs', async () => {
+    const html = await renderSection();
+    expect(html).toContain('role="tablist" aria-label="Torneo y transmisión"');
+    expect(html).toContain('Capa y popup');
+    expect(html).not.toContain('Abrir gestor del torneo');
+    expect(html).not.toContain('Popup para la comunidad');
     expect(html).toContain('Escenas de OBS');
     expect(html).toContain('Conectar OBS');
-    expect(count(html, '/draft/overlay"')).toBe(2); // input value + "Ver" link
+    expect(count(html, '/draft/overlay?follow=partido"')).toBe(2); // input value + "Ver" link
+    expect(html.indexOf('follow=partido')).toBeLessThan(html.indexOf('scene=tabla'));
     expect(html).not.toContain('mode=obs');
+  });
+
+  it('shows the tournament summary in the Torneo view (remembered for the session)', async () => {
+    vi.stubGlobal('sessionStorage', { getItem: () => 'tournament', setItem: () => {} });
+    try {
+      const html = await renderSection();
+      expect(html).toContain('Abrir gestor del torneo');
+      expect(html).toContain('Cavani');
+      expect(html).not.toContain('Escenas de OBS');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
@@ -163,7 +182,7 @@ describe('OverlayPopup (OBS, QR para la comunidad)', () => {
   });
 
   it('shows the admin block with presets and a QR preview', () => {
-    const html = renderToStaticMarkup(<ObsSceneStudio allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{}} />);
+    const html = renderToStaticMarkup(<ObsSceneStudio view="community" allTeams={{}} tournamentData={{ matches: [] }} broadcastOverlayData={{}} />);
     expect(html).toContain('Popup para la comunidad');
     expect(html).toContain('Tabla y copas');
     expect(html).toContain('Mostrar en OBS');
@@ -241,7 +260,7 @@ describe('BroadcastOverlay full-screen and tournament scenes', () => {
     for (const [scene, marker] of [['tabla', 'Tabla de posiciones'], ['bracket', 'Copa de Oro'], ['repechaje', 'Copa de Plata'], ['goleadores', 'Goleadores']]) {
       const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene, popup, showLowerThird: true, showTicker: true }} allTeams={{}} tournamentData={tournamentData} />);
       expect(html, scene).toContain(marker);
-      expect(html, scene).toContain('class="scl-frame scl-popup');
+      expect(html, scene).toContain('class="scl-pop scl-popup');
       if (scene !== 'goleadores') expect(html, scene).not.toContain('class="broadcast-lower"');
     }
   });

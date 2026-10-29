@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, User, Zap, ArrowRight } from 'lucide-react';
 import { getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
+import { useModalDialog } from '../hooks/useModalDialog.js';
 
 export function CommandPalette({
   isOpen,
@@ -84,24 +85,33 @@ export function CommandPalette({
     }
   };
 
+  const panelRef = useRef(null);
+  useModalDialog(panelRef, isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm p-4 pt-[20vh]"
+      className="fixed inset-0 z-[100] bg-black/60 p-4 pt-[20vh]"
       onClick={onClose}
     >
       <div 
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Buscar jugadores y acciones"
+        tabIndex={-1}
         className="bg-raised border border-line/[0.12] rounded-2xl max-w-xl mx-auto shadow-2xl flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center px-4 py-3 border-b border-line/[0.12] relative">
-          <Search className="w-5 h-5 text-ink-3 mr-3" />
+          <Search className="w-5 h-5 text-ink-3 mr-3" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
-            className="flex-1 bg-transparent border-none outline-none text-lg text-ink placeholder-slate-500"
-            placeholder="Buscar jugadores, acciones..."
+            className="flex-1 bg-transparent border-none outline-none text-lg text-ink placeholder:text-ink-3"
+            placeholder="Buscar jugadores, acciones…"
+            aria-label="Buscar jugadores y acciones"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -126,7 +136,7 @@ export function CommandPalette({
                     }}
                     onMouseEnter={() => setSelectedIndex(index)}
                   >
-                    <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mr-3">
+                    <div className="w-8 h-8 rounded-full bg-accent/[0.14] text-accent-soft flex items-center justify-center mr-3">
                       {item.icon}
                     </div>
                     <span className="text-ink flex-1">{item.title}</span>

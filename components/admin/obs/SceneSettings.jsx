@@ -32,7 +32,7 @@ export const MatchSettings = memo(function MatchSettings({ draft, saved, allTeam
   return (
     <section className="space-y-4" aria-labelledby="scene-match-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 id="scene-match-title" className="section-title">Partido</h4>
+        <h3 id="scene-match-title" className="section-title">Partido</h3>
         {home || away ? (
           <button type="button" className="btn btn-ghost btn-sm min-h-11" onClick={onClearMatch}>
             <X className="h-4 w-4" aria-hidden="true" /> Quitar partido
@@ -44,6 +44,12 @@ export const MatchSettings = memo(function MatchSettings({ draft, saved, allTeam
           ? <><span className="font-semibold text-ink">{home || 'A definir'}</span> vs <span className="font-semibold text-ink">{away || 'A definir'}</span>{draftMatch ? <span className="text-ink-3"> · {draft.roundLabel}</span> : <span className="text-ink-3"> · armado a mano</span>}</>
           : 'Elegí el partido de la lista. Al mandarlo al aire se abre la predicción del público para ese partido.'}
       </p>
+      {saved.matchId && !savedMatch && tournamentData != null && (
+        <Alert tone="warning" title="El partido al aire ya no está en el torneo"
+          action={draft.matchId === saved.matchId ? <button type="button" className="btn btn-secondary btn-sm min-h-11" onClick={onClearMatch}>Quitar partido</button> : null}>
+          Quedó de antes (otra temporada o un cruce que se rehízo). La web no abre la predicción para un partido que no está en el torneo: elegí uno de la lista o quitalo.
+        </Alert>
+      )}
       {drift && savedMatch && (
         <Alert tone="warning" title="El partido cambió en el torneo"
           action={<button type="button" className="btn btn-secondary btn-sm min-h-11" onClick={() => onPickMatch(savedMatch)}>Actualizar en el borrador</button>}>
@@ -59,7 +65,7 @@ export const MatchSettings = memo(function MatchSettings({ draft, saved, allTeam
         isTournamentLoaded={tournamentData != null}
         onSelect={onPickMatch}
       />
-      <details className="well px-4 py-3">
+      <details className="border-t border-line/10 pt-3">
         <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-ink-2">Ajustes a mano (marcador, reloj, fase)</summary>
         <div className="grid grid-cols-1 gap-4 pt-3 md:grid-cols-2">
           <Field label="Local">
@@ -95,7 +101,7 @@ export const TextSettings = memo(function TextSettings({ draft, onChange, onRese
   return (
     <section className="space-y-4" aria-labelledby="scene-text-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 id="scene-text-title" className="section-title">Rótulos</h4>
+        <h3 id="scene-text-title" className="section-title">Rótulos</h3>
         <button type="button" className="btn btn-ghost btn-sm min-h-11" onClick={onResetTexts} title="Vuelve los cuatro textos a los de fábrica, en el borrador">
           <RotateCcw className="h-4 w-4" aria-hidden="true" /> Restablecer textos
         </button>
@@ -122,7 +128,7 @@ export const TextSettings = memo(function TextSettings({ draft, onChange, onRese
 /** Escenas del torneo: se dibujan con los datos guardados, no tienen ajustes propios. */
 export function TournamentDataNote({ onOpenTournamentModal }) {
   return (
-    <section className="well flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className="flex flex-col gap-3 border-t border-line/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-ink-2">Esta escena muestra la tabla, las copas, la fecha o los goleadores tal como están guardados en el torneo, y se actualiza sola.</p>
       {onOpenTournamentModal && (
         <button type="button" className="btn btn-secondary min-h-11 shrink-0" onClick={onOpenTournamentModal}>

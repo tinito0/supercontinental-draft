@@ -102,7 +102,8 @@ Route: the game exposes stat getters to its internal Lua by name. A `{const char
 | Possession (team only) | S9 | **Partial**: the `+0x181A10` pair is used when the game fills it (`pes-collector/collector/possession.js`: home = trunc, away = 100 − home, last pair before the shootout; probe v4 adds the time counter to check the pair). It stayed 0 in the Bayern–Real replay and Como–Leipzig; there the summary says `possession: null`. Search for another source closed by the user (2026-10-23): the pair works in the league's matches |
 | Formation / roles / positions (game plan) | S12–S13: `ctx.mis` + 0xE98 / + 0x10F0 | **Found live (one session)**: pre-match XI, kick-off formation and mid-match formation changes; not yet read by the probe |
 | Pre-match confirmed XI | S12: `ctx.mis` order + 0x1078 / + 0x12D0 | **Found live (one session)**; equals the probe's first `lineup` |
-| Players' real positions on the pitch (x, y) | not searched | Unknown (no shot map without it) |
+| Players' real positions on the pitch (x, y) | S15: position snapshot block | **Found live (one session)**: all 22, refreshed one team at a time, ~2–3 s per player. Not per frame. Not read by the probe yet |
+| Match ratings | S15 | Not found (stats record has no rating-like field during play) |
 | Team ids, match length, subs allowed, ET/PK flags | Sider ctx (`set_match_settings`) | Confirmed live (sider.log 6396–6405) |
 
 Nothing here is used by the website yet.
@@ -189,3 +190,24 @@ watch / ptr / anchors). Step-by-step log of the session: `E:\eFootball PES 2021\
   the team tables after a mid-match swap (S13; needs players' real positions or a visual check); the first byte of
   each variant (0 in every case seen); whether `mis` keeps its address across a game restart (it did across two
   probe sessions of one run).
+
+## Player positions (S15, 2026-10-29, live, sessions 20261029_001439 and an unrecorded one)
+
+Tool: `pes-collector/tools/pitch_scan.py` (read-only). Scans in metres with (x, height, z) found nothing per frame
+(the first run fell before kick-off; the second gave 7 M moving triples, mostly bones and render data). A pair scan of
+the game's high heap found the **position snapshot**:
+
+- Private region of 0xF0000 bytes with header `{0, 0xEFFE0, 1}` (same allocator header as the stats region; the only
+  region with it). Block at region + 0x253FC: 22 × f32 (x, y, z), 12 bytes each.
+- Entry i = XI slot i in the order of the probe's `lineup` event (= formation order): 0–10 home, 11–21 away.
+  Checked against the kick-off plan: GK at (−44.9, 0.1), CBs at z ±7, full-backs ±21, striker on the spot.
+- Units: metres, origin at the centre spot, x = length (±52.5, home attacks +x in the first half), z = width
+  (±34). y is small (0–1.5) and not a clean height.
+- Refresh: not every frame. Each update rewrites ~10 entries of one team, alternating teams; 277 updates in 353 s
+  (130 touches in the same window). Median speed between updates 3.5 m/s. Frozen during pauses. At kick-off only
+  the home half is filled. What triggers an update is unknown (it is not shots, not touches).
+- Shots: shooter's last snapshot position at the 3 shots of session 20261029_001439 was 23 m, 36 m and 12 m from the
+  attacked goal (plausible), with the snapshot 0.6–2 s older than the probe's 2 s stats sample.
+- No pointer to the block within 0x800 before it; the only `0x253FC` constant in the slice is in `.rdata` unwind
+  data. The writer (and the per-frame source) is not found.
+- Ratings: no f32 3–10 / u8 or u16 30–100 field common to the 22 records of the stats block during play.

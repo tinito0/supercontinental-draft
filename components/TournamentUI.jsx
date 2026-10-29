@@ -24,7 +24,7 @@ export const TournamentSectionTitle = memo(function TournamentSectionTitle({ tit
         {title}
       </h2>
       {subtitle && (
-        <p className=" text-accent font-medium text-xs sm:text-sm mt-1">
+        <p className=" text-accent-soft font-medium text-xs sm:text-sm mt-1">
           {subtitle}
         </p>
       )}
@@ -49,8 +49,8 @@ export const TournamentTabButton = memo(function TournamentTabButton({ id, tabId
       <span>{label}</span>
       {EndIcon && <EndIcon className={`w-3.5 h-3.5 ml-1.5 shrink-0 ${isActive ? 'text-slate-950' : 'text-warning-soft'}`} />}
       {typeof badge === 'number' && badge > 0 && (
-        <span className={`ml-2 px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular-nums shrink-0 ${
-          isActive ? 'bg-slate-950 text-accent' : 'bg-accent text-slate-950'
+        <span className={`ml-2 px-1.5 py-0.2 rounded-md text-[11px] font-bold tabular-nums shrink-0 ${
+          isActive ? 'bg-slate-950 text-accent-soft' : 'bg-accent text-on-accent'
         }`}>
           {badge}
         </span>
@@ -75,9 +75,9 @@ export const TournamentPanel = memo(function TournamentPanel({ title, icon: Icon
 
 export const TournamentActionButton = memo(function TournamentActionButton({ children, onClick, disabled, title, tone = 'blue', className = '' }) {
   const toneClasses = {
-    blue: 'bg-accent/15 text-accent hover:bg-accent/25 border-accent/30',
+    blue: 'bg-accent/15 text-accent-soft hover:bg-accent/25 border-accent/30',
     yellow: 'bg-warning/15 text-warning-soft hover:bg-warning/25 border-warning/30',
-    green: 'bg-emerald-600 text-ink hover:bg-emerald-500 border-success/30',
+    green: 'bg-success/15 text-success-soft hover:bg-success/25 border-success/30',
     slate: ' bg-raised text-ink-2 hover:bg-overlay border-line/20',
     red: 'bg-danger/15 text-danger-soft hover:bg-danger/25 border-danger/30',
   };

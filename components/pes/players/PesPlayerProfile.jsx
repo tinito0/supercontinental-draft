@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Lock, UserRound } from 'lucide-react';
-import { FieldInput, ConfidenceBadge } from '../PesUi.jsx';
+import { FieldInput, ConfidenceBadge, ModifiedDot } from '../PesUi.jsx';
 import { fieldRange } from '../../../pes/core/fields.js';
 import { getStatAndOvrColorClass, getPosColor, getPosColorClass, getFlagUrl } from '../../../utils/helpers.js';
 import {
@@ -74,11 +74,11 @@ function SelectField({ label, field, value, options, canEdit, modified, onCommit
     <label className={`flex flex-col gap-1 text-xs ${modified ? 'text-accent-soft' : 'text-ink-2'}`}>
       <span className="flex items-center gap-1.5">
         {field?.confidence && <ConfidenceBadge confidence={field.confidence} />}{label}
-        {modified && <span className="w-1.5 h-1.5 rounded-full bg-accent" aria-label="modificado" />}
+        {modified && <ModifiedDot />}
       </span>
-      <select className={`select min-h-9 ${modified ? 'border-accent/50' : ''}`} value={value ?? ''} disabled={locked}
+      <select className={`select ${modified ? 'border-accent/50' : ''}`} value={value ?? ''} disabled={locked}
         onChange={e => { const v = field.kind === 'bool' ? e.target.value === '1' : Number(e.target.value); if (v !== value) onCommit(v); }}>
-        {!known && <option value={value ?? ''}>{String(value ?? '—')}</option>}
+        {!known && <option value={value ?? ''}>{value == null ? 'Sin valor' : `Código ${value}`}</option>}
         {options.map(o => <option key={o.id} value={field.kind === 'bool' ? (o.id ? '1' : '0') : o.id}>{o.label}</option>)}
       </select>
     </label>
@@ -134,7 +134,7 @@ export function PositionMap({ fieldOf, get, canEdit, isModified, commit }) {
             <button key={name} type="button" disabled={locked} title={label} aria-label={locked ? label : `${label}. Cambiar`}
               onClick={() => commit(name, (apt + 1) % 3)}
               style={{ gridColumn: col, gridRow: row, backgroundColor: bgColor, color: textColor }}
-              className={`relative min-h-9 rounded-lg text-[11px] font-bold transition-transform enabled:hover:scale-105 disabled:cursor-default
+              className={`relative min-h-11 rounded-lg text-[11px] font-bold transition-[background-color,color,scale] duration-fast enabled:active:scale-[0.97] enabled:hover:brightness-110 disabled:cursor-default
                 ${pos === registered ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas' : ''} ${isModified(name) ? 'outline outline-2 outline-accent-soft' : ''}`}>
               {pos}<span className="ml-1 opacity-70">{APTITUDE_LABEL[apt]}</span>
             </button>
@@ -164,18 +164,18 @@ function StatRow({ field, value, canEdit, modified, onCommit }) {
         <div className="flex items-center gap-1.5 text-sm text-ink-2">
           {locked && canEdit && <Lock className="w-3 h-3 text-ink-3 shrink-0" aria-label="Solo lectura: significado sin verificar" />}
           <span className={`truncate ${modified ? 'text-accent-soft' : ''}`}>{statLabel(field.name)}</span>
-          {modified && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-label="modificado" />}
+          {modified && <ModifiedDot />}
         </div>
         <div className="mt-1 h-1 rounded-full bg-white/[0.06] overflow-hidden" aria-hidden="true">
-          <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct}%` }} />
+          <div className={`meter-fill h-full rounded-full ${tone}`} style={{ scale: `${pct / 100} 1` }} />
         </div>
       </div>
       <input type="number" inputMode="numeric" min={min} max={max} value={draft ?? ''} disabled={locked}
         aria-label={`${statLabel(field.name)} (${min}–${max})`}
         onChange={e => setDraft(e.target.value)} onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setDraft(value); }}
-        className={`${tone} w-full h-8 rounded-md text-center font-display num text-base font-bold border-0 outline-none
-          focus:ring-2 focus:ring-accent-soft disabled:opacity-80 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none`} />
+        className={`${tone} w-full h-9 rounded-md text-center font-display num text-base font-bold border-0 outline-none transition-colors duration-fast
+          focus-visible:ring-2 focus-visible:ring-accent-soft focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:opacity-80 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none`} />
     </div>
   );
 }

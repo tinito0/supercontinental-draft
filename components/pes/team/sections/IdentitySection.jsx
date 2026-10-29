@@ -1,7 +1,7 @@
 import React, { useId } from 'react';
 import { Pipette } from 'lucide-react';
 import { Field } from '../../../ui/Field.jsx';
-import { Group, FieldInput } from '../../PesUi.jsx';
+import { Group, FieldInput, Disclosure } from '../../PesUi.jsx';
 import { NAME_FIELDS, coachNameOfTeam, coachOfTeam } from '../../../../pes/draftTransfer.js';
 import {
   ABBR_LENGTH, cleanAbbreviation, colourOps, countryOps, editColourHex, nameByteLimit, nameOps, abbreviationOps,
@@ -108,8 +108,7 @@ function LanguageNames({ ws, teamId, access, isModified, apply }) {
   if (!bin?.has(teamId)) return null;
   const fields = [...NAME_FIELDS, ...EXTRA_NAME_FIELDS].map(n => bin.field(n));
   return (
-    <details className="border-t border-line/[0.08] pt-4 group">
-      <summary className="eyebrow cursor-pointer min-h-11 flex items-center">Nombres por idioma ({fields.length})</summary>
+    <Disclosure className="border-t border-line/[0.08] pt-2" summaryClassName="eyebrow" summary={`Nombres por idioma (${fields.length})`}>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {fields.map(f => (
           <FieldInput key={f.name} field={f} value={bin.get(teamId, f.name)} readOnly={!access.data}
@@ -117,7 +116,7 @@ function LanguageNames({ ws, teamId, access, isModified, apply }) {
             onCommit={value => apply(() => [{ type: 'bin.team.set', target: { teamId }, field: f.name, value }])} />
         ))}
       </div>
-    </details>
+    </Disclosure>
   );
 }
 

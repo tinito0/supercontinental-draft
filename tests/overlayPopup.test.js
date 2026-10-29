@@ -1,6 +1,6 @@
 // Popup con QR del overlay de OBS (utils/overlayPopup.js): datos sintéticos.
 import qrcode from 'qrcode-generator';
-import { buildPopup, normalizePopupUrl, popupRemainingMs, qrSvgPath, POPUP_LIMITS } from '../utils/overlayPopup.js';
+import { buildPopup, nextArrival, normalizePopupUrl, popupRemainingMs, qrSvgPath, timedRemainingMs, POPUP_LIMITS } from '../utils/overlayPopup.js';
 
 const form = extra => ({ visible: true, title: 'Seguí la liga', text: 'Escaneá', url: 'https://example.com/torneo', position: 'right', autoHideSec: 30, ...extra });
 
@@ -69,5 +69,45 @@ describe('qrSvgPath', () => {
     expect(path.split('M').length - 1).toBe(dark);
     // The top-left finder pattern starts at the margin.
     expect(path.startsWith('M4 4h1v1h-1z')).toBe(true);
+  });
+});
+
+describe('popup timing with a drifting OBS clock', () => {
+  it('never keeps an item longer than its duration when the local clock is behind', () => {
+    const item = { visible: true, autoHideSec: 30, shownAt: 1_000_000 + 120_000 };
+    expect(timedRemainingMs(item, 1_000_000)).toBe(30_000);
+  });
+
+  it('the first data a source receives trusts shownAt, so a refresh does not replay an old popup', () => {
+    const empty = { key: null, at: null, seen: false };
+    expect(nextArrival(empty, '1000', 5000)).toEqual({ key: '1000', at: null, seen: true });
+  });
+
+  it('while the overlay doc loads nothing counts as new; once loaded, an empty doc makes the next popup new', () => {
+    const start = { key: null, at: null, seen: false };
+    expect(nextArrival(start, null, 5000, false)).toBe(start);
+    const loadedEmpty = nextArrival(start, null, 5000, true);
+    expect(loadedEmpty).toEqual({ key: null, at: null, seen: true });
+    expect(nextArrival(loadedEmpty, '1000', 8000)).toEqual({ key: '1000', at: 8000, seen: true });
+  });
+
+  it('a shownAt in the future at load can only be a slow clock: it counts from now', () => {
+    expect(nextArrival({ key: null, at: null, seen: false }, '9000', 5000)).toEqual({ key: '9000', at: 5000, seen: true });
+  });
+
+  it('a popup shown while the source is open counts from its arrival', () => {
+    const loaded = { key: '1000', at: null, seen: true };
+    expect(nextArrival(loaded, '9999999', 5000)).toEqual({ key: '9999999', at: 5000, seen: true });
+    expect(nextArrival({ key: null, at: null, seen: true }, '42', 7000)).toEqual({ key: '42', at: 7000, seen: true });
+  });
+
+  it('a pending serverTimestamp that resolves keeps the same start', () => {
+    const pending = { key: 'pending', at: 5000, seen: true };
+    expect(nextArrival(pending, '123', 9000)).toEqual({ key: '123', at: 5000, seen: true });
+  });
+
+  it('returns the same state when nothing changed (no re-render loop)', () => {
+    const state = { key: '1', at: 3, seen: true };
+    expect(nextArrival(state, '1', 99)).toBe(state);
   });
 });

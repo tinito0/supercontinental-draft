@@ -22,6 +22,8 @@ What it records (see docs/PES_MATCH_DATA_RESEARCH.md):
     variants of 0x21 bytes: unknown byte, roles of slots 1–10, 11 x (depth, lateral); then the strategy bytes)
     and the 40-byte order (roster slots; the first 11 = XI by formation slot). Emitted at kick-off and whenever
     the bytes change (the game copies them there when a menu change is confirmed).
+  - pos (v5): the game's position snapshot (S15), 22 x (x, z) in metres, entry i = XI slot i (0–10 home), emitted
+    when it changes. The game refreshes one team at a time, each player every 2–3 s: not a per-frame track.
 
 Requires in sider.ini: lua.enabled = 1, luajit.ext.enabled = 1, match-stats.enabled = 1.
 --]]
@@ -30,6 +32,11 @@ local m = {}
 
 local SAMPLE_EVERY_MS = 2000
 local SNAPSHOT_EVERY_MS = 60000
+-- Raw region dumps (NNNN_*.bin, for probe-diff.mjs) are research only: 1.6 MB copied and written to disk on the game
+-- thread every minute made the game stutter (2026-10-29: 42 MB in one match). Off unless a search needs them.
+local RESEARCH_DUMPS = false
+-- Events are written as they come but flushed to disk once per sample, not once per line.
+local FLUSH_EVERY_MS = SAMPLE_EVERY_MS
 local STATS_SEARCH_EVERY_MS = 5000
 
 local ID_MASK = 0x3FFFF            -- ids are < 2^18; higher bits of the packed dword are flags (F8)
@@ -82,6 +89,14 @@ local TEAM_ID_OFFSET = 0xDC
 local ENTRY_STRIDE = 0x128
 local PITCH_SLOTS = 11
 
+-- Position snapshot (S15, live 2026-10-29): private region of 0xF0000 bytes starting with u64 {0, 0xEFFE0, 1};
+-- 22 x f32 (x, y, z) at +0x253FC. Read every POS_EVERY_MS; only changes are emitted.
+local POS_REGION_SIZE = 0xF0000
+local POS_HEADER = { 0, 0xEFFE0, 1 }
+local POS_OFFSET = 0x253FC
+local POS_ENTRIES = 22
+local POS_EVERY_MS = 100
+
 local MEM_COMMIT, MEM_PRIVATE, PAGE_READWRITE = 0x1000, 0x20000, 0x04
 local MAX_USER_ADDRESS = 0x7FFFFFFEFFFF
 
@@ -98,13 +113,17 @@ local last_state = {}
 local in_match = false
 local squads = {}
 local stats_region
+local pos_region, pos_buf, last_pos
+local last_pos_ms, last_pos_search_ms = 0, 0
 local stats_cur, stats_prev = {}, {}
 local team_cache, lineups = {}, {}
 local last_possession = {}
 local last_formation = {}
 
 local C
+local NTDLL
 local CURRENT_PROCESS
+local last_flush_ms = 0
 
 local function init_ffi()
     -- Sider modules get no pcall, so a clashing cdef cannot be caught: every name is prefixed (SCLP_) and
@@ -118,8 +137,12 @@ local function init_ffi()
         int __stdcall SCLP_ReadProcessMemory(void *, const void *, void *, size_t, size_t *) __asm__("ReadProcessMemory");
         int __stdcall SCLP_CreateDirectoryA(const char *, void *) __asm__("CreateDirectoryA");
         uint64_t __stdcall SCLP_GetTickCount64(void) __asm__("GetTickCount64");
+        size_t __stdcall SCLP_RtlCompareMemory(const void *, const void *, size_t) __asm__("RtlCompareMemory");
     ]]
     C = ffi.C
+    -- ntdll is mapped in every process; RtlCompareMemory compares two stat records natively, so the Lua diff only
+    -- runs for the few records that changed since the last sample.
+    NTDLL = ffi.load("ntdll")
     CURRENT_PROCESS = ffi.cast("void*", -1)
 end
 
@@ -195,7 +218,15 @@ local function emit(kind, data)
     local st = match.stats()
     if st then data.c = { st.period or 0, st.clock_minutes or 0, st.clock_seconds or 0 } end
     ev_file:write(json(data), "\n")
-    ev_file:flush()
+end
+
+local function flush_events(force)
+    if not ev_file then return end
+    local t = now_ms()
+    if force or t - last_flush_ms >= FLUSH_EVERY_MS then
+        last_flush_ms = t
+        ev_file:flush()
+    end
 end
 
 local function hex(n)
@@ -238,6 +269,7 @@ local function write_region(label, name, base, size, index)
 end
 
 local function snapshot(label)
+    if not RESEARCH_DUMPS then return end
     seq = seq + 1
     local index = { seq = seq, label = label, regions = {} }
     local st = match.stats()
@@ -266,13 +298,46 @@ local function list_regions()
     return regions
 end
 
-local function has_stats_header(base)
+local function has_header(base, header)
     local h = ffi.new("uint64_t[3]")
     if read_into(base, h, 24) ~= 24 then return false end
     for i = 1, 3 do
-        if tonumber(h[i - 1]) ~= STATS_HEADER[i] then return false end
+        if tonumber(h[i - 1]) ~= header[i] then return false end
     end
     return true
+end
+
+local function has_stats_header(base)
+    return has_header(base, STATS_HEADER)
+end
+
+local function find_pos_region()
+    for _, r in ipairs(list_regions()) do
+        if r.size == POS_REGION_SIZE and has_header(r.base, POS_HEADER) then
+            pos_region, last_pos = r.base, nil
+            pos_buf = pos_buf or ffi.new("float[?]", POS_ENTRIES * 3)
+            emit("pos_block", { region = hex(pos_region) })
+            return
+        end
+    end
+end
+
+-- x and z of the 22 entries, one decimal (10 cm), only when the game rewrote the block.
+local function sample_positions()
+    local n = POS_ENTRIES * 12
+    if read_into(pos_region + POS_OFFSET, pos_buf, n) ~= n then
+        pos_region = nil
+        return
+    end
+    local raw = ffi.string(pos_buf, n)
+    if raw == last_pos then return end
+    last_pos = raw
+    local p = {}
+    for i = 0, POS_ENTRIES - 1 do
+        p[#p + 1] = math.floor(pos_buf[i * 3] * 10 + 0.5) / 10
+        p[#p + 1] = math.floor(pos_buf[i * 3 + 2] * 10 + 0.5) / 10
+    end
+    emit("pos", { p = p })
 end
 
 local function find_stats_region()
@@ -324,10 +389,13 @@ local function sample_stats(side)
     if read_into(stats_region + STATS_RECORDS_OFFSET + side * SIDE_STRIDE, cur, n) ~= n then return end
     local changed
     for idx = 0, players - 1 do
-        local kinds, extra = diff_record(cur, prev, idx * RECORD_WORDS)
-        if kinds or extra then
-            changed = changed or {}
-            changed[tostring(idx)] = { id = squads[side][idx + 1], k = kinds, x = extra }
+        local first = idx * RECORD_WORDS
+        if NTDLL.SCLP_RtlCompareMemory(cur + first, prev + first, RECORD_SIZE) ~= RECORD_SIZE then
+            local kinds, extra = diff_record(cur, prev, first)
+            if kinds or extra then
+                changed = changed or {}
+                changed[tostring(idx)] = { id = squads[side][idx + 1], k = kinds, x = extra }
+            end
         end
     end
     ffi.copy(prev, cur, n)
@@ -450,6 +518,7 @@ local function sample()
             sample_all_stats()
             snapshot("end")
             emit("stats_gone", {})
+            flush_events(true)
         end
         return
     end
@@ -459,12 +528,21 @@ local function sample()
         squads = { [0] = read_squad(0), [1] = read_squad(1) }
         emit("stats_appeared", { sci = hex(stats_ptr()), squad_home = squads[0], squad_away = squads[1] })
         stats_region, lineups, team_cache, last_formation = nil, {}, {}, {}
+        pos_region, last_pos, last_pos_search_ms = nil, nil, 0
         last_search_ms = 0
         last_snapshot_ms = t
     end
     if not stats_region and t - last_search_ms >= STATS_SEARCH_EVERY_MS then
         last_search_ms = t
         find_stats_region()
+    end
+    if pos_region and not has_header(pos_region, POS_HEADER) then
+        emit("pos_block_lost", { region = hex(pos_region) })
+        pos_region = nil
+    end
+    if not pos_region and t - last_pos_search_ms >= STATS_SEARCH_EVERY_MS then
+        last_pos_search_ms = t
+        find_pos_region()
     end
     sample_all_stats()
     sample_lineup(0)
@@ -519,11 +597,12 @@ local function open_session(ctx)
     ev_file = io.open(session_dir .. "\\events.ndjson", "a")
     seq, last_state, in_match, squads = 0, {}, false, {}
     stats_region, lineups, team_cache, last_possession, last_formation = nil, {}, {}, {}, {}
+    pos_region, last_pos, last_pos_search_ms = nil, nil, 0
     emit("session", {
         home_team = ctx.home_team, away_team = ctx.away_team, tournament_id = ctx.tournament_id,
         match_time = ctx.match_time, extra_time = ctx.extra_time, penalties = ctx.penalties,
         substitutions = ctx.substitutions, difficulty = ctx.difficulty, mis = hex(mis_address()),
-        probe_version = 4,
+        probe_version = 5,
     })
 end
 
@@ -543,9 +622,14 @@ end
 function m.display_frame(ctx)
     if not ev_file then return end
     local t = now_ms()
+    if in_match and pos_region and t - last_pos_ms >= POS_EVERY_MS then
+        last_pos_ms = t
+        sample_positions()
+    end
     if t - last_sample_ms < SAMPLE_EVERY_MS then return end
     last_sample_ms = t
     sample()
+    flush_events()
     if in_match and t - last_snapshot_ms >= SNAPSHOT_EVERY_MS then
         last_snapshot_ms = t
         snapshot("tick")
@@ -581,7 +665,7 @@ function m.init(ctx)
         m[handler_name] = guarded(m[event])
         ctx.register(event, m[handler_name])
     end
-    log("scl_probe ready (v4), output: " .. out_dir)
+    log("scl_probe ready (v5), output: " .. out_dir)
 end
 
 return m

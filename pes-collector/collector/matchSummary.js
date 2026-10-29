@@ -11,8 +11,9 @@ import { KIND, KIND_NAME, TEAM_STATS, kindTotal } from './statKinds.js';
 import { buildBuckets, buildSeries, buildShots } from './matchActions.js';
 import { buildFormations } from './formations.js';
 import { buildPossession } from './possession.js';
+import { buildHeatmaps, buildRatings, locateShots, positionSamples, teamXg } from './pitchData.js';
 
-// Fields added later (shots, series, buckets, formations, teamPlans) are optional: readers must handle summaries
+// Fields added later (shots, series, buckets, formations, teamPlans, ratings, heatmaps, xg) are optional: readers must handle summaries
 // without them, so the schema name stays and the match-feed function keeps accepting both.
 export const SCHEMA = 'scl.match/1';
 
@@ -91,7 +92,8 @@ function replayPlayerStats(events) {
         if (delta > 0) {
           rises.push({ ms: event.ms, clock: clockOf(event), side: event.side, id: change.id, kind: Number(kind), delta });
         }
-        player.kinds = { ...player.kinds, [kind]: values };
+        // A local accumulator: copying the whole object on every change made a full match quadratic (bridge, 2 s).
+        player.kinds[kind] = values;
       }
       players.set(key, player);
     }
@@ -268,6 +270,12 @@ export function summarizeMatch({ session, events }) {
   const { lineups, substitutions } = buildLineups(events);
   const shootoutScored = (state?.pk_home ?? 0) + (state?.pk_away ?? 0) > 0;
   if (!events.some(e => e.t === 'pstats')) warnings.push('no per-player stats in this recording (probe v1?)');
+  const extraTime = Boolean(session?.extra_time);
+  const samples = positionSamples(events);
+  // Shot positions and xG only when the probe recorded positions (v5+); older summaries keep their shots as they were.
+  const shots = samples.length
+    ? locateShots(buildShots(rises, { extraTime }), rises, samples)
+    : buildShots(rises, { extraTime });
   return {
     schema: SCHEMA,
     source: { probeVersion: session?.probe_version ?? 1, startedAt: events[0]?.ts ?? null },
@@ -289,7 +297,10 @@ export function summarizeMatch({ session, events }) {
     lineups,
     players: playersBySide,
     teamStats: buildTeamStats(playersBySide),
-    shots: buildShots(rises, { extraTime: Boolean(session?.extra_time) }),
+    shots,
+    xg: samples.length ? teamXg(shots) : null,
+    ratings: buildRatings(players),
+    heatmaps: buildHeatmaps(samples),
     series: buildSeries(rises, { extraTime: Boolean(session?.extra_time) }),
     buckets: buildBuckets(players),
     formations: buildFormations(events, warnings),

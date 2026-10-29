@@ -174,6 +174,37 @@ export function cleanPhotoUrl(value) {
   }
 }
 
+// How the stadium photo sits in the club hero: the focal point (x, y in % of the photo, as CSS object-position) and a
+// zoom around that point. The photo itself is never cropped; the hero and the editor preview render it the same way.
+export const DEFAULT_PHOTO_FRAME = Object.freeze({ x: 50, y: 50, zoom: 1 });
+export const MAX_PHOTO_ZOOM = 3;
+
+const clampRounded = (value, min, max, fallback, decimals) => {
+  const number = value === null || value === '' ? NaN : Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  const factor = 10 ** decimals;
+  return Math.round(Math.min(max, Math.max(min, number)) * factor) / factor;
+};
+
+/** A valid photo frame: numbers clamped to their range, defaults for anything missing or broken. */
+export function cleanPhotoFrame(frame) {
+  return {
+    x: clampRounded(frame?.x, 0, 100, DEFAULT_PHOTO_FRAME.x, 1),
+    y: clampRounded(frame?.y, 0, 100, DEFAULT_PHOTO_FRAME.y, 1),
+    zoom: clampRounded(frame?.zoom, 1, MAX_PHOTO_ZOOM, DEFAULT_PHOTO_FRAME.zoom, 2),
+  };
+}
+
+/** Inline style for an object-cover <img> showing `frame`. */
+export function photoFrameStyle(frame) {
+  const { x, y, zoom } = cleanPhotoFrame(frame);
+  return {
+    objectPosition: `${x}% ${y}%`,
+    transformOrigin: `${x}% ${y}%`,
+    transform: zoom === 1 ? undefined : `scale(${zoom})`,
+  };
+}
+
 function normalizeHonours(rows) {
   const kept = (Array.isArray(rows) ? rows : [])
     .map((row, index) => ({
@@ -221,6 +252,7 @@ export function normalizeClubProfile(profile = {}) {
   const photo = cleanPhotoUrl(profile?.stadiumPhotoUrl);
   if (photo === null) return { ok: false, error: 'La foto del estadio tiene que ser un link que empiece con https://.' };
   value.stadiumPhotoUrl = photo;
+  value.stadiumPhotoFrame = cleanPhotoFrame(profile?.stadiumPhotoFrame);
   const honours = normalizeHonours(profile?.honours);
   if (!honours.ok) return honours;
   const seasons = normalizeClubSeasons(profile?.seasons);

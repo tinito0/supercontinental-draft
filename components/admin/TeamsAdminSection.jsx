@@ -3,18 +3,19 @@ import { RefreshCw, Search, X, Users, Edit2, Crown, Trash2, Upload, Save, KeyRou
 import { getDocs, query, collection, getDoc, writeBatch, doc, setDoc, where, runTransaction } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { DEFAULT_LOGO, APP_ID } from '../../utils/constants.js';
-import { formatBudget } from '../../utils/helpers.js';
+import { formatPriceShort } from '../../utils/helpers.js';
 import { filterAdminTeams, mergeAdminTeamProfile, parseBudgetInput, sortByTeamName, validateLogoFile } from '../../utils/adminTeams.js';
 import { BaseModal } from '../ui/BaseModal.jsx';
 import { commitBatchOperations } from './commitBatchOperations.js';
 import { resizeImageFile } from '../../utils/resizeImage.js';
 import { renameTeamInTournament } from '../../utils/tournamentRename.js';
+import { confirmAction } from '../ui/ConfirmDialog.jsx';
 
 const ACCESS_FILTERS = [
   { id: 'all', label: 'Todos' },
-  { id: 'pending', label: 'Pendientes de aprobación' },
-  { id: 'early', label: 'Con acceso anticipado' },
-  { id: 'regular', label: 'Sin acceso anticipado' },
+  { id: 'pending', label: 'Pendientes' },
+  { id: 'early', label: 'Con acceso' },
+  { id: 'regular', label: 'Sin acceso' },
 ];
 
 // Equipos y usuarios en una sola lista: cada usuario registrado es un equipo (teams/{uid} + su perfil).
@@ -57,21 +58,27 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
   const fetchTeams = useCallback(async () => {
     setIsLoading(true);
     try {
-      const teamsSnap = await getDocs(query(getPublicTeamsCollectionRef()));
+      const [teamsSnap, locksSnap] = await Promise.all([
+        getDocs(query(getPublicTeamsCollectionRef())),
+        getDocs(collection(db, `artifacts/${APP_ID}/public/data/player_locks`)),
+      ]);
+      const playerCounts = {};
+      locksSnap.forEach(lockDoc => {
+        const owner = lockDoc.data().lockedBy;
+        if (owner) playerCounts[owner] = (playerCounts[owner] || 0) + 1;
+      });
       const teamPromises = teamsSnap.docs.map(async (teamDoc) => {
         const publicData = teamDoc.data();
         const uid = teamDoc.id;
         const privateSnap = await getDoc(getPrivateProfileRef(uid));
         const privateData = privateSnap.exists() ? privateSnap.data() : {};
-        // Count players in cart
-        const cartSnap = await getDocs(collection(db, `artifacts/${APP_ID}/users/${uid}/cart`));
-        return { ...mergeAdminTeamProfile(uid, publicData, privateData), playerCount: cartSnap.size };
+        return { ...mergeAdminTeamProfile(uid, publicData, privateData), playerCount: playerCounts[uid] || 0 };
       });
       setTeams(sortByTeamName(await Promise.all(teamPromises)));
       setHasLoaded(true);
     } catch (e) {
       console.error(e);
-      showStatusMessage('error', 'Error al cargar equipos.');
+      showStatusMessage('error', 'No se pudieron cargar los equipos. Probá con «Actualizar».');
     }
     setIsLoading(false);
   }, [getPublicTeamsCollectionRef, getPrivateProfileRef, db, showStatusMessage]);
@@ -105,7 +112,11 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
   // La whitelist (teams/{uid}.inWhitelist) deja usar el mercado aunque esté cerrado o programado (app.jsx → isMarketOpen).
   const handleToggleAccess = async (team) => {
     const next = !team.inWhitelist;
-    if (!next && !window.confirm(`¿Quitarle a "${team.teamName}" el acceso anticipado? Si el mercado está cerrado, deja de poder usarlo.`)) return;
+    if (!next && !(await confirmAction({
+      title: `¿Quitarle el acceso anticipado a ${team.teamName}?`,
+      message: 'Si el mercado está cerrado o programado, deja de poder fichar y ofertar hasta que abra.',
+      confirmLabel: 'Quitar acceso',
+    }))) return;
     setTogglingUid(team.uid);
     try {
       await setDoc(getPublicTeamRef(team.uid), { inWhitelist: next }, { merge: true });
@@ -221,13 +232,19 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
       await fetchTeams();
     } catch (err) {
       console.error(err);
-      showStatusMessage('error', 'Error al guardar equipo.');
+      showStatusMessage('error', `No se pudo guardar el equipo: ${err?.message || 'reintentá en unos instantes.'}`);
     }
     setIsSaving(false);
   };
 
   const handleDeleteTeam = async (team) => {
-    if (!window.confirm(`¿Eliminar el equipo "${team.teamName}"?\n\nSe borran su ficha pública, su perfil (formación, dorsales, franquicia), su plantel (${team.playerCount} jugadores) y sus bloqueos de mercado: esos jugadores vuelven a quedar libres. Sus ofertas abiertas se cierran. No se puede deshacer.`)) return;
+    const isConfirmed = await confirmAction({
+      title: `¿Eliminar ${team.teamName}?`,
+      message: `Se borran su ficha pública, su perfil (formación, dorsales, franquicia) y su plantel: sus ${team.playerCount} jugadores vuelven a quedar libres en el mercado. Sus ofertas abiertas se cierran.`,
+      confirmLabel: 'Eliminar equipo',
+      irreversible: true,
+    });
+    if (!isConfirmed) return false;
     try {
       // El perfil también: si quedaba, useAuth volvía a crear el equipo en el próximo ingreso del usuario.
       const operations = [
@@ -254,16 +271,24 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
           data: { status: 'withdrawn', withdrawnAt: closedAt, withdrawnReason: 'Equipo eliminado' },
         }));
       await commitBatchOperations(db, operations);
-      showStatusMessage('success', `Equipo "${team.teamName}" eliminado.`);
+      showStatusMessage('success', `${team.teamName} eliminado.`);
       await fetchTeams();
+      return true;
     } catch (err) {
       console.error(err);
-      showStatusMessage('error', 'Error al eliminar equipo.');
+      showStatusMessage('error', `No se pudo eliminar ${team.teamName}: ${err?.message || 'reintentá en unos instantes.'}`);
+      return false;
     }
   };
 
   const handleResetFranchise = async (team) => {
-    if (!window.confirm(`¿Resetear el Jugador Franquicia de "${team.teamName}"? Esto liberará su cupo y eliminará al jugador de su plantilla.`)) return;
+    const isConfirmed = await confirmAction({
+      title: `¿Resetear el franquicia de ${team.teamName}?`,
+      message: 'El jugador sale de su plantel y el club puede elegir otro franquicia.',
+      confirmLabel: 'Resetear franquicia',
+      irreversible: true,
+    });
+    if (!isConfirmed) return;
     try {
       const batch = writeBatch(db);
       const profileSnap = await getDoc(getPrivateProfileRef(team.uid));
@@ -286,7 +311,7 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
       await fetchTeams();
     } catch (err) {
       console.error(err);
-      showStatusMessage('error', 'Error al resetear franquicia.');
+      showStatusMessage('error', `No se pudo resetear el franquicia: ${err?.message || 'reintentá en unos instantes.'}`);
     }
   };
 
@@ -294,7 +319,7 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
     return (
       <div className="text-center p-8">
         <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-        <p className="text-ink-3 text-xs">Cargando equipos...</p>
+        <p className="text-ink-3 text-xs">Cargando equipos…</p>
       </div>
     );
   }
@@ -311,24 +336,24 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
 
       {/* SEARCH BAR */}
       <div className="relative">
-        <Search className="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Buscar por equipo, email o ID de usuario..."
+          placeholder="Buscar por equipo, email o ID de usuario…"
           aria-label="Buscar equipo o usuario"
-          className="w-full bg-canvas border border-line/[0.12] rounded-xl pl-9 pr-8 py-2.5 text-xs text-ink placeholder-slate-500 outline-none focus:border-accent/50"
+          className="input pl-9 pr-11 placeholder:text-ink-3"
         />
         {searchTerm && (
-          <button type="button" aria-label="Borrar búsqueda" onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink">
-            <X size={14} />
+          <button type="button" aria-label="Borrar búsqueda" onClick={() => setSearchTerm('')} className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-ink-3 hover:text-ink">
+            <X size={14} aria-hidden="true" />
           </button>
         )}
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="tab-list" role="group" aria-label="Filtrar por acceso al mercado">
+        <div className="tab-list max-w-full overflow-x-auto" role="group" aria-label="Filtrar por aprobación y acceso anticipado">
           {ACCESS_FILTERS.map(filter => (
             <button key={filter.id} type="button" className="tab" aria-pressed={accessFilter === filter.id} onClick={() => setAccessFilter(filter.id)}>
               {filter.label}
@@ -347,47 +372,44 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
           <p className="text-ink-3 font-medium text-xs">No hay equipos registrados todavía. Aparecen acá cuando cada usuario crea su cuenta.</p>
         </div>
       ) : (
-        <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
+        <div className="space-y-2">
           {filteredTeams.length === 0 ? (
             <div className="text-center py-10 text-ink-3 text-xs border border-dashed border-line/[0.12] rounded-xl">
               Ningún equipo coincide con la búsqueda o el filtro.
             </div>
           ) : (
             filteredTeams.map(team => (
-              <div key={team.uid} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-3.5 bg-surface rounded-xl border border-line/[0.12] hover:border-accent/30 transition group">
-                {/* Badge */}
+              <div key={team.uid} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-3.5 bg-surface rounded-xl border border-line/[0.12]">
                 <img
                   src={team.logoUrl || DEFAULT_LOGO}
-                  alt="Escudo"
+                  alt=""
+                  width={44}
+                  height={44}
                   className="w-11 h-11 rounded-xl object-contain bg-black/50 p-1 border border-line/[0.12] flex-shrink-0"
-                  onError={(e) => e.target.src = DEFAULT_LOGO}
+                  onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                 />
-                {/* Info */}
                 <div className="flex-1 min-w-[10rem]">
-                  <h4 className="text-sm font-bold text-ink uppercase tracking-wide truncate group-hover:text-accent transition-colors">{team.teamName}</h4>
-                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                  <h2 className="text-sm font-bold text-ink truncate">{team.teamName}</h2>
+                  <div className="flex items-center gap-x-3 gap-y-0.5 mt-0.5 flex-wrap">
                     {team.email && <span className="text-xs text-ink-2 truncate max-w-[220px]">{team.email}</span>}
-                    <span className="text-[10px] text-ink-3 font-mono" title={team.uid}>ID: {team.uid.substring(0, 8)}</span>
-                    {team.inWhitelist && <span className="text-[11px] font-semibold text-success-soft">Acceso anticipado</span>}
-                    {team.pendingApproval && <span className="text-[11px] font-semibold text-warning-soft">Pendiente de aprobación</span>}
+                    {team.pendingApproval && <span className="text-xs font-semibold text-warning-soft">Pendiente de aprobación</span>}
                   </div>
                 </div>
-                {/* Stats */}
-                <div className="flex items-center gap-4 text-right flex-shrink-0">
+                <dl className="flex items-center gap-5 text-right flex-shrink-0">
                   <div>
-                    <p className="text-[9px] text-ink-3 uppercase font-bold">Jugadores</p>
-                    <p className="text-sm font-bold text-ink font-mono">{team.playerCount}</p>
+                    <dt className="text-xs text-ink-3">Jugadores</dt>
+                    <dd className="font-display num text-lg font-bold text-ink leading-tight">{team.playerCount}</dd>
                   </div>
                   <div>
-                    <p className="text-[9px] text-ink-3 uppercase font-bold">Presupuesto</p>
-                    <p className="text-sm font-bold text-success-soft font-mono">{formatBudget(team.budget)}</p>
+                    <dt className="text-xs text-ink-3">Presupuesto</dt>
+                    <dd className="font-display num text-lg font-bold text-ink leading-tight">{formatPriceShort((Number(team.budget) || 0) / 1000000)}</dd>
                   </div>
-                </div>
-                {/* Actions */}
-                <div className="flex items-center gap-1 ml-auto opacity-80 group-hover:opacity-100 transition flex-shrink-0">
+                </dl>
+                {/* Safe actions only, with words: resetting the franchise player and deleting live in the editor. */}
+                <div className="flex items-center gap-2 ml-auto flex-shrink-0">
                   {team.pendingApproval && (
                     <button type="button" onClick={() => handleApprove(team)} disabled={togglingUid === team.uid}
-                      className="btn btn-success btn-sm" title="Aprobar: puede fichar, ofertar y usar el chat">
+                      className="btn btn-success btn-sm" title="Puede fichar, ofertar y usar el chat">
                       <UserCheck size={16} aria-hidden="true" />Aprobar
                     </button>
                   )}
@@ -395,21 +417,15 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                     type="button"
                     onClick={() => handleToggleAccess(team)}
                     disabled={togglingUid === team.uid}
-                    aria-pressed={team.inWhitelist}
-                    className={`btn btn-icon ${team.inWhitelist ? 'btn-success' : 'btn-ghost'}`}
-                    title={team.inWhitelist ? 'Quitar acceso anticipado al mercado' : 'Dar acceso anticipado al mercado (puede usarlo aunque esté cerrado)'}
-                    aria-label={team.inWhitelist ? `Quitar acceso anticipado a ${team.teamName}` : `Dar acceso anticipado a ${team.teamName}`}
+                    aria-pressed={Boolean(team.inWhitelist)}
+                    className={`btn btn-sm ${team.inWhitelist ? 'btn-success' : 'btn-secondary'}`}
+                    title="Con acceso anticipado puede usar el mercado aunque esté cerrado o programado"
                   >
                     <KeyRound size={16} aria-hidden="true" />
+                    {team.inWhitelist ? 'Acceso anticipado' : 'Dar acceso anticipado'}
                   </button>
-                  <button type="button" onClick={() => openEditTeamModal(team)} className="btn btn-ghost btn-icon" title="Editar equipo" aria-label={`Editar ${team.teamName}`}>
-                    <Edit2 size={16} aria-hidden="true" />
-                  </button>
-                  <button type="button" onClick={() => handleResetFranchise(team)} className="btn btn-ghost btn-icon hover:text-accent-soft" title="Resetear Jugador Franquicia" aria-label={`Resetear jugador franquicia de ${team.teamName}`}>
-                    <Crown size={16} aria-hidden="true" />
-                  </button>
-                  <button type="button" onClick={() => handleDeleteTeam(team)} className="btn btn-ghost btn-icon hover:text-danger-soft" title="Eliminar equipo" aria-label={`Eliminar ${team.teamName}`}>
-                    <Trash2 size={16} aria-hidden="true" />
+                  <button type="button" onClick={() => openEditTeamModal(team)} className="btn btn-secondary btn-sm" aria-label={`Editar ${team.teamName}`}>
+                    <Edit2 size={16} aria-hidden="true" />Editar
                   </button>
                 </div>
               </div>
@@ -445,16 +461,16 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                   onError={(e) => e.target.src = DEFAULT_LOGO}
                 />
                 <div className="flex-1">
-                  <label className="text-xs font-bold text-ink-3 uppercase block mb-1">Escudo</label>
-                  <label className="flex items-center gap-2 px-3 py-2 bg-black/40 border border-line/[0.12] rounded-lg text-xs text-ink-2 cursor-pointer hover:bg-white/[0.05] transition">
-                    <Upload size={14} /> {isUploading ? 'Subiendo...' : 'Subir imagen'}
+                  <p className="field-label">Escudo</p>
+                  <label className="btn btn-secondary btn-sm cursor-pointer">
+                    <Upload size={14} aria-hidden="true" /> {isUploading ? 'Subiendo…' : 'Subir imagen'}
                     <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={isUploading} />
                   </label>
                 </div>
               </div>
               {/* Team name */}
               <div>
-                <label htmlFor="team-admin-name" className="text-xs font-bold text-ink-3 uppercase block mb-1">Nombre del equipo</label>
+                <label htmlFor="team-admin-name" className="field-label">Nombre del equipo</label>
                 <input
                   id="team-admin-name"
                   type="text"
@@ -462,14 +478,14 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                   aria-describedby={formErrors.teamName ? 'team-admin-name-error' : undefined}
                   value={formData.teamName}
                   onChange={e => setFormData(prev => ({ ...prev, teamName: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-black/40 text-ink border border-line/[0.12] rounded-lg text-sm outline-none focus:border-accent transition"
+                  className="input"
                   placeholder="Ej: Club Atlético SuperCont"
                 />
                 {formErrors.teamName && <p id="team-admin-name-error" className="field-error" role="alert">{formErrors.teamName}</p>}
               </div>
               {/* Budget */}
               <div>
-                <label htmlFor="team-admin-budget" className="text-xs font-bold text-ink-3 uppercase block mb-1">Presupuesto ($)</label>
+                <label htmlFor="team-admin-budget" className="field-label">Presupuesto (en pesos, sin puntos)</label>
                 <input
                   id="team-admin-budget"
                   type="number"
@@ -479,18 +495,19 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                   aria-describedby={formErrors.budget ? 'team-admin-budget-error' : undefined}
                   value={formData.budget}
                   onChange={e => setFormData(prev => ({ ...prev, budget: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-black/40 text-ink border border-line/[0.12] rounded-lg text-sm font-mono outline-none focus:border-accent transition"
+                  className="input num"
                   placeholder="0"
                 />
                 {formErrors.budget && <p id="team-admin-budget-error" className="field-error" role="alert">{formErrors.budget}</p>}
               </div>
               {/* Country / Nationality */}
               <div>
-                <label className="text-xs font-bold text-ink-3 uppercase block mb-1">Nacionalidad / País del Club</label>
+                <label htmlFor="team-admin-country" className="field-label">País del club</label>
                 <select
+                  id="team-admin-country"
                   value={formData.country || 204}
                   onChange={e => setFormData(prev => ({ ...prev, country: Number(e.target.value) }))}
-                  className="w-full px-4 py-2.5 bg-black/40 text-ink border border-line/[0.12] rounded-lg text-xs outline-none focus:border-accent transition cursor-pointer"
+                  className="select"
                 >
                   {countryOptions.length > 0 ? (
                     countryOptions.map(c => (
@@ -502,38 +519,49 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                 </select>
               </div>
               <div className="border-t border-line/[0.12] pt-4">
-                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-accent-soft">Estadísticas públicas (edición manual)</p>
+                <p className="mb-3 text-sm font-semibold text-ink">Estadísticas públicas (edición manual)</p>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                   {[
                     ['played', 'Partidos'], ['wins', 'Ganados'], ['draws', 'Empatados'], ['losses', 'Perdidos'],
                     ['gf', 'Goles a favor'], ['ga', 'Goles en contra'], ['titles', 'Títulos'],
                   ].map(([field, label]) => (
                     <label key={field} className="block">
-                      <span className="mb-1 block text-[10px] font-bold uppercase text-ink-3">{label}</span>
+                      <span className="field-label">{label}</span>
                       <input
                         type="number"
                         min="0"
                         value={formData.manualStats?.[field] ?? ''}
                         onChange={e => setFormData(prev => ({ ...prev, manualStats: { ...prev.manualStats, [field]: e.target.value } }))}
-                        className="w-full rounded-lg border border-line/[0.12] bg-black/40 px-3 py-1.5 text-xs text-ink outline-none focus:border-accent font-mono"
+                        className="input num"
                       />
                     </label>
                   ))}
                 </div>
                 <label className="mt-3 block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase text-ink-3">Rivalidad</span>
+                  <span className="field-label">Rivalidad</span>
                   <input
                     type="text"
                     value={formData.manualStats?.rival ?? ''}
                     onChange={e => setFormData(prev => ({ ...prev, manualStats: { ...prev.manualStats, rival: e.target.value } }))}
-                    className="w-full rounded-lg border border-line/[0.12] bg-black/40 px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                    className="input"
                     placeholder="Ej: SK Konya"
                   />
                 </label>
-                <p className="mt-2 text-[10px] text-ink-3">Los campos cargados reemplazan el cálculo automático del perfil público.</p>
+                <p className="field-help">Los campos cargados reemplazan el cálculo automático del perfil público.</p>
               </div>
-              <div className="text-xs text-ink-3 bg-black/30 p-3 rounded-xl border border-line/[0.08]">
-                <span className="font-bold text-ink-2">User ID:</span> <span className="font-mono text-[11px]">{editingTeam.uid}</span>
+              <p className="text-xs text-ink-3">
+                <span className="font-semibold text-ink-2">ID de usuario:</span> <span className="font-mono">{editingTeam.uid}</span>
+              </p>
+              <div className="rounded-xl border border-danger/30 bg-danger/[0.06] p-4 space-y-3">
+                <p className="text-sm font-semibold text-danger-soft">Zona de peligro</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => handleResetFranchise(editingTeam)} disabled={isSaving} className="btn btn-danger btn-sm">
+                    <Crown size={16} aria-hidden="true" />Resetear franquicia
+                  </button>
+                  <button type="button" onClick={async () => { if (await handleDeleteTeam(editingTeam)) closeModal(); }} disabled={isSaving} className="btn btn-danger btn-sm">
+                    <Trash2 size={16} aria-hidden="true" />Eliminar equipo
+                  </button>
+                </div>
               </div>
             </div>
         </BaseModal>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowDown } from 'lucide-react';
-import { CardMark } from './MatchParts.jsx';
+import { CardMark, RatingChip } from './MatchParts.jsx';
+import { bestRated, playerRating, teamRating } from '../../../utils/matchStats.js';
 import { BallIcon } from './BallIcon.jsx';
 
 /* Las dos formaciones del saque inicial en una cancha (utils/matchAnalysis.js pitchLayout). Horizontal desde sm
@@ -49,7 +50,7 @@ function Miniface({ player, side }) {
   );
 }
 
-function Marker({ player, side, vertical }) {
+function Marker({ player, side, vertical, rating, isBest }) {
   const style = vertical
     ? { left: `${inset(player.y)}%`, top: `${inset(100 - player.x)}%` }
     : { left: `${inset(player.x)}%`, top: `${inset(player.y)}%` };
@@ -57,14 +58,18 @@ function Marker({ player, side, vertical }) {
     player.goals ? `${player.goals} ${player.goals === 1 ? 'gol' : 'goles'}` : '',
     ...(player.cards || []).map(card => (card === 'red' ? 'tarjeta roja' : 'tarjeta amarilla')),
     player.subbedOff ? `salió ${player.subbedOff}` : '',
+    rating != null ? `valoración ${String(rating).replace('.', ',')}` : '',
   ].filter(Boolean);
   const label = [`${player.name}${player.number != null ? `, dorsal ${player.number}` : ''}, ${player.role}`, ...extras].join(', ');
   return (
     <li className="absolute flex w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={style} aria-label={label}>
       <span className="relative">
         <Miniface player={player} side={side} />
+        {rating != null && (
+          <RatingChip value={rating} isBest={isBest} className="absolute -right-3 -top-2 z-10 shadow-sm" />
+        )}
         {player.goals > 0 && (
-          <span className="absolute -right-2.5 -top-1 flex items-center gap-0.5 rounded-full bg-canvas/85 py-0.5 pl-0.5 pr-1" aria-hidden="true">
+          <span className="absolute -right-2.5 -bottom-1 flex items-center gap-0.5 rounded-full bg-canvas/85 py-0.5 pl-0.5 pr-1" aria-hidden="true">
             <BallIcon className="h-4 w-4" />
             {player.goals > 1 && <span className="num text-[11px] font-bold leading-none text-ink">{player.goals}</span>}
           </span>
@@ -88,7 +93,7 @@ function Marker({ player, side, vertical }) {
   );
 }
 
-function PitchLines({ vertical }) {
+export function PitchLines({ vertical, className = 'stroke-line/25' }) {
   // Cancha de 105 × 68: áreas, círculo central y la línea media.
   const view = vertical ? '0 0 68 105' : '0 0 105 68';
   const t = vertical ? (x, y) => [y, 105 - x] : (x, y) => [x, y];
@@ -102,7 +107,7 @@ function PitchLines({ vertical }) {
   const [m2x, m2y] = t(52.5, 68);
   return (
     <svg viewBox={view} preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden="true">
-      <g fill="none" className="stroke-line/25" strokeWidth="0.35">
+      <g fill="none" className={className} strokeWidth="0.35">
         {rect(0.5, 0.5, 104, 67)}
         {rect(0.5, 13.85, 16.5, 40.3)}
         {rect(88, 13.85, 16.5, 40.3)}
@@ -127,7 +132,8 @@ function SideNotice({ side, status, vertical }) {
   );
 }
 
-function Pitch({ layout, vertical }) {
+function Pitch({ layout, vertical, summary }) {
+  const best = bestRated(summary);
   return (
     <div className={`lineup-pitch relative w-full overflow-hidden rounded-xl ${vertical ? 'mx-auto aspect-[68/105] max-w-md' : 'aspect-[105/68]'}`}>
       <PitchLines vertical={vertical} />
@@ -135,7 +141,8 @@ function Pitch({ layout, vertical }) {
         <React.Fragment key={side}>
           <SideNotice side={side} status={layout[side].status} vertical={vertical} />
           <ul aria-label={side === 'home' ? 'Local' : 'Visitante'}>
-            {layout[side].players.map(player => <Marker key={player.id} player={player} side={side} vertical={vertical} />)}
+            {layout[side].players.map(player => <Marker key={player.id} player={player} side={side} vertical={vertical}
+              rating={playerRating(summary, player.id)} isBest={best.includes(player.id)} />)}
           </ul>
         </React.Fragment>
       ))}
@@ -144,15 +151,20 @@ function Pitch({ layout, vertical }) {
 }
 
 export function LineupPitch({ layout, match }) {
+  const summary = match.summary;
+  const average = side => teamRating(summary, side);
   return (
     <section className="panel p-3 sm:p-4" aria-label="Formaciones del saque inicial">
       <div className="mb-3 flex items-center justify-between gap-3 text-sm font-semibold">
-        <span className="flex min-w-0 items-center gap-2 text-ink"><span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true" /><span className="truncate">{match.home.name}</span></span>
-        <span className="flex min-w-0 items-center gap-2 text-ink"><span className="truncate">{match.away.name}</span><span className="h-2.5 w-2.5 shrink-0 rounded-full bg-ink-3" aria-hidden="true" /></span>
+        <span className="flex min-w-0 items-center gap-2 text-ink"><span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true" /><span className="truncate">{match.home.name}</span><RatingChip value={average('home')} /></span>
+        <span className="flex min-w-0 items-center gap-2 text-ink"><RatingChip value={average('away')} /><span className="truncate">{match.away.name}</span><span className="h-2.5 w-2.5 shrink-0 rounded-full bg-ink-3" aria-hidden="true" /></span>
       </div>
-      <div className="hidden sm:block"><Pitch layout={layout} vertical={false} /></div>
-      <div className="sm:hidden"><Pitch layout={layout} vertical /></div>
-      <p className="mt-3 text-sm text-ink-2">{sourceNote(layout)}</p>
+      <div className="hidden sm:block"><Pitch layout={layout} vertical={false} summary={summary} /></div>
+      <div className="sm:hidden"><Pitch layout={layout} vertical summary={summary} /></div>
+      <p className="mt-3 text-sm text-ink-2">
+        {sourceNote(layout)}
+        {average('home') != null && ' Las valoraciones son las del juego; al lado de cada equipo, el promedio de los que jugaron.'}
+      </p>
     </section>
   );
 }

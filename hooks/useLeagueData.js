@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collection, doc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { APP_ID } from '../utils/constants.js';
 import { isTeamApproved } from '../supabase/functions/_shared/membership.js';
 import { LEAGUE_CONTENT_COLLECTION } from '../utils/leagueContent.js';
 import { parseMatchDoc } from '../utils/matchCenter.js';
+import { franchiseByTeam } from '../utils/franchisePlayers.js';
+// The market catalog (id → price, age, OVR, name, position): ~0.4 MB gzipped against 2.3 MB for the full one.
+import marketCatalogUrl from '../supabase/functions/_shared/catalog.json?url';
 
 /* Live, public data for the league site (screens/league/). Both paths are public-read in firestore.rules. */
 
@@ -207,4 +210,52 @@ export function useClubProfiles() {
     },
   ), []);
   return state;
+}
+
+let marketCatalogPromise = null;
+/** Fetched once per page load and shared; a failed fetch is retried on the next call. */
+function loadMarketCatalog() {
+  if (!marketCatalogPromise) {
+    marketCatalogPromise = fetch(marketCatalogUrl)
+      .then(response => {
+        if (!response.ok) throw new Error(`Catálogo no disponible (${response.status})`);
+        return response.json();
+      })
+      .catch(err => {
+        marketCatalogPromise = null;
+        throw err;
+      });
+  }
+  return marketCatalogPromise;
+}
+
+/**
+ * Jugador Franquicia of every club, by teamId (utils/franchisePlayers.js): the public franchise locks, with name,
+ * position and OVR from the market catalog once it loads (until then, and if it fails, only the id and photo).
+ */
+export function useFranchisePlayers() {
+  const [state, setState] = useState({ locks: [], loading: true, error: '' });
+  const [catalog, setCatalog] = useState(null);
+
+  useEffect(() => onSnapshot(
+    query(collection(db, `${PUBLIC_DATA}/player_locks`), where('isFranchise', '==', true)),
+    (snap) => setState({ locks: snap.docs.map(d => ({ id: d.id, ...d.data() })), loading: false, error: '' }),
+    (err) => {
+      console.error('[useFranchisePlayers]', err);
+      setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar los jugadores franquicia.' }));
+    },
+  ), []);
+
+  const hasLocks = state.locks.length > 0;
+  useEffect(() => {
+    if (!hasLocks) return undefined;
+    let active = true;
+    loadMarketCatalog()
+      .then(data => { if (active) setCatalog(data); })
+      .catch(err => console.error('[useFranchisePlayers] catálogo', err));
+    return () => { active = false; };
+  }, [hasLocks]);
+
+  const byTeamId = useMemo(() => franchiseByTeam(state.locks, catalog), [state.locks, catalog]);
+  return { byTeamId, loading: state.loading, error: state.error };
 }

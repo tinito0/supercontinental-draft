@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback, memo, useRef, useMemo, useReducer } from 'react';
-import { X, Save, ClipboardList, Move, Share2, Check, Copy, Loader2, Crown, Target, Zap, Shield, Users, Activity, Sliders, Settings, ArrowLeft } from 'lucide-react';
-import { writeBatch, addDoc, collection, doc, setDoc } from 'firebase/firestore';
+import { X, Save, ClipboardList, Move, Share2, Check, Copy, Loader2, Target, Users, Sliders, ArrowLeft, Wand2, LandPlot } from 'lucide-react';
+import { writeBatch, addDoc, collection } from 'firebase/firestore';
 import { Pitch } from './Pitch.jsx';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 import { Alert } from './ui/Alert.jsx';
 import { FORMATIONS, APP_ID, DEFAULT_LOGO, DEFAULT_TACTICS } from '../utils/constants.js';
-import { getPosColorClass, formatPriceShort } from '../utils/helpers.js';
+import { formationReducer, initialFormationState } from '../utils/lineupReducer.js';
+import { useStatusSwap } from '../hooks/useStatusSwap.js';
+import { SquadSection, SquadRow } from './formation/SquadList.jsx';
+import { TeamStrength } from './formation/TeamStrength.jsx';
+import { TacticsPanel, RolesPanel } from './formation/StrategyPanels.jsx';
 import {
   normalizeFormationStates, resetForFormation, layoutForState, moveSlot, setFluid, copyBaseTo, resetState,
   serializeFormationStates, effectiveState, setSlotRole, applyFormationToState, formationKeyForState, TACTICAL_STATES,
@@ -19,488 +23,10 @@ import { TacticalStateBar } from './formation/TacticalStateBar.jsx';
 import { AdvancedInstructionsPanel } from './formation/AdvancedInstructionsPanel.jsx';
 import { PositionPicker } from './formation/PositionPicker.jsx';
 import { draftUrl } from '../utils/siteRoutes.js';
+import { autoLineup } from '../utils/autoLineup.js';
 
-export const FormationPlayerItem = memo(({ player, onPlayerClick, isSelected, dorsal, onDorsalChange, isAvailable, onAvailabilityChange }) => (
-  <div className={`flex items-center justify-between gap-2 p-2 w-full rounded-lg border transition-colors ${isSelected ? 'bg-accent/15 border-accent/60' : 'bg-raised border-line/[0.12] hover:border-line/30'}`}>
-    <button type="button" onClick={() => onPlayerClick(player)} aria-pressed={isSelected} className="flex items-center gap-2.5 min-w-0 flex-1 text-left min-h-10">
-      <img crossOrigin="anonymous" src={`/fotos_jugadores/${player.Id}.webp`} alt="" className="w-9 h-9 object-cover object-top rounded-lg bg-surface shrink-0" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
-      <div className="min-w-0 flex-1">
-        <div className={`text-sm font-semibold truncate leading-tight ${isSelected ? 'text-ink' : 'text-ink-2'}`}>{player.Name}</div>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className={`text-[10px] font-bold px-1 rounded shrink-0 ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
-          <span className="text-[11px] text-ink-3 num shrink-0">{formatPriceShort(player.Precio || player.Valor || player.Price)}</span>
-        </div>
-      </div>
-    </button>
-    <div className="flex items-center gap-1 shrink-0">
-      <input
-        type="text"
-        placeholder="#"
-        aria-label={`Dorsal de ${player.Name}`}
-        inputMode="numeric"
-        className="w-10 h-8 bg-surface text-center text-ink text-sm font-semibold num rounded-md border border-line/20 focus:border-accent outline-none"
-        value={dorsal || ''}
-        onChange={(e) => onDorsalChange(player.Id, e.target.value)}
-        maxLength={2}
-        title="Dorsal"
-      />
-      <button
-        type="button"
-        onClick={() => onAvailabilityChange(player.Id, !isAvailable)}
-        aria-pressed={!isAvailable}
-        className={`h-8 min-w-11 px-2 text-[11px] font-semibold rounded-md border transition-colors ${isAvailable ? 'bg-success/[0.12] text-success-soft border-success/30' : 'bg-danger/[0.12] text-danger-soft border-danger/30'}`}
-        title="Disponibilidad para próxima fecha"
-      >
-        {isAvailable ? 'OK' : 'Baja'}
-      </button>
-    </div>
-  </div>
-));
-
-export const TacticsPanel = memo(function TacticsPanel({
-  tactics,
-  onTacticsChange,
-  children,
-}) {
-  const currentTactics = { ...DEFAULT_TACTICS, ...(tactics || {}) };
-
-  const attackFields = [
-    {
-      key: 'attackingStyles',
-      label: 'Estilo de Ataque',
-      type: 'select',
-      options: [
-        { value: 1, label: 'Posesión (Possession Game)' },
-        { value: 0, label: 'Contraataque (Counter Attack)' }
-      ]
-    },
-    {
-      key: 'buildUp',
-      label: 'Construcción',
-      type: 'select',
-      options: [
-        { value: 1, label: 'Pase Corto (Short-pass)' },
-        { value: 0, label: 'Pase Largo (Long-pass)' }
-      ]
-    },
-    {
-      key: 'attackingArea',
-      label: 'Área de Ataque',
-      type: 'select',
-      options: [
-        { value: 1, label: 'Centro (Centre)' },
-        { value: 0, label: 'Bandas (Wide)' }
-      ]
-    },
-    {
-      key: 'positioning',
-      label: 'Posicionamiento',
-      type: 'select',
-      options: [
-        { value: 1, label: 'Flexible' },
-        { value: 0, label: 'Mantener Formación' }
-      ]
-    },
-    {
-      key: 'supportRange',
-      label: 'Rango de Apoyo',
-      type: 'slider',
-      min: 1,
-      max: 10,
-      minLabel: 'Corto (1)',
-      maxLabel: 'Largo (10)'
-    },
-    {
-      key: 'numbersInAttack',
-      label: 'Efectivos en Ataque',
-      type: 'select',
-      options: [
-        { value: 2, label: 'Muchos (Many)' },
-        { value: 1, label: 'Medio (Medium)' },
-        { value: 0, label: 'Pocos (Few)' }
-      ]
-    }
-  ];
-
-  const defenseFields = [
-    {
-      key: 'defensiveStyles',
-      label: 'Estilo Defensivo',
-      type: 'select',
-      options: [
-        { value: 0, label: 'Presión en la Frontal (Frontline Pressure)' },
-        { value: 1, label: 'Defensa Total (All-out Defence)' }
-      ]
-    },
-    {
-      key: 'containmentArea',
-      label: 'Área de Contención',
-      type: 'select',
-      options: [
-        { value: 0, label: 'Centro (Middle)' },
-        { value: 1, label: 'Bandas (Wide)' }
-      ]
-    },
-    {
-      key: 'pressuring',
-      label: 'Presión',
-      type: 'select',
-      options: [
-        { value: 0, label: 'Conservador (Conservative)' },
-        { value: 1, label: 'Agresivo (Aggressive)' }
-      ]
-    },
-    {
-      key: 'defensiveLine',
-      label: 'Línea Defensiva',
-      type: 'slider',
-      min: 1,
-      max: 10,
-      minLabel: 'Retrasada (1)',
-      maxLabel: 'Adelantada (10)'
-    },
-    {
-      key: 'compactness',
-      label: 'Compactibilidad / Densidad',
-      type: 'slider',
-      min: 1,
-      max: 10,
-      minLabel: 'Abierta (1)',
-      maxLabel: 'Compacta (10)'
-    },
-    {
-      key: 'numbersInDefense',
-      label: 'Efectivos en Defensa',
-      type: 'select',
-      options: [
-        { value: 0, label: 'Pocos (Few)' },
-        { value: 1, label: 'Medio (Medium)' },
-        { value: 2, label: 'Muchos (Many)' }
-      ]
-    }
-  ];
-
-  return (
-    <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-4 pb-20 lg:pb-4">
-      <p className="text-xs text-ink-3 leading-relaxed mb-1">
-        Configurá la estrategia táctica (Preset S1) de tu equipo. Se exporta directamente a PES en <span className="text-ink-2 font-mono">Formation.csv</span>.
-      </p>
-
-      {/* SECCIÓN ATAQUE */}
-      <div className="space-y-2">
-        <h3 className="eyebrow flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" aria-hidden="true" />Ataque</h3>
-        <div className="space-y-2">
-          {attackFields.map((field) => (
-            <div key={field.key} className="py-3 space-y-2 border-b border-line/[0.07] last:border-0">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-ink-2">{field.label}</span>
-                {field.type === 'slider' && (
-                  <span className="font-display num text-base font-bold text-ink">
-                    {currentTactics[field.key] ?? field.min}
-                  </span>
-                )}
-              </div>
-              {field.type === 'select' ? (
-                <select
-                  aria-label={field.label}
-                  value={currentTactics[field.key] ?? field.options[0].value}
-                  onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
-                  className="select min-h-9 text-sm"
-                >
-                  {field.options.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              ) : (
-                <div className="space-y-1 pt-1">
-                  <input
-                    type="range"
-                    aria-label={field.label}
-                    min={field.min}
-                    max={field.max}
-                    value={currentTactics[field.key] ?? field.min}
-                    onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
-                    className="w-full h-1.5 bg-overlay rounded-lg appearance-none cursor-pointer accent-[rgb(var(--c-accent))]"
-                  />
-                  <div className="flex justify-between text-[11px] text-ink-3 px-0.5">
-                    <span>{field.minLabel}</span>
-                    <span>{field.maxLabel}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* SECCIÓN DEFENSA */}
-      <div className="space-y-2 pt-4 border-t border-line/[0.08]">
-        <h3 className="eyebrow flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" aria-hidden="true" />Defensa</h3>
-        <div className="space-y-2">
-          {defenseFields.map((field) => (
-            <div key={field.key} className="py-3 space-y-2 border-b border-line/[0.07] last:border-0">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-ink-2">{field.label}</span>
-                {field.type === 'slider' && (
-                  <span className="font-display num text-base font-bold text-ink">
-                    {currentTactics[field.key] ?? field.min}
-                  </span>
-                )}
-              </div>
-              {field.type === 'select' ? (
-                <select
-                  aria-label={field.label}
-                  value={currentTactics[field.key] ?? field.options[0].value}
-                  onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
-                  className="select min-h-9 text-sm"
-                >
-                  {field.options.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              ) : (
-                <div className="space-y-1 pt-1">
-                  <input
-                    type="range"
-                    aria-label={field.label}
-                    min={field.min}
-                    max={field.max}
-                    value={currentTactics[field.key] ?? field.min}
-                    onChange={(e) => onTacticsChange(field.key, Number(e.target.value))}
-                    className="w-full h-1.5 bg-overlay rounded-lg appearance-none cursor-pointer accent-[rgb(var(--c-accent))]"
-                  />
-                  <div className="flex justify-between text-[11px] text-ink-3 px-0.5">
-                    <span>{field.minLabel}</span>
-                    <span>{field.maxLabel}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-});
-
-function formatRolePlayerOption(player, roleKey, dorsals = {}) {
-  const d = dorsals[player.Id] ? `#${dorsals[player.Id]} ` : '';
-  const name = player.Name;
-  const pos = player.slotPos || player.POS_NOMBRE;
-  const isLeftFooted = String(player.Foot).toLowerCase() === 'izquierdo' || player.Foot === true || player.Foot === 'True';
-  const footLabel = isLeftFooted ? 'Izq' : 'Der';
-  const hasCaptaincy = player.Captaincy === true || String(player.Captaincy) === 'True';
-  const hasPenaltySpec = player.PenaltySpecialist === true || String(player.PenaltySpecialist) === 'True';
-  const hasHeadingSpec = player.HeadingSpecial === true || String(player.HeadingSpecial) === 'True';
-
-  const pk = player.PlaceKicking ?? '-';
-  const curl = player.Curl ?? '-';
-  const kp = player.KickingPower ?? '-';
-  const fin = player.Finishing ?? '-';
-  const head = player.Heading ?? '-';
-  const jump = player.Jump ?? '-';
-  const height = player.Height ? `${player.Height}cm` : '';
-  const ovr = player.OVR_CALCULADO ?? '-';
-
-  switch (roleKey) {
-    case 'captain':
-      return `${pos} ${d}${name} (${hasCaptaincy ? '⭐ Capitanía | ' : ''}OVR: ${ovr})`;
-    case 'shortFK':
-      return `${pos} ${d}${name} (BP: ${pk} · Efecto: ${curl})`;
-    case 'longFK':
-      return `${pos} ${d}${name} (BP: ${pk} · Potencia: ${kp})`;
-    case 'leftCorner':
-    case 'rightCorner':
-      return `${pos} ${d}${name} (BP: ${pk} · Efecto: ${curl} · ${footLabel})`;
-    case 'penalty':
-      return `${pos} ${d}${name} (${hasPenaltySpec ? 'Especialista en penales · ' : ''}BP: ${pk})`;
-    case 'secondKicker':
-      return `${pos} ${d}${name} (BP: ${pk} · Efecto: ${curl} · ${footLabel})`;
-    case 'header1':
-    case 'header2':
-    case 'header3':
-      return `${pos} ${d}${name} (${hasHeadingSpec ? '💥 ' : ''}Cab: ${head} · Salto: ${jump}${height ? ' · ' + height : ''})`;
-    default:
-      return `${pos} ${d}${name} (OVR: ${ovr})`;
-  }
-}
-
-export const RolesPanel = memo(function RolesPanel({
-  starterPlayers,
-  setPieces,
-  onSetPieceChange,
-  dorsals
-}) {
-  if (!starterPlayers || starterPlayers.length === 0) {
-    return (
-      <div className="p-6 text-center text-ink-3 text-sm">
-        Coloca jugadores titulares en la cancha para poder asignar los roles de balón parado y capitanía.
-      </div>
-    );
-  }
-
-  const roleConfigs = [
-    { key: 'captain', label: 'Capitán', icon: Crown, color: 'text-warning-soft', statLabel: 'Habilidad Capitanía · OVR' },
-    { key: 'shortFK', label: 'Tiro Libre Corto', icon: Target, color: 'text-accent', statLabel: 'Balón Parado · Efecto' },
-    { key: 'longFK', label: 'Tiro Libre Largo', icon: Zap, color: 'text-warning-soft', statLabel: 'Balón Parado · Potencia' },
-    { key: 'leftCorner', label: 'Córner Izquierdo', icon: Target, color: 'text-blue-400', statLabel: 'Balón Parado · Efecto · Pie' },
-    { key: 'rightCorner', label: 'Córner Derecho', icon: Target, color: 'text-blue-400', statLabel: 'Balón Parado · Efecto · Pie' },
-    { key: 'penalty', label: 'Penales', icon: Shield, color: 'text-success-soft', statLabel: 'Balón Parado' },
-    { key: 'secondKicker', label: 'Segundo Tirador', icon: Users, color: 'text-accent-soft', statLabel: 'Balón Parado · Efecto · Pie' },
-    { key: 'header1', label: 'Rematador al Cabeceo 1', icon: Activity, color: 'text-danger-soft', statLabel: 'Cabeceo · Salto · Altura' },
-    { key: 'header2', label: 'Rematador al Cabeceo 2', icon: Activity, color: 'text-danger-soft', statLabel: 'Cabeceo · Salto · Altura' },
-    { key: 'header3', label: 'Rematador al Cabeceo 3', icon: Activity, color: 'text-danger-soft', statLabel: 'Cabeceo · Salto · Altura' },
-  ];
-
-  return (
-    <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar pb-20 lg:pb-4">
-      <p className="text-xs text-ink-3 leading-relaxed mb-1">
-        Configura los lanzadores de faltas y capitán. Se exportan directamente a PES en <span className="text-ink-2 font-mono">Formation.csv</span>.
-      </p>
-      {roleConfigs.map(({ key, label, icon: Icon, color, statLabel }) => {
-        const currentValue = setPieces[key] || '';
-        return (
-          <div key={key} className="py-3 space-y-2 border-b border-line/[0.07] last:border-0">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-sm font-medium text-ink-2">
-                <Icon className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
-                {label}
-              </span>
-              <span className="text-[11px] text-ink-3">
-                {statLabel}
-              </span>
-            </div>
-            <select
-              aria-label={label}
-              value={currentValue}
-              onChange={(e) => onSetPieceChange(key, e.target.value)}
-              className="select min-h-9 text-sm"
-            >
-              <option value="">(Por defecto / Automático)</option>
-              {starterPlayers.map((player) => (
-                <option key={player.Id} value={player.Id}>
-                  {formatRolePlayerOption(player, key, dorsals)}
-                </option>
-              ))}
-            </select>
-          </div>
-        );
-      })}
-    </div>
-  );
-});
-
-// --- REDUCER: lineup + holdingPlayer viven juntos y se actualizan en un solo paso puro ---
-// (antes: setLineup se llamaba DENTRO del updater de setHoldingPlayer, lo cual es un
-// side-effect impuro. React puede re-invocar ese updater más de una vez —siempre pasa
-// en Strict Mode— y cada re-invocación volvía a escribir el mismo jugador en el lineup,
-// terminando con el mismo playerId pisado en varios slots a la vez).
-const initialFormationState = { lineup: {}, holdingPlayer: null };
-// Espera tras el último cambio antes de guardar solo (una ráfaga de cambios = una escritura).
+// Wait after the last change before saving on its own (a burst of changes = one write).
 const AUTOSAVE_DELAY_MS = 700;
-
-
-// Además de sacar jugadores que ya no están en el cart (eso ya lo hacía SANITIZE),
-// esto fuerza unicidad: si el mismo playerId aparece en más de un slot (rastro de
-// datos viejos, de ANTES de que existiera este reducer, guardados en Firestore
-// mientras el bug de duplicación seguía activo), se queda con la PRIMERA
-// aparición (por índice de slot, orden numérico) y limpia el resto. Sin esto,
-// cargar un lineup ya corrompido lo seguía mostrando corrompido para siempre,
-// aunque el bug que lo causó ya esté arreglado.
-function dedupeLineup(sourceLineup) {
-  const seen = new Set();
-  const deduped = {};
-  const orderedSlots = Object.entries(sourceLineup || {})
-    .sort(([a], [b]) => Number(a) - Number(b));
-  orderedSlots.forEach(([slotIndex, playerId]) => {
-    const id = String(playerId || '');
-    if (!id || seen.has(id)) return;
-    seen.add(id);
-    deduped[slotIndex] = id;
-  });
-  return deduped;
-}
-
-function formationReducer(state, action) {
-  switch (action.type) {
-    case 'LOAD':
-      return { lineup: dedupeLineup(action.payload?.lineup || {}), holdingPlayer: null };
-
-    case 'RESET':
-      return { lineup: {}, holdingPlayer: null };
-
-    case 'SANITIZE': {
-      const { cart } = action.payload;
-      const validIds = new Set((cart || []).map(p => String(p.Id)));
-      const cleaned = {};
-      Object.entries(state.lineup || {}).forEach(([slotIndex, playerId]) => {
-        const id = String(playerId || '');
-        if (id && validIds.has(id)) cleaned[slotIndex] = id;
-      });
-      const deduped = dedupeLineup(cleaned);
-      if (JSON.stringify(deduped) === JSON.stringify(state.lineup)) return state; // sin cambios, misma referencia
-      return { ...state, lineup: deduped };
-    }
-
-    case 'CANCEL_HOLD': {
-      const held = state.holdingPlayer;
-      if (!held) return state;
-      // A player lifted from a slot is out of the lineup while held: put him back if his slot is still free.
-      if (held.from === 'slot' && state.lineup[held.fromSlotIndex] == null) {
-        return { lineup: dedupeLineup({ ...state.lineup, [held.fromSlotIndex]: String(held.player.Id) }), holdingPlayer: null };
-      }
-      return { ...state, holdingPlayer: null };
-    }
-
-    case 'PICK_FROM_LIST': {
-      const { player } = action.payload;
-      const holdingPlayer = state.holdingPlayer?.player.Id === player.Id ? null : { player, from: 'list' };
-      return { ...state, holdingPlayer };
-    }
-
-    case 'CLICK_SLOT': {
-      const { index, cart } = action.payload;
-      const curr = state.holdingPlayer;
-      const newLineup = { ...state.lineup };
-      const playerInSlotId = newLineup[index];
-      const playerInSlot = cart.find(p => String(p.Id) === String(playerInSlotId));
-
-      if (curr) {
-        const placingId = String(curr.player.Id);
-
-        // UNICIDAD: sacar al jugador de cualquier otro slot primero
-        Object.keys(newLineup).forEach(key => {
-          if (String(newLineup[key]) === placingId && String(key) !== String(index)) {
-            delete newLineup[key];
-          }
-        });
-
-        // Colocar al jugador que se estaba sosteniendo en este slot
-        newLineup[index] = placingId;
-
-        if (curr.from === 'slot' && String(curr.fromSlotIndex) !== String(index)) {
-          // Swap: el jugador desplazado vuelve al slot de origen
-          if (playerInSlot) newLineup[curr.fromSlotIndex] = String(playerInSlot.Id);
-          else delete newLineup[curr.fromSlotIndex];
-        }
-
-        return { lineup: newLineup, holdingPlayer: null };
-      }
-
-      if (playerInSlot) {
-        // Levantar jugador del slot
-        delete newLineup[index];
-        return { lineup: newLineup, holdingPlayer: { player: playerInSlot, from: 'slot', fromSlotIndex: index } };
-      }
-
-      return state; // click en slot vacío sin nada en mano: no-op
-    }
-
-    default:
-      return state;
-  }
-}
 
 // --- COMPONENTE PRINCIPAL ---
 
@@ -515,7 +41,6 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const pendingAutoSaveRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const [mobileTab, setMobileTab] = useState('pitch'); // 'pitch' | 'squad' | 'tactics'
-  const [mobileTacticsSubTab, setMobileTacticsSubTab] = useState('tactics'); // 'tactics' | 'roles'
   const [showSharePopover, setShowSharePopover] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const pitchRef = useRef(null);
@@ -589,12 +114,17 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     return cleaned;
   }, [cart]);
 
+  // Roles as played at kick-off (Inicio de partido), which is what the squad list, the set-piece panel and the
+  // exports use.
+  const kickoffLayout = useMemo(
+    () => layoutForState(FORMATIONS[selectedFormation] || FORMATIONS['4-3-3'], formationStates, 'base'),
+    [selectedFormation, formationStates],
+  );
+
   const starterPlayers = useMemo(() => {
     const clean = sanitizeLineup(lineup);
-    // Roles as played at kick-off (Inicio de partido), which is what the set-piece panel and the exports use.
-    const currentLayout = layoutForState(FORMATIONS[selectedFormation] || FORMATIONS['4-3-3'], formationStates, 'base');
     const list = [];
-    currentLayout.forEach((slot, index) => {
+    kickoffLayout.forEach((slot, index) => {
       const pId = clean[index];
       if (pId) {
         const p = (cart || []).find(pl => String(pl.Id ?? pl.id ?? '') === String(pId));
@@ -604,7 +134,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       }
     });
     return list;
-  }, [lineup, selectedFormation, formationStates, cart, sanitizeLineup]);
+  }, [lineup, kickoffLayout, cart, sanitizeLineup]);
 
   useEffect(() => {
     if (!cart?.length || (!isVisible && !isPage)) return;
@@ -839,22 +369,57 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const shownStateLabel = TACTICAL_STATES.find(st => st.id === shownState)?.label;
   // Edits of the shown state (moved markers and changed roles): what "Restablecer" can undo.
   const movedCount = Object.keys(formationStates.positions[shownState] || {}).length + Object.keys(formationStates.roles?.[shownState] || {}).length;
-  // Derive available players from assigned slots — enforce uniqueness
+  // Derive available players from assigned slots, enforcing uniqueness
   const assignedIds = useMemo(() => {
     const ids = new Set();
     Object.values(lineup).filter(Boolean).forEach(id => ids.add(String(id)));
     return ids;
   }, [lineup]);
+  // Substitutes: the squad minus the starters. A starter in hand stays in his row of «Titulares», not here.
+  const heldFromSlotId = holdingPlayer?.from === 'slot' ? String(holdingPlayer.player.Id) : null;
   const availablePlayers = useMemo(() => {
-    const list = cart.filter(p => !assignedIds.has(String(p.Id)) || (holdingPlayer?.from === 'slot' && String(p.Id) === String(holdingPlayer.player.Id)));
+    const list = cart.filter(p => !assignedIds.has(String(p.Id)) && String(p.Id) !== heldFromSlotId);
     return [...list].sort((a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO);
-  }, [cart, assignedIds, holdingPlayer]);
+  }, [cart, assignedIds, heldFromSlotId]);
+
+  // The XI in kick-off order for the squad list and the strength bars. The starter in hand keeps his row.
+  const starterRows = useMemo(() => kickoffLayout.map((slot, index) => {
+    const id = holdingPlayer?.from === 'slot' && holdingPlayer.fromSlotIndex === index ? String(holdingPlayer.player.Id) : lineup[index];
+    return { index, role: slot.pos, player: id ? cart.find(p => String(p.Id) === String(id)) : null };
+  }), [kickoffLayout, lineup, holdingPlayer, cart]);
+  const strengthStarters = useMemo(
+    () => starterRows.filter(row => row.player).map(row => ({ pos: row.role, ovr: row.player.OVR_CALCULADO })),
+    [starterRows],
+  );
 
   const handlePlayerClick = useCallback((player) => {
+    // A starter in hand and a substitute picked: a substitution, saved like a placement on the pitch.
+    if (holdingPlayer?.from === 'slot') {
+      pendingAutoSaveRef.current = true;
+      dispatchFormation({ type: 'PICK_FROM_LIST', payload: { player } });
+      return;
+    }
     dispatchFormation({ type: 'PICK_FROM_LIST', payload: { player } });
-    // Auto switch to pitch view on mobile after selecting a player
-    setMobileTab('pitch');
+    // Phones: a substitute taken in hand is placed on the pitch, so show it.
+    if (holdingPlayer?.player.Id !== player.Id) setMobileTab('pitch');
+  }, [holdingPlayer]);
+
+  // The lineup already lacks the starter in hand, so nothing else changes: the tick triggers the autosave.
+  const [benchTick, setBenchTick] = useState(0);
+  const handleBenchHeld = useCallback(() => {
+    pendingAutoSaveRef.current = true;
+    dispatchFormation({ type: 'DROP_HELD' });
+    setBenchTick(tick => tick + 1);
   }, []);
+
+  // «Armar el once»: fills the empty slots with the best available players; the ones already placed stay. Saved like any placement.
+  const handleAutoLineup = useCallback(() => {
+    const playable = (cart || []).filter(p => availability[p.Id] !== false);
+    const next = autoLineup(kickoffLayout, playable, lineup);
+    if (Object.keys(next).length === Object.keys(lineup).length) return;
+    pendingAutoSaveRef.current = true;
+    dispatchFormation({ type: 'LOAD', payload: { lineup: next } });
+  }, [cart, availability, kickoffLayout, lineup]);
 
   const onSlotClick = useCallback((index) => {
     // Si había un jugador "en mano", este click va a resultar en una colocación:
@@ -881,7 +446,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       autoSaveTimerRef.current = null;
       saveLatestRef.current?.();
     }, AUTOSAVE_DELAY_MS);
-  }, [lineup, selectedFormation, setPieces, tactics, formationStates, advanced, dorsals, availability]);
+  }, [lineup, selectedFormation, setPieces, tactics, formationStates, advanced, dorsals, availability, benchTick]);
   useEffect(() => () => {
     if (!autoSaveTimerRef.current) return;
     clearTimeout(autoSaveTimerRef.current);
@@ -1029,6 +594,9 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSharePopover]);
 
+  // The autosave status swaps in place: «Guardando…» steps to «Guardado automático» instead of blinking.
+  const { shown: shownSaveStatus, isLeaving: isSaveStatusLeaving } = useStatusSwap(saveIndicator);
+
   if (!isVisible && !isPage) return null;
 
   /* ── Shared sub-components ── */
@@ -1065,7 +633,13 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       )}
     </div>
   );
-  const saveIcon = isSaving ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Save className="w-4 h-4" aria-hidden="true" />;
+  // The share icon turns into a check once the link is copied (enters like a status swap).
+  const ShareIcon = (
+    <span key={shareCopied ? 'copied' : 'share'} className="status-swap">
+      {shareCopied ? <Check className="w-4 h-4 text-success-soft" aria-hidden="true" /> : <Share2 className="w-4 h-4" aria-hidden="true" />}
+    </span>
+  );
+  const saveIcon = isSaving ?<Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Save className="w-4 h-4" aria-hidden="true" />;
   const busyTitle = isSaving ? 'Hay una operación en curso' : undefined;
 
   const ControlsBar = (
@@ -1078,14 +652,13 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         type="button" className="btn btn-primary w-full">
         {saveIcon}{isSaving ? 'Guardando…' : 'Guardar alineación'}
       </button>
-      <p className="text-center text-xs text-ink-3"><span className="num">{availablePlayers.length}</span> suplentes · van al banco automáticamente</p>
       <div className="relative" data-share-area>
         <button onClick={handleShareURL} disabled={isSharing} title={isSharing ? 'Hay una operación en curso' : undefined}
           type="button" className="btn btn-secondary w-full">
           {isSharing ? (
             <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Generando…</>
           ) : (
-            <><Share2 className="w-4 h-4" aria-hidden="true" /> {shareCopied ? 'Enlace copiado' : 'Compartir enlace público'}</>
+            <>{ShareIcon} {shareCopied ? 'Enlace copiado' : 'Compartir enlace público'}</>
           )}
         </button>
         {SharePopover}
@@ -1094,7 +667,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   );
 
   // Phones: one row above the pitch, so the pitch starts near the top of the screen. The bench count is on the
-  // "Banco" tab.
+  // "Plantel" tab.
   const CompactControlsBar = (
     <div className="px-3 py-2 shrink-0 border-b border-line/[0.08]">
       {shownState !== 'base' && (
@@ -1108,7 +681,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         <div className="relative shrink-0" data-share-area>
           <button onClick={handleShareURL} disabled={isSharing} type="button" className="btn btn-secondary btn-icon"
             aria-label={shareCopied ? 'Enlace copiado' : 'Compartir enlace público'} title="Compartir enlace público">
-            {isSharing ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Share2 className="w-4 h-4" aria-hidden="true" />}
+            {isSharing ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : ShareIcon}
           </button>
           {SharePopover}
         </div>
@@ -1116,26 +689,114 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     </div>
   );
 
+  // The private profile keeps the franchise signing (the market function writes franchisePlayerId).
+  const isFranchisePlayer = player => player != null && userProfile?.franchisePlayerId != null && String(userProfile.franchisePlayerId) === String(player.Id);
+  const heldName = holdingPlayer?.player.Name;
+  const holdingText = !holdingPlayer
+    ? 'Tocá un jugador para moverlo. Un suplente entra en el puesto que elijas.'
+    : holdingPlayer.from === 'slot'
+      ? `Moviendo a ${heldName}: tocá otro puesto o un suplente para cambiarlos.`
+      : `Moviendo a ${heldName}: tocá un puesto de la cancha o un titular para que entre.`;
   const HoldingBanner = (
-    <div className={`px-4 py-2.5 border-b border-line/[0.08] ${holdingPlayer ? 'bg-accent/10' : ''}`} role="status">
-      <p className="text-sm font-semibold text-ink">{holdingPlayer ? <><Move className="w-4 h-4 inline mr-2 text-accent-soft" aria-hidden="true" /> Moviendo a {holdingPlayer.player.Name}: tocá un lugar de la cancha</> : 'Tocá un jugador para ubicarlo en la cancha.'}</p>
+    <div className={`px-4 py-2.5 border-b border-line/[0.08] ${holdingPlayer ? 'bg-accent/10' : ''}`}>
+      <div role="status">
+        <p key={holdingText} className="status-swap items-start gap-2 text-sm font-semibold text-ink">
+          {holdingPlayer && <Move className="w-4 h-4 mt-0.5 shrink-0 text-accent-soft" aria-hidden="true" />}
+          <span>{holdingText}</span>
+        </p>
+      </div>
+      {holdingPlayer && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {holdingPlayer.from === 'slot' && (
+            <button type="button" onClick={handleBenchHeld} className="btn btn-secondary btn-sm">Mandar al banco</button>
+          )}
+          <button type="button" onClick={() => dispatchFormation({ type: 'CANCEL_HOLD' })} className="btn btn-ghost btn-sm">Cancelar</button>
+        </div>
+      )}
     </div>
   );
 
-  const PlayerList = (
-    <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-2 pb-20 lg:pb-4">
-      {availablePlayers.map(player => (
-        <FormationPlayerItem
-          key={player.Id}
-          player={player}
-          onPlayerClick={handlePlayerClick}
-          isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id}
-          dorsal={dorsals[player.Id]}
-          onDorsalChange={handleDorsalChange}
-          isAvailable={availability[player.Id] !== false}
-          onAvailabilityChange={handleAvailabilityChange}
+  const renderRowControls = player => {
+    const isAvailable = availability[player.Id] !== false;
+    return (
+      <div className="flex items-center gap-1 shrink-0">
+        <input
+          type="text"
+          placeholder="#"
+          aria-label={`Dorsal de ${player.Name}`}
+          inputMode="numeric"
+          className="w-11 h-11 bg-surface text-center text-ink font-display text-base font-semibold num rounded-md border border-line/55 focus:border-accent outline-none"
+          value={dorsals[player.Id] || ''}
+          onChange={(e) => handleDorsalChange(player.Id, e.target.value)}
+          maxLength={2}
+          title="Dorsal"
         />
-      ))}
+        <button
+          type="button"
+          onClick={() => handleAvailabilityChange(player.Id, !isAvailable)}
+          aria-pressed={!isAvailable}
+          className={`h-11 min-w-11 px-2 text-xs font-semibold rounded-md border transition-colors ${isAvailable ? 'bg-success/[0.12] text-success-soft border-success/30' : 'bg-danger/[0.12] text-danger-soft border-danger/30'}`}
+          title="Disponibilidad para la próxima fecha"
+        >
+          <span className="sr-only">{player.Name}: </span>{isAvailable ? 'OK' : 'Baja'}
+        </button>
+      </div>
+    );
+  };
+
+  // PES game plan: the XI in kick-off order (each row is the same as its marker on the pitch), then the bench.
+  const PlayerList = (
+    <div className="flex-grow overflow-y-auto px-3 pt-3 lg:px-4 custom-scrollbar pb-20 lg:pb-4">
+      <TeamStrength starters={strengthStarters} className="px-1 pb-1" />
+      <SquadSection
+        title="Titulares"
+        count={strengthStarters.length}
+        hint={strengthStarters.length === 0 ? 'Armalo solo o tocá un suplente y después su puesto' : 'Puestos al inicio del partido'}
+        action={strengthStarters.length < kickoffLayout.length && availablePlayers.length > 0 && !holdingPlayer ? (
+          <button type="button" onClick={handleAutoLineup} className={`btn btn-sm ${strengthStarters.length === 0 ? 'btn-primary' : 'btn-secondary'}`}>
+            <Wand2 className="w-4 h-4" aria-hidden="true" />
+            {strengthStarters.length === 0 ? 'Armar el once' : 'Completar el once'}
+          </button>
+        ) : null}
+      >
+        {starterRows.map(({ index, role, player }) => {
+          const isHeldHere = holdingPlayer?.from === 'slot' && holdingPlayer.fromSlotIndex === index;
+          const label = holdingPlayer && !isHeldHere
+            ? `Poner a ${heldName} de ${role}${player ? ` en lugar de ${player.Name}` : ''}`
+            : player ? `${isHeldHere ? 'Soltar' : 'Mover'} a ${player.Name} (${role})` : undefined;
+          return (
+            <SquadRow
+              key={index}
+              showPhoto={false}
+              isFranchise={isFranchisePlayer(player)}
+              role={role}
+              player={player}
+              isUnavailable={player ? availability[player.Id] === false : false}
+              isSelected={isHeldHere}
+              onSelect={() => onSlotClick(index)}
+              selectLabel={label}
+              disabledReason={!player && !holdingPlayer ? 'Elegí primero un suplente para este puesto' : undefined}
+              trailing={player ? renderRowControls(player) : null}
+            />
+          );
+        })}
+      </SquadSection>
+      <SquadSection title="Suplentes" count={availablePlayers.length} hint="Van al banco automáticamente">
+        {availablePlayers.map(player => (
+          <SquadRow
+            key={player.Id}
+            showPhoto={false}
+            isFranchise={isFranchisePlayer(player)}
+            role={player.POS_NOMBRE}
+            player={player}
+            isUnavailable={availability[player.Id] === false}
+            isSelected={holdingPlayer?.from === 'list' && holdingPlayer.player.Id === player.Id}
+            onSelect={() => handlePlayerClick(player)}
+            selectLabel={heldFromSlotId ? `Poner a ${player.Name} en lugar de ${heldName}` : `Mover a ${player.Name}`}
+            trailing={renderRowControls(player)}
+          />
+        ))}
+      </SquadSection>
       {availablePlayers.length === 0 && <p className="text-ink-3 text-sm text-center py-4">Todos tus jugadores están en la cancha.</p>}
     </div>
   );
@@ -1190,7 +851,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
             {isPage ? (
               <div>
-                <p className="eyebrow mb-1">Mi club</p>
+                <p className="eyebrow mb-1">{userProfile?.teamName || 'Mi club'}</p>
                 <h1 className="page-title">Pizarra táctica</h1>
               </div>
             ) : (
@@ -1198,19 +859,21 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                 <ClipboardList className="w-5 h-5 text-accent-soft" aria-hidden="true" />Pizarra táctica
               </h2>
             )}
-            {saveIndicator && (
-              <span role="status" className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                saveIndicator === 'saving' ? 'text-accent-soft' : saveIndicator === 'error' ? 'text-danger-soft' : 'text-success-soft'
-              }`}>
-                {saveIndicator === 'saving' ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />Guardando…</>
-                ) : saveIndicator === 'error' ? (
-                  <><X className="w-3.5 h-3.5" aria-hidden="true" />No se pudo guardar</>
-                ) : (
-                  <><Check className="w-3.5 h-3.5" aria-hidden="true" />Guardado automático</>
-                )}
-              </span>
-            )}
+            <span role="status" className="text-xs font-medium">
+              {shownSaveStatus && (
+                <span key={shownSaveStatus} data-leaving={isSaveStatusLeaving || undefined} className={`status-swap items-center gap-1.5 ${
+                  shownSaveStatus === 'saving' ? 'text-accent-soft' : shownSaveStatus === 'error' ? 'text-danger-soft' : 'text-success-soft'
+                }`}>
+                  {shownSaveStatus === 'saving' ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />Guardando…</>
+                  ) : shownSaveStatus === 'error' ? (
+                    <><X className="w-3.5 h-3.5" aria-hidden="true" />No se pudo guardar</>
+                  ) : (
+                    <><Check className="w-3.5 h-3.5" aria-hidden="true" />Guardado automático</>
+                  )}
+                </span>
+              )}
+            </span>
           </div>
           {isPage ? (
             <button type="button" onClick={onClose} className="btn btn-secondary">
@@ -1224,9 +887,10 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         {/* ── MOBILE TAB SWITCHER (visible only on < lg) ── */}
         <div className="lg:hidden shrink-0 px-3 py-2.5">
           <Tabs className="w-full [&>button]:flex-1 [&>button]:justify-center" label="Secciones de la pizarra" value={mobileTab} onChange={setMobileTab} tabs={[
-            { id: 'pitch', label: 'Cancha', icon: Sliders },
-            { id: 'squad', label: 'Banco', icon: Users, count: availablePlayers.length || null },
-            { id: 'tactics', label: 'Estrategia', icon: Target },
+            { id: 'pitch', label: 'Cancha', icon: LandPlot },
+            { id: 'squad', label: 'Plantel', icon: Users, count: cart.length || null },
+            { id: 'roles', label: 'Roles', icon: Target },
+            { id: 'tactics', label: 'Táctica', icon: Sliders },
           ]} />
         </div>
 
@@ -1236,13 +900,13 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           {/* === DESKTOP LAYOUT (lg+): side-by-side === */}
           <div className="hidden lg:flex flex-grow overflow-hidden">
             {/* Left Panel */}
-            <div className="w-[340px] xl:w-[360px] flex-shrink-0 flex flex-col h-full overflow-hidden border-r border-line/[0.08]">
+            <div className="w-[400px] xl:w-[440px] flex-shrink-0 flex flex-col h-full overflow-hidden border-r border-line/[0.08]">
               {ControlsBar}
-              
+
               <div className="px-3 pt-3 shrink-0">
                 <Tabs className="w-full [&>button]:flex-1 [&>button]:justify-center" label="Panel lateral" value={sidebarTab} onChange={setSidebarTab} tabs={[
-                  { id: 'players', label: 'Banco', icon: Users },
-                  { id: 'roles', label: 'Balón parado', icon: Target },
+                  { id: 'players', label: 'Plantel', icon: Users },
+                  { id: 'roles', label: 'Roles', icon: Target },
                   { id: 'tactics', label: 'Táctica', icon: Sliders },
                 ]} />
               </div>
@@ -1283,28 +947,18 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
                 {HoldingBanner}
                 {PlayerList}
               </>
+            ) : mobileTab === 'roles' ? (
+              <RolesPanel
+                starterPlayers={starterPlayers}
+                setPieces={setPieces}
+                onSetPieceChange={handleSetPieceChange}
+                dorsals={dorsals}
+              />
             ) : (
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <div className="px-3 pb-2 shrink-0">
-                  <Tabs className="w-full [&>button]:flex-1 [&>button]:justify-center" label="Estrategia" value={mobileTacticsSubTab} onChange={setMobileTacticsSubTab} tabs={[
-                    { id: 'tactics', label: 'Táctica', icon: Sliders },
-                    { id: 'roles', label: 'Balón parado', icon: Target },
-                  ]} />
-                </div>
-                {mobileTacticsSubTab === 'tactics' ? (
-                  <TacticsPanel
-                    tactics={tactics}
-                    onTacticsChange={handleTacticsChange}
-                  >{AdvancedSection}</TacticsPanel>
-                ) : (
-                  <RolesPanel
-                    starterPlayers={starterPlayers}
-                    setPieces={setPieces}
-                    onSetPieceChange={handleSetPieceChange}
-                    dorsals={dorsals}
-                  />
-                )}
-              </div>
+              <TacticsPanel
+                tactics={tactics}
+                onTacticsChange={handleTacticsChange}
+              >{AdvancedSection}</TacticsPanel>
             )}
           </div>
 

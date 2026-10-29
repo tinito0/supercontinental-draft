@@ -139,7 +139,7 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
 126 wears the kits of the folder mapped to 126 until that folder's kits are edited.
 
 - **3D preview** (`components/pes/PesKit3DViewer.jsx`): garment models of the CometKIT previewer (via PES Editor
-  Rebuilt, `public/pes/kitpack.bin`, downloaded on first use), parts chosen from config.txt (TightKit, Collar,
+  Rebuilt, `public/kit3d/kitpack.bin`, downloaded on first use), parts chosen from config.txt (TightKit, Collar,
   ShortsModel, ShortSleevesModel, goalkeeper sleeves), WebGL fabric shader with stadium lights. Panels in tabs
   (Vista · Camiseta · Letras · Tela · Diagnóstico).
 - **Texture resolution** (`pes/kits/kitAssetResolver.js`, pure; providers in `components/pes/kit3d/loadKitTextures.js`):

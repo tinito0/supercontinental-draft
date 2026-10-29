@@ -12,6 +12,7 @@ import { OverlayPopup } from './broadcast/OverlayPopup.jsx';
 import { CommunityCard } from './broadcast/CommunityCard.jsx';
 import { BroadcastMvp, BroadcastPrediction, BroadcastScorers } from './broadcast/BroadcastMatchExtras.jsx';
 import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
+import { OverlayErrorBoundary } from './broadcast/OverlayErrorBoundary.jsx';
 
 export const DEFAULT_BROADCAST_OVERLAY = {
   scene: 'live',
@@ -27,8 +28,8 @@ export const DEFAULT_BROADCAST_OVERLAY = {
   competitionLabel: 'SUPERCONTINENTAL LEAGUE',
   roundLabel: '',
   headline: 'SUPERCONTINENTAL LEAGUE',
-  subheadline: 'Transmision oficial',
-  ticker: 'Bienvenidos a la transmision de la Supercontinental League.',
+  subheadline: 'Transmisión oficial',
+  ticker: 'Bienvenidos a la transmisión de la Supercontinental League.',
   showScoreboard: true,
   showLowerThird: true,
   showTicker: true,
@@ -41,13 +42,27 @@ function teamOf(teamId, teams, fallbackName) {
   return { name: team?.teamName || fallbackName, logoUrl: team?.logoUrl || null };
 }
 
-function ScorerRows({ tournamentData, getTeamLogo }) {
-  const rows = (tournamentData?.topScorers || []).filter(item => item?.name).map(item => ({
-    name: item.name,
-    team: item.team || '',
-    value: Number(item.goals) || 0,
-  }));
-  if (!rows.length) return <div className="broadcast-empty">Todavía no hay goles cargados</div>;
+const rankingRows = (list, field) => (list || []).filter(item => item?.name && Number(item[field]) > 0).map(item => ({
+  name: item.name,
+  team: item.team || '',
+  value: Number(item[field]),
+}));
+
+/** Goleadores y, si el torneo ya tiene, asistidores al lado (los dos salen de los resultados cargados). */
+function LeaderColumns({ tournamentData, getTeamLogo }) {
+  const scorers = rankingRows(tournamentData?.topScorers, 'goals');
+  const assisters = rankingRows(tournamentData?.topAssisters, 'assists');
+  if (!scorers.length) return <div className="broadcast-empty">Todavía no hay goles cargados</div>;
+  if (!assisters.length) return <RankingRows rows={scorers} unit={['GOL', 'GOLES']} getTeamLogo={getTeamLogo} />;
+  return (
+    <div className="broadcast-leader-columns">
+      <section><h3 className="broadcast-leader-title">Goles</h3><RankingRows rows={scorers} unit={['GOL', 'GOLES']} getTeamLogo={getTeamLogo} /></section>
+      <section><h3 className="broadcast-leader-title">Asistencias</h3><RankingRows rows={assisters} unit={['ASIST.', 'ASIST.']} getTeamLogo={getTeamLogo} /></section>
+    </div>
+  );
+}
+
+function RankingRows({ rows, unit, getTeamLogo }) {
   return (
     <div className="broadcast-rankings">
       {rows.map((row, index) => (
@@ -60,7 +75,7 @@ function ScorerRows({ tournamentData, getTeamLogo }) {
           </div>
           <div className="broadcast-ranking-value">
             <strong>{row.value}</strong>
-            <small>{row.value === 1 ? 'GOL' : 'GOLES'}</small>
+            <small>{row.value === 1 ? unit[0] : unit[1]}</small>
           </div>
         </div>
       ))}
@@ -112,9 +127,10 @@ function MatchPanel({ scene, data, home, away, live, fixture }) {
  * escenas, el popup con QR y la tarjeta de la comunidad. Durante el partido («live») no hay marcador ni rótulos:
  * el juego ya los muestra (pedido del usuario).
  * @param {{ overlayData: object, allTeams: Record<string, object>, tournamentData: object, forcedScene?: string|null,
- *   live?: object, liveMatch?: object|null }} props
+ *   live?: object, liveMatch?: object|null, overlayLoaded?: boolean }} props
+ *   overlayLoaded: false mientras la fuente de OBS espera el doc del overlay (el popup que ya estaba no vuelve a salir).
  */
-export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, allTeams, tournamentData, forcedScene, live, liveMatch }) {
+export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, allTeams, tournamentData, forcedScene, live, liveMatch, overlayLoaded = true }) {
   const data = { ...DEFAULT_BROADCAST_OVERLAY, ...(overlayData || {}) };
   const scene = forcedScene || data.scene || 'live';
 
@@ -149,14 +165,17 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
   else if (scene === 'goleadores') {
     content = (
       <BroadcastFrame className="broadcast-panel" kicker={data.competitionLabel} title={sceneLabel('goleadores')}>
-        <ScorerRows tournamentData={tournamentData} getTeamLogo={getTeamLogo} />
+        <LeaderColumns tournamentData={tournamentData} getTeamLogo={getTeamLogo} />
       </BroadcastFrame>
     );
   }
 
   return (
     <div className="broadcast-overlay-root" data-scene={scene} aria-label="SCL OBS overlay">
-      {content}
+      <OverlayErrorBoundary name={`escena ${scene}`} resetKey={tournamentData}>
+        {/* La key es solo la escena: la entrada se ve al cambiar de escena, no con cada dato que llega. */}
+        {content && <div className="scl-scene" key={scene}>{content}</div>}
+      </OverlayErrorBoundary>
 
       {showChrome && data.showLowerThird && (
         <div className="broadcast-lower">
@@ -177,8 +196,10 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
         </div>
       )}
 
-      <CommunityCard card={overlayData?.card} live={live} homeName={home.name} awayName={away.name} side={cardSide} />
-      <OverlayPopup popup={overlayData?.popup} />
+      <OverlayErrorBoundary name="comunidad" resetKey={overlayData}>
+        <CommunityCard card={overlayData?.card} live={live} homeName={home.name} awayName={away.name} side={cardSide} loaded={overlayLoaded} />
+        <OverlayPopup popup={overlayData?.popup} loaded={overlayLoaded} />
+      </OverlayErrorBoundary>
     </div>
   );
 });

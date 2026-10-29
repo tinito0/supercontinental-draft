@@ -307,8 +307,16 @@ export function dataSources(summary) {
         detail: 'Porcentaje de los dos contadores de tiempo con la pelota del juego. Coincide con su pantalla o difiere en 1 punto.' }
       : { label: 'Posesión', source: 'unavailable',
         detail: 'En este partido el juego no llenó su contador de posesión (pasa en algunos partidos), o se grabó antes de medirla.' },
-    { label: 'Goles esperados (xG) y mapa de tiros', source: 'unavailable', detail: 'El juego no expone dónde se pateó cada tiro.' },
-    { label: 'Calificaciones de los jugadores', source: 'unavailable', detail: 'No se encontraron en memoria; no se inventan.' },
-    { label: 'Mapas de calor, distancia y zonas de ataque', source: 'unavailable', detail: 'Hace falta la posición de cada jugador en la cancha.' },
+    summary?.xg
+      ? { label: 'Goles esperados (xG) y mapa de tiros', source: 'estimated',
+        detail: 'Modelo propio de distancia y ángulo sobre la última posición del pateador que registró el juego (unos metros de error); penal 0,76.' }
+      : { label: 'Goles esperados (xG) y mapa de tiros', source: 'unavailable', detail: 'Partido grabado antes de leer las posiciones de los jugadores.' },
+    summary?.ratings
+      ? { label: 'Valoraciones de los jugadores', source: 'extracted', detail: 'La nota de cada jugador que calcula el juego, la misma de su pantalla final.' }
+      : { label: 'Valoraciones de los jugadores', source: 'unavailable', detail: 'Partido grabado antes de leerlas.' },
+    summary?.heatmaps
+      ? { label: 'Mapas de calor', source: 'extracted', detail: 'Posiciones del juego, que actualiza a cada jugador cada 2 o 3 segundos: muestran zonas, no recorridos.' }
+      : { label: 'Mapas de calor', source: 'unavailable', detail: 'Partido grabado antes de leer las posiciones.' },
+    { label: 'Distancia recorrida y velocidad', source: 'unavailable', detail: 'Las posiciones no se actualizan en cada cuadro: no alcanzan para medir recorridos.' },
   ];
 }

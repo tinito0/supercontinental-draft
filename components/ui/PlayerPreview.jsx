@@ -24,7 +24,7 @@ function PreviewCard({ player, isVisible, position }) {
   return (
     <div
       aria-hidden="true"
-      className={`fixed z-50 w-56 p-3 rounded-xl bg-surface border border-line/[0.16] shadow-lg pointer-events-none transition-opacity duration-150 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed z-50 w-56 p-3 rounded-xl bg-surface border border-line/[0.16] shadow-lg pointer-events-none transition-opacity duration-fast ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       style={{ top: position.top, left: position.left }}
     >
       <div className="flex items-center gap-3 pb-2 mb-2 border-b border-line/[0.12]">

@@ -23,7 +23,7 @@ export const TacticalStateBar = memo(function TacticalStateBar({ active, fluid, 
             );
           })}
         </div>
-        <label className="inline-flex items-center gap-2 text-xs font-medium text-ink-2 cursor-pointer select-none">
+        <label className="inline-flex items-center gap-2 min-h-11 px-1 text-xs font-medium text-ink-2 cursor-pointer select-none">
           <input type="checkbox" role="switch" aria-checked={fluid} checked={fluid} onChange={e => onFluidChange(e.target.checked)} className="accent-[rgb(var(--c-accent))] w-4 h-4" />
           Formación fluida
         </label>

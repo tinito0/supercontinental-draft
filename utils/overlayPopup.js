@@ -88,8 +88,33 @@ function toMillis(value) {
 export function timedRemainingMs(item, nowMs) {
   if (!item?.visible) return 0;
   if (!item.autoHideSec) return null;
+  const duration = item.autoHideSec * 1000;
   const shownAt = toMillis(item.shownAt) ?? nowMs;
-  return Math.max(0, shownAt + item.autoHideSec * 1000 - nowMs);
+  // Con el reloj local atrasado, shownAt queda en el futuro: nunca más que la duración pedida.
+  return Math.min(duration, Math.max(0, shownAt + duration - nowMs));
+}
+
+/**
+ * Desde cuándo contar un popup o tarjeta en esta fuente (components/broadcast/OverlayPopup.jsx useRemaining).
+ * `shownAt` lo pone el servidor y la PC de OBS puede tener la hora corrida, así que lo que cambia con la fuente abierta
+ * se cuenta desde que llegó (`at`, reloj local). Lo que ya estaba al cargar el doc (al abrir o refrescar la fuente) usa
+ * `shownAt` (`at: null`): si no, un popup viejo volvería a salir en cada refresco. Un `shownAt` en el futuro solo puede
+ * ser reloj atrasado: cuenta desde ahora.
+ * @param {{ key: string|null, at: number|null, seen: boolean }} prev seen: ya se cargó el doc una vez
+ * @param {string|null} key shownKey del item ('pending' o los ms de shownAt), o null si no hay item
+ * @param {boolean} [loaded] el doc del overlay ya llegó (mientras carga, nada cuenta como recién llegado)
+ * @returns {{ key: string|null, at: number|null, seen: boolean }}
+ */
+export function nextArrival(prev, key, nowMs, loaded = true) {
+  if (prev.key === key) return prev.seen || !loaded ? prev : { ...prev, seen: true };
+  if (!prev.seen) {
+    const future = Number(key) > nowMs;
+    return { key, at: future ? nowMs : null, seen: loaded };
+  }
+  if (key === null) return { key, at: null, seen: true };
+  // Un serverTimestamp que se resuelve ('pending' → hora) es el mismo popup: no reinicia la cuenta.
+  if (prev.key === 'pending') return { key, at: prev.at ?? nowMs, seen: true };
+  return { key, at: nowMs, seen: true };
 }
 
 /** Igual que timedRemainingMs; un popup sin enlace no se muestra. */

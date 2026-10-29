@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { CalendarDays, ChevronRight, Radio, Trophy, Vote } from 'lucide-react';
 import { Tabs } from '../../ui/Tabs.jsx';
 import { Alert } from '../../ui/Alert.jsx';
-import { EmptyState } from '../../ui/EmptyState.jsx';
 import { FixtureRow } from '../match/FixtureRow.jsx';
 
 /* Centro de partidos de la portada: en vivo, últimos resultados y próximos, con datos reales del torneo y del juego
@@ -51,12 +50,25 @@ export function MatchCentre({ groups, round, clubOf, loading, error, liveError, 
 
   const tabs = [
     { id: 'live', label: 'En vivo', icon: Radio, count: groups.live.length || null, hidden: !live.length },
-    { id: 'results', label: 'Resultados', icon: Trophy },
+    { id: 'results', label: 'Resultados', icon: Trophy, hidden: !results.length },
     { id: 'upcoming', label: 'Próximos', icon: CalendarDays, count: groups.upcoming.length || null },
   ];
+  // Sin ningún partido cargado (pretemporada) no hay nada que elegir: una línea en lugar de pestañas vacías.
+  const isEmpty = !error && !loading && !live.length && !results.length && !upcoming.length;
 
   let body;
   if (error) body = <div className="p-4"><Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert></div>;
+  else if (isEmpty) {
+    body = (
+      <p className="flex items-start gap-3 px-4 py-5 sm:px-5">
+        <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-accent-soft" aria-hidden="true" />
+        <span>
+          <span className="block font-semibold text-ink">La temporada arranca cuando se cargue la fecha 1.</span>
+          <span className="block text-ink-2">Ahí aparecen los cruces, los horarios y los partidos en vivo.</span>
+        </span>
+      </p>
+    );
+  }
   else if (loading) {
     body = (
       <div className="divide-y divide-line/10" aria-busy="true" aria-label="Cargando partidos">
@@ -82,17 +94,24 @@ export function MatchCentre({ groups, round, clubOf, loading, error, liveError, 
           </>
         )}
       </>
-    ) : <div className="p-4"><EmptyState icon={CalendarDays} title={empty.title} description={empty.description} /></div>;
+    ) : (
+      <div className="px-4 py-10 text-center">
+        <p className="font-display text-lg font-bold text-ink">{empty.title}</p>
+        <p className="mx-auto mt-1 max-w-[46ch] text-sm text-ink-2">{empty.description}</p>
+      </div>
+    );
   }
 
   return (
     <div className="panel overflow-hidden p-0">
-      <div className="flex flex-col gap-3 border-b border-line/10 px-4 pb-2 pt-4 sm:flex-row sm:items-end sm:justify-between">
-        <Tabs label="Partidos" value={tab} onChange={setChosen} tabs={tabs} />
-        <Link to="/partidos" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink">
-          Todos los partidos <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
-      </div>
+      {!isEmpty && (
+        <div className="flex flex-col gap-3 border-b border-line/10 px-4 pb-2 pt-4 sm:flex-row sm:items-end sm:justify-between">
+          <Tabs label="Partidos" value={tab} onChange={setChosen} tabs={tabs} />
+          <Link to="/partidos" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink">
+            Todos los partidos <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+      )}
       {liveError && !error && <p className="px-4 pt-3 text-sm text-warning-soft">No se pudo conectar con los partidos en vivo; el fixture sí está actualizado.</p>}
       {body}
     </div>

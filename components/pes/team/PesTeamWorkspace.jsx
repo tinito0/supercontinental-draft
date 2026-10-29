@@ -154,23 +154,31 @@ function TeamDetail({
   const props = { ws, version: pes.version, teamId, access, isModified, modified, apply, countries, teams: rows, leagueIds };
 
   return (
-    <section aria-labelledby={headingId} className="min-w-0 space-y-4">
+    // Keyed by teamId in the parent: the record fades in when another team is opened.
+    <section aria-labelledby={headingId} className="animate-in fade-in min-w-0 space-y-4">
       <TeamHeader teamId={teamId} headingId={headingId} identity={identity} colours={colours}
         meta={headerMeta(ws, teamId, identity, countries, draftUid && allTeams[draftUid]?.teamName)}
         accessNote={accessNote(access)}
         saved={teamDrafts.length ? 'Hay cambios sin guardar en este equipo.' : 'Sin cambios pendientes en este equipo.'}
         onBack={onBack} onReplace={canReplace && !replacing ? () => setReplacing(true) : undefined} />
-      {replacing && <ReplacementWizard ws={ws} teamId={teamId} apply={pes.apply} onDone={() => setReplacing(false)} />}
-      <Tabs tabs={tabs} value={current} onChange={onSectionChange} label="Secciones del equipo" />
-      {error && <Alert tone="danger">{error.message || String(error)}</Alert>}
-      {current === 'kits' ? <KitsSection key={teamId} pes={pes} teamId={teamId} access={access} onApply={pes.apply} /> : (
-        <div key={resetKey} className="panel-flat p-4 sm:p-5">
-          {current === 'identity' && <IdentitySection {...props} onPreviewColour={(n, hex) => setPreview(p => ({ ...p, [n]: hex }))} />}
-          {current === 'stadium' && <StadiumSection {...props} />}
-          {current === 'squad' && <SquadSection {...props} />}
-          {current === 'advanced' && <AdvancedSection {...props} />}
+      {replacing && (
+        <div className="animate-in fade-in slide-in-from-top">
+          <ReplacementWizard ws={ws} teamId={teamId} apply={pes.apply} onDone={() => setReplacing(false)} />
         </div>
       )}
+      <Tabs tabs={tabs} value={current} onChange={onSectionChange} label="Secciones del equipo" />
+      {error && <Alert tone="danger">{error.message || String(error)}</Alert>}
+      {/* The section fades in on a tab change; a reset after a failed commit (resetKey) remounts without it. */}
+      <div key={current} className="animate-in fade-in">
+        {current === 'kits' ? <KitsSection key={teamId} pes={pes} teamId={teamId} access={access} onApply={pes.apply} /> : (
+          <div key={resetKey} className="panel-flat p-4 sm:p-5">
+            {current === 'identity' && <IdentitySection {...props} onPreviewColour={(n, hex) => setPreview(p => ({ ...p, [n]: hex }))} />}
+            {current === 'stadium' && <StadiumSection {...props} />}
+            {current === 'squad' && <SquadSection {...props} />}
+            {current === 'advanced' && <AdvancedSection {...props} />}
+          </div>
+        )}
+      </div>
       <TeamSaveBar teamCount={teamDrafts.length} totalCount={drafts.length} busy={pes.busy}
         onSave={pes.saveDrafts} onDiscard={() => pes.discardDrafts(teamDrafts)} />
     </section>

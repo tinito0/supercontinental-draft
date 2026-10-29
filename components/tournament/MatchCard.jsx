@@ -65,7 +65,7 @@ export const MatchCard = memo(function MatchCard({
 
   return (
     <div
-      className={`w-full max-w-[260px] rounded-xl overflow-hidden bg-surface border transition-[border-color,box-shadow] duration-200 shadow-md ${
+      className={`w-full max-w-[260px] rounded-xl overflow-hidden bg-surface border transition-[border-color,box-shadow] duration-base shadow-md ${
         isFinal
           ? 'border-accent-soft/50'
           : 'border-line/[0.12] hover:border-white/[0.18]'
@@ -123,7 +123,7 @@ export const MatchCard = memo(function MatchCard({
                   alt=""
                   width={20}
                   height={20}
-                  className="w-5 h-5 object-contain shrink-0 drop-shadow"
+                  className="w-5 h-5 object-contain shrink-0"
                   onError={(e) => { e.currentTarget.src = DEFAULT_LOGO; }}
                 />
                 {isEditing ? (

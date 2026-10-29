@@ -5,6 +5,15 @@ import { APP_ID } from '../utils/constants.js';
 import { formatPriceShort } from '../utils/helpers.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
+import { useModalDialog } from '../hooks/useModalDialog.js';
+import { Tabs } from './ui/Tabs.jsx';
+
+const FEED_FILTERS = [
+  { id: 'all', label: 'Todo' },
+  { id: 'transfers', label: 'Traspasos' },
+  { id: 'signings', label: 'Fichajes' },
+  { id: 'matches', label: 'Partidos' },
+];
 
 function getTransferTime(timestamp) {
   return timestamp?.toDate
@@ -39,7 +48,7 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
     );
   }
   return (
-    <span className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center text-[8px] font-bold text-accent flex-shrink-0 border border-accent/20">
+    <span className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center text-[11px] font-bold text-accent-soft flex-shrink-0 border border-accent/20">
       {getInitials(teamName)}
     </span>
   );
@@ -47,7 +56,7 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
 
 const TransferSkeleton = memo(function TransferSkeleton() {
   return (
-    <div className="rounded-xl bg-surface/60 p-3.5 animate-pulse border border-line/15">
+    <div className="rounded-xl bg-surface/60 p-3.5 skeleton border border-line/15">
       <div className="flex items-start gap-3">
         <div className="w-11 h-11 rounded-lg bg-raised" />
         <div className="flex-1 space-y-2">
@@ -65,7 +74,7 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
   if (transfer.type === 'match_result') {
     return (
       <article className="relative overflow-hidden rounded-xl border border-success/20 bg-emerald-950/20 p-3.5">
-        <div className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-success-soft">
+        <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-success-soft">
           <span>Resultado Final</span>
           <span>{transfer.round || 'Torneo'}</span>
         </div>
@@ -124,12 +133,12 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
               {transfer.playerName}
             </h4>
             <div className="mt-1 flex items-center gap-2">
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                isTransfer ? ' text-accent-soft' : isFranchise ? ' text-warning-soft' : ' text-accent'
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                isTransfer ? ' text-accent-soft' : isFranchise ? ' text-warning-soft' : ' text-accent-soft'
               }`}>
                 {isTransfer ? 'Traspaso' : isFranchise ? 'Franquicia' : 'Fichaje'}
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] text-ink-3 font-medium">
+              <span className="inline-flex items-center gap-1 text-[11px] text-ink-3 font-medium">
                 <Clock className="w-3 h-3" /> {time}
               </span>
             </div>
@@ -137,11 +146,11 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
         </div>
 
         {isReleased ? (
-          <span className="shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-danger/10 text-danger-soft border border-danger/20">
+          <span className="shrink-0 rounded px-2 py-0.5 text-[11px] font-bold bg-danger/10 text-danger-soft border border-danger/20">
             Liberado
           </span>
         ) : isFranchise ? (
-          <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold uppercase bg-warning/10 text-warning-soft border border-warning/20">
+          <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-bold bg-warning/10 text-warning-soft border border-warning/20">
             <Star className="w-3 h-3" fill="currentColor" /> Gratis
           </span>
         ) : (
@@ -236,25 +245,34 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
     return true;
   }), [filter, news, transfers]);
 
+  // A drawer is a modal too: focus moves in and stays, Escape closes, focus returns to the trigger.
+  const drawerRef = useRef(null);
+  useModalDialog(drawerRef, isVisible, onClose);
+
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center sm:justify-end z-[70] animate-in fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-end z-[70] animate-in fade-in" onClick={onClose}>
       <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="transfer-feed-title"
+        tabIndex={-1}
         className="w-full sm:max-w-md h-[100dvh] sm:h-full bg-surface flex flex-col shadow-2xl border-l border-line/20 animate-in slide-in-from-right"
         onClick={event => event.stopPropagation()}
       >
         {/* Header */}
         <div className="shrink-0 p-4 sm:p-5 border-b border-line/20 flex items-center justify-between bg-surface/40">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 text-accent">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 text-accent-soft">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-ink tracking-tight">Centro de Traspasos</h2>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-danger/10 text-danger-soft border border-danger/20">
-                  En Vivo
+                <h2 id="transfer-feed-title" className="text-base font-bold text-ink tracking-tight">Centro de traspasos</h2>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-danger/10 text-danger-soft border border-danger/20">
+                  En vivo
                 </span>
               </div>
               <p className="text-xs text-ink-3 font-medium">Últimos movimientos del mercado</p>
@@ -264,35 +282,15 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
             type="button"
             onClick={onClose}
             aria-label="Cerrar centro de traspasos"
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition cursor-pointer"
+            className="w-11 h-11 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition-colors cursor-pointer"
           >
-            <X size={18} />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
         {/* Filter Tabs */}
-        <div className="shrink-0 flex gap-1.5 px-4 py-2.5 sm:px-5 border-b border-line/15 bg-surface/20" role="tablist" aria-label="Filtrar movimientos">
-          {[
-            ['all', 'Todo'],
-            ['transfers', 'Traspasos'],
-            ['signings', 'Fichajes'],
-            ['matches', 'Partidos'],
-          ].map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={filter === id}
-              onClick={() => setFilter(id)}
-              className={`min-h-8 rounded-lg px-3 text-xs font-semibold transition cursor-pointer ${
-                filter === id
-                  ? ' bg-white text-slate-950 shadow-sm'
-                  : ' text-ink-3 hover:bg-raised'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="shrink-0 px-4 py-2.5 sm:px-5 border-b border-line/15">
+          <Tabs tabs={FEED_FILTERS} value={filter} onChange={setFilter} label="Filtrar movimientos" />
         </div>
 
         {/* List Content */}

@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
-import { popupRemainingMs, qrSvgPath, timedRemainingMs } from '../../utils/overlayPopup.js';
-import { BroadcastFrame } from './BroadcastFrame.jsx';
+import { nextArrival, popupRemainingMs, qrSvgPath, timedRemainingMs } from '../../utils/overlayPopup.js';
+import { CommunityFrame } from './CommunityFrame.jsx';
 
 // Tarjeta con QR para la comunidad, sobre el overlay de OBS (1920×1080), con el marco de la transmisión
 // (broadcast.css). Los datos vienen del campo `popup` del doc del overlay (utils/overlayPopup.js); se oculta sola
@@ -18,13 +18,21 @@ export const QrCode = memo(function QrCode({ url, size = 220, label }) {
   );
 });
 
-// La salida (.is-leaving en broadcast.css) dura 280 ms: arranca un poco antes de que venza el tiempo.
+// La salida (.scl-pop.is-leaving en broadcast.css) dura 280 ms: arranca un poco antes de que venza el tiempo.
 export const LEAVE_MS = 300;
 
-/** Milisegundos que le quedan en pantalla (ver timedRemainingMs); re-renderiza hasta que vence. */
-export function useRemaining(item, remainingMs = timedRemainingMs) {
+/**
+ * Milisegundos que le quedan en pantalla (ver timedRemainingMs); re-renderiza hasta que vence. Lo que llega con la
+ * fuente abierta se cuenta desde que llegó, no por la hora del servidor (utils/overlayPopup.js nextArrival).
+ */
+export function useRemaining(item, remainingMs = timedRemainingMs, loaded = true) {
   const [now, setNow] = useState(() => Date.now());
-  const remaining = remainingMs(item, now);
+  const key = item ? String(shownKey(item)) : null;
+  const [arrival, setArrival] = useState({ key: null, at: null, seen: false });
+  const next = nextArrival(arrival, key, Date.now(), loaded);
+  if (next !== arrival) setArrival(next);
+  const anchored = next.at !== null ? { ...item, shownAt: next.at } : item;
+  const remaining = remainingMs(anchored, now);
   useEffect(() => {
     if (!remaining) return undefined;
     // Despierta justo al empezar la salida y otra vez al terminar, además de cada segundo.
@@ -55,26 +63,31 @@ function displayUrl(href) {
   }
 }
 
-export const OverlayPopup = memo(function OverlayPopup({ popup }) {
-  const remaining = useRemaining(popup, popupRemainingMs);
+export const OverlayPopup = memo(function OverlayPopup({ popup, loaded = true }) {
+  const remaining = useRemaining(popup, popupRemainingMs, loaded);
   if (remaining === 0) return null;
   const host = displayUrl(popup.url);
   const isLeaving = remaining !== null && remaining <= LEAVE_MS;
   return (
     // La key reinicia la animación de entrada cada vez que el admin vuelve a mostrarlo (nuevo shownAt).
-    <BroadcastFrame
+    <CommunityFrame
       key={popupKey(popup)}
-      className={`scl-popup ${isLeaving ? 'is-leaving' : ''}`}
-      dataPosition={popup.position || 'right'}
+      className="scl-popup"
+      position={popup.position || 'right'}
       title={popup.title}
+      isLeaving={isLeaving}
     >
-      {popup.text && <div className="scl-popup-text">{popup.text}</div>}
       <div className="scl-popup-qr">
-        <QrCode url={popup.url} size={250} />
-        <div className="scl-popup-scan" aria-hidden="true" />
+        {/* 200 px: unos 6 px por módulo, lo mínimo para que se escanee desde la tele con la compresión del stream. */}
+        <QrCode url={popup.url} size={200} />
       </div>
-      {host && <div className="scl-popup-url">{host}</div>}
-    </BroadcastFrame>
+      <div className="scl-popup-copy">
+        {popup.text
+          ? <p className="scl-popup-text" style={{ '--i': 0 }}>{popup.text}</p>
+          : <span className="scl-popup-hint" style={{ '--i': 1 }}>Escaneá con la cámara del celular</span>}
+        {host && <span className="scl-popup-url" style={{ '--i': 2 }}>{host}</span>}
+      </div>
+    </CommunityFrame>
   );
 });
 

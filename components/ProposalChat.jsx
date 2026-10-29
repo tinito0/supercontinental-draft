@@ -104,12 +104,12 @@ export const ProposalChat = memo(function ProposalChat({
         className="w-full px-3 py-2 flex items-center justify-between bg-surface/80 hover:bg-raised transition text-left"
       >
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-3.5 h-3.5 text-accent" />
+          <MessageSquare className="w-3.5 h-3.5 text-accent-soft" />
           <span className="text-xs font-bold text-ink-2">
             Chat de negociación
           </span>
           {messages.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">
+            <span className="px-1.5 py-0.2 rounded-md text-[11px] font-bold bg-accent/10 text-accent-soft border border-accent/20">
               {messages.length}
             </span>
           )}
@@ -153,7 +153,7 @@ export const ProposalChat = memo(function ProposalChat({
                           className="w-3.5 h-3.5 rounded object-contain bg-raised"
                           onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                         />
-                        <span className="text-[10px] font-semibold text-ink-3 truncate max-w-[150px]">
+                        <span className="text-[11px] font-semibold text-ink-3 truncate max-w-[150px]">
                           {msg.senderTeamName || 'Rival'}
                         </span>
                       </div>
@@ -167,7 +167,7 @@ export const ProposalChat = memo(function ProposalChat({
                     >
                       <p className="leading-snug">{msg.text}</p>
                       {timeStr && (
-                        <span className={`block text-[9px] mt-0.5 text-right font-medium ${
+                        <span className={`block text-[11px] mt-0.5 text-right font-medium ${
                           isMine ? 'text-accent-soft' : 'text-ink-3'
                         }`}>
                           {timeStr}
@@ -203,7 +203,7 @@ export const ProposalChat = memo(function ProposalChat({
                 type="submit"
                 disabled={!text.trim() || isSending}
                 className="w-7 h-7 rounded-lg bg-accent hover:bg-accent text-ink flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                title={isSending ? 'Hay una operación en curso' : !text.trim() ? 'Completa los datos requeridos primero' : 'Enviar mensaje'}
+                title={isSending ? 'Hay una operación en curso' : !text.trim() ? 'Escribí un mensaje' : 'Enviar mensaje'}
                 aria-label="Enviar mensaje"
               >
                 <Send className="w-3 h-3" />

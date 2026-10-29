@@ -12,6 +12,7 @@ import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { ProposalChat } from './ProposalChat.jsx';
 import { BaseModal } from './ui/BaseModal.jsx';
+import { confirmAction } from './ui/ConfirmDialog.jsx';
 import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
 import { Tabs } from './ui/Tabs.jsx';
@@ -42,7 +43,7 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
       <div className="flex-1 min-w-0 pointer-events-none">
         <p className="text-sm font-semibold text-ink truncate group-hover:text-accent-soft transition-colors">{player.Name}</p>
         <p className="mt-1 flex items-center gap-2 text-xs">
-          <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+          <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
           {/* The franchise player costs nothing from the budget (hooks/useBudget.js), so no price for him. */}
           {player.isFranchise
             ? <span className="font-semibold text-accent-soft">Franquicia</span>
@@ -273,6 +274,8 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     return map;
   }, [allPlayers]);
 
+  const offerPlayer = (offer) => playerMap.get(String(offer.playerId)) || { Id: offer.playerId, Name: offer.playerName };
+
   const handleAcceptOffer = async (offer) => {
     if (isProcessing || processingOfferRef.current) return;
     if (!isMarketOpen) {
@@ -281,7 +284,16 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     }
     // The only offer action that cannot be undone (rejecting and withdrawing already asked).
     const price = formatPriceShort(getOfferAmount(offer) / 1000000);
-    if (!window.confirm(`¿Aceptar la oferta por ${offer.playerName} (${price})? El jugador pasa a ${getOfferSenderName(offer, allTeams)} y no se puede deshacer.`)) return;
+    const isConfirmed = await confirmAction({
+      title: '¿Aceptar la oferta?',
+      player: offerPlayer(offer),
+      amount: price,
+      message: `${offer.playerName} pasa a ${getOfferSenderName(offer, allTeams)}.`,
+      confirmLabel: 'Aceptar oferta',
+      tone: 'primary',
+      irreversible: true,
+    });
+    if (!isConfirmed) return;
     processingOfferRef.current = offer?.id || 'unknown';
     setIsProcessing(true);
     showStatusMessage?.('loading', `Aceptando la oferta por ${offer.playerName}...`);
@@ -300,7 +312,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   const handleRejectOffer = async (offer) => {
     if (isProcessing) return;
-    if (!window.confirm(`¿Seguro que quieres rechazar la oferta por ${offer.playerName}?`)) return;
+    const isConfirmed = await confirmAction({
+      title: '¿Rechazar la oferta?',
+      player: offerPlayer(offer),
+      amount: formatPriceShort(getOfferAmount(offer) / 1000000),
+      message: `${getOfferSenderName(offer, allTeams)} recibe el aviso y el jugador sigue en tu plantel.`,
+      confirmLabel: 'Rechazar oferta',
+    });
+    if (!isConfirmed) return;
     setIsProcessing(true);
     showStatusMessage?.('loading', `Rechazando la oferta por ${offer.playerName}...`);
     try {
@@ -346,7 +365,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   const handleWithdrawOffer = async (offer) => {
     if (isProcessing) return;
-    if (!window.confirm(`¿Seguro que quieres retirar la oferta por ${offer.playerName}?`)) return;
+    const isConfirmed = await confirmAction({
+      title: '¿Retirar la oferta?',
+      player: offerPlayer(offer),
+      amount: formatPriceShort(getOfferAmount(offer) / 1000000),
+      message: 'El dinero reservado vuelve a tu presupuesto. Podés volver a ofertar después.',
+      confirmLabel: 'Retirar oferta',
+    });
+    if (!isConfirmed) return;
     setIsProcessing(true);
     showStatusMessage?.('loading', `Retirando la oferta por ${offer.playerName}...`);
     try {
@@ -488,7 +514,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         <Stat label="Disponible" value={fmtM(remainingBudget)} size="sm" tone={availableTone} hint={`${budgetPct.toFixed(0)}% del presupuesto`} />
       </div>
       <div className="mt-4 h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(budgetPct)} aria-label="Presupuesto disponible">
-        <div className={`h-full rounded-full transition-[width] duration-500 ${meterTone}`} style={{ width: `${budgetPct}%` }} />
+        <div className={`h-full rounded-full transition-[width] duration-move ${meterTone}`} style={{ width: `${budgetPct}%` }} />
       </div>
     </section>
   );

@@ -62,7 +62,7 @@ function CopyButton({ text, label, onCopied }) {
 function MacroDeckGuide() {
   const [copied, setCopied] = useState('');
   return (
-    <details className="well px-4 py-3">
+    <details className="border-t border-line/10 pt-3">
       <summary className="cursor-pointer min-h-11 flex items-center gap-2 text-sm font-semibold text-ink-2">
         <Keyboard className="w-4 h-4" aria-hidden="true" /> Botones de Macro Deck 3
       </summary>
@@ -127,7 +127,7 @@ export const CommunityLayerControl = memo(function CommunityLayerControl({ overl
   return (
     <div className="space-y-2" role="group" aria-labelledby="overlay-cards-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 id="overlay-cards-title" className="eyebrow flex items-center gap-2"><Users className="h-4 w-4" aria-hidden="true" /> Tarjetas de la comunidad</h4>
+        <h3 id="overlay-cards-title" className="eyebrow flex items-center gap-2"><Users className="h-4 w-4" aria-hidden="true" /> Tarjetas de la comunidad</h3>
         <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink-2">
           <input
             type="checkbox"
@@ -148,7 +148,7 @@ export const CommunityLayerControl = memo(function CommunityLayerControl({ overl
             <button key={card.kind} type="button" disabled={Boolean(busy) || !ready}
               title={ready ? undefined : `No se va a ver en OBS: ${note.toLowerCase()}.`}
               onClick={() => run(`card-${card.kind}`, { card: { visible: true, kind: card.kind, autoHideSec: CARD_SECONDS, shownAt: serverTimestamp() } }, `OBS: tarjeta ${card.label} (${CARD_SECONDS} s).`)}
-              className="min-h-14 rounded-xl border border-line/[0.16] bg-raised px-3 py-2 text-left text-ink-2 transition-[border-color,transform] duration-150 ease-out hover:border-line/40 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-100 disabled:hover:border-line/[0.16] disabled:active:scale-100">
+              className="min-h-14 rounded-xl border border-line/[0.16] bg-raised px-3 py-2 text-left text-ink-2 transition-[border-color,transform] duration-fast ease-out hover:border-line/40 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-100 disabled:hover:border-line/[0.16] disabled:active:scale-100">
               <span className={`block font-display text-base font-bold ${ready ? 'text-ink' : 'text-ink-2'}`}>{card.label}</span>
               <span className={`mt-0.5 flex items-center gap-1.5 text-sm ${ready ? 'text-success-soft' : 'text-warning-soft'}`}>
                 <StatusIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

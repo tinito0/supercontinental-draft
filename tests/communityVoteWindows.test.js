@@ -2,7 +2,7 @@
 // partidos ya jugados, cierre por clubes y «ya votaste» con la opción contada. Datos sintéticos.
 import {
   castVote, clientIp, CommunityVoteError, finishedAtFor, fixtureIsFinished, LIVE_SIGNAL_MS, MVP_GRACE_MS, mvpWindow,
-  predictionClosure, predictionWindow,
+  fixtureIsPredictable, predictionClosure, predictionWindow,
 } from '../supabase/functions/_shared/communityVote.js';
 import { pickMvpMatch, predictionOutcome } from '../utils/communityView.js';
 
@@ -39,7 +39,7 @@ describe('finishedAtFor (match-feed)', () => {
 
 describe('predictions for matches already played', () => {
   const tournament = {
-    matches: [{ id: '7', status: 'completed', homeScore: 2, awayScore: 0 }, { id: '8', status: 'scheduled', homeScore: '', awayScore: '' }],
+    matches: [{ id: '7', status: 'completed', homeScore: 2, awayScore: 0 }, { id: '8', homeTeam: 'A', awayTeam: 'B', status: 'scheduled', homeScore: '', awayScore: '' }],
     bracket: { quarters: [{ scoreA: 1, scoreB: 1 }, { scoreA: '', scoreB: '' }], repechaje: { r1: [{ scoreA: 0, scoreB: 3 }] } },
   };
 
@@ -132,5 +132,29 @@ describe('predictionOutcome (post-partido en /en-vivo)', () => {
   it('is null until the linked match finishes, or without a linked match', () => {
     expect(predictionOutcome({ liveMatchKey: 'k1' }, [{ ...finished(1, 0), status: { kind: 'live' } }])).toBeNull();
     expect(predictionOutcome({ votes: {} }, [finished(1, 0)])).toBeNull();
+  });
+});
+
+describe('fixtureIsPredictable (match left on air from another season)', () => {
+  const tournament = {
+    matches: [{ id: '8', homeTeam: 'Aspra Calcio', awayTeam: 'SK Konya', status: 'pending' }],
+    bracket: { repechaje: { r2: [{ teamA: '', teamB: 'Sendai Ryuden' }] } },
+  };
+  const overlay = { matchId: 'plata-r2-1', homeTeamName: 'Ganador 2° Red.', awayTeamName: 'Ganador 4° Red.' };
+
+  it('closes the prediction for a fixture id that is not in the tournament', () => {
+    expect(fixtureIsPredictable({ matches: [] }, 'plata-r2-1')).toBe(false);
+    expect(predictionWindow({ overlay, prediction: null, matchId: 'plata-r2-1', tournament: { matches: [] } }))
+      .toEqual({ open: false, reason: 'Ese partido todavía no tiene los dos equipos definidos.' });
+  });
+
+  it('closes it while a cup tie is missing a club', () => {
+    expect(fixtureIsPredictable(tournament, 'plata-r2-0')).toBe(false);
+  });
+
+  it('keeps it open for a fixture with both clubs, and does not block when the tournament is unknown', () => {
+    expect(fixtureIsPredictable(tournament, 'league-8')).toBe(true);
+    expect(fixtureIsPredictable(null, 'plata-r2-1')).toBe(true);
+    expect(fixtureIsPredictable(tournament, 'm12')).toBe(true);
   });
 });

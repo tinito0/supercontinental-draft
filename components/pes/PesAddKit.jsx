@@ -30,10 +30,10 @@ export function PesAddKit({ kits, teamId, version, onApply, onCreated }) {
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
 
-  if (!open) return <Button onClick={() => setOpen(true)}><Plus className="w-3.5 h-3.5" />Agregar kit</Button>;
-  const sel = 'input min-h-9';
+  if (!open) return <Button onClick={() => setOpen(true)}><Plus className="w-4 h-4" aria-hidden="true" />Agregar kit</Button>;
+  const sel = 'select';
   return (
-    <div className="mt-3 rounded-lg border border-line/[0.12] p-3 space-y-2 text-xs text-ink-2">
+    <div className="animate-in fade-in slide-in-from-top mt-3 rounded-xl border border-line/[0.12] p-3 space-y-3 text-xs text-ink-2">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1">Tipo
           <select className={sel} value={category} onChange={e => { setCategory(e.target.value); setFrom(''); setSection(''); }}>
@@ -51,15 +51,15 @@ export function PesAddKit({ kits, teamId, version, onApply, onCreated }) {
             {(sections.length ? sections : ['default']).map(s => <option key={s} value={s}>{s === 'default' ? '(sin sección)' : `[${s}]`}</option>)}
           </select>
         </label>
-        <span className="pb-1">Carpeta nueva: <b className="text-ink">{name}</b></span>
+        <span className="pb-2.5">Carpeta nueva: <span className="num font-semibold text-ink">{name}</span></span>
       </div>
       <p className="text-[11px] text-ink-3">
         Se copian los valores del config.txt (incluidos los nombres de textura). Después importá la textura propia del kit nuevo con otro nombre en «Texturas del kit»;
         si no, comparte las del kit copiado.
       </p>
       <div className="flex gap-2">
-        <Button variant="primary" disabled={busy || !source} onClick={add}><Plus className="w-3.5 h-3.5" />{busy ? 'Agregando…' : `Crear ${name}`}</Button>
-        <Button onClick={() => setOpen(false)}>Cancelar</Button>
+        <Button variant="primary" disabled={busy || !source} onClick={add}><Plus className="w-4 h-4" aria-hidden="true" />{busy ? 'Agregando…' : `Crear ${name}`}</Button>
+        <Button variant="quiet" onClick={() => setOpen(false)}>Cancelar</Button>
       </div>
       {!templates.length && <p className="text-[11px] text-warning-soft">El equipo no tiene kits de este tipo para copiar.</p>}
       <ErrorText error={error} />

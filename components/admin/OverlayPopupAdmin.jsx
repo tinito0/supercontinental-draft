@@ -93,9 +93,9 @@ export const OverlayPopupAdmin = memo(function OverlayPopupAdmin({ savedPopup, o
   return (
     <section className="panel p-5 space-y-4" aria-labelledby="overlay-popup-title">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h3 id="overlay-popup-title" className="section-title flex items-center gap-2.5">
+        <h2 id="overlay-popup-title" className="section-title flex items-center gap-2.5">
           <QrIcon className="w-5 h-5 text-accent-soft" aria-hidden="true" /> Popup para la comunidad
-        </h3>
+        </h2>
         <p className="text-xs text-ink-3" role="status">
           {isOnAir ? <>Al aire · <span className="text-ink-2 font-semibold">{onAirLabel}</span></> : 'No se muestra'}
         </p>

@@ -23,10 +23,44 @@ const COLUMNS = [
   { key: 'dg', label: 'DG', title: 'Diferencia de gol', always: true },
 ];
 
+/** Antes del primer partido el orden de tournament.league es solo el de carga: clubes inscriptos, sin puestos ni zonas. */
+function Entrants({ rows, clubOf }) {
+  return (
+    <div className="space-y-3">
+      <div className="panel overflow-hidden p-0">
+        <h2 className="section-title px-4 pt-4">Clubes inscriptos</h2>
+        <ul className="mt-2 grid grid-cols-1 gap-x-6 px-4 sm:grid-cols-2">
+          {rows.map(row => {
+            const club = clubOf(row.name);
+            const name = (
+              <>
+                <LeagueCrest name={row.name} club={club} size="md" />
+                <span className="truncate font-semibold text-ink">{row.name}</span>
+              </>
+            );
+            return (
+              <li key={row.id || row.name} className="min-w-0 border-t border-line/10">
+                {club?.id
+                  ? <Link to={`/equipos/${club.id}`} className="flex min-h-12 min-w-0 items-center gap-3 hover:[&>span]:text-accent-soft">{name}</Link>
+                  : <span className="flex min-h-12 min-w-0 items-center gap-3">{name}</span>}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <p className="text-sm text-ink-2">
+        La tabla arranca con el primer partido. Del 1.° al {GOLD_CUP_PLACES}.° van a la Copa de Oro; del {GOLD_CUP_PLACES + 1}.° al {SILVER_CUP_PLACES}.°, a la Copa de Plata.
+        Ganado en los 90: {LEAGUE_POINTS.REGULATION_WIN} pts · ganado por penales: {LEAGUE_POINTS.SHOOTOUT_WIN} pt · perdido: {LEAGUE_POINTS.LOSS}.
+      </p>
+    </div>
+  );
+}
+
 /**
  * @param {{ rows: Array<object>, clubOf: (name: string) => object | null }} props rows: tournament.league
  */
 export function StandingsTable({ rows, clubOf }) {
+  if (!rows.some(row => Number(row.pj) > 0)) return <Entrants rows={rows} clubOf={clubOf} />;
   return (
     <div className="space-y-3">
       <div className="panel overflow-hidden">

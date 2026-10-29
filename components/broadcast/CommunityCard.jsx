@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { BroadcastFrame } from './BroadcastFrame.jsx';
+import { CommunityFrame } from './CommunityFrame.jsx';
 import { LEAVE_MS, shownKey, useRemaining } from './OverlayPopup.jsx';
 
 // Tarjeta de la comunidad sobre el overlay de OBS (lado izquierdo, el popup con QR va a la derecha): el MVP que va
@@ -8,12 +8,14 @@ import { LEAVE_MS, shownKey, useRemaining } from './OverlayPopup.jsx';
 
 const PREDICTION_LABEL = { home: null, draw: 'Empate', away: null };
 
-function ShareRow({ label, pct, isLeader, detail }) {
+// --i escalona la entrada de cada fila y de su barra. La key={pct} vuelve a montar el número cuando cambia: el valor
+// nuevo se funde en el lugar en vez de saltar (broadcast.css scl-pop-swap).
+function ShareRow({ label, pct, isLeader, detail, index }) {
   return (
-    <li className={`scl-card-row ${isLeader ? 'is-leader' : ''}`}>
+    <li className={`scl-card-row ${isLeader ? 'is-leader' : ''}`} style={{ '--i': index }}>
       <div className="scl-card-row-head">
         <span className="scl-card-row-name">{label}</span>
-        <span className="scl-card-row-pct">{pct}%</span>
+        <span className="scl-card-row-pct"><span key={pct}>{pct}%</span></span>
       </div>
       <div className="scl-card-bar" aria-hidden="true"><span style={{ transform: `scaleX(${pct / 100})` }} /></div>
       {detail && <div className="scl-card-row-detail">{detail}</div>}
@@ -56,27 +58,27 @@ function cardContent(kind, live, homeName, awayName) {
   return null;
 }
 
-export const CommunityCard = memo(function CommunityCard({ card, live, homeName, awayName, side = 'left' }) {
-  const remaining = useRemaining(card);
+export const CommunityCard = memo(function CommunityCard({ card, live, homeName, awayName, side = 'left', loaded = true }) {
+  const remaining = useRemaining(card, undefined, loaded);
   if (remaining === 0) return null;
   // Sin votos no hay nada que mostrar: la tarjeta no aparece vacía.
   const content = cardContent(card.kind, live, homeName, awayName);
   if (!content) return null;
   const isLeaving = remaining !== null && remaining <= LEAVE_MS;
   return (
-    <BroadcastFrame
+    <CommunityFrame
       key={`${shownKey(card)}|${card.kind}`}
-      className={`scl-popup scl-card ${isLeaving ? 'is-leaving' : ''}`}
-      dataPosition={side}
-      kicker="Comunidad"
+      className="scl-card"
+      position={side}
       title={content.title}
+      aside={content.aside}
+      isLeaving={isLeaving}
     >
-      <div className="scl-card-aside">{content.aside}</div>
       <ol className="scl-card-rows">
-        {content.rows.map(({ key, ...row }) => <ShareRow key={key} {...row} />)}
+        {content.rows.map(({ key, ...row }, index) => <ShareRow key={key} index={index} {...row} />)}
       </ol>
-      {content.footer && <div className="scl-card-footer">{content.footer}</div>}
-    </BroadcastFrame>
+      {content.footer && <div className="scl-card-footer" style={{ '--i': content.rows.length }}>{content.footer}</div>}
+    </CommunityFrame>
   );
 });
 

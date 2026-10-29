@@ -1,6 +1,6 @@
 // 3D kit models for the preview: shirt, sleeves, collars, shorts and socks.
 // Meshes come from the CometKIT previewer as packed by PES Editor Rebuilt (js/kitpack.js, BSD-3-Clause);
-// the pack is served as public/pes/kitpack.bin (zlib). Part selection, normal welding and framing are
+// the pack is served as public/kit3d/kitpack.bin (zlib). Part selection, normal welding and framing are
 // adapted from Rebuilt js/kit3d.js (k3Pack, k3Load, K3GL.weld, k3Fit). See pes/THIRD_PARTY_NOTICES.md.
 import { unzlibSync } from 'fflate';
 import { PesFormatError } from '../core/errors.js';

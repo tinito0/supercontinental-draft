@@ -22,6 +22,12 @@ export const FULLSCREEN_SCENES = new Set(['partidos', 'tabla', 'bracket', 'repec
 /** Escenas que usan el partido al aire. */
 export const MATCH_SCENES = new Set(['previa', 'descanso', 'final']);
 
+/** Escenas que puede mostrar la fuente del partido (?follow=partido): las que van encima del juego. */
+export const MATCH_GROUP_SCENES = new Set(OBS_SCENES.filter(scene => scene.group === 'partido').map(scene => scene.id));
+
+/** Grupos que una fuente puede seguir con ?follow=. */
+const FOLLOW_GROUPS = { partido: MATCH_GROUP_SCENES };
+
 // Nombres viejos o alternativos que todavía usan fuentes de OBS ya configuradas.
 const ALIASES = { table: 'tabla', groups: 'tabla', llaves: 'bracket', stats: 'goleadores', matches: 'partidos' };
 
@@ -34,11 +40,12 @@ export function normalizeSceneId(value) {
 /**
  * Si una URL del draft es una fuente de OBS y qué muestra. main.jsx la resuelve antes de montar el draft, así una
  * fuente de OBS no carga el login ni el mercado.
- * - /draft/overlay: el overlay; sigue la escena guardada salvo que la URL fije una (?scene=, o ?view= de antes).
+ * - /draft/overlay: el overlay; sigue la escena guardada salvo que la URL fije una (?scene=, o ?view= de antes);
+ *   con ?follow=partido sigue solo las escenas del partido (sceneForSource).
  * - ?mode=obs&view=…: las vistas del torneo de antes, ahora escenas del mismo overlay (fondo transparente).
  * - ?mode=table / ?mode=bracket: tabla o copa como página (fondo opaco).
  * @param {string} draftPath la ruta dentro del draft (sin /draft)
- * @returns {null | { scene: string | null, transparent: boolean }}
+ * @returns {null | { scene: string | null, follow: string | null, transparent: boolean }}
  */
 export function resolveObsRequest(draftPath, search) {
   const params = new URLSearchParams(search || '');
@@ -51,10 +58,44 @@ export function resolveObsRequest(draftPath, search) {
     return scene === 'bracket' && isPlata ? 'repechaje' : scene;
   };
   if (path === '/overlay' || path.startsWith('/overlay/')) {
-    return { scene: normalizeSceneId(params.get('scene')) || normalizeSceneId(view), transparent: true };
+    const scene = normalizeSceneId(params.get('scene')) || normalizeSceneId(view);
+    const follow = String(params.get('follow') || '').toLowerCase();
+    return { scene, follow: !scene && FOLLOW_GROUPS[follow] ? follow : null, transparent: true };
   }
-  if (mode === 'obs') return { scene: fromView('tabla'), transparent: true };
-  if (mode === 'table') return { scene: fromView('tabla'), transparent: false };
-  if (mode === 'bracket') return { scene: fromView('bracket'), transparent: false };
+  if (mode === 'obs') return { scene: fromView('tabla'), follow: null, transparent: true };
+  if (mode === 'table') return { scene: fromView('tabla'), follow: null, transparent: false };
+  if (mode === 'bracket') return { scene: fromView('bracket'), follow: null, transparent: false };
   return null;
+}
+
+/**
+ * Qué escena dibuja una fuente de OBS con la escena guardada (la que está al aire):
+ * - fija (?scene=): siempre la suya;
+ * - del partido (?follow=partido): la del aire si es de partido (en partido, previa, entretiempo, final); si al aire hay
+ *   una del torneo (tabla, copas…), queda limpia en «En partido», porque esas tienen su propia escena en OBS;
+ * - general (/overlay): la del aire.
+ * @param {{ scene?: string|null, follow?: string|null } | null} request
+ * @param {string|null|undefined} savedScene
+ */
+export function sceneForSource(request, savedScene) {
+  if (request?.scene) return request.scene;
+  const onAir = normalizeSceneId(savedScene) || 'live';
+  const group = request?.follow ? FOLLOW_GROUPS[request.follow] : null;
+  if (group) return group.has(onAir) ? onAir : 'live';
+  return onAir;
+}
+
+/** Fuentes que se ofrecen para pegar en OBS (components/admin/obs/ObsConnection.jsx). */
+export const OBS_SOURCES = [
+  { id: 'partido', request: { scene: null, follow: 'partido' }, path: '/overlay?follow=partido' },
+  { id: 'general', request: { scene: null, follow: null }, path: '/overlay' },
+  ...OBS_SCENES.map(scene => ({ id: scene.id, request: { scene: scene.id, follow: null }, path: `/overlay?scene=${scene.id}` })),
+];
+
+/**
+ * En qué fuentes se ve una escena cuando está al aire (para que el editor no diga «al aire» si ninguna la muestra).
+ * @returns {string[]} ids de OBS_SOURCES
+ */
+export function sourcesShowingOnAir(sceneId) {
+  return OBS_SOURCES.filter(source => sceneForSource(source.request, sceneId) === sceneId).map(source => source.id);
 }

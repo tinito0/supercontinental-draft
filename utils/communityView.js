@@ -1,6 +1,9 @@
 // Página /en-vivo (screens/league/LeagueLiveScreen.jsx): qué partido mostrar, porcentajes de la predicción y ranking
 // del MVP. Las reglas de las ventanas son las mismas que aplica el servidor (supabase/functions/_shared/communityVote.js).
 import { mvpCandidates, mvpWindow } from '../supabase/functions/_shared/communityVote.js';
+
+/** Si el partido al aire se puede predecir (está en el torneo con los dos clubes): la misma regla que el servidor. */
+export { fixtureIsPredictable } from '../supabase/functions/_shared/communityVote.js';
 import { playerName } from './matchCenter.js';
 
 /** Encuestas «¿quién gana la copa?» (public/data/polls/{id}); en este orden se elige la que muestra el overlay. */

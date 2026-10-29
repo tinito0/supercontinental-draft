@@ -72,7 +72,7 @@ export const CupBracketView = memo(function CupBracketView({
           renderMatch={entry => (
             <div className="relative w-full flex justify-center">
               {entry.isFinal && (
-                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 flex items-center gap-2 px-3.5 py-1 rounded-full border text-xs font-bold uppercase tracking-wider whitespace-nowrap ${tone.pill}`}>
+                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 flex items-center gap-2 px-3.5 py-1 rounded-md border text-xs font-bold uppercase tracking-wider whitespace-nowrap ${tone.pill}`}>
                   <Trophy className={`w-4 h-4 ${tone.pillIcon}`} aria-hidden="true" />
                   <span>{cup.finalLabel}</span>
                 </div>
