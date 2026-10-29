@@ -4,39 +4,40 @@
 <head>
   <!-- html2canvas loaded dynamically via npm import in FormationModal.jsx -->
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="manifest" href="/manifest.json">
+  <!-- viewport-fit=cover: sin esto env(safe-area-inset-*) vale 0 en iPhone y la app instalada queda bajo la barra de inicio -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <!-- El manifest (PWA del draft) lo agrega main.jsx solo bajo /draft: la web pública no ofrece instalar el draft. -->
   <meta name="theme-color" content="#080b14">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="icon" type="image/png" href="/android-chrome-512x512.png" />
+  <!-- Favicon chico: antes el ícono de 512 px (74 KB) se descargaba en cada primera visita -->
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
 
-  <meta name="description" content="SCL Draft 2026 - Plataforma de gestión de fichajes y transferencias del Supercontinental Draft. Control de plantillas, presupuesto y torneo en tiempo real.">
-  <title>SCL DRAFT 2026 - Supercontinental Master League</title>
+  <!-- Vistas previas de links. scripts/build-share-pages.mjs reemplaza este bloque en cada página (utils/sharePages.js). -->
+  <!-- share:start -->
+  <title>SuperContinental League</title>
+  <meta name="description" content="La liga de eFootball PES 2021: resultados, tabla, copas y la historia de cada club.">
+  <link rel="canonical" href="https://supercont-d62df.firebaseapp.com/">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="SCL DRAFT 2026 - Supercontinental League">
-  <meta property="og:description" content="Plataforma de gestión de fichajes, presupuestos y tácticas para PES 2021 en tiempo real.">
-  <meta property="og:image" content="/logo.webp">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="SCL DRAFT 2026 - Supercontinental League">
-  <meta name="twitter:description" content="Plataforma de gestión de fichajes, presupuestos y tácticas para PES 2021 en tiempo real.">
-  <meta name="twitter:image" content="/logo.webp">
-  <script>
-    document.documentElement.classList.add('dark');
-  </script>
+  <meta property="og:site_name" content="SuperContinental League">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:url" content="https://supercont-d62df.firebaseapp.com/">
+  <meta property="og:title" content="SuperContinental League">
+  <meta property="og:description" content="La liga de eFootball PES 2021: resultados, tabla, copas y la historia de cada club.">
+  <meta property="og:image" content="https://supercont-d62df.firebaseapp.com/og/liga.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SuperContinental League">
+  <meta name="twitter:description" content="La liga de eFootball PES 2021: resultados, tabla, copas y la historia de cada club.">
+  <meta name="twitter:image" content="https://supercont-d62df.firebaseapp.com/og/liga.png">
+  <!-- share:end -->
+  <script src="/boot.js"></script>
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/main.jsx"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW registered:', reg.scope))
-          .catch(err => console.warn('SW registration failed:', err));
-      });
-    }
-  </script>
 </body>
 
 </html>

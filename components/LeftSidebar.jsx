@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import {
   LayoutDashboard, Trophy, ShoppingCart, ClipboardList, Search, Users, Shield,
-  Crown, HelpCircle, MessageSquarePlus, LogOut, X, Keyboard, Database,
+  Crown, HelpCircle, MessageSquarePlus, LogOut, X, Keyboard, Database, Globe,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -52,6 +52,7 @@ function NavItem({ item, active, onClick }) {
 export const LeftSidebar = memo(function LeftSidebar({
   setActiveTab,
   isAdmin,
+  isLeagueEditor, // editor de la web pública: entra a Administración solo para esos textos
   hasPesAccess, // rol en el editor PES (Super Admin / Admin del Draft / Kit Manager)
   isOpen,
   onClose,
@@ -79,6 +80,7 @@ export const LeftSidebar = memo(function LeftSidebar({
   const tools = [
     hasPesAccess && { id: 'PES', label: 'Editor PES', icon: Database, paths: ['/pes'] },
     isAdmin && { id: 'Admin', label: 'Administración', icon: Crown, paths: ['/admin'] },
+    !isAdmin && isLeagueEditor && { id: 'Admin', label: 'Web pública', icon: Globe, paths: ['/admin'] },
   ].filter(Boolean);
   if (tools.length) groups.push({ label: 'Gestión', items: tools });
 
@@ -96,7 +98,7 @@ export const LeftSidebar = memo(function LeftSidebar({
             <img src="/logo.webp" alt="" width={40} height={40} className="w-10 h-10 object-contain shrink-0" />
             <div className="min-w-0 leading-none">
               <p className="font-display text-[19px] font-bold tracking-wide text-ink uppercase">Supercontinental</p>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-3 mt-1">Draft · Liga SCL</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3 mt-1">Draft · Liga SCL</p>
             </div>
             <button type="button" onClick={onClose} className="sidebar-close-btn ml-auto" aria-label="Cerrar menú">
               <X className="w-5 h-5" aria-hidden="true" />
@@ -106,7 +108,7 @@ export const LeftSidebar = memo(function LeftSidebar({
           <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-5" aria-label="Secciones">
             {groups.map(group => (
               <div key={group.label}>
-                <p className="px-4 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">{group.label}</p>
+                <p className="px-4 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">{group.label}</p>
                 <div className="space-y-0.5">
                   {group.items.map(item => (
                     <NavItem key={item.id} item={item} active={item.paths.includes(pathname)} onClick={() => go(item.id)} />

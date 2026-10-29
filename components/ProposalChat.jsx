@@ -28,6 +28,7 @@ export const ProposalChat = memo(function ProposalChat({
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef(null);
@@ -71,6 +72,7 @@ export const ProposalChat = memo(function ProposalChat({
     if (!trimmed || isSending || isClosed) return;
 
     setIsSending(true);
+    setSendError('');
     try {
       const messagesRef = collection(db, `artifacts/${APP_ID}/public/data/offers/${offerId}/messages`);
       await addDoc(messagesRef, {
@@ -84,6 +86,10 @@ export const ProposalChat = memo(function ProposalChat({
       setText('');
     } catch (err) {
       console.error('Error sending negotiation message:', err);
+      // Before, a failed send was only logged: the text stayed in the box with no explanation.
+      setSendError(err?.code === 'permission-denied'
+        ? 'No se pudo enviar: la negociación ya está cerrada o no participás en ella.'
+        : 'No se pudo enviar el mensaje. Revisá la conexión y probá de nuevo.');
     } finally {
       setIsSending(false);
     }
@@ -98,12 +104,12 @@ export const ProposalChat = memo(function ProposalChat({
         className="w-full px-3 py-2 flex items-center justify-between bg-surface/80 hover:bg-raised transition text-left"
       >
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-3.5 h-3.5 text-accent" />
+          <MessageSquare className="w-3.5 h-3.5 text-accent-soft" />
           <span className="text-xs font-bold text-ink-2">
             Chat de negociación
           </span>
           {messages.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">
+            <span className="px-1.5 py-0.2 rounded-md text-[11px] font-bold bg-accent/10 text-accent-soft border border-accent/20">
               {messages.length}
             </span>
           )}
@@ -147,7 +153,7 @@ export const ProposalChat = memo(function ProposalChat({
                           className="w-3.5 h-3.5 rounded object-contain bg-raised"
                           onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                         />
-                        <span className="text-[10px] font-semibold text-ink-3 truncate max-w-[150px]">
+                        <span className="text-[11px] font-semibold text-ink-3 truncate max-w-[150px]">
                           {msg.senderTeamName || 'Rival'}
                         </span>
                       </div>
@@ -161,7 +167,7 @@ export const ProposalChat = memo(function ProposalChat({
                     >
                       <p className="leading-snug">{msg.text}</p>
                       {timeStr && (
-                        <span className={`block text-[9px] mt-0.5 text-right font-medium ${
+                        <span className={`block text-[11px] mt-0.5 text-right font-medium ${
                           isMine ? 'text-accent-soft' : 'text-ink-3'
                         }`}>
                           {timeStr}
@@ -186,7 +192,7 @@ export const ProposalChat = memo(function ProposalChat({
               <input
                 type="text"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => { setText(e.target.value); if (sendError) setSendError(''); }}
                 placeholder="Escribí un mensaje..."
                 aria-label="Escribir mensaje de negociación"
                 maxLength={400}
@@ -197,12 +203,15 @@ export const ProposalChat = memo(function ProposalChat({
                 type="submit"
                 disabled={!text.trim() || isSending}
                 className="w-7 h-7 rounded-lg bg-accent hover:bg-accent text-ink flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                title={isSending ? 'Hay una operación en curso' : !text.trim() ? 'Completa los datos requeridos primero' : 'Enviar mensaje'}
+                title={isSending ? 'Hay una operación en curso' : !text.trim() ? 'Escribí un mensaje' : 'Enviar mensaje'}
                 aria-label="Enviar mensaje"
               >
                 <Send className="w-3 h-3" />
               </button>
             </form>
+          )}
+          {sendError && !isClosed && (
+            <p role="alert" className="pt-1 text-[11px] font-medium text-danger-soft">{sendError}</p>
           )}
         </div>
       )}

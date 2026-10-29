@@ -1,12 +1,18 @@
 import React, { useRef, useState, useEffect, useMemo, memo } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { X, ShoppingCart, DollarSign, ArrowRight, History, ClipboardList } from 'lucide-react';
+import '../utils/chartSetup.js';
+import { X, ShoppingCart, DollarSign, ArrowRight, History, ClipboardList, Lock } from 'lucide-react';
 import { formatPriceShort, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
-import { DEFAULT_BUDGET } from '../utils/constants.js';
+import { DEFAULT_BUDGET, TRANSFER_FEE_RATE } from '../utils/constants.js';
+import { buildClubLedger } from '../utils/clubLedger.js';
+import { budgetMeter } from '../utils/budgetDisplay.js';
+import { isOfferExpired, offerTimeLeft } from '../supabase/functions/_shared/offerExpiry.js';
+import { formatTimeLeft } from '../utils/marketCountdown.js';
 import { db } from '../config/firebase.js';
 import { TransferPlayerCard } from './TransferPlayerCard.jsx';
 import { ProposalChat } from './ProposalChat.jsx';
 import { BaseModal } from './ui/BaseModal.jsx';
+import { confirmAction } from './ui/ConfirmDialog.jsx';
 import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
 import { Tabs } from './ui/Tabs.jsx';
@@ -37,16 +43,27 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
       <div className="flex-1 min-w-0 pointer-events-none">
         <p className="text-sm font-semibold text-ink truncate group-hover:text-accent-soft transition-colors">{player.Name}</p>
         <p className="mt-1 flex items-center gap-2 text-xs">
-          <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
-          <span className="num text-ink-3">{formatPriceShort(precio)}</span>
+          <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+          {/* The franchise player costs nothing from the budget (hooks/useBudget.js), so no price for him. */}
+          {player.isFranchise
+            ? <span className="font-semibold text-accent-soft">Franquicia</span>
+            : <span className="num text-ink-3">{formatPriceShort(precio)}</span>}
         </p>
       </div>
       <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 pointer-events-none ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
-      <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        className="relative btn btn-ghost btn-icon btn-sm text-ink-3 hover:text-danger-soft"
-        title="Quitar del plantel" aria-label={`Quitar a ${player.Name} del plantel`}>
-        <X className="w-4 h-4" aria-hidden="true" />
-      </button>
+      {/* Un Jugador Franquicia no se libera (el servidor lo rechaza; el admin resetea la franquicia). */}
+      {player.isFranchise ? (
+        <span className="relative w-8 h-8 shrink-0 flex items-center justify-center text-accent-soft" title="El Jugador Franquicia no se puede liberar">
+          <Lock className="w-4 h-4" aria-hidden="true" />
+          <span className="sr-only">Jugador Franquicia: no se puede liberar</span>
+        </span>
+      ) : (
+        <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="relative btn btn-ghost btn-icon btn-sm text-ink-3 hover:text-danger-soft"
+          title="Quitar del plantel" aria-label={`Quitar a ${player.Name} del plantel`}>
+          <X className="w-4 h-4" aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 });
@@ -64,12 +81,13 @@ function getOfferStatusLabel(status) {
 
 const STATUS_TONE = { pending: 'text-warning-soft', countered: 'text-warning-soft', accepted: 'text-success-soft', rejected: 'text-danger-soft', withdrawn: 'text-ink-3' };
 
+// The live team name first: the names stored in the offer are written by its sender.
 function getOfferTargetName(offer, allTeams) {
-  return offer.targetTeamName || allTeams?.[offer.targetTeamId]?.teamName || 'Equipo rival';
+  return allTeams?.[offer.targetTeamId]?.teamName || offer.targetTeamName || 'Equipo rival';
 }
 
 function getOfferSenderName(offer, allTeams) {
-  return offer.senderTeamName || allTeams?.[offer.senderId]?.teamName || 'Equipo comprador';
+  return allTeams?.[offer.senderId]?.teamName || offer.senderTeamName || 'Equipo comprador';
 }
 
 const OfferTimeline = memo(function OfferTimeline({ offer }) {
@@ -123,6 +141,26 @@ const NegotiationCard = memo(function NegotiationCard({
   const targetName = getOfferTargetName(offer, allTeams);
   const activeAmount = getOfferAmount(offer);
   const busyTitle = isProcessing ? 'Hay una operación en curso' : undefined;
+  // Each turn has 48 hours (supabase/functions/_shared/offerExpiry.js). An expired offer can still be rejected or
+  // withdrawn to tidy up, but not accepted or countered, and it no longer holds the buyer's money.
+  const isOpenOffer = !isHistory && (offer.status === 'pending' || offer.status === 'countered');
+  const timeLeft = isOpenOffer ? offerTimeLeft(offer) : null;
+  const isExpired = isOpenOffer && isOfferExpired(offer);
+  const expiredTitle = isExpired ? 'La oferta venció: pasaron 48 horas sin respuesta' : undefined;
+  // When the other club answers (counter, re-offer, rejection) the card glows once, so the change is noticed
+  // while reading another offer. Restarting a CSS animation needs the class removed and a reflow in between.
+  const cardRef = useRef(null);
+  const previousStateRef = useRef(`${offer.status}:${activeAmount}`);
+  useEffect(() => {
+    const state = `${offer.status}:${activeAmount}`;
+    if (previousStateRef.current === state) return;
+    previousStateRef.current = state;
+    const el = cardRef.current;
+    if (!el) return;
+    el.classList.remove('row-flash');
+    void el.offsetWidth;
+    el.classList.add('row-flash');
+  }, [offer.status, activeAmount]);
   const transferData = {
     ...offer,
     price: (activeAmount || 0) / 1000000,
@@ -136,7 +174,7 @@ const NegotiationCard = memo(function NegotiationCard({
   };
 
   return (
-    <article className="panel-flat p-4 sm:p-5" aria-label={`Negociación por ${offer.playerName}`}>
+    <article ref={cardRef} className="panel-flat p-4 sm:p-5" aria-label={`Negociación por ${offer.playerName}`}>
       {offer.status === 'accepted' ? (
         <TransferPlayerCard transfer={transferData} player={livePlayer} allTeams={allTeams} compact />
       ) : (
@@ -163,6 +201,13 @@ const NegotiationCard = memo(function NegotiationCard({
               <span className={`text-xs font-semibold ${STATUS_TONE[offer.status] || 'text-ink-3'}`}>{getOfferStatusLabel(offer.status)}</span>
               <span className="font-display num text-2xl font-bold text-ink">{formatPriceShort((activeAmount || 0) / 1000000)}</span>
             </div>
+            {timeLeft !== null && (
+              <p className={`-mt-2 mb-3 text-xs ${isExpired ? 'font-semibold text-warning-soft' : 'text-ink-3'}`}>
+                {isExpired
+                  ? (isIncoming ? 'Vencida: pasaron 48 h sin respuesta.' : 'Vencida: ya no reserva tu presupuesto.')
+                  : <>Vence en <span className="num">{formatTimeLeft(timeLeft)}</span></>}
+              </p>
+            )}
 
             {!isHistory && counteringOfferId === offer.id ? (
               <div className="flex w-full flex-wrap items-center gap-2">
@@ -182,8 +227,8 @@ const NegotiationCard = memo(function NegotiationCard({
                 {isIncoming ? (
                   <>
                     <button type="button" onClick={() => onReject(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-danger">Rechazar</button>
-                    <button type="button" onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing} title={busyTitle} className="btn btn-secondary">Contraofertar</button>
-                    <button type="button" onClick={() => onAccept(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-primary">Aceptar</button>
+                    <button type="button" onClick={() => { setCounteringOfferId(offer.id); setCounterAmount(''); }} disabled={isProcessing || isExpired} title={busyTitle || expiredTitle} className="btn btn-secondary">Contraofertar</button>
+                    <button type="button" onClick={() => onAccept(offer)} disabled={isProcessing || isExpired} title={busyTitle || expiredTitle} className="btn btn-primary">Aceptar</button>
                   </>
                 ) : (
                   <button type="button" onClick={() => onWithdraw(offer)} disabled={isProcessing} title={busyTitle} className="btn btn-danger col-span-3">Retirar oferta</button>
@@ -204,7 +249,7 @@ const NegotiationCard = memo(function NegotiationCard({
   );
 });
 
-export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, onRemoveFromCart, userProfile, userId, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage }) {
+export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, isSquadLoading = false, onRemoveFromCart, userProfile, userId, budgetBase, budgetPercent, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage, isMarketOpen = true }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingOfferRef = useRef(null);
@@ -229,20 +274,31 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     return map;
   }, [allPlayers]);
 
+  const offerPlayer = (offer) => playerMap.get(String(offer.playerId)) || { Id: offer.playerId, Name: offer.playerName };
+
   const handleAcceptOffer = async (offer) => {
     if (isProcessing || processingOfferRef.current) return;
+    if (!isMarketOpen) {
+      showStatusMessage?.('error', 'El mercado está cerrado: las ofertas se aceptan cuando abra.');
+      return;
+    }
+    // The only offer action that cannot be undone (rejecting and withdrawing already asked).
+    const price = formatPriceShort(getOfferAmount(offer) / 1000000);
+    const isConfirmed = await confirmAction({
+      title: '¿Aceptar la oferta?',
+      player: offerPlayer(offer),
+      amount: price,
+      message: `${offer.playerName} pasa a ${getOfferSenderName(offer, allTeams)}.`,
+      confirmLabel: 'Aceptar oferta',
+      tone: 'primary',
+      irreversible: true,
+    });
+    if (!isConfirmed) return;
     processingOfferRef.current = offer?.id || 'unknown';
     setIsProcessing(true);
     showStatusMessage?.('loading', `Aceptando la oferta por ${offer.playerName}...`);
     try {
-      await acceptTransferOffer({
-        db,
-        offer,
-        userId,
-        allPlayers,
-        playerMap,
-        allTeams,
-      });
+      await acceptTransferOffer({ offer, userId });
       showStatusMessage?.('success', `Traspaso confirmado: ${offer.playerName} ahora pertenece a ${getOfferSenderName(offer, allTeams)}.`);
 
     } catch (err) {
@@ -256,13 +312,21 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   const handleRejectOffer = async (offer) => {
     if (isProcessing) return;
-    if (!window.confirm(`¿Seguro que quieres rechazar la oferta por ${offer.playerName}?`)) return;
+    const isConfirmed = await confirmAction({
+      title: '¿Rechazar la oferta?',
+      player: offerPlayer(offer),
+      amount: formatPriceShort(getOfferAmount(offer) / 1000000),
+      message: `${getOfferSenderName(offer, allTeams)} recibe el aviso y el jugador sigue en tu plantel.`,
+      confirmLabel: 'Rechazar oferta',
+    });
+    if (!isConfirmed) return;
     setIsProcessing(true);
     showStatusMessage?.('loading', `Rechazando la oferta por ${offer.playerName}...`);
     try {
       await rejectTransferOffer({
         db,
         offer,
+        userId,
         teamName: userProfile?.teamName || 'Equipo',
       });
       showStatusMessage?.('success', `Oferta por ${offer.playerName} rechazada.`);
@@ -276,13 +340,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   const handleCounterOffer = async (offer) => {
     if (isProcessing || !counterAmount || isNaN(counterAmount)) return;
-    const livePlayer = allPlayers?.find(p => p.Id === offer.playerId);
+    const livePlayer = playerMap.get(String(offer.playerId));
     setIsProcessing(true);
     showStatusMessage?.('loading', `Enviando contraoferta por ${offer.playerName}...`);
     try {
       await counterTransferOffer({
         db,
         offer,
+        userId,
         counterAmountMillions: counterAmount,
         livePlayer,
         teamName: userProfile?.teamName || 'Equipo',
@@ -300,13 +365,21 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   const handleWithdrawOffer = async (offer) => {
     if (isProcessing) return;
-    if (!window.confirm(`¿Seguro que quieres retirar la oferta por ${offer.playerName}?`)) return;
+    const isConfirmed = await confirmAction({
+      title: '¿Retirar la oferta?',
+      player: offerPlayer(offer),
+      amount: formatPriceShort(getOfferAmount(offer) / 1000000),
+      message: 'El dinero reservado vuelve a tu presupuesto. Podés volver a ofertar después.',
+      confirmLabel: 'Retirar oferta',
+    });
+    if (!isConfirmed) return;
     setIsProcessing(true);
     showStatusMessage?.('loading', `Retirando la oferta por ${offer.playerName}...`);
     try {
       await withdrawTransferOffer({
         db,
         offer,
+        userId,
         teamName: userProfile?.teamName || 'Equipo',
       });
       showStatusMessage?.('success', `Oferta por ${offer.playerName} retirada.`);
@@ -321,6 +394,11 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
 
   // --- LÓGICA DE ESTADÍSTICAS ---
+  const ledger = useMemo(
+    () => buildClubLedger({ squad: cart, offerHistory, userId: userId || userProfile?.uid, feeRate: TRANSFER_FEE_RATE }),
+    [cart, offerHistory, userId, userProfile?.uid],
+  );
+
   const statsData = useMemo(() => {
     const totalPlayers = cart.length;
     const avgOvr = totalPlayers > 0 ? Math.round(cart.reduce((acc, p) => acc + p.OVR_CALCULADO, 0) / totalPlayers) : 0;
@@ -396,17 +474,21 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   if (!isVisible && !isPage) return null;
 
-  const initialBudget = userProfile?.budget || DEFAULT_BUDGET || 0;
+  // Same base as "Disponible" (useBudget): the profile copy of the budget goes stale after a transfer.
+  const { base: initialBudget, percent: budgetPct } = budgetMeter({
+    base: budgetBase, profileBudget: userProfile?.budget, defaultBudget: DEFAULT_BUDGET, remaining: remainingBudget, percent: budgetPercent,
+  });
   const activeCommitted = committedInOffers !== undefined
     ? committedInOffers
     : (sentOffers || []).filter(o => o.senderId === userId && o.status === 'pending').reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
-  const budgetPct = initialBudget > 0 ? Math.min(100, Math.max(0, (remainingBudget / initialBudget) * 100)) : 0;
-  const budgetTone = budgetPct > 50 ? 'bg-success' : budgetPct > 20 ? 'bg-warning' : 'bg-danger';
+  // One tone for the "Disponible" figure and its meter: accent, warning from 20% down (the budget alert's
+  // threshold, hooks/useBudget.js), danger once nothing is left.
+  const availableTone = remainingBudget <= 0 ? 'danger' : budgetPct <= 20 ? 'warning' : 'accent';
+  const meterTone = { danger: 'bg-danger', warning: 'bg-warning', accent: 'bg-accent' }[availableTone];
+  // Same format as every other price in the app ($12.50M). Keeps the sign: an overdrawn budget reads -$3.20M.
   const fmtM = (val) => {
-    const v = Math.abs(val || 0);
-    if (v >= 1000000) return `$${(v / 1000000).toFixed(2)}M`;
-    if (v >= 1000) return `$${(v / 1000).toFixed(0)}K`;
-    return `$${v}`;
+    const v = Number(val) || 0;
+    return v < 0 ? `-${formatPriceShort(-v / 1000000)}` : formatPriceShort(v / 1000000);
   };
 
   const tabs = [
@@ -414,7 +496,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     { id: 'offers', label: 'Recibidas', count: incomingOffers?.length || 0 },
     { id: 'sent', label: 'Enviadas', count: sentOffers?.length || 0 },
     { id: 'history', label: 'Historial', count: offerHistory?.length || 0 },
-    { id: 'stats', label: 'Gráficos' },
+    { id: 'stats', label: 'Finanzas' },
   ];
 
   const negotiationProps = {
@@ -425,13 +507,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const finances = (
     <section aria-label="Balance financiero" className="border-y border-line/[0.08] py-5">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
-        <Stat label="Presupuesto inicial" value={fmtM(initialBudget)} size="sm" />
-        <Stat label="Gastado en el plantel" value={fmtM(totalCartCost)} size="sm" />
-        <Stat label="Comprometido en ofertas" value={fmtM(activeCommitted)} size="sm" tone={activeCommitted > 0 ? 'warning' : 'default'} hint="Ofertas enviadas pendientes" />
-        <Stat label="Disponible" value={fmtM(remainingBudget)} size="sm" tone={remainingBudget > 0 ? 'accent' : 'danger'} hint={`${budgetPct.toFixed(0)}% del inicial`} />
+        {/* Short labels: each fits one line at 360px; the detail goes in the hint. */}
+        <Stat label="Presupuesto" value={fmtM(initialBudget)} size="sm" hint="Cambia con los traspasos" />
+        <Stat label="Gastado" value={fmtM(totalCartCost)} size="sm" hint="En el plantel" />
+        <Stat label="En ofertas" value={fmtM(activeCommitted)} size="sm" tone={activeCommitted > 0 ? 'warning' : 'default'} hint="Enviadas, pendientes" />
+        <Stat label="Disponible" value={fmtM(remainingBudget)} size="sm" tone={availableTone} hint={`${budgetPct.toFixed(0)}% del presupuesto`} />
       </div>
       <div className="mt-4 h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(budgetPct)} aria-label="Presupuesto disponible">
-        <div className={`h-full rounded-full transition-[width] duration-500 ${budgetTone}`} style={{ width: `${budgetPct}%` }} />
+        <div className={`h-full rounded-full transition-[width] duration-move ${meterTone}`} style={{ width: `${budgetPct}%` }} />
       </div>
     </section>
   );
@@ -439,7 +522,11 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const content = (
     <>
       {activeTab === 'players' && (
-        cart.length === 0 ? (
+        isSquadLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5" role="status" aria-label="Cargando el plantel">
+            {Array.from({ length: 8 }, (_, i) => <div key={i} className="skeleton h-[70px] rounded-xl" />)}
+          </div>
+        ) : cart.length === 0 ? (
           <EmptyState icon={ShoppingCart} title="Tu plantel está vacío" description="Explorá el mercado para fichar jugadores." />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
@@ -485,6 +572,32 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
       {activeTab === 'stats' && (
         <div className="space-y-6">
+          <section className="panel-flat p-5" aria-labelledby="cart-ledger">
+            <h3 id="cart-ledger" className="eyebrow mb-4">Movimientos de la temporada</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Stat label="Fichajes" value={fmtM(ledger.totals.spentOnSignings)} hint={`${ledger.signings.length} jugadores`} size="sm" />
+              <Stat label="Compras" value={fmtM(ledger.totals.spentOnPurchases)} hint={`${ledger.purchases.length} traspasos`} size="sm" />
+              <Stat label="Ventas (neto)" value={fmtM(ledger.totals.receivedFromSales)} hint={`comisión ${fmtM(ledger.totals.fees)}`} size="sm" />
+              <Stat label="Balance" value={fmtM(ledger.totals.net)} tone={ledger.totals.net < 0 ? 'danger' : 'accent'} size="sm" />
+            </div>
+            {(ledger.purchases.length > 0 || ledger.sales.length > 0) && (
+              <ul className="mt-4 divide-y divide-line/[0.08] text-sm">
+                {ledger.purchases.map(row => (
+                  <li key={`buy-${row.id}`} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 truncate text-ink-2">Compra · <span className="text-ink">{row.name}</span>{row.club ? ` de ${row.club}` : ''}</span>
+                    <span className="num font-semibold text-danger-soft shrink-0">-{fmtM(row.amount)}</span>
+                  </li>
+                ))}
+                {ledger.sales.map(row => (
+                  <li key={`sale-${row.id}`} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 truncate text-ink-2">Venta · <span className="text-ink">{row.name}</span>{row.club ? ` a ${row.club}` : ''}</span>
+                    <span className="num font-semibold text-success-soft shrink-0">+{fmtM(row.net)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 text-xs text-ink-3">Los fichajes cuentan a precio de catálogo; las ventas, después de la comisión de la liga. El presupuesto disponible es el de arriba.</p>
+          </section>
           <div className="grid grid-cols-3 gap-6">
             <Stat label="Media del plantel" value={statsData.avgOvr} tone="accent" size="sm" />
             <Stat label="Edad promedio" value={statsData.avgAge} hint="años" size="sm" />

@@ -1,6 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import { useExitAnimation } from '../../hooks/usePresence.js';
 import { X } from 'lucide-react';
-import { isTyping } from '../../hooks/useKeyboardShortcuts.js';
+import { useModalDialog, hasOpenModalDialog } from '../../hooks/useModalDialog.js';
+
+/** True while any modal dialog is open. The app's global Escape listener leaves Escape to it (app.jsx). */
+export const hasOpenBaseModal = hasOpenModalDialog;
 
 const SIZE_MAP = {
   sm: 'max-w-md',
@@ -26,67 +30,19 @@ export function BaseModal({
   contentClassName = '',
 }) {
   const dialogRef = useRef(null);
-  // Parents usually pass an inline onClose (a new function on every render). Reading it through a ref
-  // keeps the focus effect below tied to opening/closing only: re-running it on each render moved the
-  // focus to the first focusable control (the close button) while the user was typing in a field.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  // Focus trap, Escape, scroll lock and focus return (hooks/useModalDialog.js, shared with hand-made dialogs).
+  useModalDialog(dialogRef, isOpen, onClose);
 
-  // Keep keyboard focus inside the dialog and return it to the trigger on close.
-  // This is deliberately centralized so every consumer gets the same baseline.
-  useEffect(() => {
-    if (!isOpen) return;
+  // Exit: a dialog whose isOpen turns false stays mounted with data-closing while it animates out. Focus, the
+  // dialog stack and the page scroll are released at once (the effect above), and the leaving copy is inert.
+  // Callers that unmount the whole component (route modals rendered with &&) still close at once.
+  const [isMounted, setIsMounted] = useState(isOpen);
+  if (isOpen && !isMounted) setIsMounted(true);
+  const isClosing = isMounted && !isOpen;
+  const backdropRef = useRef(null);
+  useExitAnimation(backdropRef, isClosing, () => setIsMounted(false));
 
-    const previouslyFocused = document.activeElement;
-    const getFocusableElements = () => dialogRef.current?.querySelectorAll(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    ) || [];
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        // Escape inside a field leaves the field first; it never closes the dialog while typing.
-        if (isTyping(e.target)) {
-          e.target.blur?.();
-          return;
-        }
-        onCloseRef.current?.();
-        return;
-      }
-
-      if (e.key === 'Tab') {
-        const focusable = Array.from(getFocusableElements());
-        if (focusable.length === 0) {
-          e.preventDefault();
-          dialogRef.current?.focus();
-          return;
-        }
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
-    const firstFocusable = getFocusableElements()[0];
-    (firstFocusable || dialogRef.current)?.focus();
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  if (!isMounted) return null;
 
   const sizeClass = SIZE_MAP[size] || SIZE_MAP.md;
 
@@ -95,13 +51,16 @@ export function BaseModal({
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel || (typeof title === 'string' ? title : 'Ventana emergente')}
-      className="fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in"
-      onClick={onClose}
+      ref={backdropRef}
+      className="modal-backdrop fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in"
+      data-closing={isClosing ? '' : undefined}
+      inert={isClosing ? '' : undefined}
+      onClick={isClosing ? undefined : onClose}
     >
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={`bg-surface border border-line/[0.14] rounded-t-2xl sm:rounded-2xl w-full shadow-lg flex flex-col overflow-hidden max-h-[94dvh] sm:max-h-[92dvh] animate-in slide-in-from-bottom sm:zoom-in-95 ${sizeClass} ${className}`}
+        className={`modal-panel bg-surface border border-line/[0.14] rounded-t-2xl sm:rounded-2xl w-full shadow-lg flex flex-col overflow-hidden max-h-[94dvh] sm:max-h-[92dvh] max-sm:pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom sm:zoom-in-95 ${sizeClass} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -138,7 +97,7 @@ export function BaseModal({
         )}
 
         {/* Content */}
-        <div className={`p-5 overflow-y-auto custom-scrollbar flex-1 min-h-0 ${contentClassName}`}>
+        <div className={`p-5 overflow-y-auto overscroll-contain custom-scrollbar flex-1 min-h-0 ${contentClassName}`}>
           {children}
         </div>
 

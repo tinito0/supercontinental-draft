@@ -13,11 +13,14 @@ import { readField } from './core/fields.js';
 import { EDIT_TACTICS, EDIT_TAKER_ROLES, EDIT_STRATEGY } from './formats/pes2021/editLayout.js';
 import { PesValidationError } from './core/errors.js';
 import { TACTICS_STRATEGY } from './formats/pes2021/tacticsLayout.js';
+import { toGameCoords, normalizeFormationStates, exportVariants, PES_POSITION_MAP } from '../utils/formationStates.js';
+import { instructionSlots } from '../utils/advancedInstructions.js';
 
-/** App position code → PES role (same table as utils/pesExport.js PES_POSITION_MAP). */
-export const PES_POSITION_MAP = { PT: 0, DFC: 1, LI: 2, LD: 3, MCD: 4, MC: 5, MI: 6, MD: 7, MO: 8, EI: 9, ED: 10, SD: 11, DC: 12 };
+/** App position code → PES role; one table shared with utils/pesExport.js (kept exported here for callers). */
+export { PES_POSITION_MAP };
 
-const NAME_FIELDS = ['nameJapanese', 'nameSpanish', 'nameLatamSpanish', 'nameEnglish', 'nameUSEnglish', 'nameItalian', 'namePortuguese',
+/** Team.bin name fields written when a team is renamed (every language plus the database name). */
+export const NAME_FIELDS = ['nameJapanese', 'nameSpanish', 'nameLatamSpanish', 'nameEnglish', 'nameUSEnglish', 'nameItalian', 'namePortuguese',
   'nameBrazilian', 'nameFrench', 'nameGerman', 'nameDutch', 'nameSwedish', 'nameRussian', 'nameGreek', 'nameTurkish', 'nameSimplifiedChinese', 'nameDatabase'];
 const SUPER = { uid: 'draft-transfer', role: 'super_admin' };
 const enc = new TextEncoder();
@@ -37,9 +40,9 @@ export function abbreviationOf(name) {
   return String(name || '').normalize('NFD').replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() || 'SCL';
 }
 
-/** App pitch (x 0..100 left→right, y 0 attack .. 90 own goal) → EDIT (depth, lateral); formula of pesExport.js. */
+/** App pitch (x 0..100 left→right, y 0 attack .. 90 own goal) → EDIT (depth, lateral); shared with pesExport.js. */
 export function toPitch(slot) {
-  return [clamp((90 - slot.y) * 0.46 + 3, 3, 48), clamp(slot.x, 8, 92)];
+  return toGameCoords(slot);
 }
 
 /** App tactics → EDIT strategy bytes. Pressuring is inverted; "numbers in" go 0..2 → 1..3. */
@@ -82,9 +85,13 @@ const TAKER_SCORE = {
  */
 export function buildSquadSpec(team, { formations, defaultTactics = {}, playerTable = null }) {
   const warnings = [], errors = [];
-  const formation = formations[team.formation] || formations['4-3-3'];
+  const formationKey = formations[team.formation] ? team.formation : '4-3-3';
+  const formation = formations[formationKey];
   if (!formations[team.formation]) warnings.push(`Formación "${team.formation}" desconocida: se usa 4-3-3.`);
   const layout = formation.layout.slice(0, 11);
+  // Inicio de partido / Con pelota / Sin pelota: the 3 formation variants (equal while fluid is off).
+  const states = normalizeFormationStates(team.formationStates, formationKey, formation);
+  const variantLayouts = exportVariants(formation, states).map(l => l.slice(0, 11));
   const players = (team.players || []).filter(p => Number.isInteger(idOf(p)) && idOf(p) > 0);
   const byId = new Map(players.map(p => [idOf(p), p]));
   if (players.length > 40) errors.push(`Tiene ${players.length} jugadores; el juego admite 40.`);
@@ -105,7 +112,7 @@ export function buildSquadSpec(team, { formations, defaultTactics = {}, playerTa
       const next = rest.shift();
       used.add(next);
       starterIds[k] = next;
-      warnings.push(`Puesto ${layout[entries[k]].pos} sin titular: se usa a ${byId.get(next)?.Name || (playerTable?.has(next) ? playerTable.get(next, 'name') : next)}.`);
+      warnings.push(`Puesto ${variantLayouts[0][entries[k]].pos} sin titular: se usa a ${byId.get(next)?.Name || (playerTable?.has(next) ? playerTable.get(next, 'name') : next)}.`);
     }
   });
   const ordered = [...starterIds.filter(id => id != null), ...players.map(idOf).filter(id => !used.has(id))].slice(0, 40);
@@ -130,8 +137,10 @@ export function buildSquadSpec(team, { formations, defaultTactics = {}, playerTa
 
   const slotOf = id => roster.findIndex(r => r.playerId === id);
   const lineup = starterIds.map(id => slotOf(id));
-  const roles = [0, ...entries.slice(1).map(i => PES_POSITION_MAP[layout[i].pos] ?? 5)];
-  const pos = [EDIT_TACTICS.gkPosition, ...entries.slice(1).map(i => toPitch(layout[i]))];
+  // Each variant keeps its own roles, as the EDIT does: the user may change a slot's role per tactical state.
+  const rolesOf = l => [0, ...entries.slice(1).map(i => PES_POSITION_MAP[l[i].pos] ?? 5)];
+  const posOf = l => [EDIT_TACTICS.gkPosition, ...entries.slice(1).map(i => toPitch(l[i]))];
+  const variants = variantLayouts.map(l => ({ roles: rolesOf(l), pos: posOf(l) }));
 
   // Captain and takers: the user's picks; empty picks are filled with the best starter (Rebuilt scores).
   const sp = team.setPieces || {};
@@ -163,7 +172,9 @@ export function buildSquadSpec(team, { formations, defaultTactics = {}, playerTa
     spec: {
       players: roster.map(({ playerId, number }) => ({ playerId, number })),
       lineup,
-      formation: { roles, pos },
+      formation: variants[0],
+      ...(states.fluid ? { variants } : {}),
+      advanced: instructionSlots(team.advancedInstructions),
       strategy: strategyFromTactics(team.tactics, defaultTactics),
       captain,
       takers,
@@ -227,12 +238,14 @@ export function planDraftTransfer(ws, draftTeams, mapping, options) {
     if (ws.edit && !ws.edit.teams.has(pesId)) errors.push(`"${t.name}": el equipo del juego ${pesId} no existe en el EDIT.`);
     if (isNational(ws, pesId)) warnings.push(`"${t.name}" reemplaza a una selección nacional (${pesId}).`);
   }
+  // Squad problems found while loading (services/draftTeamsService.js), e.g. cart rows without a lock.
+  for (const t of teams) (t.squadWarnings || []).forEach(w => warnings.push(`"${t.name}": ${w}`));
   const owner = new Map();
   for (const t of teams) {
     for (const p of t.players || []) {
       const id = idOf(p);
-      if (owner.has(id) && owner.get(id) !== t.name) errors.push(`${p.Name || id} está en "${owner.get(id)}" y en "${t.name}".`);
-      owner.set(id, t.name);
+      if (owner.has(id) && owner.get(id) !== t) errors.push(`${p.Name || id} está en "${owner.get(id).name}" y en "${t.name}".`);
+      owner.set(id, t);
       if (playerTable && !playerTable.has(id) && !ws.edit?.players.has(id)) {
         errors.push(`"${t.name}": ${p.Name || id} (id ${id}) no existe en la base cargada. ¿Se generó jugadores.json desde otra base?`);
       }
@@ -302,7 +315,7 @@ export function planDraftTransfer(ws, draftTeams, mapping, options) {
         run(editOps.map(op => ({ ...op, batch: 'draft.transfer' })));
       }
       if (ws.bin?.tables.tactics && ws.bin.tables.team?.has(pesTeamId)) {
-        run([{ type: 'bin.team.tactics', target: { teamId: pesTeamId }, value: { strategy: binStrategyFromTactics(t.tactics, options.defaultTactics), formation: spec.formation }, batch: 'draft.transfer' }]);
+        run([{ type: 'bin.team.tactics', target: { teamId: pesTeamId }, value: { strategy: binStrategyFromTactics(t.tactics, options.defaultTactics), formation: spec.formation, ...(spec.variants ? { variants: spec.variants } : {}) }, batch: 'draft.transfer' }]);
       }
       const coach = options.coaches?.[t.id];
       if (coach?.name?.trim()) {

@@ -16,6 +16,16 @@ export function formatPriceShort(priceInMillions) {
   return `$${priceInMillions.toFixed(2)}M`;
 }
 
+/**
+ * Rounded price for browsing (marketplace cards and rows): $95M, $4.8M, $0.75M. The exact value
+ * (formatPriceShort) stays in the player sheet, the hover preview, accessible labels and budget maths.
+ */
+export function formatPriceCompact(priceInMillions) {
+  if (typeof priceInMillions !== 'number' || isNaN(priceInMillions)) return "$0M";
+  const decimals = priceInMillions >= 10 ? 0 : priceInMillions >= 1 ? 1 : 2;
+  return `$${Number(priceInMillions.toFixed(decimals))}M`;
+}
+
 export function formatBudget(amount) {
   return currencyFormatter.format(amount);
 }
@@ -34,6 +44,13 @@ export const getRegionById = (countryId) => {
 export function normalizarString(text) {
   if (typeof text !== 'string') return "";
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+const GLITCH_CHECK_STATS = ['Finishing', 'DefensiveAwareness', 'Speed', 'BallControl', 'LowPass'];
+
+/** Jugadores con stats "glitcheadas" (todas 80 o todas 40): no se muestran ni se pueden fichar. */
+export function isGlitchedPlayer(player) {
+  return [80, 40].some(value => GLITCH_CHECK_STATS.every(key => Number(player?.[key]) === value));
 }
 
 export function processPlayersData(playersData) {
@@ -111,10 +128,10 @@ export function getStatAndOvrColorClass(value) {
 
 export function getPosColor(valorAptitud) {
   const apt = Number(valorAptitud);
-  if (apt === 3) return { bgColor: '#00b34a', textColor: '#ffffff' };
+  if (apt === 3) return { bgColor: '#00b34a', textColor: '#1e1e1e' };
   if (apt === 2) return { bgColor: '#a0dd00', textColor: '#1e1e1e' };
   if (apt === 1) return { bgColor: '#ffc400', textColor: '#1e1e1e' };
-  return { bgColor: '#333', textColor: '#777' };
+  return { bgColor: '#333', textColor: '#9ca3af' };
 }
 
 export function getFlagCode(countryId) {
@@ -129,4 +146,10 @@ export function getFlagUrl(countryId) {
     return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMCAyMCI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjNzc3NzciLz48cGF0aCBkPSJNMCAxNSBoMzAgbDAgNSBoLTMwIHoiIGZpbGw9IiM0NDQiLz48L3N2Zy>";
   }
   return `https://flagcdn.com/24x18/${code}.png`;
+}
+
+/** Valor para <input type="datetime-local"> en hora local (toISOString() daría UTC). */
+export function toLocalDateTimeInput(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

@@ -3,8 +3,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { SearchBar, countActiveFilters } from '../components/SearchBar.jsx';
-import { FiltrosModal, getActiveFilters } from '../components/FiltrosModal.jsx';
+import { SearchBar } from '../components/SearchBar.jsx';
+import { FiltrosModal } from '../components/FiltrosModal.jsx';
+import { getActiveFilterChips, countActiveFilters, isInvertedRange } from '../utils/marketFilters.js';
 import { isTyping } from '../hooks/useKeyboardShortcuts.js';
 
 const baseFilters = {
@@ -15,21 +16,19 @@ const baseFilters = {
 const searchBar = (filters = baseFilters) => renderToString(React.createElement(SearchBar, {
   filters, setFilters: vi.fn(), resetFilters: vi.fn(), setIsFiltrosModalVisible: vi.fn(),
   sortConfig: { key: 'ovr', direction: 'desc' }, setSortConfig: vi.fn(),
-  viewMode: 'grid', setViewMode: vi.fn(), gridColumns: 4, setGridColumns: vi.fn(), resultCount: 10, totalCount: 10,
+  viewMode: 'grid', setViewMode: vi.fn(), density: 'comfortable', setDensity: vi.fn(), totalCount: 10,
 }));
 
 const buttons = html => [...html.matchAll(/<button\b[^>]*>/g)].map(m => m[0]);
 
 describe('marketplace search bar', () => {
-  it('the clear (X) button can never be the form default button', () => {
+  it('the clear (X) button can never be the form default button (the search is live, no submit button)', () => {
     const html = searchBar({ ...baseFilters, name: 'messi' });
     const clear = buttons(html).find(b => b.includes('Borrar texto de búsqueda'));
     expect(clear).toBeDefined();
     expect(clear).toContain('type="button"');
-    // Enter submits through the only submit button, "Buscar".
-    const submits = buttons(html).filter(b => b.includes('type="submit"'));
-    expect(submits).toHaveLength(1);
-    expect(html.indexOf('type="submit"')).toBeGreaterThan(-1);
+    // Enter in the search field submits the search form implicitly; no button can be "pressed" by it.
+    expect(buttons(html).filter(b => b.includes('type="submit"'))).toHaveLength(0);
   });
 
   it('every other control declares type="button" (no accidental submit or navigation)', () => {
@@ -44,11 +43,34 @@ describe('marketplace search bar', () => {
     expect(html).not.toMatch(/⭐/);
   });
 
-  it('counts active filters the same way as before the redesign', () => {
+  it('counts one per chip; the name search and "Solo favoritos" are not counted', () => {
     expect(countActiveFilters(baseFilters)).toBe(0);
     expect(countActiveFilters({ ...baseFilters, ovrMin: '80', pos: 'DC', grupos: { Delanteros: true }, skills: { Rabona: true } })).toBe(4);
-    // The name search is a search, not a filter.
-    expect(countActiveFilters({ ...baseFilters, name: 'messi' })).toBe(0);
+    expect(countActiveFilters({ ...baseFilters, ovrMin: '80', ovrMax: '90' })).toBe(1);
+    expect(countActiveFilters({ ...baseFilters, name: 'messi', wishlistOnly: true })).toBe(0);
+  });
+
+  it('shows stat ranges and skills as chips and counts them (they used to be invisible in the toolbar)', () => {
+    const filters = { ...baseFilters, SpeedMin: '85', skills: { Trickster: true } };
+    const labels = getActiveFilterChips(filters).map(chip => chip.label);
+    expect(labels).toEqual(['Mago del balón', 'Velocidad 85–99']);
+    expect(countActiveFilters(filters)).toBe(2);
+    const html = searchBar(filters);
+    expect(html).toContain('Velocidad 85–99');
+    expect(html).toContain('Limpiar filtros');
+  });
+
+  it('each chip clears only its own filter', () => {
+    const filters = { ...baseFilters, ageMin: '18', ageMax: '23', pos: 'DC', SpeedMin: '85', SpeedMax: '99' };
+    const chips = getActiveFilterChips(filters);
+    const afterAge = chips.find(chip => chip.id === 'age').clear(filters);
+    expect(afterAge).toMatchObject({ ageMin: '', ageMax: '', pos: 'DC', SpeedMin: '85' });
+    const afterSpeed = chips.find(chip => chip.id === 'stat-Speed').clear(filters);
+    expect(afterSpeed).toMatchObject({ SpeedMin: '', SpeedMax: '', ageMin: '18' });
+  });
+
+  it('never shows the name search as a chip', () => {
+    expect(getActiveFilterChips({ ...baseFilters, name: 'messi' })).toEqual([]);
   });
 });
 
@@ -65,8 +87,18 @@ describe('filters dialog', () => {
     for (const b of buttons(html)) expect(b).toContain('type="button"');
   });
 
-  it('lists the active filters in Spanish', () => {
-    expect(getActiveFilters({ ...baseFilters, ovrMin: '80', grupos: { Arqueros: true } })).toEqual(['OVR mín: 80', 'Arqueros']);
+  it('lists the active filters in Spanish, as removable chips, and shows the result count', () => {
+    expect(getActiveFilterChips({ ...baseFilters, ovrMin: '80', grupos: { Arqueros: true } }).map(chip => chip.label)).toEqual(['OVR 80–99', 'Arqueros']);
+    const html = dialog({ ...baseFilters, ovrMin: '80' });
+    expect(html).toContain('Quitar filtro OVR 80–99');
+    expect(html).toContain('1 filtro activo');
+  });
+
+  it('flags an inverted range instead of silently returning nothing', () => {
+    expect(isInvertedRange('90', '80')).toBe(true);
+    expect(isInvertedRange('80', '90')).toBe(false);
+    expect(isInvertedRange('80', '')).toBe(false);
+    expect(dialog({ ...baseFilters, ovrMin: '90', ovrMax: '80' })).toContain('El mínimo es mayor que el máximo');
   });
 });
 

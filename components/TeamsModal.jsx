@@ -53,6 +53,8 @@ export const TeamsModal = memo(function TeamsModal({
   isVisible,
   onClose,
   allTeams,
+  currentUserId,
+  isLoading = false,
   playerLocks,
   allPlayers,
   countryMap,
@@ -111,10 +113,11 @@ export const TeamsModal = memo(function TeamsModal({
     });
   }, [playersByTeam]);
 
-  // Filtrado y ordenamiento de equipos
+  // Filtrado y ordenamiento de equipos. La lista son los rivales: el club propio queda fuera
+  // (los totales de la liga, más abajo, sí lo cuentan).
   const filteredAndSortedTeams = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    let result = teamStats;
+    let result = currentUserId ? teamStats.filter(team => team.userId !== currentUserId) : teamStats;
 
     if (query) {
       result = result.filter(team => {
@@ -136,7 +139,7 @@ export const TeamsModal = memo(function TeamsModal({
       if (sortOption === 'players-desc') return b.players.length - a.players.length;
       return (a.teamName || '').localeCompare(b.teamName || '');
     });
-  }, [teamStats, searchQuery, selectedPosGroup, sortOption]);
+  }, [teamStats, currentUserId, searchQuery, selectedPosGroup, sortOption]);
 
   // Handlers para colapsar/expandir acordeón
   const toggleTeamCollapse = (teamId) => {
@@ -210,9 +213,17 @@ export const TeamsModal = memo(function TeamsModal({
     </div>
   );
 
-  const list = filteredAndSortedTeams.length === 0 ? (
-    <EmptyState icon={Users} title="No se encontraron clubes" description="Probá con otra búsqueda o quitá el filtro de línea."
-      actionLabel={filtersActive ? 'Restablecer filtros' : undefined} onAction={filtersActive ? () => { setSearchQuery(''); setSelectedPosGroup('TODOS'); } : undefined} />
+  const list = isLoading ? (
+    <ul className="space-y-3" role="status" aria-label="Cargando los clubes">
+      {Array.from({ length: 5 }, (_, i) => <li key={i} className="skeleton h-[72px] rounded-2xl" />)}
+    </ul>
+  ) : filteredAndSortedTeams.length === 0 ? (
+    filtersActive ? (
+      <EmptyState icon={Users} title="No se encontraron clubes" description="Probá con otra búsqueda o quitá el filtro de línea."
+        actionLabel="Restablecer filtros" onAction={() => { setSearchQuery(''); setSelectedPosGroup('TODOS'); }} />
+    ) : (
+      <EmptyState icon={Users} title="Todavía no hay otros clubes" description="Cuando los demás managers armen su club, sus planteles van a aparecer acá." />
+    )
   ) : (
     <ul className="space-y-3">
       {filteredAndSortedTeams.map(team => {
@@ -253,7 +264,7 @@ export const TeamsModal = memo(function TeamsModal({
             </div>
 
             {!isCollapsed && (
-              <div id={panelId} className="border-t border-line/[0.08] px-3 sm:px-5 py-4 space-y-5">
+              <div id={panelId} className="border-t border-line/[0.08] px-3 sm:px-5 py-4 space-y-5 animate-in fade-in">
                 {team.players.length === 0 ? (
                   <p className="py-4 text-center text-sm text-ink-3">Este club todavía no fichó jugadores.</p>
                 ) : displayedPlayers.length === 0 ? (
@@ -293,7 +304,7 @@ export const TeamsModal = memo(function TeamsModal({
                                       {isTopStar && <Star className="w-3.5 h-3.5 shrink-0 fill-current text-warning-soft" aria-label="Figura del plantel" />}
                                     </span>
                                     <span className="flex items-center gap-2 mt-0.5 text-xs text-ink-3">
-                                      <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                                      <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                                       <img src={getFlagUrl(player.Country1)} className="w-4 h-3 rounded-[2px] shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} alt="" />
                                       {player.Age ? <span>{player.Age} años</span> : null}
                                       <span className="num">{formatPriceShort(player.Precio)}</span>
@@ -319,10 +330,10 @@ export const TeamsModal = memo(function TeamsModal({
 
   const summary = (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 border-y border-line/[0.08] py-4">
-      <Stat label="Clubes" value={leagueSummary.totalTeams} size="sm" />
-      <Stat label="Jugadores fichados" value={leagueSummary.totalSignedPlayers} size="sm" />
-      <Stat label="Gasto de la liga" value={formatPriceShort(leagueSummary.totalSpent)} size="sm" />
-      <Stat label="Media de la liga" value={leagueSummary.leagueAvgOvr || '—'} size="sm" tone="accent" />
+      <Stat label="Clubes de la liga" value={isLoading ? '—' : leagueSummary.totalTeams} size="sm" />
+      <Stat label="Jugadores fichados" value={isLoading ? '—' : leagueSummary.totalSignedPlayers} size="sm" />
+      <Stat label="Gasto de la liga" value={isLoading ? '—' : formatPriceShort(leagueSummary.totalSpent)} size="sm" />
+      <Stat label="Media de la liga" value={(!isLoading && leagueSummary.leagueAvgOvr) || '—'} size="sm" tone="accent" />
     </div>
   );
 

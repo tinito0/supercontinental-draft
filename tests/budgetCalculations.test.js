@@ -1,81 +1,105 @@
+// Budget arithmetic: the app (hooks/useBudget.js calculateBudget) and the market function
+// (supabase/functions/_shared/market.js getCommittedFunds) share supabase/functions/_shared/budget.js.
+// The parity tests feed both the same locks and offers. Synthetic data only.
 import { describe, it, expect } from 'vitest';
+import { calculateBudget } from '../hooks/useBudget.js';
+import { committedInOffers, heldAmount, isFranchiseLock, spentOnLocks } from '../supabase/functions/_shared/budget.js';
+import { getCommittedFunds, marketPaths } from '../supabase/functions/_shared/market.js';
 
-function calculateCartCost(ownedCart = [], userProfile) {
-  return ownedCart.reduce((total, player) => {
-    const isFranchise = player.isFranchise || (userProfile?.franchisePlayerId === player.Id);
-    return total + (isFranchise ? 0 : (Number(player.Precio) || 0) * 1000000);
-  }, 0);
-}
+const PRICES = { 10: 25.0, 11: 15.0, 12: 12.5, 13: 7.35 };
+const priceOf = id => PRICES[id] ?? 0;
 
-function calculateCommittedOffers(sentOffers = [], userId) {
-  if (!userId || !sentOffers) return 0;
-  return sentOffers
-    .filter(o => o.senderId === userId && o.status === 'pending')
-    .reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
-}
+describe('budget.js', () => {
+  it('charges owned non-franchise players at their price', () => {
+    const owned = [['10', { isFranchise: true }], ['11', { isFranchise: false }], ['12', {}]];
+    expect(spentOnLocks(owned, priceOf)).toBe(27500000);
+  });
 
-function calculateRemainingBudget(userProfile, totalCartCost, committedInOffers) {
-  if (!userProfile) return 0;
-  const baseBudget = Number(userProfile.budget) || 0;
-  return baseBudget - totalCartCost - committedInOffers;
-}
+  it('falls back to franchisePlayerId only for locks without the flag', () => {
+    expect(isFranchiseLock('10', {}, 10)).toBe(true);
+    expect(isFranchiseLock('10', { isFranchise: false }, '10')).toBe(false); // released and signed again
+    expect(isFranchiseLock('11', {}, '10')).toBe(false);
+    expect(spentOnLocks([['10', {}], ['11', {}]], priceOf, { franchisePlayerId: '10' })).toBe(15000000);
+  });
 
-function calculateBudgetPercent(remainingBudget, totalBudget) {
-  if (!totalBudget || totalBudget <= 0) return 100;
-  return Math.max(0, (remainingBudget / totalBudget) * 100);
-}
+  it('rounds each price to whole units like the server', () => {
+    expect(spentOnLocks([['13', {}]], priceOf)).toBe(7350000);
+  });
 
-describe('Budget Financial Calculations (useBudget core logic)', () => {
-  const userProfile = {
-    budget: 100000000, // 100M
-    franchisePlayerId: '10'
+  it('never lets an offer amount release money', () => {
+    expect([-1e12, 'abc', NaN, Infinity, null, 0].map(heldAmount)).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(committedInOffers([{ id: 'a', offerAmount: 5000000 }, { id: 'b', offerAmount: -1e12 }])).toBe(5000000);
+    expect(committedInOffers([{ id: 'a', offerAmount: 5000000 }], { excludeOfferId: 'a' })).toBe(0);
+  });
+});
+
+describe('calculateBudget (app)', () => {
+  const locks = {
+    10: { lockedBy: 'user-1', isFranchise: true },
+    11: { lockedBy: 'user-1', isFranchise: false },
+    12: { lockedBy: 'user-1' },
+    13: { lockedBy: 'user-2' },
   };
-
-  const sampleRoster = [
-    { Id: '10', Name: 'Messi', Precio: 25.0 }, // Franchise player -> $0 cost
-    { Id: '11', Name: 'De Paul', Precio: 15.0 }, // $15M
-    { Id: '12', Name: 'Romero', Precio: 12.5 }, // $12.5M
+  const offers = [
+    { id: 'o1', senderId: 'user-1', status: 'pending', offerAmount: 5000000 },
+    { id: 'o2', senderId: 'user-1', status: 'pending', offerAmount: 3000000 },
+    { id: 'o3', senderId: 'user-1', status: 'rejected', offerAmount: 10000000 },
+    { id: 'o4', senderId: 'user-1', status: 'countered', offerAmount: 4000000 },
+    { id: 'o5', senderId: 'user-2', status: 'pending', offerAmount: 8000000 },
   ];
 
-  it('correctly calculates totalCartCost excluding franchise players', () => {
-    const cost = calculateCartCost(sampleRoster, userProfile);
-    // 15M + 12.5M = 27.5M (27,500,000)
-    expect(cost).toBe(27500000);
+  it('subtracts owned players (from locks, not the cart) and pending offers from the team budget', () => {
+    const budget = calculateBudget({ baseBudget: 100000000, playerLocks: locks, userId: 'user-1', sentOffers: offers, priceOf });
+    expect(budget).toEqual({ base: 100000000, spent: 27500000, committed: 8000000, remaining: 64500000 });
   });
 
-  it('respects player.isFranchise flag on player object', () => {
-    const roster = [
-      { Id: '20', Name: 'Mbappe', Precio: 30.0, isFranchise: true },
-      { Id: '21', Name: 'Camavinga', Precio: 10.0 }
-    ];
-    const cost = calculateCartCost(roster, { budget: 100000000 });
-    expect(cost).toBe(10000000);
+  it('counts a player bought in a transfer before any cart copy exists', () => {
+    const afterTransfer = { ...locks, 13: { lockedBy: 'user-1', isFranchise: false } };
+    expect(calculateBudget({ baseBudget: 100000000, playerLocks: afterTransfer, userId: 'user-1', priceOf }).spent).toBe(34850000);
   });
+});
 
-  it('calculates committed funds only for pending offers sent by the current user', () => {
-    const offers = [
-      { senderId: 'user-1', status: 'pending', offerAmount: 5000000 },
-      { senderId: 'user-1', status: 'pending', offerAmount: 3000000 },
-      { senderId: 'user-1', status: 'rejected', offerAmount: 10000000 },
-      { senderId: 'user-1', status: 'accepted', offerAmount: 4000000 },
-      { senderId: 'user-2', status: 'pending', offerAmount: 8000000 }, // Rival offer
-    ];
+/** Minimal stand-in for the REST transaction: only the two queries getCommittedFunds runs. */
+function fakeTx(paths, { locks, offers }) {
+  const matches = (data, filters) => filters.every(([field, , value]) => data[field] === value);
+  return {
+    async query(collectionPath, filters) {
+      const source = collectionPath === paths.locks ? locks : offers;
+      return Object.entries(source)
+        .filter(([, data]) => matches(data, filters))
+        .map(([id, data]) => ({ id, data }));
+    },
+  };
+}
 
-    const committed = calculateCommittedOffers(offers, 'user-1');
-    expect(committed).toBe(8000000); // Only pending from user-1
-  });
+describe('app and market function agree', () => {
+  const paths = marketPaths('test-app');
+  const catalog = Object.fromEntries(Object.entries(PRICES).map(([id, price]) => [id, [price, 30, 80, 'P', 'DC', 1]]));
+  const cases = {
+    'franchise, legacy lock and pending offers': {
+      locks: { 10: { lockedBy: 'u', isFranchise: true }, 11: { lockedBy: 'u' }, 12: { lockedBy: 'u', isFranchise: false }, 13: { lockedBy: 'v' } },
+      offers: { a: { senderId: 'u', status: 'pending', offerAmount: 12000000 }, b: { senderId: 'u', status: 'countered', offerAmount: 1 }, c: { senderId: 'v', status: 'pending', offerAmount: 5 } },
+      franchisePlayerId: undefined,
+    },
+    'legacy franchise lock without the flag': {
+      locks: { 10: { lockedBy: 'u' }, 13: { lockedBy: 'u' } },
+      offers: {},
+      franchisePlayerId: 10,
+    },
+    'forged negative offer': {
+      locks: { 11: { lockedBy: 'u' } },
+      offers: { a: { senderId: 'u', status: 'pending', offerAmount: -1e12 } },
+      franchisePlayerId: undefined,
+    },
+  };
 
-  it('calculates remaining budget taking into account roster and committed transfers', () => {
-    const cartCost = 27500000;
-    const committed = 8000000;
-    const remaining = calculateRemainingBudget(userProfile, cartCost, committed);
-    // 100M - 27.5M - 8M = 64.5M
-    expect(remaining).toBe(64500000);
-  });
-
-  it('calculates budget percentage and clamps to zero if overspent', () => {
-    expect(calculateBudgetPercent(50000000, 100000000)).toBe(50);
-    expect(calculateBudgetPercent(15000000, 100000000)).toBe(15);
-    expect(calculateBudgetPercent(-5000000, 100000000)).toBe(0);
-  });
+  for (const [name, { locks, offers, franchisePlayerId }] of Object.entries(cases)) {
+    it(name, async () => {
+      const server = await getCommittedFunds(fakeTx(paths, { locks, offers }), paths, catalog, 'u', { franchisePlayerId });
+      const sentOffers = Object.entries(offers).map(([id, data]) => ({ id, ...data }));
+      const client = calculateBudget({ baseBudget: 200000000, playerLocks: locks, userId: 'u', sentOffers, priceOf, franchisePlayerId });
+      expect(client.spent + client.committed).toBe(server);
+      expect(server).toBeGreaterThanOrEqual(0);
+    });
+  }
 });

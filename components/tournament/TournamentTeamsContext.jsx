@@ -2,13 +2,14 @@ import React, { createContext, useContext, memo } from 'react';
 
 export const TournamentTeamsContext = createContext([]);
 
-export const TeamSelect = memo(function TeamSelect({ value, onChange, className = '' }) {
+export const TeamSelect = memo(function TeamSelect({ value, onChange, className = '', 'aria-label': ariaLabel }) {
   const teams = useContext(TournamentTeamsContext);
   const currentValue = value || '';
   const hasCurrentValue = currentValue && !teams.some(team => team.name === currentValue);
   return (
     <select
       value={currentValue}
+      aria-label={ariaLabel}
       onChange={event => onChange(event.target.value)}
       className={`bg-surface text-ink rounded-lg border border-line/[0.12] px-2 py-1 outline-none focus:border-accent text-xs transition-colors ${className}`}
     >

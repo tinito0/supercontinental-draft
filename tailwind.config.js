@@ -5,6 +5,8 @@ const token = name => `rgb(var(--c-${name}) / <alpha-value>)`;
 
 export default {
   darkMode: 'class',
+  // hover: solo con puntero real (@media (hover: hover)): en el celular un toque no deja el hover pegado.
+  future: { hoverOnlyWhenSupported: true },
   content: [
     "./index.html",
     "./*.jsx",
@@ -29,18 +31,11 @@ export default {
           deep: token('accent-deep'),
         },
         'on-accent': token('on-accent'),
+        // Competition marks only (the franchise player), never interaction: docs/DESIGN_SYSTEM.md principle 3.
+        crest: { DEFAULT: token('crest-lavender'), soft: token('crest-lavender-soft') },
         success: { DEFAULT: token('success'), soft: token('success-soft') },
         warning: { DEFAULT: token('warning'), soft: token('warning-soft') },
         danger: { DEFAULT: token('danger'), soft: token('danger-soft') },
-        info: { DEFAULT: token('accent'), soft: token('accent-soft') },
-        // Previous names, kept so older classes keep resolving to the same tokens.
-        brand: {
-          bg: token('canvas'),
-          surface: token('surface'),
-          'surface-elevated': token('raised'),
-          accent: token('accent'),
-          'accent-hover': token('accent-hover'),
-        },
       },
       fontFamily: {
         sans: ['Barlow', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
@@ -71,6 +66,20 @@ export default {
       },
       maxWidth: {
         page: '1440px',
+      },
+      // Motion tokens (index.css --dur-*, --ease-*). ease-in/out/in-out are redefined so every class uses the app's curves.
+      // DEFAULT: a bare `transition` / `transition-colors` without a duration class lands on the scale (was Tailwind's 150ms).
+      transitionDuration: {
+        DEFAULT: 'var(--dur-fast)',
+        fast: 'var(--dur-fast)',
+        base: 'var(--dur-base)',
+        move: 'var(--dur-move)',
+      },
+      transitionTimingFunction: {
+        DEFAULT: 'var(--ease-out)',
+        out: 'var(--ease-out)',
+        in: 'var(--ease-in)',
+        'in-out': 'var(--ease-in-out)',
       },
     },
   },

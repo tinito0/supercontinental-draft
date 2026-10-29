@@ -1,21 +1,6 @@
 import JSZip from 'jszip';
 import { FORMATIONS, DEFAULT_TACTICS } from './constants.js';
-
-const PES_POSITION_MAP = {
-  PT: 0,
-  DFC: 1,
-  LI: 2,
-  LD: 3,
-  MCD: 4,
-  MC: 5,
-  MI: 6,
-  MD: 7,
-  MO: 8,
-  EI: 9,
-  ED: 10,
-  SD: 11,
-  DC: 12,
-};
+import { normalizeFormationStates, exportVariants, toGameCoords, PES_POSITION_MAP } from './formationStates.js';
 
 let cachedMasterCsv = null;
 let masterCsvHeaders = '';
@@ -175,13 +160,18 @@ export async function generatePlayersCsv(allTeamPlayers, onProgress) {
   };
 }
 
+/** Texto libre para una celda de los CSV de EJOGC (separados por ';', sin comillas): sin ';' ni saltos de línea. */
+function csvText(value) {
+  return String(value ?? '').replace(/[;\r\n]+/g, ' ').replace(/ {2,}/g, ' ').trim();
+}
+
 /**
  * Genera Team.csv con el ID de PES destino, el nombre del equipo de la liga y su país
  */
 export function generateTeamCsv(teamId, teamName, teamNationality = 204) {
   const headers = "Id;Name;Country;Stadium;Coach;National;NameJapanese;NameSpanish;NameLatamSpanish;NameEnglish;NameUSEnglish;NameItalian;NamePortuguese;NameBrazilian;NameFrench;NameGerman;NameDutch;NameSwedish;NameRussian;NameGreek;NameTurkish;NameSimplifiedChinese;NameDatabase;NameEmpty1;NameEmpty2;NameEmpty3;NameEmpty4;ShortNameLicensed;ShortNameFake;Abbreviation;Commentary;StadiumFile;StadiumName;StadiumFileName;EmblemFile;EmblemFileName;Rival1;Rival2;Rival3;Banner1;Banner2;Banner3;Banner4;Kit1;Kit2;Kit3;Kit4;Kit5;Kit6;Kit7;Kit8;Kit9;Kit10;TeamColor1R;TeamColor1G;TeamColor1B;TeamColor2R;TeamColor2G;TeamColor2B;TurfPattern;SidelineColour;SeatColour;GoalStyle;NetPattern;GoalNettingDesign;GoalNettingColor1R;GoalNettingColor1G;GoalNettingColor1B;GoalNettingColor2R;GoalNettingColor2G;GoalNettingColor2B;Sponsor1;Sponsor2;Sponsor3;SponsorFile1;SponsorFile2;SponsorFile3;SponsorColorR;SponsorColorG;SponsorColorB;EditName;EditEmblem;EditStadium;EditStadiumName;EditStadiumFile;EditStadiumDetails;EditStadiumDetails2;EditRivals;EditBanners;EditTeamColors;EditCoach;EditSponsorFile;EditSponsorColors;EditSponsor;Edit1;Fake;LicencedPlayers;LicencedKits;LicencedCoach;LicencedCoach2;FeederTeam;ParentTeam;NonPlayableLeague;HasAnthem;AnthemStandingStyle;AnthemPlayersSinging;AnthemStandingAngle;Value1;Value2;Value3;Value4;Value5;Value6;Value7;ValueFF;Team2020_1;Team2020_2;Team2020_3;Team2020_4;Team2020_5;Team2020_6;Team2020_7;Team2020_8;Team2020_9;Team2020_10;Team2020_11;Country2020_1;Country2020_2;Country2020_3;Country2020_4;Country2020_5;Value2020_1;Value2020_2;Value2020_3;Value2020_4;Value2020_5;Value2020_6;Value2020_7;Value2020_8;Value2020_9;Value2020_10;Value2020_11;Value2020_12;Value2020_13;Value2020_14;Value2020_15;Value2020_16;Value2020_17";
 
-  const safeName = (teamName || 'Equipo').substring(0, 32);
+  const safeName = csvText(teamName || 'Equipo').substring(0, 32);
   const abbr = safeName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase() || 'SCL';
   const coachId = (parseInt(teamId, 10) * 1000) + 1;
   const countryId = parseInt(teamNationality, 10) || 204;
@@ -198,34 +188,34 @@ export function generateCoachCsv(teamId, coachName = 'Director Técnico', coachN
   const headers = "Id;Name;Country;JapName;Adaptability;Photo;Photo_file;EditName;EditCountry;EditPhoto;EditIntern;Value1;Value2;Value3;Value4;Value5;Value6";
   const coachId = (parseInt(teamId, 10) * 1000) + 1;
   const countryId = parseInt(coachNationality, 10) || 204;
-  const row = `${coachId};${coachName};${countryId};;85;0;;False;False;False;False;0;0;0;-1;-1;-1`;
+  const row = `${coachId};${csvText(coachName)};${countryId};;85;0;;False;False;False;False;0;0;0;-1;-1;-1`;
   return `${headers}\n${row}\n`;
 }
 
 /**
- * Genera Formation.csv mapeando slots, coordenadas y roles de pateadores
+ * Genera Formation.csv mapeando slots, coordenadas y roles de pateadores.
+ * F1/F2/F3 = Inicio de partido / Con pelota / Sin pelota (EJOGC: "Normal", "With ball", "Without ball");
+ * con la formación fluida apagada las tres son la de inicio. Las columnas AdvancedAtt/AdvancedDef quedan en 0:
+ * los códigos del juego están verificados para el EDIT (utils/advancedInstructions.js), pero no cómo los numera
+ * el CSV de EJOGC (su lista tiene otro orden), así que las instrucciones solo se escriben en el traspaso al EDIT.
  */
-export function generateFormationCsv(teamId, formationKey, starters, setPieces = {}, allPlayers = [], tactics = {}) {
-  const formation = FORMATIONS[formationKey] || FORMATIONS['4-3-3'];
-  const layout = formation.layout || FORMATIONS['4-3-3'].layout;
+export function generateFormationCsv(teamId, formationKey, starters, setPieces = {}, allPlayers = [], tactics = {}, formationStates = null) {
+  const key = FORMATIONS[formationKey] ? formationKey : '4-3-3';
+  const formation = FORMATIONS[key];
+  const states = normalizeFormationStates(formationStates, key, formation);
 
   // Header completo de Formation.csv
   const headers = "Id;Position1F1S1;Position2F1S1;Position3F1S1;Position4F1S1;Position5F1S1;Position6F1S1;Position7F1S1;Position8F1S1;Position9F1S1;Position10F1S1;Position11F1S1;LocationX1F1S1;LocationY1F1S1;LocationX2F1S1;LocationY2F1S1;LocationX3F1S1;LocationY3F1S1;LocationX4F1S1;LocationY4F1S1;LocationX5F1S1;LocationY5F1S1;LocationX6F1S1;LocationY6F1S1;LocationX7F1S1;LocationY7F1S1;LocationX8F1S1;LocationY8F1S1;LocationX9F1S1;LocationY9F1S1;LocationX10F1S1;LocationY10F1S1;LocationX11F1S1;LocationY11F1S1;Position1F2S1;Position2F2S1;Position3F2S1;Position4F2S1;Position5F2S1;Position6F2S1;Position7F2S1;Position8F2S1;Position9F2S1;Position10F2S1;Position11F2S1;LocationX1F2S1;LocationY1F2S1;LocationX2F2S1;LocationY2F2S1;LocationX3F2S1;LocationY3F2S1;LocationX4F2S1;LocationY4F2S1;LocationX5F2S1;LocationY5F2S1;LocationX6F2S1;LocationY6F2S1;LocationX7F2S1;LocationY7F2S1;LocationX8F2S1;LocationY8F2S1;LocationX9F2S1;LocationY9F2S1;LocationX10F2S1;LocationY10F2S1;LocationX11F2S1;LocationY11F2S1;Position1F3S1;Position2F3S1;Position3F3S1;Position4F3S1;Position5F3S1;Position6F3S1;Position7F3S1;Position8F3S1;Position9F3S1;Position10F3S1;Position11F3S1;LocationX1F3S1;LocationY1F3S1;LocationX2F3S1;LocationY2F3S1;LocationX3F3S1;LocationY3F3S1;LocationX4F3S1;LocationY4F3S1;LocationX5F3S1;LocationY5F3S1;LocationX6F3S1;LocationY6F3S1;LocationX7F3S1;LocationY7F3S1;LocationX8F3S1;LocationY8F3S1;LocationX9F3S1;LocationY9F3S1;LocationX10F3S1;LocationY10F3S1;LocationX11F3S1;LocationY11F3S1;AttackingStylesS1;BuildUpS1;AttackingAreaS1;PositioningS1;SupportRangeS1;NumbersInAttackS1;DefensiveStylesS1;ContainmentAreaS1;PressuringS1;DefensiveLineS1;CompactnessS1;NumbersInDefenseS1;FluidS1;AdvancedAtt1S1;AdvancedAtt2S1;AdvancedDef1S1;AdvancedDef2S1;FFS1;Value1S1;Value2S1;Value3S1;Value4S1;Value5S1;Position1F1S2;Position2F1S2;Position3F1S2;Position4F1S2;Position5F1S2;Position6F1S2;Position7F1S2;Position8F1S2;Position9F1S2;Position10F1S2;Position11F1S2;LocationX1F1S2;LocationY1F1S2;LocationX2F1S2;LocationY2F1S2;LocationX3F1S2;LocationY3F1S2;LocationX4F1S2;LocationY4F1S2;LocationX5F1S2;LocationY5F1S2;LocationX6F1S2;LocationY6F1S2;LocationX7F1S2;LocationY7F1S2;LocationX8F1S2;LocationY8F1S2;LocationX9F1S2;LocationY9F1S2;LocationX10F1S2;LocationY10F1S2;LocationX11F1S2;LocationY11F1S2;Position1F2S2;Position2F2S2;Position3F2S2;Position4F2S2;Position5F2S2;Position6F2S2;Position7F2S2;Position8F2S2;Position9F2S2;Position10F2S2;Position11F2S2;LocationX1F2S2;LocationY1F2S2;LocationX2F2S2;LocationY2F2S2;LocationX3F2S2;LocationY3F2S2;LocationX4F2S2;LocationY4F2S2;LocationX5F2S2;LocationY5F2S2;LocationX6F2S2;LocationY6F2S2;LocationX7F2S2;LocationY7F2S2;LocationX8F2S2;LocationY8F2S2;LocationX9F2S2;LocationY9F2S2;LocationX10F2S2;LocationY10F2S2;LocationX11F2S2;LocationY11F2S2;Position1F3S2;Position2F3S2;Position3F3S2;Position4F3S2;Position5F3S2;Position6F3S2;Position7F3S2;Position8F3S2;Position9F3S2;Position10F3S2;Position11F3S2;LocationX1F3S2;LocationY1F3S2;LocationX2F3S2;LocationY2F3S2;LocationX3F3S2;LocationY3F3S2;LocationX4F3S2;LocationY4F3S2;LocationX5F3S2;LocationY5F3S2;LocationX6F3S2;LocationY6F3S2;LocationX7F3S2;LocationY7F3S2;LocationX8F3S2;LocationY8F3S2;LocationX9F3S2;LocationY9F3S2;LocationX10F3S2;LocationY10F3S2;LocationX11F3S2;LocationY11F3S2;AttackingStylesS2;BuildUpS2;AttackingAreaS2;PositioningS2;SupportRangeS2;NumbersInAttackS2;DefensiveStylesS2;ContainmentAreaS2;PressuringS2;DefensiveLineS2;CompactnessS2;NumbersInDefenseS2;FluidS2;AdvancedAtt1S2;AdvancedAtt2S2;AdvancedDef1S2;AdvancedDef2S2;FFS2;Value1S2;Value2S2;Value3S2;Value4S2;Value5S2;Position1F1S3;Position2F1S3;Position3F1S3;Position4F1S3;Position5F1S3;Position6F1S3;Position7F1S3;Position8F1S3;Position9F1S3;Position10F1S3;Position11F1S3;LocationX1F1S3;LocationY1F1S3;LocationX2F1S3;LocationY2F1S3;LocationX3F1S3;LocationY3F1S3;LocationX4F1S3;LocationY4F1S3;LocationX5F1S3;LocationY5F1S3;LocationX6F1S3;LocationY6F1S3;LocationX7F1S3;LocationY7F1S3;LocationX8F1S3;LocationY8F1S3;LocationX9F1S3;LocationY9F1S3;LocationX10F1S3;LocationY10F1S3;LocationX11F1S3;LocationY11F1S3;Position1F2S3;Position2F2S3;Position3F2S3;Position4F2S3;Position5F2S3;Position6F2S3;Position7F2S3;Position8F2S3;Position9F2S3;Position10F2S3;Position11F2S3;LocationX1F2S3;LocationY1F2S3;LocationX2F2S3;LocationY2F2S3;LocationX3F2S3;LocationY3F2S3;LocationX4F2S3;LocationY4F2S3;LocationX5F2S3;LocationY5F2S3;LocationX6F2S3;LocationY6F2S3;LocationX7F2S3;LocationY7F2S3;LocationX8F2S3;LocationY8F2S3;LocationX9F2S3;LocationY9F2S3;LocationX10F2S3;LocationY10F2S3;LocationX11F2S3;LocationY11F2S3;Position1F3S3;Position2F3S3;Position3F3S3;Position4F3S3;Position5F3S3;Position6F3S3;Position7F3S3;Position8F3S3;Position9F3S3;Position10F3S3;Position11F3S3;LocationX1F3S3;LocationY1F3S3;LocationX2F3S3;LocationY2F3S3;LocationX3F3S3;LocationY3F3S3;LocationX4F3S3;LocationY4F3S3;LocationX5F3S3;LocationY5F3S3;LocationX6F3S3;LocationY6F3S3;LocationX7F3S3;LocationY7F3S3;LocationX8F3S3;LocationY8F3S3;LocationX9F3S3;LocationY9F3S3;LocationX10F3S3;LocationY10F3S3;LocationX11F3S3;LocationY11F3S3;AttackingStylesS3;BuildUpS3;AttackingAreaS3;PositioningS3;SupportRangeS3;NumbersInAttackS3;DefensiveStylesS3;ContainmentAreaS3;PressuringS3;DefensiveLineS3;CompactnessS3;NumbersInDefenseS3;FluidS3;AdvancedAtt1S3;AdvancedAtt2S3;AdvancedDef1S3;AdvancedDef2S3;FFS3;Value1S3;Value2S3;Value3S3;Value4S3;Value5S3;IndexPlayer1;IndexPlayer2;IndexPlayer3;IndexPlayer4;IndexPlayer5;IndexPlayer6;IndexPlayer7;IndexPlayer8;IndexPlayer9;IndexPlayer10;IndexPlayer11;IndexPlayer12;IndexPlayer13;IndexPlayer14;IndexPlayer15;IndexPlayer16;IndexPlayer17;IndexPlayer18;IndexPlayer19;IndexPlayer20;IndexPlayer21;IndexPlayer22;IndexPlayer23;IndexPlayer24;IndexPlayer25;IndexPlayer26;IndexPlayer27;IndexPlayer28;IndexPlayer29;IndexPlayer30;IndexPlayer31;IndexPlayer32;IndexPlayer33;IndexPlayer34;IndexPlayer35;IndexPlayer36;IndexPlayer37;IndexPlayer38;IndexPlayer39;IndexPlayer40;Captain;ShortFK;LongFK;RightCorner;LeftCorner;Penalty;SecondKicker;Header1;Header2;Header3;AutoSubstitutions;OffsideTrap;SwitchTactics;AutoChangeAttDef;Value1;Value2;Zeros";
 
-  // 11 posiciones numéricas y coordenadas calculadas
-  const positions = layout.slice(0, 11).map(slot => PES_POSITION_MAP[slot.pos] ?? 5);
-  const locPairs = layout.slice(0, 11).map(slot => {
-    const pesX = Math.max(3, Math.min(48, Math.round((90 - slot.y) * 0.46 + 3)));
-    const pesY = Math.max(8, Math.min(92, Math.round(slot.x)));
-    return `${pesX};${pesY}`;
-  });
+  // Por cada estado táctico: sus 11 posiciones numéricas (cada estado tiene sus propios roles) y sus coordenadas
+  const formationsChunk = exportVariants(formation, states)
+    .map(layout => layout.slice(0, 11))
+    .map(slots => `${slots.map(slot => PES_POSITION_MAP[slot.pos] ?? 5).join(';')};${slots.map(slot => toGameCoords(slot).join(';')).join(';')}`)
+    .join(';');
 
-  const positionsString = positions.join(';');
-  const locationsString = locPairs.join(';');
-
-  // Estrategia real configurada por el equipo (Preset S1)
+  // Estrategia real configurada por el equipo (Preset S1); FluidS = formación fluida (Con pelota / Sin pelota)
   const t = { ...DEFAULT_TACTICS, ...(tactics || {}) };
-  const strategyChunk = `${t.attackingStyles ?? 1};${t.buildUp ?? 1};${t.attackingArea ?? 1};${t.positioning ?? 1};${t.supportRange ?? 6};${t.numbersInAttack ?? 2};${t.defensiveStyles ?? 0};${t.containmentArea ?? 0};${t.pressuring ?? 0};${t.defensiveLine ?? 8};${t.compactness ?? 2};${t.numbersInDefense ?? 0};0;0;0;0;0;0;0;0;0;0;0`;
+  const strategyChunk = `${t.attackingStyles ?? 1};${t.buildUp ?? 1};${t.attackingArea ?? 1};${t.positioning ?? 1};${t.supportRange ?? 6};${t.numbersInAttack ?? 2};${t.defensiveStyles ?? 0};${t.containmentArea ?? 0};${t.pressuring ?? 0};${t.defensiveLine ?? 8};${t.compactness ?? 2};${t.numbersInDefense ?? 0};${states.fluid ? 1 : 0};0;0;0;0;0;0;0;0;0;0`;
 
   // IndexPlayer1..40 (mapeo secuencial 0..39 a los 40 slots del Roster)
   const indexPlayers = Array.from({ length: 40 }, (_, i) => i).join(';');
@@ -253,8 +243,9 @@ export function generateFormationCsv(teamId, formationKey, starters, setPieces =
 
   const rolesString = `${captainIdx};${shortFkIdx};${longFkIdx};${rightCornerIdx};${leftCornerIdx};${penaltyIdx};${secondKickerIdx};${header1Idx};${header2Idx};${header3Idx};0;0;0;0;0;0;0`;
 
-  // F1S1, F2S1, F3S1 repetidos para preset ofensivo, defensivo y custom
-  const row = `${teamId};${positionsString};${locationsString};${positionsString};${locationsString};${positionsString};${locationsString};${strategyChunk};${positionsString};${locationsString};${positionsString};${locationsString};${positionsString};${locationsString};${strategyChunk};${positionsString};${locationsString};${positionsString};${locationsString};${positionsString};${locationsString};${strategyChunk};${indexPlayers};${rolesString}`;
+  // F1..F3 + estrategia repetidos en los presets S1, S2 y S3
+  const preset = `${formationsChunk};${strategyChunk}`;
+  const row = `${teamId};${preset};${preset};${preset};${indexPlayers};${rolesString}`;
 
   return `${headers}\n${row}\n`;
 }
@@ -274,33 +265,46 @@ export function generateAppearancesCsv(allTeamPlayers) {
 }
 
 /**
+ * Titulares alineados a los puestos de la formación: Formation.csv asigna el puesto k al jugador k del Roster
+ * (IndexPlayer 0..39), así que un puesto vacío no puede correr a los siguientes. Un puesto sin titular (vacío,
+ * o con un jugador que ya no está en el plantel) se completa con el siguiente del plantel, como en el traspaso
+ * al EDIT (pes/draftTransfer.js).
+ * @returns {{ starters: object[], subs: object[], filledSlots: {slot: number, pos: string, player: object}[] }}
+ */
+export function alignStarters(layout = [], lineup = {}, players = []) {
+  const idOf = player => String(player.Id ?? player.id);
+  const byId = new Map(players.map(player => [idOf(player), player]));
+  const used = new Set();
+  const slots = layout.slice(0, 11).map((_, idx) => {
+    const id = lineup[idx] != null ? String(lineup[idx]) : null;
+    if (id && byId.has(id) && !used.has(id)) {
+      used.add(id);
+      return byId.get(id);
+    }
+    return null;
+  });
+  const rest = players.filter(player => !used.has(idOf(player)));
+  const filledSlots = [];
+  slots.forEach((player, idx) => {
+    if (player || !rest.length) return;
+    const next = rest.shift();
+    used.add(idOf(next));
+    slots[idx] = next;
+    filledSlots.push({ slot: idx, pos: layout[idx]?.pos || '', player: next });
+  });
+  const starters = slots.filter(Boolean);
+  return { starters, subs: players.filter(player => !used.has(idOf(player))), filledSlots };
+}
+
+/**
  * Empaqueta y descarga el ZIP completo de Option File para PES
  */
 export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachName = 'Director Técnico', customTeamName = null, coachNationality = 204, teamNationality = 204, onProgress = null) {
   const zip = new JSZip();
 
   const finalTeamName = (customTeamName && typeof customTeamName === 'string' && customTeamName.trim()) ? customTeamName.trim() : (teamData.name || 'Equipo');
-  const starters = [];
-  const starterIds = new Set();
-  const lineup = teamData.lineup || {};
   const currentFormation = FORMATIONS[teamData.formation] || FORMATIONS['4-3-3'];
-
-  // 1. Extraer titulares en orden de slot táctico
-  if (currentFormation?.layout) {
-    currentFormation.layout.forEach((_, idx) => {
-      const pId = lineup[idx];
-      if (pId) {
-        const p = teamData.players.find(pl => String(pl.Id || pl.id) === String(pId));
-        if (p) {
-          starters.push(p);
-          starterIds.add(String(p.Id || p.id));
-        }
-      }
-    });
-  }
-
-  // 2. Extraer suplentes (el resto del plantel)
-  const subs = (teamData.players || []).filter(p => !starterIds.has(String(p.Id || p.id)));
+  const { starters, subs, filledSlots } = alignStarters(currentFormation.layout, teamData.lineup || {}, teamData.players || []);
   const allSquad = [...starters, ...subs];
 
   // 3. Generar CSVs
@@ -308,7 +312,7 @@ export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachN
   const { csvContent: playersCsv, missingPlayers } = await generatePlayersCsv(allSquad, onProgress);
   const teamCsv = generateTeamCsv(targetPesTeamId, finalTeamName, teamNationality);
   const coachCsv = generateCoachCsv(targetPesTeamId, coachName, coachNationality);
-  const formationCsv = generateFormationCsv(targetPesTeamId, teamData.formation, starters, teamData.setPieces || {}, allSquad, teamData.tactics || {});
+  const formationCsv = generateFormationCsv(targetPesTeamId, teamData.formation, starters, teamData.setPieces || {}, allSquad, teamData.tactics || {}, teamData.formationStates || null);
   const appearancesCsv = generateAppearancesCsv(allSquad);
 
   // 4. Agregar al archivo ZIP
@@ -334,6 +338,7 @@ export async function exportTeamToPesZip(teamData, targetPesTeamId = 103, coachN
   return {
     success: true,
     totalPlayers: allSquad.length,
-    missingPlayers
+    missingPlayers,
+    filledSlots,
   };
 }

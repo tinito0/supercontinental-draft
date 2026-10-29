@@ -1,5 +1,4 @@
 @import './landing.css';
-@import './playercard.css';
 
 /* --- Importaciones de Tailwind --- */
 @tailwind base;
@@ -33,7 +32,8 @@
   --c-accent-deep: 22 36 74;    /* #16244a fondos teñidos de azul */
   --c-on-accent: 255 255 255;   /* texto sobre el azul */
   /* Lavanda del escudo: solo marcas de la competición (no para interacción) */
-  --c-crest-lavender: 123 120 176; /* #7b78b0 */
+  --c-crest-lavender: 123 120 176; /* #7b78b0 tinte y borde (texto encima: 4,1:1, no alcanza) */
+  --c-crest-lavender-soft: 179 176 224; /* #b3b0e0 texto lavanda: 9,0:1 en surface, 7,4:1 en overlay */
   /* Semánticos */
   --c-success: 34 197 94;       /* #22c55e */
   --c-success-soft: 74 222 128;
@@ -42,27 +42,8 @@
   --c-danger: 239 68 68;        /* #ef4444 */
   --c-danger-soft: 248 113 113;
 
-  /* Compatibilidad con los nombres anteriores (--app-*) */
-  --app-bg: rgb(var(--c-canvas));
-  --app-surface: rgb(var(--c-surface));
-  --app-surface-elevated: rgb(var(--c-raised));
-  --app-border: rgb(var(--c-line) / 0.14);
-  --app-border-hover: rgb(var(--c-line) / 0.3);
-  --app-accent: rgb(var(--c-accent));
-  --app-accent-hover: rgb(var(--c-accent-hover));
   --app-focus: rgb(var(--c-accent-soft));
   --app-focus-offset: 2px;
-  --app-text-primary: rgb(var(--c-ink));
-  --app-text-secondary: rgb(var(--c-ink-2));
-  --app-text-muted: rgb(var(--c-ink-3));
-  --app-success: rgb(var(--c-success));
-  --app-success-muted: rgb(var(--c-success) / 0.15);
-  --app-warning: rgb(var(--c-warning));
-  --app-warning-muted: rgb(var(--c-warning) / 0.15);
-  --app-danger: rgb(var(--c-danger));
-  --app-danger-muted: rgb(var(--c-danger) / 0.15);
-  --app-info: rgb(var(--c-accent));
-  --app-info-muted: rgb(var(--c-accent) / 0.15);
 
   /* Radios: chicos adentro, más suaves en contenedores */
   --app-radius-sm: 4px;
@@ -91,6 +72,15 @@
   --app-space-2xl: 32px;
   --app-space-3xl: 48px;
   --app-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Movimiento (docs/DESIGN_SYSTEM.md "Movimiento"): pocas duraciones y tres curvas para toda la app. */
+  --dur-fast: 120ms;   /* respuesta a una acción, salidas */
+  --dur-base: 180ms;   /* entradas */
+  --dur-move: 220ms;   /* desplazamientos (pizarra) */
+  --dur-flash: 600ms;  /* destello que marca un cambio de valor */
+  --ease-out: var(--app-ease);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   color-scheme: dark;
 }
 
@@ -103,7 +93,9 @@
 
   html {
     -webkit-text-size-adjust: 100%;
-    text-rendering: optimizeLegibility;
+    /* Sin text-rendering: optimizeLegibility: en Android encarece el layout de texto y el kerning ya es el
+       comportamiento por defecto. */
+    -webkit-tap-highlight-color: rgb(var(--c-accent) / 0.18);
   }
 
   body {
@@ -114,6 +106,17 @@
     background-color: rgb(var(--c-canvas));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Con viewport-fit=cover (index.html) el contenido no debe quedar bajo el notch en horizontal. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Fuente de OBS (public/boot.js y main.jsx agregan la clase): transparente desde el primer pintado. */
+  html.obs-source,
+  html.obs-source body,
+  html.obs-source #root {
+    background: transparent;
+    padding: 0;
   }
 
   h1, h2, h3, h4 {
@@ -160,12 +163,36 @@
 }
 
 /* Movimiento reducido: sin animaciones decorativas ni desplazamientos suaves. */
+/* iOS Safari agranda la página al enfocar un campo con letra de menos de 16 px (todos los .input/.select
+   usaban 14 px): en celular los campos usan 16 px. La especificidad de los :not() le gana a text-xs/text-sm
+   sin !important. */
+@media (max-width: 767px) {
+  :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+    font-size: 16px;
+  }
+}
+
+/* Con movimiento reducido no corre ninguna animación salvo su versión reducida, declarada junto a la original en
+   --animation-reduced: entradas y salidas quedan en un fundido y los spinners giran lento en vez de congelarse
+   (antes todo se cortaba a 0,01 ms y una carga en curso parecía colgada). Las transiciones son inmediatas. */
+@property --animation-reduced {
+  syntax: "*";
+  inherits: false;
+  initial-value: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Sin @property (Firefox < 128, Safari < 16.4) la variable se heredaría y los hijos repetirían el fundido del padre. */
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+    --animation-reduced: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: var(--animation-reduced) !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
@@ -175,7 +202,7 @@
   /* ── Tipografía ─────────────────────────────────────────────── */
   .font-display { font-family: 'Barlow Condensed', 'Barlow', ui-sans-serif, system-ui, sans-serif; }
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3;
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3;
   }
   .page-title {
     @apply font-display text-[28px] sm:text-[32px] font-bold leading-none text-ink tracking-tight;
@@ -200,8 +227,8 @@
   /* ── Botones ───────────────────────────────────────────────── */
   .btn {
     @apply inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-lg text-sm font-semibold whitespace-nowrap select-none
-      transition-[background-color,border-color,color,transform,box-shadow] duration-150
-      disabled:opacity-45 disabled:cursor-not-allowed active:translate-y-px;
+      transition-[background-color,border-color,color,transform,box-shadow] duration-fast
+      disabled:opacity-45 disabled:cursor-not-allowed active:scale-[0.97];
   }
   .btn-sm { @apply min-h-8 px-3 text-xs rounded-md gap-1.5; }
   .btn-lg { @apply min-h-12 px-5 text-base; }
@@ -233,10 +260,11 @@
   .field-error {
     @apply mt-1 text-xs font-medium text-danger-soft;
   }
+  /* El borde es lo que delimita el campo, así que llega a 3:1 contra el fondo (WCAG 1.4.11): 55 % de line sobre raised = 3,03:1. */
   .input {
-    @apply w-full min-h-10 px-3 rounded-lg bg-raised text-ink text-sm border border-line/[0.16]
-      transition-colors duration-150 outline-none
-      hover:border-line/30 focus:border-accent focus:ring-2 focus:ring-accent/25
+    @apply w-full min-h-10 px-3 rounded-lg bg-raised text-ink text-sm border border-line/[0.55]
+      transition-colors duration-fast outline-none
+      hover:border-line/70 focus:border-accent focus:ring-2 focus:ring-accent/25
       disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .input[aria-invalid="true"] { @apply border-danger/60 focus:ring-danger/25; }
@@ -252,9 +280,20 @@
   }
   .tab-list {
     @apply inline-flex items-center gap-1 p-1 rounded-lg bg-raised border border-line/[0.12];
+    scrollbar-width: none;
+  }
+  .tab-list::-webkit-scrollbar { display: none; }
+  /* Más pestañas fuera de vista a la derecha (Tabs.jsx): el borde se desvanece para que se note que sigue. */
+  .tab-list--more {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
   }
   .tab {
     @apply inline-flex items-center gap-1.5 min-h-8 px-3 rounded-md text-xs font-semibold text-ink-2 transition-colors hover:text-ink;
+  }
+  /* En pantallas táctiles las pestañas y segmentos llegan a 44 px de alto (en mouse siguen compactos). */
+  @media (pointer: coarse) {
+    .tab { min-height: 2.75rem; }
   }
   .tab[aria-selected="true"],
   .tab[aria-current="page"],
@@ -276,7 +315,7 @@
   /* ── Esqueletos de carga ───────────────────────────────────── */
   .skeleton {
     @apply rounded-md bg-white/[0.05];
-    animation: skeleton-pulse 1.4s var(--app-ease) infinite;
+    animation: skeleton-pulse 1.4s var(--ease-in-out) infinite;
   }
 }
 
@@ -287,7 +326,10 @@
 
 /* Utilidades de entrada usadas en toda la app (animate-in / fade-in / zoom-in-95 / slide-in-*). */
 @layer utilities {
-  .animate-in { animation: app-enter 180ms var(--app-ease) both; }
+  .animate-in {
+    animation: app-enter var(--dur-base) var(--ease-out) both;
+    --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+  }
   .fade-in { --enter-opacity: 0; }
   .zoom-in-95 { --enter-scale: 0.97; }
   .slide-in-from-top { --enter-ty: -8px; }
@@ -311,10 +353,160 @@
   }
 }
 
+@keyframes app-exit {
+  to {
+    opacity: 0;
+    transform: translate3d(var(--exit-tx, 0), var(--exit-ty, 0), 0) scale(var(--exit-scale, 1));
+  }
+}
+
+/* Versiones de solo opacidad, para movimiento reducido. */
+@keyframes app-fade { from { opacity: 0; } }
+@keyframes app-fade-out { to { opacity: 0; } }
+
+/* Confeti del festejo de fichaje (components/PlayerModal.jsx): duración, demora y giro por pieza en línea.
+   Con movimiento reducido no se arma. */
+.confetti-piece {
+  position: absolute;
+  top: -5%;
+  border-radius: 9999px;
+  animation-name: confetti-fall;
+  animation-timing-function: var(--ease-in);
+  animation-fill-mode: both;
+}
+@keyframes confetti-fall {
+  to { transform: translate3d(0, 110vh, 0) rotate(var(--spin, 540deg)); opacity: 0; }
+}
+
+/* Destello de un valor que cambió (presupuesto del encabezado): uno por cambio, sin desplazamiento, así que se
+   mantiene con movimiento reducido. */
+.value-flash {
+  animation: value-flash var(--dur-flash) var(--ease-out);
+  --animation-reduced: value-flash var(--dur-flash) var(--ease-out);
+}
+@keyframes value-flash {
+  from { text-shadow: 0 0 14px rgb(var(--c-accent-soft) / 0.95); color: rgb(var(--c-accent-soft)); }
+}
+
+/* Salida de BaseModal (components/ui/BaseModal.jsx): el fondo se funde; la hoja baja 8 px en celular y el
+   diálogo se achica apenas en pantallas grandes. Más corta que la entrada. */
+.modal-backdrop[data-closing] {
+  animation: app-fade-out var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
+  pointer-events: none;
+}
+.modal-backdrop[data-closing] .modal-panel {
+  --exit-ty: 8px;
+  animation: app-exit var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
+}
+@media (min-width: 640px) {
+  .modal-backdrop[data-closing] .modal-panel { --exit-ty: 0; --exit-scale: 0.98; }
+}
+
+/* Destello de una tarjeta cuyo contenido cambió en vivo (negociación en CartModal): un anillo que se apaga. */
+.row-flash {
+  animation: row-flash var(--dur-flash) var(--ease-out);
+  --animation-reduced: row-flash var(--dur-flash) var(--ease-out);
+}
+@keyframes row-flash {
+  from { box-shadow: 0 0 0 2px rgb(var(--c-accent-soft) / 0.85); }
+}
+
+/* Spinners: con movimiento reducido siguen girando, lento, para que se vea que algo está en curso. */
+.animate-spin { --animation-reduced: spin 2.4s linear infinite; }
+
+/* Estado que cambia de texto en el lugar (autoguardado de la pizarra, jugador en mano): transitions.dev «Text states
+   swap». El texto viejo sale 4 px hacia arriba y el nuevo entra desde abajo, para leerlo como un paso
+   (hooks/useStatusSwap.js). Con movimiento reducido, solo el fundido. */
+.status-swap {
+  display: inline-flex;
+  animation: status-enter var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+}
+.status-swap[data-leaving] {
+  animation: status-exit var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
+}
+@keyframes status-enter { from { opacity: 0; translate: 0 4px; filter: blur(2px); } }
+@keyframes status-exit { to { opacity: 0; translate: 0 -4px; filter: blur(2px); } }
+
+/* Valor que cambia porque cambió el dato (fuerza del equipo al mover el once): transitions.dev «Text swap soft». Los
+   dos números comparten la celda y se cruzan sin moverse (components/ui/SoftValue.jsx). */
+.soft-swap { display: inline-grid; justify-items: end; }
+.soft-swap > span { grid-area: 1 / 1; white-space: pre; }
+.soft-swap-old {
+  animation: soft-swap-out var(--dur-base) var(--ease-in-out) both;
+  --animation-reduced: app-fade-out var(--dur-base) var(--ease-in-out) both;
+}
+.soft-swap-new {
+  animation: soft-swap-in var(--dur-base) var(--ease-in-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-in-out) both;
+}
+@keyframes soft-swap-in { from { opacity: 0; filter: blur(2px); } }
+@keyframes soft-swap-out { to { opacity: 0; filter: blur(2px); } }
+
+/* Barra de fuerza por línea (components/formation/TeamStrength.jsx): crece con scale, nunca con width. */
+.strength-bar-fill {
+  transform-origin: left center;
+  transition: scale var(--dur-move) var(--ease-out);
+}
+
+/* Barra de un atributo del editor PES (PesPlayerProfile StatRow): como la de fuerza, crece con scale. */
+.meter-fill {
+  transform-origin: left center;
+  transition: scale var(--dur-move) var(--ease-out);
+}
+
+/* Desplegables (<details>) del editor PES: sin el triángulo nativo, con un chevron que se da vuelta (scaleY, funciona
+   en todos los navegadores). El contenido aparece sin animar la altura. */
+.disclosure > summary { list-style: none; }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure-chevron { transition: scale var(--dur-fast) var(--ease-out); }
+.disclosure[open] > summary .disclosure-chevron { scale: 1 -1; }
+
+/* Barra de guardado de un equipo (components/pes/team/TeamSaveBar.jsx): entra subiendo 8 px y, al guardar o
+   descartar, sale bajando 8 px antes de desmontarse. */
+.save-bar {
+  --enter-opacity: 0;
+  --enter-ty: 8px;
+  animation: app-enter var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+}
+.save-bar[data-closing] {
+  --exit-ty: 8px;
+  animation: app-exit var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
+  pointer-events: none;
+}
+
+/* Editor PES en pantallas táctiles: los botones chicos y los campos llegan a 44 px (en mouse siguen compactos). */
+/* Touch screens get 44 px targets everywhere (docs/DESIGN_SYSTEM.md, principle 8); the mouse keeps the dense sizes. */
+@media (pointer: coarse) {
+  /* Compound selectors: Tailwind emits no native layers, so .btn-icon.btn-sm (two classes) would win otherwise. */
+  .btn, .btn.btn-sm, .input, .select { min-height: 2.75rem; }
+  .btn.btn-icon, .btn.btn-icon.btn-sm { min-width: 2.75rem; min-height: 2.75rem; }
+}
+
+/* Avisos (components/ToastStack.jsx): entran subiendo 8 px y salen bajando 4 px. La salida corre mientras el aviso
+   sigue montado (hooks/usePresence.js) y lo desmonta al terminar. */
+.toast {
+  --enter-opacity: 0;
+  --enter-ty: 8px;
+  animation: app-enter var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+}
+.toast[data-closing] {
+  --exit-ty: 4px;
+  animation: app-exit var(--dur-fast) var(--ease-out) both;
+  --animation-reduced: app-fade-out var(--dur-fast) var(--ease-out) both;
+  pointer-events: none;
+}
+
 /* --- Paleta de Colores para Estadísticas (Píldoras) --- */
 .stat-c-90 {
   background-color: #1ec9a4 !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 .stat-c-80 {
@@ -334,7 +526,7 @@
 
 .stat-c-50 {
   background-color: #ff4d4d !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 .stat-c-default {
@@ -345,7 +537,7 @@
 /* --- Paleta de Colores para OVR (Tarjetas Antiguas) --- */
 .ovr-c-90 {
   background-color: #ff4d4d !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 /* Red */
@@ -363,13 +555,13 @@
 /* Light Green */
 .ovr-c-60 {
   background-color: #00b34a !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 /* Green */
 .ovr-c-50 {
   background-color: #00aeff !important;
-  color: #ffffff !important;
+  color: #1e1e1e !important;
 }
 
 /* Blue */
@@ -402,7 +594,7 @@
 
 /* Verde esmeralda */
 .ovr-text-50 {
-  color: #4d7ad6 !important;
+  color: rgb(var(--c-accent-soft)) !important;
 }
 
 /* Azul claro */
@@ -415,17 +607,17 @@
 /* --- Paleta de Colores para Posiciones (Píldoras y Tarjetas) --- */
 .pos-delantero {
   background-color: #ff4d4d;
-  color: #ffffff;
+  color: #1e1e1e;
 }
 
 .pos-medio {
   background-color: #00b34a;
-  color: #ffffff;
+  color: #1e1e1e;
 }
 
 .pos-defensa {
   background-color: #00aeff;
-  color: #ffffff;
+  color: #1e1e1e;
 }
 
 /* CORREGIDO: 'ffc400' en lugar de 'ffc4al' */
@@ -439,21 +631,6 @@
   color: #e0e0e0;
 }
 
-/* --- Animación de Fondo --- */
-@keyframes gradientBG {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
 /* --- Scrollbar Personalizado (Estilo PES 2021) --- */
 ::-webkit-scrollbar {
   width: 6px;
@@ -465,15 +642,15 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgb(var(--c-overlay));
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgb(var(--c-line) / 0.4);
 }
 
-/* --- Estilos para la animación de modales --- */
+/* Fondo de la barra lateral en celular */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -482,26 +659,6 @@
   to {
     opacity: 1;
   }
-}
-
-@keyframes slideIn {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.modal-enter {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.modal-content-enter {
-  animation: slideIn 0.3s ease-out;
 }
 
 /* --- Grid de Habilidades --- */
@@ -536,9 +693,10 @@
   border-radius: 50%;
   font-weight: bold;
   font-size: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
+  box-shadow: var(--app-shadow-sm);
+  border: 2px solid rgb(var(--c-ink) / 0.1);
+  transition: background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -547,8 +705,8 @@
 
 /* Desktop: inline sidebar (default) */
 .sidebar {
-  background: var(--app-surface, #06080d);
-  border-right: 1px solid var(--app-border, rgba(255, 255, 255, 0.07));
+  background: rgb(var(--c-surface));
+  border-right: 1px solid rgb(var(--c-line) / 0.14);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -558,13 +716,15 @@
   width: 0;
   min-width: 0;
   box-shadow: none;
-  transition: width 280ms ease-in-out, min-width 280ms ease-in-out, background-color 200ms ease;
+  /* El ancho cambia de una vez en escritorio: animarlo recalculaba el layout de todo el contenido (y la grilla
+     virtualizada del mercado) durante 280 ms. En celular la barra se desliza con transform (abajo). */
+  transition: background-color var(--dur-base) var(--ease-out);
 }
 
 .sidebar--open {
   width: 232px;
   min-width: 232px;
-  box-shadow: 1px 0 0 var(--app-border, rgba(255, 255, 255, 0.07));
+  box-shadow: 1px 0 0 rgb(var(--c-line) / 0.14);
 }
 
 /* Hide X button on desktop */
@@ -587,13 +747,15 @@
     width: 260px !important;
     min-width: 260px !important;
     transform: translateX(-100%);
-    transition: transform 300ms ease-in-out;
+    /* Cerrar es más corto que abrir; las dos con --ease-out para que el panel arranque ya en movimiento. */
+    transition: transform var(--dur-base) var(--ease-out);
     z-index: 60;
-    box-shadow: 8px 0 32px rgb(2 6 12 / 0.6);
+    box-shadow: var(--app-shadow-lg);
   }
 
   .sidebar--open {
     transform: translateX(0);
+    transition-duration: var(--dur-move);
   }
 
   .sidebar-close-btn {
@@ -607,495 +769,21 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
   }
 
   .sidebar-close-btn:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.06);
+    color: rgb(var(--c-ink));
+    background: rgb(var(--c-ink) / 0.06);
   }
 
   .sidebar-backdrop {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
+    background: rgb(var(--c-canvas) / 0.8);
     z-index: 55;
-    animation: fadeIn 0.3s ease-out;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   PLAYER CARD — Redesigned for maximum info visibility
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* ── Base card ── */
-.player-card {
-  --pos-accent: #9ca3af;
-  --ovr-color: #9ca3af;
-
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 80%;
-  max-width: 240px;
-  margin: 0 auto;
-  border-radius: 10px;
-  cursor: pointer;
-  user-select: none;
-  overflow: visible;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .player-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5) !important;
-  }
-}
-
-.player-card--locked {
-  opacity: 0.55;
-  pointer-events: auto;
-}
-
-.player-card--locked:hover {
-  transform: none;
-}
-
-/* ── Photo wrapper ── */
-.player-card__photo-wrapper {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 3 / 3.2;
-  overflow: hidden;
-  border-radius: 0;
-  background-color: transparent;
-}
-
-.player-card__glow {
-  position: absolute;
-  inset: 0;
-  opacity: 0.35;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.player-card__photo {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-  z-index: 2;
-  transition: transform 0.45s ease;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .player-card:hover .player-card__photo {
-    transform: scale(1.04);
-  }
-}
-
-.player-card__photo-fade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 35%;
-  background: linear-gradient(to top, rgba(12, 12, 14, 0.7) 0%, transparent 100%);
-  z-index: 3;
-  pointer-events: none;
-}
-
-/* ═══════════ INFO STRIP — OVR + Flag + Position overlaid on photo ═══════════ */
-.player-card__info-strip {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  pointer-events: none;
-}
-
-/* OVR badge container */
-.player-card__ovr-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: 1.5px solid;
-  padding: 2px 7px;
-  backdrop-filter: blur(6px);
-  flex-shrink: 0;
-}
-
-.player-card__ovr {
-  font-size: 1.6rem;
-  font-weight: 900;
-  line-height: 1;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-  letter-spacing: -0.03em;
-}
-
-/* Country flag — larger and prominent */
-.player-card__flag {
-  width: 22px;
-  height: 15px;
-  object-fit: cover;
-  border-radius: 2px;
-  opacity: 1;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-  flex-shrink: 0;
-}
-
-/* Position pill — solid, bold */
-.player-card__pos {
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  padding: 3px 8px;
-  border-radius: 5px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-/* ── Compare button ── */
-.player-card__compare-btn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.85);
-  z-index: 20;
-  padding: 8px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  color: #60a5fa;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease;
-  pointer-events: auto;
-}
-
-/* En dispositivos táctiles :hover no dispara de forma confiable (o queda "pegado"
-   tras el tap), así que el botón "Comparar" quedaba invisible y prácticamente
-   indescubrible en mobile aunque siguiera siendo tappeable. Se muestra siempre
-   en touch — pero centrado tapaba media cara del jugador (mala UX). El strip de
-   OVR/bandera/posición ya ocupa toda la franja de abajo, así que se reposiciona
-   al borde derecho, centrado verticalmente (al costado de la cara), y se achica,
-   en vez de un círculo grande en el medio de la foto. En hover real (mouse) se
-   mantiene centrado como estaba, porque ahí solo aparece un instante al pasar
-   el mouse — no molesta. */
-@media (hover: none) {
-  .player-card__compare-btn {
-    top: 42%;
-    left: auto;
-    right: 6px;
-    bottom: auto;
-    transform: translateY(-50%);
-    padding: 5px;
-    opacity: 0.55;
-  }
-
-  .player-card__compare-btn svg {
-    width: 13px;
-    height: 13px;
-  }
-
-  .player-card__compare-btn--active {
-    opacity: 0.9;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .player-card:hover .player-card__compare-btn {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-
-  .player-card__compare-btn:hover {
-    background: rgba(37, 99, 235, 0.85);
-    color: #fff;
-    border-color: rgba(96, 165, 250, 0.5);
-  }
-}
-
-.player-card__compare-btn--active {
-  opacity: 1 !important;
-  background: rgba(79, 70, 229, 0.9) !important;
-  color: #fff !important;
-  border-color: rgba(129, 140, 248, 0.6) !important;
-  box-shadow: 0 0 14px rgba(99, 102, 241, 0.5);
-  transform: translate(-50%, -50%) scale(1) !important;
-}
-
-/* ── Locked overlay bar ── */
-.player-card__locked-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 25;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 3px 6px;
-  background: rgba(220, 38, 38, 0.92);
-  font-size: 8px;
-  font-weight: 900;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-/* ── Owned accent stripe ── */
-.player-card__owned-stripe {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  background: #10b981;
-  z-index: 25;
-  border-radius: 10px 0 0 0;
-}
-
-/* ── Name bar (bottom of card) ── */
-.player-card__name-bar {
-  padding: 6px 7px 7px;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 0 0 10px 10px;
-}
-
-.player-card__name {
-  font-size: 12px;
-  font-weight: 800;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.25;
-}
-
-/* ── Price header — sits on top of the card ── */
-.player-card__price-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 6px 8px 5px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(16, 185, 129, 0.06) 100%);
-  border-bottom: 1px solid rgba(16, 185, 129, 0.12);
-  border-radius: 10px 10px 0 0;
-}
-
-.player-card__price {
-  font-size: 16px;
-  font-weight: 900;
-  color: #34d399;
-  letter-spacing: 0.01em;
-  text-shadow: 0 0 12px rgba(52, 211, 153, 0.3), 0 1px 4px rgba(0, 0, 0, 0.6);
-}
-
-/* ── Responsive tweaks ── */
-@media (max-width: 480px) {
-  .player-card {
-    max-width: 150px;
-  }
-
-  .player-card__ovr {
-    font-size: 1.3rem;
-  }
-
-  .player-card__flag {
-    width: 18px;
-    height: 13px;
-  }
-
-  .player-card__pos {
-    font-size: 8px;
-    padding: 2px 6px;
-  }
-
-  .player-card__price {
-    font-size: 14px;
-  }
-
-  .player-card__name {
-    font-size: 10px;
-    line-height: 1.2;
-  }
-}
-
-/* Marketplace card sizing: final overrides after legacy card styles. */
-.market-player-card-shell {
-  width: 100%;
-  min-width: 0;
-  height: clamp(124px, 31vw, 238px);
-  max-width: 172px;
-  margin: 0 auto;
-}
-
-.market-player-card-shell .player-card {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none;
-  margin: 0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: none !important;
-}
-
-.market-player-card-shell .player-card:hover {
-  transform: none;
-  box-shadow: none !important;
-}
-
-.market-player-card-shell .player-card__price-header {
-  top: 5px;
-  left: 5px;
-  padding: 2px 6px;
-  border-radius: 5px;
-}
-
-.market-player-card-shell .player-card__price {
-  font-size: clamp(0.62rem, 2.4vw, 0.9rem);
-  letter-spacing: 0;
-}
-
-.market-player-card-shell .player-card__photo-wrapper {
-  min-height: 0;
-  flex: 1 1 auto;
-}
-
-.market-player-card-shell .player-card__photo {
-  object-fit: contain;
-  object-position: center bottom;
-}
-
-.market-player-card-shell .player-card:hover .player-card__photo {
-  transform: none;
-}
-
-.market-player-card-shell .player-card__info-strip {
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
-  gap: 4px;
-  padding: 0;
-}
-
-.market-player-card-shell .player-card__ovr-badge {
-  width: clamp(28px, 7.5vw, 40px);
-  height: clamp(28px, 7.5vw, 40px);
-  border-width: 1px;
-}
-
-.market-player-card-shell .player-card__ovr {
-  font-size: clamp(0.9rem, 4vw, 1.16rem);
-  letter-spacing: 0;
-}
-
-.market-player-card-shell .player-card__flag {
-  width: clamp(17px, 4.8vw, 24px);
-  height: auto;
-  margin-bottom: 4px;
-}
-
-.market-player-card-shell .player-card__pos {
-  font-size: clamp(0.52rem, 2.1vw, 0.76rem);
-  padding: 2px 5px;
-  letter-spacing: 0;
-  border-radius: 4px;
-}
-
-.market-player-card-shell .player-card__compare-btn {
-  padding: clamp(6px, 2vw, 10px);
-  backdrop-filter: none;
-}
-
-.market-player-card-shell .player-card__name-bar {
-  flex: 0 0 auto;
-  padding: 5px 6px;
-}
-
-.market-player-card-shell .player-card__name {
-  font-size: clamp(0.56rem, 2.3vw, 0.86rem);
-  letter-spacing: 0;
-  line-height: 1.15;
-}
-
-@media (max-width: 480px) {
-  #player-list.grid {
-    gap: 8px;
-  }
-
-  .market-player-card-shell {
-    height: clamp(118px, 34vw, 154px);
-    max-width: 124px;
-  }
-
-  .market-player-card-shell .player-card__price-header {
-    top: 4px;
-    left: 4px;
-    padding: 1px 5px;
-  }
-
-  .market-player-card-shell .player-card__info-strip {
-    left: 4px;
-    right: 4px;
-    bottom: 4px;
-  }
-
-  .market-player-card-shell .player-card__name-bar {
-    padding: 4px 5px;
-  }
-
-  .market-player-card-shell .player-card,
-  .market-player-card-shell .player-card__photo,
-  .market-player-card-shell .player-card__compare-btn {
-    transition-duration: 120ms;
-  }
-
-  .market-player-card-shell .player-card__glow {
-    opacity: 0.28;
-  }
-
-  .market-player-card-shell .player-card__photo-fade {
-    height: 38%;
-  }
-
-  .market-player-card-shell .player-card__price-header,
-  .market-player-card-shell .player-card__ovr-badge,
-  .market-player-card-shell .player-card__compare-btn {
-    backdrop-filter: none;
-  }
-}
-
-@media (min-width: 768px) {
-  .market-player-card-shell {
-    height: clamp(176px, 22vw, 252px);
-    max-width: 190px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .market-player-card-shell {
-    height: clamp(208px, 16vw, 278px);
-    max-width: 210px;
+    animation: fadeIn var(--dur-base) var(--ease-out);
   }
 }
 
@@ -1104,9 +792,9 @@
   min-height: 0;
   height: 100%;
   scrollbar-width: auto;
-  scrollbar-color: rgba(34, 211, 238, 0.55) rgba(15, 23, 42, 0.55);
+  scrollbar-color: rgb(var(--c-accent-soft) / 0.55) rgb(var(--c-surface) / 0.55);
   -webkit-overflow-scrolling: touch;
-  background: #020712;
+  background: rgb(var(--c-canvas));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1118,17 +806,17 @@
 }
 
 .manager-chat-scroll::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.55);
+  background: rgb(var(--c-surface) / 0.55);
 }
 
 .manager-chat-scroll::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.55);
-  border: 3px solid rgba(15, 23, 42, 0.85);
+  background: rgb(var(--c-accent-soft) / 0.55);
+  border: 3px solid rgb(var(--c-surface) / 0.85);
   border-radius: 999px;
 }
 
 .manager-chat-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.8);
+  background: rgb(var(--c-accent-soft) / 0.8);
 }
 
 .manager-chat-message {
@@ -1159,7 +847,7 @@
 }
 
 .manager-chat-composer {
-  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 -1px 0 rgb(var(--c-ink) / 0.05);
 }
 
 @media (max-width: 767px) {
@@ -1201,80 +889,24 @@
   }
 }
 
-.scout-help-panel {
-  animation: scoutHelpIn 220ms ease-out both;
-}
-
+.scout-help-panel,
 .scout-help-step {
-  animation: scoutHelpIn 280ms ease-out both;
+  animation: scoutHelpIn var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
 }
 
-.scout-guide-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  pointer-events: auto;
-}
-
-.scout-guide-backdrop {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-}
-
-.scout-guide-ring {
-  position: fixed;
-  z-index: 121;
-  border: 2px solid rgba(58, 102, 196, 0.95);
-  border-radius: 12px;
-  box-shadow:
-    0 0 0 9999px rgba(0, 0, 0, 0.02),
-    0 0 28px rgba(58, 102, 196, 0.34);
-  pointer-events: none;
-  transition: left 180ms ease, top 180ms ease, width 180ms ease, height 180ms ease;
-}
-
-.scout-guide-popover {
-  position: fixed;
-  z-index: 122;
-  max-width: min(340px, calc(100vw - 24px));
-  border: 1px solid rgba(58, 102, 196, 0.28);
-  border-radius: 14px;
-  background: rgba(12, 16, 23, 0.96);
-  padding: 16px;
-  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(14px);
-  animation: scoutHelpIn 180ms ease-out both;
-}
-
-.scout-guide-skip {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  min-width: 48px;
-  min-height: 44px;
-  border-radius: 10px;
-  color: #9ca3af;
-  font-size: 12px;
-  font-weight: 900;
-  transition: color 160ms ease, background 160ms ease;
-}
-
-.scout-guide-skip:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.app-guide-layer {
+/* Guía paso a paso (components/TutorialModal.jsx y components/ScoutAssignmentsPanel.jsx): un anillo sobre el elemento
+   explicado y un globo con el texto. Crest blue como el resto de la app, sin brillo ni desenfoque. El anillo sí
+   anima left/top/width/height: es un único elemento chico y fijo que sigue a otro, y animar transform no
+   permite cambiar de tamaño sin deformar el borde. */
+.guide-layer {
   position: fixed;
   inset: 0;
   z-index: 140;
   pointer-events: auto;
 }
 
-.app-guide-backdrop {
+.guide-backdrop {
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -1282,50 +914,69 @@
   pointer-events: none;
 }
 
-.app-guide-ring {
+.guide-ring {
   position: fixed;
   z-index: 141;
-  border: 2px solid rgba(34, 211, 238, 0.95);
+  border: 2px solid rgb(var(--c-accent-soft));
   border-radius: 12px;
-  box-shadow: 0 0 30px rgba(34, 211, 238, 0.34);
   pointer-events: none;
-  transition: left 180ms ease, top 180ms ease, width 180ms ease, height 180ms ease;
+  transition: left var(--dur-base) var(--ease-out), top var(--dur-base) var(--ease-out), width var(--dur-base) var(--ease-out), height var(--dur-base) var(--ease-out);
 }
 
-.app-guide-popover {
+.guide-popover {
   position: fixed;
   z-index: 142;
   max-width: min(360px, calc(100vw - 24px));
-  border: 1px solid rgba(34, 211, 238, 0.28);
-  border-radius: 16px;
-  background: rgba(8, 12, 18, 0.97);
+  border: 1px solid rgb(var(--c-accent) / 0.4);
+  border-radius: var(--app-radius-2xl);
+  background: rgb(var(--c-surface));
   padding: 16px;
-  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(14px);
-  animation: scoutHelpIn 180ms ease-out both;
+  box-shadow: var(--app-shadow-lg);
+  animation: scoutHelpIn var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+  transition: left var(--dur-move) var(--ease-out), top var(--dur-move) var(--ease-out);
 }
 
-.app-guide-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+.guide-chapters {
+  display: flex;
+  width: 100%;
+}
+
+.guide-chapters .tab {
+  flex: 1;
+  justify-content: center;
+  padding-inline: 6px;
+}
+
+/* Cada paso entra con un cambio corto de texto (sube 4px y se enfoca) en vez de reemplazarse de golpe. */
+.guide-step {
+  animation: guideStepIn var(--dur-base) var(--ease-out) both;
+  --animation-reduced: app-fade var(--dur-base) var(--ease-out) both;
+}
+
+@keyframes guideStepIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(2px);
+  }
+}
+
+.guide-close {
+  flex-shrink: 0;
   min-height: 44px;
-  min-width: 72px;
-  padding: 0 10px;
-  border-radius: 10px;
-  color: #9ca3af;
-  font-size: 12px;
-  font-weight: 900;
+  min-width: 44px;
+  border-radius: var(--app-radius-lg);
+  color: rgb(var(--c-ink-3));
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  transition: color 160ms ease, background 160ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
-.app-guide-close:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+.guide-close:hover {
+  color: rgb(var(--c-ink));
+  background: rgb(var(--c-ink) / 0.06);
 }
 
 @media (max-width: 767px) {
@@ -1341,26 +992,14 @@
     font-size: 14px;
   }
 
-  .scout-guide-popover {
-    max-width: none;
-    width: auto;
-    border-radius: 16px 16px 18px 18px;
-    padding: 16px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
-  }
-
-  .scout-guide-ring {
-    border-radius: 10px;
-  }
-
-  .app-guide-popover {
+  .guide-popover {
     max-width: none;
     width: auto;
     border-radius: 16px 16px 18px 18px;
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
 
-  .app-guide-ring {
+  .guide-ring {
     border-radius: 10px;
   }
 }

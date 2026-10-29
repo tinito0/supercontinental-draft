@@ -3,7 +3,7 @@
 // byte of the decrypted data section, plus the description/logo/serial sections,
 // is preserved exactly.
 import { decryptEdit, encryptEdit } from './editCrypto.js';
-import { EDIT_LAYOUT, EDIT_PLAYER_FIELDS, EDIT_TEAM_FIELDS, EDIT_COACH, EDIT_COACH_FIELDS, EDIT_LOCKED_FIELDS, EDIT_TACTICS, EDIT_STRATEGY, editFlagsFor } from './editLayout.js';
+import { EDIT_LAYOUT, EDIT_PLAYER_FIELDS, EDIT_TEAM_FIELDS, EDIT_COACH, EDIT_COACH_FIELDS, EDIT_LOCKED_FIELDS, EDIT_TACTICS, EDIT_STRATEGY, EDIT_ADVANCED_CODES, editFlagsFor } from './editLayout.js';
 import { readField, writeField } from '../../core/fields.js';
 import { PesFormatError, PesValidationError } from '../../core/errors.js';
 
@@ -192,25 +192,34 @@ export class EditDatabase {
     return t;
   }
 
-  /** Order (40 slots), captain, takers and plan 0 / variant 0 formation of a team. */
+  /** Order (40 slots), captain, takers, plan 0 formation (variant 0 and all 3 variants), strategy and instructions. */
   readTactics(teamId) {
     const t = this.#tacticsTeam(teamId);
     const T = EDIT_TACTICS, d = this.data, tb = t.tacticsBase;
     const o = tb + T.planBase;
+    const variant = v => {
+      const vo = o + v * T.variantSize;
+      return { roles: [0, ...d.subarray(vo + 1, vo + 11)], pos: Array.from({ length: 11 }, (_, i) => [d[vo + 11 + i * 2], d[vo + 12 + i * 2]]) };
+    };
     return {
       order: Array.from(d.subarray(tb + T.order, tb + T.order + 40)),
       takers: Array.from(d.subarray(tb + T.takers, tb + T.takers + T.takerCount)),
       captain: d[tb + T.captain],
-      formation: { roles: [0, ...d.subarray(o + 1, o + 11)], pos: Array.from({ length: 11 }, (_, i) => [d[o + 11 + i * 2], d[o + 12 + i * 2]]) },
+      formation: variant(0),
+      variants: Array.from({ length: T.variants }, (_, v) => variant(v)),
       strategy: Object.fromEntries(Object.entries(EDIT_STRATEGY).map(([k, s]) => [k, d[o + s.offset]])),
+      advanced: T.advanced.map(off => d[o + off]),
     };
   }
 
   /**
    * Replaces a team's whole squad and game plan.
    * @param {{ players: {playerId:number, number:number}[], lineup: number[], formation: {roles:number[], pos:number[][]},
+   *           variants?: {roles:number[], pos:number[][]}[], advanced?: number[],
    *           strategy: Record<string, number>, captain: number, takers: number[] }} spec
    *   players: roster in slot order (≤ 40); lineup: 11 roster slots (GK first, then formation entries 1..10);
+   *   variants: the 3 formation variants (base, with ball, without ball: fluid formation); default `formation` in all 3;
+   *   advanced: instruction codes [attack 1, attack 2, defence 1, defence 2] (0 = none); default none;
    *   captain/takers: roster slots or 255 (none).
    */
   setSquad(teamId, spec) {
@@ -231,14 +240,15 @@ export class EditDatabase {
     for (let plan = 0; plan < T.plans; plan++) {
       const pb = tb + T.planBase + plan * T.planSize;
       for (let v = 0; v < T.variants; v++) {
-        const o = pb + v * T.variantSize;
+        const o = pb + v * T.variantSize, f = spec.variants?.[v] || spec.formation;
         d[o] = 0;
-        for (let i = 1; i <= 10; i++) d[o + i] = spec.formation.roles[i];
-        for (let i = 0; i < 11; i++) { d[o + 11 + i * 2] = spec.formation.pos[i][0]; d[o + 12 + i * 2] = spec.formation.pos[i][1]; }
+        for (let i = 1; i <= 10; i++) d[o + i] = f.roles[i];
+        for (let i = 0; i < 11; i++) { d[o + 11 + i * 2] = f.pos[i][0]; d[o + 12 + i * 2] = f.pos[i][1]; }
       }
       for (const [k, s] of Object.entries(EDIT_STRATEGY)) if (spec.strategy[k] != null) d[pb + s.offset] = spec.strategy[k];
-      // Instructions and man-marking referred to the previous squad: reset to "none" / automatic.
-      for (const off of T.advanced) d[pb + off] = 0;
+      // Advanced instructions chosen for the new squad (none when not given); man-marking referred to the
+      // previous squad's players, so it goes back to automatic.
+      T.advanced.forEach((off, k) => { d[pb + off] = spec.advanced?.[k] || 0; });
       d.fill(0xff, pb + T.marking, pb + T.marking + T.markingCount);
     }
     return { before, after: spec };
@@ -323,9 +333,26 @@ export function validateSquadSpec(spec) {
   }
   const n = players.length;
   if (!Array.isArray(lineup) || lineup.length !== 11 || new Set(lineup).size !== 11 || !lineup.every(s => isSlot(s, n))) fail('LINEUP', 'el 11 titular debe tener 11 jugadores distintos del plantel.');
-  if (!formation || formation.roles?.length !== 11 || formation.pos?.length !== 11) fail('FORMATION', 'formación incompleta.');
-  for (let i = 1; i <= 10; i++) if (!Number.isInteger(formation.roles[i]) || formation.roles[i] < 1 || formation.roles[i] > 12) fail('FORMATION', `puesto inválido (${formation.roles[i]}).`);
-  for (const [a, b] of formation.pos) if (![a, b].every(v => Number.isInteger(v) && v >= 0 && v <= 100)) fail('FORMATION', 'posición fuera de la cancha.');
+  const checkFormation = f => {
+    if (!f || f.roles?.length !== 11 || f.pos?.length !== 11) fail('FORMATION', 'formación incompleta.');
+    for (let i = 1; i <= 10; i++) if (!Number.isInteger(f.roles[i]) || f.roles[i] < 1 || f.roles[i] > 12) fail('FORMATION', `puesto inválido (${f.roles[i]}).`);
+    for (const [a, b] of f.pos) if (![a, b].every(v => Number.isInteger(v) && v >= 0 && v <= 100)) fail('FORMATION', 'posición fuera de la cancha.');
+  };
+  checkFormation(formation);
+  if (spec.variants != null) {
+    if (!Array.isArray(spec.variants) || spec.variants.length !== EDIT_TACTICS.variants) fail('FORMATION', `hacen falta ${EDIT_TACTICS.variants} variantes de formación.`);
+    // Each variant has its own roles (a full back pushed up with the ball plays LMF/RMF): 338 of the 348 fluid
+    // plans in the game's own EDIT data change roles between variants. The players are the same in the three.
+    for (const f of spec.variants) checkFormation(f);
+  }
+  if (spec.advanced != null) {
+    const { attack, defense } = EDIT_ADVANCED_CODES;
+    if (!Array.isArray(spec.advanced) || spec.advanced.length !== EDIT_TACTICS.advanced.length) fail('ADVANCED', 'hacen falta 4 instrucciones avanzadas (0 = ninguna).');
+    spec.advanced.forEach((c, k) => {
+      if (c !== 0 && !(k < 2 ? attack : defense).includes(c)) fail('ADVANCED', `instrucción avanzada ${c} no válida en ${k < 2 ? 'ataque' : 'defensa'}.`);
+    });
+    for (const pair of [spec.advanced.slice(0, 2), spec.advanced.slice(2)]) if (pair[0] && pair[0] === pair[1]) fail('ADVANCED', `instrucción avanzada ${pair[0]} repetida.`);
+  }
   for (const [k, v] of Object.entries(strategy)) {
     const s = EDIT_STRATEGY[k];
     if (!s) fail('STRATEGY', `opción desconocida "${k}".`);

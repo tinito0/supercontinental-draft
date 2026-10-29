@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { X, Send, AlertTriangle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { offerExpiresAt } from '../supabase/functions/_shared/offerExpiry.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { db } from '../config/firebase.js';
 import { APP_ID, DEFAULT_LOGO, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
 export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamName, targetTeamId, senderId, senderTeamName, senderTeamLogo, remainingBudget }) => {
   const [offerAmount, setOfferAmount] = useState('');
@@ -19,7 +21,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
     e.preventDefault();
     if (submittingRef.current) return;
     if (!senderId || !targetTeamId || senderId === targetTeamId) {
-      setError('No puedes enviarte una oferta a tu propio equipo.');
+      setError('No podés ofertar por un jugador de tu propio equipo.');
       return;
     }
 
@@ -41,7 +43,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
 
     const numericOffer = Math.round(Number(offerAmount) * 1000000);
     if (remainingBudget !== undefined && numericOffer > remainingBudget) {
-      setError(`No tienes presupuesto líquido disponible suficiente ($${((remainingBudget || 0) / 1000000).toFixed(2)}M) para enviar esta oferta.`);
+      setError(`No te alcanza el presupuesto: tenés $${((remainingBudget || 0) / 1000000).toFixed(2)}M disponibles.`);
       return;
     }
     
@@ -51,7 +53,8 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
 
     try {
       const proposalRef = collection(db, `artifacts/${APP_ID}/public/data/offers`);
-      const nowIso = new Date().toISOString();
+      const nowMs = Date.now();
+      const nowIso = new Date(nowMs).toISOString();
       await addDoc(proposalRef, {
         playerId: player.Id,
         playerName: player.Name,
@@ -67,6 +70,8 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
         message: message.trim(),
         status: 'pending',
         createdAt: nowIso,
+        // The seller has 48 hours to answer; after that the offer stops holding this club's money.
+        expiresAtMs: offerExpiresAt(nowMs),
         history: [{
           type: 'sent',
           title: 'Oferta enviada',
@@ -98,6 +103,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
       onClose={onClose}
       size="md"
       showClose={false}
+      ariaLabel={`Proponer traspaso por ${player.Name}`}
       className="!p-0"
       contentClassName="!p-0 !overflow-hidden flex flex-col"
     >
@@ -107,11 +113,11 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
       >
         <div className="px-5 py-4 border-b border-line/20 flex items-center justify-between bg-surface/60">
           <div className="min-w-0">
-            <h3 className="text-base font-bold text-ink">Proponer Traspaso</h3>
-            <p className="text-xs text-ink-3">Oferta a <span className=" text-accent font-semibold">{targetTeamName}</span> por <span className=" text-ink font-semibold">{player.Name}</span></p>
+            <h3 className="text-base font-bold text-ink">Proponer traspaso</h3>
+            <p className="text-xs text-ink-3">Oferta a <span className=" text-accent-soft font-semibold">{targetTeamName}</span> por <span className=" text-ink font-semibold">{player.Name}</span></p>
           </div>
-          <button onClick={onClose} className="p-1.5 text-ink-3 hover:text-ink rounded-lg hover:bg-raised transition-colors">
-            <X size={18} />
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="w-11 h-11 shrink-0 flex items-center justify-center text-ink-3 hover:text-ink rounded-lg hover:bg-raised transition-colors">
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -135,16 +141,16 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                   className="w-11 h-11 rounded-lg object-contain bg-raised border border-line/20 p-1"
                   onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                 />
-                <span className="text-[10px] text-ink-3 font-semibold max-w-16 truncate">{senderTeamName || 'Tu equipo'}</span>
+                <span className="text-[11px] text-ink-3 font-semibold max-w-16 truncate">{senderTeamName || 'Tu equipo'}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-ink-3 uppercase font-semibold tracking-wider">Pide traspaso por</p>
+                <p className="text-[11px] text-ink-3 uppercase font-semibold tracking-wider">Pide traspaso por</p>
                 <div className="flex items-center gap-2.5 mt-1.5">
                   <img
                     src={`/fotos_jugadores/${player.Id}.webp`}
                     alt={player.Name}
                     className="w-12 h-12 rounded-lg object-cover bg-raised border border-line/20"
-                    onError={(e) => { e.target.src = `https://placehold.co/56x56/111/333?text=${player.Name?.[0] || '?'}`; }}
+                    onError={(e) => { e.target.src = playerPlaceholder(player.Name?.[0] || '?'); }}
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-ink truncate">{player.Name}</p>
@@ -171,7 +177,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                   step="0.1"
                   value={offerAmount}
                   onChange={(e) => setOfferAmount(e.target.value)}
-                  className="w-full bg-surface border border-line/20 rounded-xl pl-7 pr-10 py-2.5 text-ink font-semibold text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
+                  className="w-full bg-surface border border-line/20 rounded-xl pl-7 pr-10 py-2.5 text-ink font-semibold text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-[border-color,box-shadow]"
                   placeholder={`Ej. ${(player.Precio).toFixed(2)}`}
                   required
                 />
@@ -180,12 +186,12 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
               <div className="flex items-center justify-between mt-1.5 text-[11px] text-ink-3">
                 <span>Máximo: ${(Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100).toFixed(2)}M</span>
                 {remainingBudget !== undefined && (
-                  <span className="font-semibold text-accent">
+                  <span className="font-semibold text-accent-soft">
                     Disponible: ${((remainingBudget || 0) / 1000000).toFixed(2)}M
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-[10px] text-ink-3">
+              <p className="mt-1 text-[11px] text-ink-3">
                 El vendedor recibe el {Math.round((1 - TRANSFER_FEE_RATE) * 100)}%; comisión {Math.round(TRANSFER_FEE_RATE * 100)}%.
               </p>
             </div>
@@ -196,8 +202,8 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                 id="offer-message-input"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="w-full bg-surface border border-line/20 rounded-xl px-3.5 py-2.5 text-ink text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all resize-none"
-                placeholder="Escribe un mensaje para convencer al otro equipo..."
+                className="w-full bg-surface border border-line/20 rounded-xl px-3.5 py-2.5 text-ink text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-[border-color,box-shadow] resize-none"
+                placeholder="Un mensaje para convencer al otro club (opcional)…"
                 rows="3"
               ></textarea>
             </div>

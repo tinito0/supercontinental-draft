@@ -6,6 +6,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isShortText(value, max) {
+      return value is string && value.size() <= max;
+    }
+
     function isAdmin() {
       return isAuth() && (
         request.auth.uid == "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3" ||
@@ -16,74 +20,194 @@ service cloud.firestore {
     // ── ARTIFACTS ─────────────────────────────────────────────
     match /artifacts/{appId} {
 
-      // Player locks: control de fichajes y validación de Jugador Franquicia
+      // ── MERCADO ───────────────────────────────────────────────
+      // Fichajes y traspasos los ejecuta el servidor (Edge Function `market` de Supabase, con una
+      // cuenta de servicio que no pasa por estas reglas): valida precios reales, presupuesto y estado
+      // del mercado. Desde el navegador nadie escribe locks, presupuestos, el feed ni ofertas
+      // aceptadas. El presupuesto base vive en teams/{uid}.budget (useAuth lo copia al perfil).
+      function defaultBudget() { return 200000000; }        // DEFAULT_BUDGET (utils/constants.js)
+
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+      function teamPath(uid) {
+        return /databases/$(database)/documents/artifacts/$(appId)/public/data/teams/$(uid);
+      }
+      function profilePath(uid) {
+        return /databases/$(database)/documents/artifacts/$(appId)/users/$(uid)/profile/data;
+      }
+      function lockPath(playerId) {
+        return /databases/$(database)/documents/artifacts/$(appId)/public/data/player_locks/$(playerId);
+      }
+      // Membresía (supabase/functions/_shared/membership.js): un equipo nuevo nace con approved: false y no
+      // oferta ni escribe en el chat hasta que el admin lo aprueba. Los equipos anteriores no tienen el campo
+      // y cuentan como aprobados.
+      function isApprovedManager() {
+        return exists(teamPath(request.auth.uid))
+          && get(teamPath(request.auth.uid)).data.get('approved', true) == true;
+      }
+
+      // Player locks: los crea, mueve y libera el servidor (liberar cierra las ofertas abiertas por el
+      // jugador; desde el navegador quedaban reteniendo el dinero de los compradores).
       match /public/data/player_locks/{playerId} {
         allow read: if true;
-        allow create, update: if isAuth() && (
-          isAdmin() || (
-            request.resource.data.lockedBy == request.auth.uid &&
-            (
-              request.resource.data.isFranchise != true ||
-              get(/databases/$(database)/documents/artifacts/$(appId)/users/$(request.auth.uid)/profile/data).data.franchisePlayerUsed != true
-            )
-          )
-        );
-        allow delete: if isAuth() && (resource.data.lockedBy == request.auth.uid || isAdmin());
+        allow write: if isAdmin();
       }
 
-      // Equipos públicos: validación de presupuesto no negativo (traspasos)
+      // Equipos públicos. El dueño edita su nombre, escudo, formación y plantilla visible; el
+      // presupuesto y la whitelist sólo los cambia el admin (o el servidor en un traspaso).
       match /public/data/teams/{teamId} {
         allow read: if true;
-        allow create: if isAuth() && (request.auth.uid == teamId || isAdmin());
-        allow update: if isAuth() && (
+        allow create: if isAuth() && (
           isAdmin() || (
-            !('budget' in request.resource.data) || request.resource.data.budget >= 0
+            request.auth.uid == teamId
+            && request.resource.data.get('inWhitelist', false) == false
+            && request.resource.data.get('approved', true) == false
+            && (request.resource.data.budget == defaultBudget()
+              || request.resource.data.budget == get(profilePath(teamId)).data.budget)
           )
+        );
+        allow update: if isAuth() && (
+          isAdmin()
+          || (request.auth.uid == teamId && !changedKeys().hasAny(['budget', 'inWhitelist', 'userId', 'marketUpdatedAt', 'approved']))
         );
         allow delete: if isAdmin();
       }
 
-      // Feed de transferencias
+      // Feed de transferencias: lo escribe el servidor, que también borra el fichaje al liberar.
       match /public/data/transfers/{transferId} {
         allow read: if true;
-        allow create: if isAuth();
-        allow update, delete: if isAdmin();
+        allow write: if isAdmin();
       }
 
-      // Ofertas de traspaso
+      // Ofertas de traspaso. Las leen solo los dos clubes de la oferta (y el admin): cualquier cuenta de Google
+      // nueva queda con un equipo pendiente, así que «con sesión» no alcanza para ver negociaciones ajenas
+      // (docs/SECURITY_AUDIT.md, S1). Aceptar la ejecuta el servidor; el resto de la negociación la escriben los
+      // participantes, por turnos.
       match /public/data/offers/{offerId} {
-        allow read: if isAuth();
-        allow create: if isAuth() && (request.resource.data.senderId == request.auth.uid || isAdmin());
-        allow update: if isAuth() && (request.resource.data.senderId == request.auth.uid || request.resource.data.targetTeamId == request.auth.uid || isAdmin());
+        allow read: if isAdmin() || (isAuth() && (resource.data.senderId == request.auth.uid || resource.data.targetTeamId == request.auth.uid));
+        allow create: if isAuth() && (
+          isAdmin() || (
+            request.resource.data.senderId == request.auth.uid
+            && request.resource.data.targetTeamId != request.auth.uid
+            && isApprovedManager()
+            && request.resource.data.status == 'pending'
+            && isMoney(request.resource.data.offerAmount)
+            && isFreshExpiry(request.resource.data.expiresAtMs)
+          )
+        );
+        allow update: if isAuth() && (
+          isAdmin() || (
+            request.auth.uid in [resource.data.senderId, resource.data.targetTeamId]
+            && changedKeys().hasOnly(['status', 'offerAmount', 'counterAmount', 'history', 'rejectedAt', 'rejectedBy',
+              'withdrawnAt', 'counterAt', 'counterBy', 'reofferedAt', 'expiresAtMs'])
+            && isOfferTransition()
+          )
+        );
         allow delete: if isAdmin();
 
+        // Montos: enteros positivos. Las ofertas pendientes retienen fondos del comprador; un monto
+        // negativo o no numérico liberaría presupuesto (supabase/functions/_shared/budget.js).
+        function isMoney(value) {
+          return value is int && value > 0;
+        }
+
+        // Cada turno (oferta, contraoferta, nueva oferta) vence a las 48 h (supabase/functions/_shared/offerExpiry.js).
+        // Se acepta una hora de margen por el reloj del navegador; nadie puede fijar un vencimiento más lejano.
+        function isFreshExpiry(value) {
+          return value is int
+            && value >= request.time.toMillis() + 47 * 3600 * 1000
+            && value <= request.time.toMillis() + 49 * 3600 * 1000;
+        }
+
+        // Igual que buildOfferUpdate (services/transferService.js):
+        // pending:   vendedor → rejected | countered; comprador → withdrawn
+        // countered: comprador → rejected | withdrawn | pending (nueva oferta); vendedor → withdrawn
+        function isOfferTransition() {
+          let from = resource.data.status;
+          let to = request.resource.data.status;
+          let isSeller = request.auth.uid == resource.data.targetTeamId;
+          let amountsKept = !changedKeys().hasAny(['offerAmount', 'counterAmount', 'expiresAtMs']);
+          let newTurn = isFreshExpiry(request.resource.data.get('expiresAtMs', 0));
+          return (from == 'pending' && isSeller && to == 'rejected' && amountsKept)
+            || (from == 'pending' && isSeller && to == 'countered' && !changedKeys().hasAny(['offerAmount'])
+              && isMoney(request.resource.data.counterAmount) && newTurn)
+            || (from == 'pending' && !isSeller && to == 'withdrawn' && amountsKept)
+            || (from == 'countered' && !isSeller && to in ['rejected', 'withdrawn'] && amountsKept)
+            || (from == 'countered' && !isSeller && to == 'pending' && !changedKeys().hasAny(['counterAmount'])
+              && isMoney(request.resource.data.offerAmount) && newTurn)
+            || (from == 'countered' && isSeller && to == 'withdrawn' && amountsKept);
+        }
+
+        // Chat de la negociación: solo los dos clubes de la oferta, mientras sigue abierta, con texto corto.
+        // Antes cualquier manager podía escribir en cualquier oferta, sin límite de largo.
         match /messages/{messageId} {
-          allow read: if isAuth();
-          allow create: if isAuth() && (request.resource.data.senderId == request.auth.uid || isAdmin());
+          allow read: if isAdmin() || (isAuth() && request.auth.uid in [negotiation().senderId, negotiation().targetTeamId]);
+          allow create: if isAuth() && (isAdmin() || (
+            request.resource.data.senderId == request.auth.uid
+            && request.auth.uid in [negotiation().senderId, negotiation().targetTeamId]
+            && negotiation().status in ['pending', 'countered']
+            && request.resource.data.keys().hasOnly(['senderId', 'senderTeamName', 'senderTeamLogo', 'text', 'createdAt', 'createdAtIso'])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 500
+            && isShortText(request.resource.data.get('senderTeamName', ''), 80)
+            && isShortText(request.resource.data.get('senderTeamLogo', ''), 1000)
+          ));
           allow update, delete: if isAdmin();
+
+          function negotiation() {
+            return get(/databases/$(database)/documents/artifacts/$(appId)/public/data/offers/$(offerId)).data;
+          }
         }
       }
 
       // Manager chat
+      // Solo managers aprobados (antes bastaba con tener sesión, y cualquier cuenta de Google nueva la tiene). Un
+      // mensaje puede ser solo un GIF: el texto vacío se rechazaba aunque el chat permitía mandarlo.
       match /public/data/manager_chat/{messageId} {
-        allow read: if true;
+        allow read: if isAdmin() || (isAuth() && isApprovedManager());
         allow create: if isAuth()
           && request.resource.data.senderId == request.auth.uid
+          && isApprovedManager()
           && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 1000;
+          && request.resource.data.text.size() <= 1000
+          && isGifUrl(request.resource.data.get('gifUrl', ''))
+          && (request.resource.data.text.size() > 0 || request.resource.data.get('gifUrl', '') != '')
+          && isShortText(request.resource.data.get('senderTeamName', ''), 80);
         allow update, delete: if isAdmin();
+
+        function isGifUrl(url) {
+          return url == '' || (url is string && url.size() <= 600 && url.matches('https://[^ ]+'));
+        }
       }
 
       // Formaciones compartidas: cualquier persona puede verlas, pero sólo su autor
       // (o un admin) puede crear, editar o eliminar su propio snapshot.
+      // Formaciones compartidas (FormationModal → /tactics/view/:id). Cualquier cuenta con sesión crea: límites de
+      // forma y tamaño para que nadie use la colección pública como almacenamiento (auditoría S7).
+      function isSharedFormationShape(data) {
+        return data.keys().hasOnly(['teamName', 'logoUrl', 'formationKey', 'formationName', 'formationStates',
+            'slots', 'bench', 'isPublic', 'createdAt', 'createdBy'])
+          && data.teamName is string && data.teamName.size() <= 80
+          && data.logoUrl is string && data.logoUrl.size() <= 2048
+          && data.formationKey is string && data.formationKey.size() <= 40
+          && data.formationName is string && data.formationName.size() <= 80
+          && data.slots is map && data.slots.size() <= 11
+          && data.bench is list && data.bench.size() <= 60
+          && (!('formationStates' in data) || (data.formationStates is map
+            && data.formationStates.keys().hasOnly(['formation', 'fluid', 'positions', 'roles', 'presets'])))
+          && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 40));
+      }
       match /public/data/shared_formations/{formationId} {
         allow read: if true;
         allow create: if isAuth()
-          && request.resource.data.createdBy == request.auth.uid;
+          && request.resource.data.createdBy == request.auth.uid
+          && isSharedFormationShape(request.resource.data);
         allow update: if isAdmin() || (
           resource.data.createdBy == request.auth.uid
           && request.resource.data.createdBy == resource.data.createdBy
+          && isSharedFormationShape(request.resource.data)
         );
         allow delete: if isAdmin() || resource.data.createdBy == request.auth.uid;
       }
@@ -116,6 +240,92 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
 
+      // Textos de la web pública de la liga (historia de la liga, de cada club y reglamento de la temporada):
+      // los escribe el admin desde «Web pública» (utils/leagueContent.js); los lee cualquiera.
+      // Un editor de la web (league_editors/{uid}, lo nombra el admin) puede crear y editar esos textos y nada más:
+      // solo los documentos conocidos, con los campos y largos de utils/leagueContent.js, a su nombre. No borra.
+      function isLeagueEditor() {
+        return isAuth()
+          && exists(/databases/$(database)/documents/artifacts/$(appId)/league_editors/$(request.auth.uid));
+      }
+      function isLeagueContentDoc(docId) {
+        return docId in ['history', 'rules'] || docId.matches('club-[A-Za-z0-9_-]{1,128}');
+      }
+      function isValidLeagueContent() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(['body', 'season', 'chapters', 'profile', 'updatedAt', 'updatedBy'])
+          && data.updatedBy == request.auth.uid
+          && data.updatedAt == request.time
+          && (!('body' in data) || isShortText(data.body, 20000))
+          && (!('season' in data) || isShortText(data.season, 40))
+          && (!('chapters' in data) || (data.chapters is list && data.chapters.size() <= 40))
+          && (!('profile' in data) || isValidClubProfile(data.profile));
+      }
+      // Encuadre de la foto del estadio (utils/leagueContent.js cleanPhotoFrame): punto de enfoque en % y zoom.
+      function isValidPhotoFrame(f) {
+        return f is map && f.keys().hasOnly(['x', 'y', 'zoom'])
+          && f.x is number && f.x >= 0 && f.x <= 100
+          && f.y is number && f.y >= 0 && f.y <= 100
+          && f.zoom is number && f.zoom >= 1 && f.zoom <= 3;
+      }
+      // Ficha del club (utils/leagueContent.js CLUB_PROFILE_FIELDS): textos cortos, una foto https y dos listas acotadas.
+      function isValidClubProfile(p) {
+        return p is map
+          && p.keys().hasOnly(['nickname', 'founded', 'city', 'country', 'stadium', 'capacity', 'coach', 'president',
+            'manager', 'captain', 'colors', 'stadiumPhotoUrl', 'stadiumPhotoFrame', 'honours', 'seasons'])
+          && (!('nickname' in p) || isShortText(p.nickname, 60))
+          && (!('founded' in p) || isShortText(p.founded, 40))
+          && (!('city' in p) || isShortText(p.city, 60))
+          && (!('country' in p) || isShortText(p.country, 60))
+          && (!('stadium' in p) || isShortText(p.stadium, 80))
+          && (!('capacity' in p) || isShortText(p.capacity, 20))
+          && (!('coach' in p) || isShortText(p.coach, 80))
+          && (!('president' in p) || isShortText(p.president, 80))
+          && (!('manager' in p) || isShortText(p.manager, 80))
+          && (!('captain' in p) || isShortText(p.captain, 80))
+          && (!('colors' in p) || isShortText(p.colors, 60))
+          && (!('stadiumPhotoUrl' in p) || (isShortText(p.stadiumPhotoUrl, 500)
+            && (p.stadiumPhotoUrl == '' || p.stadiumPhotoUrl.matches('https://[^\\s]+'))))
+          && (!('stadiumPhotoFrame' in p) || isValidPhotoFrame(p.stadiumPhotoFrame))
+          && (!('honours' in p) || (p.honours is list && p.honours.size() <= 30))
+          && (!('seasons' in p) || (p.seasons is list && p.seasons.size() <= 40));
+      }
+      match /public/data/league_content/{docId} {
+        allow read: if true;
+        allow write: if isAdmin();
+        allow create, update: if isLeagueEditor() && isLeagueContentDoc(docId) && isValidLeagueContent();
+      }
+
+      // Quién es editor de la web pública: cada uno lee el suyo (para ver la sección); solo el admin los nombra.
+      match /league_editors/{uid} {
+        allow read: if isAuth() && (request.auth.uid == uid || isAdmin());
+        allow write: if isAdmin();
+      }
+
+      // Partidos de PES en vivo: los escribe la función match-feed (cuenta de servicio) con lo que sube el
+      // puente local (pes-collector/bridge). Nadie los escribe desde el navegador salvo el admin.
+      match /public/data/live_matches/{matchKey} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      // Votos del público sin cuenta (docs/COMMUNITY_PLATFORM.md): totales públicos que escribe solo la función
+      // community-vote (cuenta de servicio). Las boletas y los contadores por IP viven fuera de artifacts
+      // (community_ballots, community_ip) y caen en el catch-all: solo admin.
+      match /public/data/predictions/{matchId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+      match /public/data/mvp_votes/{matchKey} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+      // Encuesta «¿quién gana la copa?»: el admin la abre, la cierra y carga las opciones; los votos los suma la función.
+      match /public/data/polls/{pollId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
       // La configuración de mercado cambia permisos funcionales y debe ser admin-only.
       match /public/data/config/{configId} {
         allow read: if true;
@@ -131,31 +341,41 @@ service cloud.firestore {
       match /presence/{userId} {
         allow read: if true;
         allow create, update: if isAuth() && (request.auth.uid == userId || isAdmin());
-        allow delete: if isAuth();
+        allow delete: if isAuth() && (request.auth.uid == userId || isAdmin());
       }
 
       // ── USUARIOS ──────────────────────────────────────────────
       // Carrito privado de usuario: validación de requisitos de Jugador Franquicia
       match /users/{userId}/cart/{playerId} {
         allow read, delete: if isAuth() && (request.auth.uid == userId || isAdmin());
+        // Copia privada de los jugadores propios (la autoridad es el lock). Un jugador figura como
+        // franquicia sólo si su lock, escrito por el servidor, lo dice.
         allow create, update: if isAuth() && (request.auth.uid == userId || isAdmin()) && (
           request.resource.data.isFranchise != true || (
-            request.resource.data.Age >= 30 &&
-            request.resource.data.OVR_CALCULADO >= 82 &&
-            request.resource.data.OVR_CALCULADO <= 89 &&
-            get(/databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/profile/data).data.franchisePlayerUsed != true
+            get(lockPath(playerId)).data.lockedBy == userId &&
+            get(lockPath(playerId)).data.isFranchise == true
           )
         );
       }
 
-      // Perfil privado: control de flag de jugador franquicia y presupuesto no negativo
+      // El presupuesto del perfil es una copia del público (teams/{uid}.budget): sólo puede tomar
+      // el valor que el equipo tiene después de esta escritura. isAdmin, role y los datos de franquicia
+      // no los escribe el usuario (la franquicia la marca el servidor al fichar).
       match /users/{userId}/profile/data {
-        allow read, create: if isAuth() && (request.auth.uid == userId || isAdmin());
+        allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
+        allow create: if isAuth() && (
+          isAdmin() || (
+            request.auth.uid == userId
+            && request.resource.data.get('budget', defaultBudget()) == defaultBudget()
+            && !request.resource.data.keys().hasAny(['isAdmin', 'role', 'franchisePlayerId'])
+            && request.resource.data.get('franchisePlayerUsed', false) == false
+          )
+        );
         allow update: if isAuth() && (
           isAdmin() || (
             request.auth.uid == userId &&
-            (!('budget' in request.resource.data) || request.resource.data.budget >= 0) &&
-            (!('franchisePlayerUsed' in resource.data) || resource.data.franchisePlayerUsed != true || request.resource.data.franchisePlayerUsed == true)
+            !changedKeys().hasAny(['isAdmin', 'role', 'franchisePlayerUsed', 'franchisePlayerId']) &&
+            (!changedKeys().hasAny(['budget']) || request.resource.data.budget == getAfter(teamPath(userId)).data.budget)
           )
         );
         allow delete: if isAdmin();
@@ -246,17 +466,41 @@ service cloud.firestore {
 
         // Las texturas (kits y fuentes) viven en Supabase Storage; ver supabase/storage-policies.sql.
 
-        // Historial de exportaciones.
+        // Una actualización del manifiesto solo puede agregar entradas: nunca cambiar ni quitar las existentes.
+        function kitTexturesOnlyAdded(next, prev) {
+          return next.diff(prev).changedKeys().size() == 0 && next.diff(prev).removedKeys().size() == 0;
+        }
+
+        // Qué texturas originales del kit-server de un equipo están compartidas en Supabase
+        // (services/pesWorkspaceService.js addKitTextures). Solo se agregan entradas.
+        match /kit_textures/{teamId} {
+          allow read: if hasPesRole();
+          allow create, update: if isAuth()
+            && (resource == null || kitTexturesOnlyAdded(request.resource.data.files, resource.data.files))
+            && request.resource.data.updatedBy == request.auth.uid
+            && request.resource.data.keys().hasOnly(['teamId', 'files', 'updatedBy', 'updatedAt'])
+            && request.resource.data.files is map
+            && request.resource.data.teamId == int(teamId)
+            && (isPesSuper() || (isKitManager() && pesInLeague(wsId, { 'target': { 'teamId': int(teamId) } })));
+          allow delete: if isPesSuper();
+        }
+
+        // Historial de exportaciones: inmutable; sólo se borra junto con el espacio (Super Admin).
         match /exports/{exportId} {
           allow read: if hasPesRole();
           allow create: if isPesSuper() && request.resource.data.exportedBy == request.auth.uid;
-          allow update, delete: if false;
+          allow update: if false;
+          allow delete: if isPesSuper();
         }
 
-        // Última validación (cualquier rol la puede refrescar).
+        // Última validación: cualquier rol la puede refrescar, a su nombre y solo con los campos del resultado
+        // (antes un rol de solo lectura podía escribir cualquier cosa). Se borra junto con el espacio.
         match /meta/{docId} {
           allow read: if hasPesRole();
-          allow write: if hasPesRole();
+          allow create, update: if hasPesRole()
+            && request.resource.data.checkedBy == request.auth.uid
+            && request.resource.data.keys().hasOnly(['passed', 'errors', 'warnings', 'preexisting', 'checkedAt', 'checkedBy']);
+          allow delete: if isPesSuper();
         }
       }
     }

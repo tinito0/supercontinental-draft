@@ -22,7 +22,7 @@ export function PesPlayerList({ total, results, query, onQuery, selectedId, onSe
             <li key={`${p.src}-${p.id}`}>
               <button type="button" onClick={() => onSelect(p.id)} aria-current={selected ? 'true' : undefined}
                 className={`w-full flex items-center gap-3 min-h-12 px-2 py-1.5 rounded-lg text-left transition-colors
-                  ${selected ? 'bg-accent/15 text-ink' : 'text-ink-2 hover:bg-white/[0.04] hover:text-ink'}`}>
+                  ${selected ? 'bg-accent-deep text-ink' : 'text-ink-2 hover:bg-overlay hover:text-ink'}`}>
                 <PlayerPhoto id={p.id} className="w-9 h-9 rounded-lg shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{p.name || `Jugador ${p.id}`}</span>
@@ -30,15 +30,20 @@ export function PesPlayerList({ total, results, query, onQuery, selectedId, onSe
                     <span className="num">{p.id}</span>{p.src === 'edit' && ' · editado en el EDIT'}
                   </span>
                 </span>
-                {p.pos && <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${getPosColorClass(p.pos)}`}>{p.pos}</span>}
-                {p.ovr > 0 && <span className={`shrink-0 w-8 text-center rounded font-display num text-sm font-bold ${getStatAndOvrColorClass(p.ovr)}`}>{p.ovr}</span>}
+                {p.pos && <span className={`shrink-0 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${getPosColorClass(p.pos)}`}>{p.pos}</span>}
+                {p.ovr > 0 && <span className={`shrink-0 w-8 text-center rounded-md font-display num text-sm font-bold ${getStatAndOvrColorClass(p.ovr)}`}>{p.ovr}</span>}
               </button>
             </li>
           );
         })}
-        {results.length === 0 && <li className="px-2 py-6 text-center text-sm text-ink-3">Ningún jugador coincide con «{query}».</li>}
+        {results.length === 0 && (
+          <li className="px-2 py-6 text-center text-sm text-ink-3">
+            <p>Ningún jugador coincide con «{query}».</p>
+            <button type="button" className="btn btn-ghost btn-sm mt-2" onClick={() => onQuery('')}>Limpiar búsqueda</button>
+          </li>
+        )}
       </ul>
-      {truncated && <p className="px-1 pt-2 text-[11px] text-ink-3">Se muestran los primeros resultados: escribí más letras para acotar.</p>}
+      {truncated && <p className="px-1 pt-2 text-xs text-ink-3">Se muestran los primeros resultados: escribí más letras para acotar.</p>}
     </section>
   );
 }

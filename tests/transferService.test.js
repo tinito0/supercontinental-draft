@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   getOfferAmount,
   appendHistory,
+  buildOfferUpdate,
   counterTransferOffer,
   rejectTransferOffer,
   withdrawTransferOffer
@@ -106,6 +107,48 @@ describe('services/transferService.js', () => {
         livePlayer,
         teamName: 'Boca'
       })).rejects.toThrow();
+    });
+  });
+
+  describe('buildOfferUpdate (turns, same table as firestore.rules)', () => {
+    const at = '2026-10-14T00:00:00.000Z';
+    const pending = { senderId: 'buyer', targetTeamId: 'seller', status: 'pending', offerAmount: 11000000, history: [{ type: 'sent' }] };
+    const countered = { ...pending, status: 'countered', counterAmount: 11500000 };
+
+    it('the seller counters a pending offer', () => {
+      const update = buildOfferUpdate({ offer: pending, userId: 'seller', action: 'counter', amount: 11500000, teamName: 'S', at });
+      expect(update).toMatchObject({ status: 'countered', counterAmount: 11500000, counterBy: 'S' });
+      expect(update.history.at(-1)).toMatchObject({ type: 'countered', teamId: 'seller', amount: 11500000 });
+    });
+
+    it("the buyer answers a counter with a new offer, which goes back to the seller's turn", () => {
+      const update = buildOfferUpdate({ offer: countered, userId: 'buyer', action: 'counter', amount: 11200000, teamName: 'B', at });
+      expect(update).toMatchObject({ status: 'pending', offerAmount: 11200000 });
+      expect(update).not.toHaveProperty('counterAmount');
+      expect(update.history.at(-1)).toMatchObject({ type: 'sent', teamId: 'buyer', amount: 11200000 });
+    });
+
+    it('rejects moves out of turn: the buyer cannot counter their own pending offer, nor the seller re-counter', () => {
+      expect(() => buildOfferUpdate({ offer: pending, userId: 'buyer', action: 'counter', amount: 1, at })).toThrow(/no es tu turno/);
+      expect(() => buildOfferUpdate({ offer: countered, userId: 'seller', action: 'counter', amount: 1, at })).toThrow(/no es tu turno/);
+    });
+
+    it('credits a rejection to the team that rejects it', () => {
+      const bySeller = buildOfferUpdate({ offer: pending, userId: 'seller', action: 'reject', teamName: 'S', at });
+      const byBuyer = buildOfferUpdate({ offer: countered, userId: 'buyer', action: 'reject', teamName: 'B', at });
+      expect(bySeller.history.at(-1)).toMatchObject({ teamId: 'seller', amount: 11000000 });
+      expect(byBuyer.history.at(-1)).toMatchObject({ teamId: 'buyer', amount: 11500000 });
+    });
+
+    it('lets the buyer withdraw a pending offer and the seller withdraw their counter', () => {
+      expect(buildOfferUpdate({ offer: pending, userId: 'buyer', action: 'withdraw', at }).status).toBe('withdrawn');
+      expect(buildOfferUpdate({ offer: countered, userId: 'seller', action: 'withdraw', at }).status).toBe('withdrawn');
+    });
+
+    it('refuses closed offers (e.g. already accepted in another tab) and outsiders', () => {
+      const accepted = { ...pending, status: 'accepted' };
+      expect(() => buildOfferUpdate({ offer: accepted, userId: 'buyer', action: 'withdraw', at })).toThrow(/no es tu turno/);
+      expect(() => buildOfferUpdate({ offer: pending, userId: 'mallory', action: 'reject', at })).toThrow(/No participás/);
     });
   });
 });

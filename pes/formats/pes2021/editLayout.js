@@ -109,6 +109,13 @@ export const EDIT_TACTICS = {
   gkPosition: [3, 52],
 };
 
+/**
+ * Advanced instruction codes the game accepts in the attack slots (+0x6C, +0x74) and defence slots (+0x7C, +0x84)
+ * of a plan; 0 = none. From PES Editor Rebuilt js/extras.js ADV_CODES ("verified in the game"; 15 is "probable").
+ * Names and descriptions for the UI: utils/advancedInstructions.js.
+ */
+export const EDIT_ADVANCED_CODES = { attack: [1, 2, 3, 4, 5, 6, 7, 9], defense: [11, 12, 13, 14, 15, 16] };
+
 /** Set-piece takers in EDIT order (Rebuilt SP_ROLES): index -> meaning. */
 export const EDIT_TAKER_ROLES = ['longFK', 'shortFK', 'secondKicker', 'leftCorner', 'rightCorner', 'penalty', 'header1', 'header2', 'header3'];
 

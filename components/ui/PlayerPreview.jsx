@@ -1,99 +1,65 @@
 import React from 'react';
-import { getFlagUrl, formatPriceShort } from '../../utils/helpers.js';
+import { createPortal } from 'react-dom';
+import { getFlagUrl, formatPriceShort, getPosColorClass, getStatAndOvrColorClass } from '../../utils/helpers.js';
+import { playerPlaceholder } from '../../utils/playerPlaceholder.js';
 
-// Same scale as the stat badges (index.css .stat-c-*): stat colours are football semantics.
-const getStatColor = (val) => {
-  if (val >= 90) return 'text-[#1ec9a4]';
-  if (val >= 80) return 'text-[#a0dd00]';
-  if (val >= 70) return 'text-[#ffc400]';
-  if (val >= 60) return 'text-[#ec7d22]';
-  return 'text-ink-3';
-};
+const FIELD_STATS = [['VEL', 'Speed'], ['TIR', 'Finishing'], ['PAS', 'LowPass'], ['REG', 'Dribbling'], ['DEF', 'BallWinning'], ['FIS', 'Stamina']];
+const GK_STATS = [['ATA', 'GKCatching'], ['DES', 'GKClearing'], ['REF', 'GKReflexes'], ['EST', 'GKReach'], ['COB', 'GKCoverage'], ['SAQ', 'GKParrying']];
 
-const getOvrColorClass = (ovr) => {
-  if (ovr >= 90) return 'bg-[#1ec9a4]/20 text-[#1ec9a4] border border-[#1ec9a4]/40';
-  if (ovr >= 85) return 'bg-[#a0dd00]/20 text-[#a0dd00] border border-[#a0dd00]/40';
-  if (ovr >= 75) return 'bg-[#ffc400]/20 text-[#ffc400] border border-[#ffc400]/40';
-  if (ovr >= 65) return 'bg-[#ec7d22]/20 text-[#ec7d22] border border-[#ec7d22]/40';
-  return 'bg-white/[0.06] text-ink-3 border border-line/25';
-};
-
-export function PlayerPreview({ player, isVisible, position, onOpenProfile }) {
+/**
+ * Hover preview for marketplace cards (desktop, grid view). Informational only: it never takes the pointer
+ * (moving towards it would close it), so it has no buttons; clicking the card opens the full sheet.
+ * Rendered on document.body: an animated (transformed) ancestor would make `position: fixed` relative to it.
+ */
+export function PlayerPreview({ player, isVisible, position }) {
   if (!player) return null;
+  const preview = <PreviewCard player={player} isVisible={isVisible} position={position} />;
+  return typeof document === 'undefined' ? preview : createPortal(preview, document.body);
+}
 
+function PreviewCard({ player, isVisible, position }) {
   const isGK = player.POS_NOMBRE === 'PT';
   const flagUrl = getFlagUrl(player.Country1);
 
-  const stats = isGK ? [
-    { label: 'ATA', value: player.GKCatching },
-    { label: 'DES', value: player.GKClearing },
-    { label: 'REF', value: player.GKReflexes },
-    { label: 'EST', value: player.GKReach },
-    { label: 'COB', value: player.GKCoverage },
-    { label: 'SAQ', value: player.GKParrying },
-  ] : [
-    { label: 'VEL', value: player.Speed },
-    { label: 'TIR', value: player.Finishing },
-    { label: 'PAS', value: player.LowPass },
-    { label: 'REG', value: player.Dribbling },
-    { label: 'DEF', value: player.BallWinning },
-    { label: 'FIS', value: player.Stamina },
-  ];
-
   return (
     <div
-      className={`fixed z-50 bg-surface border border-line/[0.12] rounded-xl shadow-2xl p-3 w-56 transition-all duration-200 ${
-        isVisible ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
-      }`}
+      aria-hidden="true"
+      className={`fixed z-50 w-56 p-3 rounded-xl bg-surface border border-line/[0.16] shadow-lg pointer-events-none transition-opacity duration-fast ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       style={{ top: position.top, left: position.left }}
     >
-      <div className="flex items-center gap-3 border-b border-line/[0.12] pb-2 mb-2">
+      <div className="flex items-center gap-3 pb-2 mb-2 border-b border-line/[0.12]">
         <img
           src={`/fotos_jugadores/${player.Id}.webp`}
-          alt={player.Name}
-          className="w-12 h-12 object-cover rounded-full bg-black/20"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = `https://placehold.co/48x48/111/333?text=${player.Name?.substring(0, 2)}`;
-          }}
+          alt=""
+          width={48}
+          height={48}
+          className="w-12 h-12 object-cover object-top rounded-lg bg-raised"
+          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = playerPlaceholder(player.Name?.substring(0, 2)); }}
         />
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-ink truncate text-sm">{player.Name}</div>
-          <div className="flex items-center gap-1.5 text-xs mt-0.5">
-            <span className={`px-1 rounded text-[10px] font-bold ${getOvrColorClass(player.OVR_CALCULADO)}`}>
-              {player.OVR_CALCULADO}
-            </span>
-            <span className="text-ink-3 font-semibold">{player.POS_NOMBRE}</span>
-            <span className="text-ink-3">•</span>
-            <span className="text-ink-3">{player.Age}</span>
-            <img src={flagUrl} alt="" className="w-3.5 h-2.5 rounded-sm ml-0.5 opacity-90" />
+          <p className="text-sm font-semibold text-ink truncate">{player.Name}</p>
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-ink-3">
+            <span className={`min-w-7 px-1 rounded font-display num text-sm font-bold text-center ${getStatAndOvrColorClass(player.OVR_CALCULADO)}`}>{player.OVR_CALCULADO}</span>
+            <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+            <span><span className="num">{player.Age}</span> años</span>
+            {flagUrl && <img src={flagUrl} alt="" width={16} height={12} className="w-4 h-3 rounded-[2px] object-cover" />}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mb-3">
-        {stats.map((stat, i) => (
-          <div key={i} className="flex justify-between items-center text-xs bg-white/5 px-2 py-1 rounded">
-            <span className="text-ink-3 font-bold">{stat.label}</span>
-            <span className={`font-bold ${getStatColor(stat.value)}`}>{stat.value || 0}</span>
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+        {(isGK ? GK_STATS : FIELD_STATS).map(([label, key]) => (
+          <div key={key} className="flex items-center justify-between text-xs">
+            <dt className="font-semibold text-ink-3">{label}</dt>
+            <dd className={`min-w-7 px-1 rounded font-display num text-sm font-bold text-center ${getStatAndOvrColorClass(player[key])}`}>{player[key] ?? '–'}</dd>
           </div>
         ))}
-      </div>
+      </dl>
 
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-line/[0.12]">
-        <span className="text-success-soft font-bold text-sm tracking-tight">
-          {formatPriceShort(player.Precio)}
-        </span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onOpenProfile) onOpenProfile(player.Id);
-          }}
-          className="text-[10px] font-bold text-accent hover:text-accent-soft transition-colors uppercase tracking-wider"
-        >
-          Ver perfil completo →
-        </button>
-      </div>
+      <p className="mt-2 pt-2 border-t border-line/[0.12] flex items-baseline justify-between">
+        <span className="text-xs text-ink-3">Precio</span>
+        <span className="font-display num text-base font-semibold text-ink">{formatPriceShort(player.Precio)}</span>
+      </p>
     </div>
   );
 }

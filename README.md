@@ -102,7 +102,6 @@ supercontinental-draft/
 ├── index.html                 # HTML raíz con Service Worker
 ├── index.css                  # Estilos principales
 ├── landing.css                # Estilos de la landing page
-├── playercard.css             # Estilos de las tarjetas de jugador
 │
 ├── components/                # 27 componentes React
 │   ├── AdminModal.jsx         # Panel de administración
@@ -126,7 +125,7 @@ supercontinental-draft/
 │   ├── LinkGoogleScreen.jsx   # Migración/vinculación de cuenta Google
 │   ├── TeamScreen.jsx         # Vista pública de equipo
 │   ├── FormationViewScreen.jsx # Vista pública de formación
-│   └── MaintenanceScreen.jsx  # Pantalla de mantenimiento
+│   └── (mercado cerrado: components/MarketClosedBanner.jsx)
 │
 ├── utils/                     # Utilidades y constantes
 │   ├── constants.js           # Posiciones, stats, formaciones, skills, regiones
@@ -174,7 +173,7 @@ supercontinental-draft/
 | **Backend**      | Firebase (Auth, Firestore, Storage, Hosting)                   |
 | **Charts**       | Chart.js + react-chartjs-2 (radar charts, barras)              |
 | **PDF/Export**    | jsPDF + jspdf-autotable, html2canvas                           |
-| **Virtualización** | react-window + react-virtualized-auto-sizer                  |
+| **Virtualización** | @tanstack/react-virtual (filas del mercado sobre el scroll de la página) |
 | **Notificaciones** | react-toastify                                                |
 | **Efectos**      | react-snowfall (efectos de temporada)                          |
 | **PWA**          | Service Worker nativo + Web App Manifest                       |

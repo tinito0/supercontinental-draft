@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatPrice,
   formatPriceShort,
+  formatPriceCompact,
   formatBudget,
   normalizarString,
   processPlayersData,
@@ -180,5 +181,25 @@ describe('utils/helpers.js', () => {
       expect(getRegionById('invalid')).toBe('Otras');
       expect(getFlagCode(null)).toBe('NA');
     });
+  });
+});
+
+describe('formatPriceCompact (marketplace cards and rows)', () => {
+  it('rounds to whole millions from $10M up', () => {
+    expect(formatPriceCompact(94.99)).toBe('$95M');
+    expect(formatPriceCompact(112)).toBe('$112M');
+    expect(formatPriceCompact(10)).toBe('$10M');
+  });
+
+  it('keeps one decimal between $1M and $10M and two below $1M, without trailing zeros', () => {
+    expect(formatPriceCompact(4.75)).toBe('$4.8M');
+    expect(formatPriceCompact(3)).toBe('$3M');
+    expect(formatPriceCompact(0.75)).toBe('$0.75M');
+    expect(formatPriceCompact(0.5)).toBe('$0.5M');
+  });
+
+  it('falls back to $0M for missing prices', () => {
+    expect(formatPriceCompact(undefined)).toBe('$0M');
+    expect(formatPriceCompact(NaN)).toBe('$0M');
   });
 });

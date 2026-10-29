@@ -1,0 +1,55 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co https://api.giphy.com https://api.klipy.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" }
+      ]
+    },
+    {
+      "source": "/((?!.*\\.).*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/(.*)\\.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
+  ],
+  "redirects": [
+    { "source": "/login", "destination": "/draft/login", "statusCode": 301 },
+    { "source": "/overview", "destination": "/draft/overview", "statusCode": 301 },
+    { "source": "/marketplace", "destination": "/draft/marketplace", "statusCode": 301 },
+    { "source": "/my-team", "destination": "/draft/my-team", "statusCode": 301 },
+    { "source": "/scouting", "destination": "/draft/scouting", "statusCode": 301 },
+    { "source": "/other-teams", "destination": "/draft/other-teams", "statusCode": 301 },
+    { "source": "/financials", "destination": "/draft/financials", "statusCode": 301 },
+    { "source": "/tournament", "destination": "/draft/tournament", "statusCode": 301 },
+    { "source": "/overlay", "destination": "/draft/overlay", "statusCode": 301 },
+    { "source": "/tactics", "destination": "/draft/tactics", "statusCode": 301 },
+    { "source": "/tactics/:rest*", "destination": "/draft/tactics/:rest*", "statusCode": 301 },
+    { "source": "/pes", "destination": "/draft/pes", "statusCode": 301 },
+    { "source": "/pes/:rest*", "destination": "/draft/pes/:rest*", "statusCode": 301 },
+    { "source": "/modal/:rest*", "destination": "/draft/modal/:rest*", "statusCode": 301 },
+    { "source": "/team/:rest*", "destination": "/draft/team/:rest*", "statusCode": 301 }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { DRAFT_BASE, isDraftPath } from '../utils/siteRoutes.js';
 
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -28,7 +29,8 @@ export class ErrorBoundary extends Component {
   };
 
   handleGoHome = () => {
-    window.location.href = '/';
+    // Home of whichever app failed: the draft lives under /draft, the league site at the root.
+    window.location.href = isDraftPath(window.location.pathname) ? `${DRAFT_BASE}/` : '/';
   };
 
   render() {
@@ -46,7 +48,7 @@ export class ErrorBoundary extends Component {
             <AlertTriangle className="w-8 h-8" />
           </div>
 
-          <span className="text-[11px] font-bold uppercase tracking-wider text-danger-soft bg-danger/10 px-2.5 py-1 rounded-full border border-danger/20 mb-3">
+          <span className="text-[11px] font-bold text-danger-soft bg-danger/10 px-2.5 py-1 rounded-md border border-danger/20 mb-3">
             Ocurrió un error inesperado
           </span>
 
@@ -62,7 +64,7 @@ export class ErrorBoundary extends Component {
             <button
               type="button"
               onClick={this.handleReset}
-              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent font-bold text-xs rounded-xl shadow-lg transition active:scale-95 flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent font-bold text-xs rounded-xl shadow-lg transition active:scale-[0.97] flex items-center gap-2 cursor-pointer"
             >
               <RefreshCw className="w-4 h-4" />
               Reintentar
@@ -70,7 +72,7 @@ export class ErrorBoundary extends Component {
             <button
               type="button"
               onClick={this.handleGoHome}
-              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-ink border border-line/[0.12] font-bold text-xs rounded-xl transition active:scale-95 flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-ink border border-line/[0.12] font-bold text-xs rounded-xl transition active:scale-[0.97] flex items-center gap-2 cursor-pointer"
             >
               <Home className="w-4 h-4" />
               Ir al Inicio

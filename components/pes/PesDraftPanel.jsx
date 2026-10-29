@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, Calculator, Play, Save, RefreshCw } from 'lucide-react';
-import { Card, Button, Pill, ErrorText, Issue } from './PesUi.jsx';
+import { Calculator, Play, Save, RefreshCw } from 'lucide-react';
+import { Card, Button, Pill, ErrorText, Issue, Disclosure, plural } from './PesUi.jsx';
+import { Alert } from '../ui/Alert.jsx';
 import { useCountries } from './useCountries.js';
 import { loadDraftTeams } from '../../services/draftTeamsService.js';
 import { planDraftTransfer, coachNameOfTeam } from '../../pes/draftTransfer.js';
 import { FORMATIONS, DEFAULT_TACTICS } from '../../utils/constants.js';
+
+// Suggestions read "377 · Club name"; the id before the separator is what gets stored.
+const SEPARATOR = ' · ';
 
 /** Game teams for the picker: Team.bin names when loaded, otherwise EDIT names. */
 function gameTeams(ws) {
@@ -21,9 +25,9 @@ function TargetInput({ value, label, onCommit }) {
   useEffect(() => { setText(value); }, [value]);
   return (
     <input list="pes-game-teams" value={text} placeholder="id o nombre del equipo del juego" aria-label={label}
-      onChange={e => { setText(e.target.value); if (/ — /.test(e.target.value)) onCommit(e.target.value); }}
+      onChange={e => { setText(e.target.value); if (e.target.value.includes(SEPARATOR)) onCommit(e.target.value); }}
       onBlur={() => onCommit(text)}
-      className="w-full max-w-sm input min-h-9" />
+      className="w-full min-w-56 input" />
   );
 }
 
@@ -32,14 +36,14 @@ function CoachInput({ team, value, current, countries, onChange }) {
   const name = value?.name || '';
   const country = Number(value?.country) || Number(team.country) || 0;
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-2">
       <input value={name} maxLength={44} aria-label={`Nombre del DT de ${team.name}`}
         placeholder={current ? `Mantiene a ${current}` : 'Mantiene el DT del juego'}
         onChange={e => onChange({ name: e.target.value, country })}
-        className="w-40 input min-h-9" />
+        className="w-44 input" />
       {name.trim() && (
         <select value={country} aria-label={`Nacionalidad del DT de ${team.name}`} onChange={e => onChange({ name, country: Number(e.target.value) })}
-          className="w-32 select min-h-9">
+          className="animate-in fade-in w-36 select">
           {!countries.some(c => c.id === country) && <option value={country}>País {country}</option>}
           {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
@@ -59,17 +63,25 @@ function RemovedList({ removed }) {
     if (r.emptyPosition) entry.empty = true;
     byClub.get(key).set(r.playerId, entry);
   }
+  if (!removed.length) return <p className="text-sm text-ink-3">Ningún fichado estaba en otro club.</p>;
   return (
-    <details className="text-xs text-ink-2">
-      <summary className="cursor-pointer">{removed.length ? `${byClub.size} club(es) pierden jugadores fichados` : 'Ningún fichado estaba en otro club'}</summary>
-      <ul className="mt-2 space-y-1 max-h-72 overflow-y-auto">
+    <Disclosure className="text-sm text-ink-2" summary={`${byClub.size} ${plural(byClub.size, 'club pierde', 'clubes pierden')} jugadores fichados`}>
+      <ul className="mt-2 space-y-1.5 max-h-72 overflow-y-auto overscroll-contain text-xs">
         {[...byClub].map(([club, players]) => (
           <li key={club}>
-            <b>{club}</b>: {[...players.values()].map(p => `${p.name}${p.sub ? ` (entra ${p.sub})` : ''}${p.empty ? ' (queda el puesto vacío)' : ''}`).join(', ')}
+            <span className="font-semibold text-ink">{club}</span>: {[...players.values()].map(p => `${p.name}${p.sub ? ` (entra ${p.sub})` : ''}${p.empty ? ' (queda el puesto vacío)' : ''}`).join(', ')}
           </li>
         ))}
       </ul>
-    </details>
+    </Disclosure>
+  );
+}
+
+function SkeletonTable() {
+  return (
+    <ul className="space-y-2" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, i) => <li key={i} className="skeleton h-11" />)}
+    </ul>
   );
 }
 
@@ -126,78 +138,108 @@ export function PesDraftPanel({ pes }) {
     setBusy(true);
     try {
       await pes.apply(plan.ops);
-      setNotice(`Listo: ${plan.ops.length} cambios aplicados a la copia de trabajo (sin guardar). Seguí en «Cambios y exportación»: Guardar → Validar → Exportar.`);
+      setNotice(`Listo: ${plan.ops.length} cambios aplicados a la copia de trabajo (sin guardar). Seguí en «Cambios y exportación»: Guardar, Validar y Exportar.`);
       setPlan(null);
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
 
-  if (!ws) return <Card><p className="text-xs text-ink-3">Cargá el espacio de trabajo (base y EDIT) primero.</p></Card>;
+  if (!ws) return <Card><p className="text-sm text-ink-3">Cargá el espacio de trabajo (base y EDIT) primero.</p></Card>;
   const mapped = Object.keys(map).length;
 
   return (
     <div className="space-y-4">
-      <Card title="Equipos del draft → equipos del juego" actions={<>
-        <Button onClick={load} disabled={busy}><RefreshCw className="w-3.5 h-3.5" />Recargar equipos</Button>
-        <Button onClick={saveMap}><Save className="w-3.5 h-3.5" />Guardar asignación</Button>
-        <Button variant="primary" disabled={!teams || !mapped} onClick={calculate}><Calculator className="w-3.5 h-3.5" />Calcular</Button>
-      </>}>
-        <p className="text-xs text-ink-3 mb-3">
-          Cada equipo del draft reemplaza al equipo del juego que elijas: nombre, abreviatura, país, plantel con dorsales, 11 titular, formación,
-          estrategia, capitán y pateadores. Se escribe en la base (Team.bin, PlayerAssignment.bin) y en el EDIT. Los fichados salen de su club original
-          (las selecciones no se tocan). Si escribís un DT, se renombra el entrenador del equipo reemplazado (Coach.bin y EDIT); vacío, queda el del juego.
-          Nada se modifica hasta que tocás «Aplicar».
-        </p>
-        <datalist id="pes-game-teams">{options.map(o => <option key={o.id} value={`${o.id} — ${o.name}${o.national ? ' (selección)' : ''}`} />)}</datalist>
-        {!teams && !error && <p className="text-xs text-ink-3">Cargando equipos del draft…</p>}
-        {teams && (
-          <table className="w-full text-xs text-ink-2">
-            <thead><tr className="text-left text-ink-3"><th className="py-1">Equipo del draft</th><th>Jugadores</th><th>Reemplaza a</th><th>DT</th></tr></thead>
-            <tbody>
-              {teams.map(t => (
-                <tr key={t.id} className="border-t border-line/[0.08]">
-                  <td className="py-1.5"><Users className="inline w-3.5 h-3.5 mr-1 text-ink-3" />{t.name}{!t.inWhitelist && <Pill>fuera de la lista</Pill>}</td>
-                  <td className={t.players.length < 11 || t.players.length > 40 ? 'text-danger-soft' : ''}>{t.players.length}</td>
-                  <td className="py-1">
-                    <TargetInput value={map[t.id] ? `${map[t.id]} — ${nameOf(map[t.id]) || ''}` : ''} label={`Equipo del juego para ${t.name}`}
-                      onCommit={v => setTarget(t.id, v)} />
-                  </td>
-                  <td className="py-1">
-                    <CoachInput team={t} value={coaches[t.id]} countries={countries} current={map[t.id] ? coachNameOfTeam(ws, Number(map[t.id])) : null}
-                      onChange={c => { setPlan(null); setCoaches(prev => ({ ...prev, [t.id]: c })); }} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {notice && <p className="text-xs text-success-soft mt-3">{notice}</p>}
-        <ErrorText error={error} />
+      <Card title="Equipos del draft a equipos del juego"
+        description="Cada equipo del draft reemplaza al equipo del juego que elijas: nombre, abreviatura, país, plantel con dorsales, 11 titular, formación, estrategia, capitán y pateadores. Se escribe en la base (Team.bin, PlayerAssignment.bin) y en el EDIT. Los fichados salen de su club original (las selecciones no se tocan). Si escribís un DT, se renombra el entrenador del equipo reemplazado; vacío, queda el del juego. Nada se modifica hasta que tocás «Aplicar»."
+        actions={<>
+          <Button onClick={load} disabled={busy}><RefreshCw className={`w-4 h-4 ${busy && !teams ? 'animate-spin' : ''}`} aria-hidden="true" />Recargar equipos</Button>
+          <Button onClick={saveMap}><Save className="w-4 h-4" aria-hidden="true" />Guardar asignación</Button>
+          <Button variant="primary" disabled={!teams || !mapped} title={!mapped ? 'Elegí al menos un equipo del juego' : undefined} onClick={calculate}>
+            <Calculator className="w-4 h-4" aria-hidden="true" />Calcular
+          </Button>
+        </>}>
+        <datalist id="pes-game-teams">{options.map(o => <option key={o.id} value={`${o.id}${SEPARATOR}${o.name}${o.national ? ' (selección)' : ''}`} />)}</datalist>
+        <div className="space-y-3">
+          {!teams && !error && <SkeletonTable />}
+          {teams && teams.length === 0 && <p className="text-sm text-ink-3">El draft no tiene equipos todavía.</p>}
+          {teams && teams.length > 0 && (
+            <div className="overflow-x-auto -mx-4 sm:-mx-5">
+              <table className="data-table min-w-[44rem]">
+                <thead>
+                  <tr>
+                    <th scope="col">Equipo del draft</th>
+                    <th scope="col" className="text-right">Jugadores</th>
+                    <th scope="col">Reemplaza a</th>
+                    <th scope="col">DT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teams.map(t => {
+                    const badSize = t.players.length < 11 || t.players.length > 40;
+                    return (
+                      <tr key={t.id}>
+                        <td>
+                          <span className="font-semibold text-ink">{t.name}</span>
+                          {!t.inWhitelist && <span className="block"><Pill tone="amber">fuera de la lista</Pill></span>}
+                        </td>
+                        <td className={`num text-right ${badSize ? 'text-danger-soft font-semibold' : ''}`} title={badSize ? 'Un plantel necesita entre 11 y 40 jugadores' : undefined}>
+                          {t.players.length}
+                        </td>
+                        <td>
+                          <TargetInput value={map[t.id] ? `${map[t.id]}${SEPARATOR}${nameOf(map[t.id]) || ''}` : ''} label={`Equipo del juego para ${t.name}`}
+                            onCommit={v => setTarget(t.id, v)} />
+                        </td>
+                        <td>
+                          <CoachInput team={t} value={coaches[t.id]} countries={countries} current={map[t.id] ? coachNameOfTeam(ws, Number(map[t.id])) : null}
+                            onChange={c => { setPlan(null); setCoaches(prev => ({ ...prev, [t.id]: c })); }} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {notice && <Alert tone="success">{notice}</Alert>}
+          <ErrorText error={error} />
+        </div>
       </Card>
 
       {plan && (
-        <Card title="Resultado del cálculo" actions={<Button variant="primary" disabled={!plan.ok || busy} onClick={apply}><Play className="w-3.5 h-3.5" />Aplicar {plan.ops.length} cambios</Button>}>
-          {plan.errors.length > 0 && (
-            <div className="mb-3 text-xs text-danger-soft space-y-1">
-              <p className="font-bold">Hay que corregir esto antes de aplicar:</p>
-              {plan.errors.map(e => <Issue key={e} tone="error">{e}</Issue>)}
+        <div className="animate-in fade-in slide-in-from-top">
+          <Card title="Resultado del cálculo" actions={(
+            <Button variant="primary" disabled={!plan.ok || busy} onClick={apply}><Play className="w-4 h-4" aria-hidden="true" />Aplicar {plan.ops.length} cambios</Button>
+          )}>
+            <div className="space-y-3">
+              {plan.errors.length > 0 && (
+                <div className="text-sm text-danger-soft space-y-1">
+                  <p className="font-semibold">Hay que corregir esto antes de aplicar:</p>
+                  {plan.errors.map(e => <Issue key={e} tone="error">{e}</Issue>)}
+                </div>
+              )}
+              {plan.ok && (
+                <div className="overflow-x-auto -mx-4 sm:-mx-5">
+                  <table className="data-table min-w-[32rem]">
+                    <thead><tr><th scope="col">Equipo del draft</th><th scope="col">Reemplaza a</th><th scope="col" className="text-right">Plantel</th><th scope="col">DT</th></tr></thead>
+                    <tbody>{plan.teams.map(t => (
+                      <tr key={t.draftTeamId}>
+                        <td className="font-semibold text-ink">{t.name}</td>
+                        <td>{nameOf(t.pesTeamId)} <span className="num text-ink-3">({t.pesTeamId})</span></td>
+                        <td className="num text-right">{t.players}</td>
+                        <td>{t.coachName || <span className="text-ink-3">{coachNameOfTeam(ws, t.pesTeamId) || 'sin cambios'}</span>}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+              {plan.ok && <RemovedList removed={plan.removed} />}
+              {plan.warnings.length > 0 && (
+                <Disclosure className="text-sm text-warning-soft" summary={`${plan.warnings.length} ${plural(plan.warnings.length, 'aviso', 'avisos')}`}>
+                  <ul className="mt-1 space-y-1 max-h-60 overflow-y-auto overscroll-contain text-xs">{plan.warnings.map(w => <Issue as="li" key={w} tone="warning">{w}</Issue>)}</ul>
+                </Disclosure>
+              )}
             </div>
-          )}
-          {plan.ok && (
-            <div className="overflow-x-auto mb-3"><table className="data-table min-w-[32rem]">
-              <thead><tr className="text-left text-ink-3"><th className="py-1">Equipo del draft</th><th>Reemplaza a</th><th>Plantel</th><th>DT</th></tr></thead>
-              <tbody>{plan.teams.map(t => (
-                <tr key={t.draftTeamId} className="border-t border-line/[0.08]"><td className="py-1">{t.name}</td><td>{nameOf(t.pesTeamId)} ({t.pesTeamId})</td><td>{t.players}</td><td>{t.coachName || <span className="text-ink-3">{coachNameOfTeam(ws, t.pesTeamId) || 'sin cambios'}</span>}</td></tr>
-              ))}</tbody>
-            </table></div>
-          )}
-          {plan.ok && <RemovedList removed={plan.removed} />}
-          {plan.warnings.length > 0 && (
-            <details className="mt-2 text-xs text-warning-soft">
-              <summary className="cursor-pointer">{plan.warnings.length} aviso(s)</summary>
-              <ul className="mt-1 space-y-0.5 max-h-60 overflow-y-auto">{plan.warnings.map(w => <Issue as="li" key={w} tone="warning">{w}</Issue>)}</ul>
-            </details>
-          )}
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   );

@@ -11,7 +11,7 @@ the honeycomb weave was changed to whole periods so it tiles), `components/pes/k
 K3LIGHTS / K3ENV.scene / K3GL from `js/kit3d.js`), `components/pes/kit3d/kitDecals.js` (KFONT from `js/kitfont.js`;
 composition from `js/kitstudio.js`). Source inspected: `vendor/Pes-Editor-Rebuilt-main` (v0.044 alpha).
 
-`public/pes/kitpack.bin` is the garment model pack (shirt, sleeves, collars, shorts, socks) shipped by PES Editor
+`public/kit3d/kitpack.bin` is the garment model pack (shirt, sleeves, collars, shorts, socks) shipped by PES Editor
 Rebuilt in `js/kitpack.js`, converted from base64 to binary without changes. Rebuilt credits the meshes to the
 **CometKIT previewer V1.01b**; they derive from game models. They are only used to preview kits inside the editor.
 

@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { APP_ID } from '../utils/constants.js';
+import { manifestKey } from '../pes/kits/kitAssetResolver.js';
 
 const base = `artifacts/${APP_ID}`;
 const rolesCol = () => collection(db, `${base}/pes_roles`);
@@ -14,6 +15,7 @@ const wsCol = () => collection(db, `${base}/pes_workspaces`);
 const wsDoc = id => doc(db, `${base}/pes_workspaces`, id);
 const opsCol = id => collection(db, `${base}/pes_workspaces/${id}/ops`);
 const exportsCol = id => collection(db, `${base}/pes_workspaces/${id}/exports`);
+const kitTexturesDoc = (id, teamId) => doc(db, `${base}/pes_workspaces/${id}/kit_textures`, String(teamId));
 
 /** Firestore rejects `undefined`; drop such keys recursively. */
 function clean(v) {
@@ -65,6 +67,22 @@ export function updateWorkspace(id, patch) {
   return updateDoc(wsDoc(id), clean({ ...patch, updatedAt: serverTimestamp() }));
 }
 
+/**
+ * Deletes a workspace with its history, exports and validation (Super Admin). Subcollections first,
+ * the workspace document last, so a failure halfway leaves it visible to retry.
+ */
+export async function deleteWorkspace(id) {
+  for (const sub of ['ops', 'exports', 'meta', 'kit_textures']) {
+    const snap = await getDocs(collection(db, `${base}/pes_workspaces/${id}/${sub}`));
+    for (let i = 0; i < snap.docs.length; i += 450) {
+      const batch = writeBatch(db);
+      snap.docs.slice(i, i + 450).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+  await deleteDoc(wsDoc(id));
+}
+
 export function subscribeWorkspace(id, cb, onError) {
   return onSnapshot(wsDoc(id), s => cb(s.exists() ? { id: s.id, ...s.data() } : null), onError);
 }
@@ -83,13 +101,17 @@ export function subscribeOps(id, cb, onError) {
   return onSnapshot(query(opsCol(id), orderBy('seq')), s => cb(s.docs.map(d => decodeOp(d.id, d.data()))), onError);
 }
 
-/** Persists applied operations in order. Batches of ≤ 450 writes. */
+/**
+ * Persists applied operations in order. Batches of ≤ 450 writes. A draft's clientId is its document id, so
+ * retrying after a save that stopped half way can never store an operation twice (the rules reject
+ * rewriting a saved op).
+ */
 export async function saveOps(id, ops, actor) {
   const now = Date.now();
   for (let i = 0; i < ops.length; i += 450) {
     const batch = writeBatch(db);
     ops.slice(i, i + 450).forEach((op, k) => {
-      batch.set(doc(opsCol(id)), clean({
+      batch.set(op.clientId ? doc(opsCol(id), op.clientId) : doc(opsCol(id)), clean({
         type: op.type, target: op.target, field: op.field, key: op.key, slot: op.slot, ext: op.ext, asset: op.asset,
         valueJson: toJson(op.value), beforeJson: toJson(op.before), afterJson: toJson(op.after), batch: op.batch, clientId: op.clientId,
         actorUid: actor.uid, actorRole: actor.role, state: 'saved',
@@ -127,4 +149,23 @@ export function saveValidation(id, v, actorUid) {
     passed: v.passed, errors: v.errors.length, warnings: v.warnings.length, preexisting: v.preexisting.length,
     checkedAt: v.checkedAt, checkedBy: actorUid,
   }));
+}
+
+// ── Shared kit-server textures ───────────────────────────
+// pes_workspaces/{id}/kit_textures/{teamId}: which original kit-server files of a team are in Supabase Storage.
+// `files` maps an encoded kit-server relative path (lower case) to { path, sha256, ext, size }; the bytes live
+// at <workspaceId>/<sha256>.ftex (content-addressed, verified on download). Entries are only ever added.
+
+export function subscribeKitTextures(id, teamId, cb, onError) {
+  return onSnapshot(kitTexturesDoc(id, teamId), s => cb(s.exists() ? (s.data().files || {}) : {}), onError);
+}
+
+/**
+ * Adds shared files to a team's manifest. `merge: true` deep-merges the `files` map, which is what is wanted
+ * here: existing entries stay, new ones are added (entries are immutable, a different file is a different key).
+ * @param {{ path: string, sha256: string, ext: string, size: number }[]} entries
+ */
+export function addKitTextures(id, teamId, entries, actorUid) {
+  const files = Object.fromEntries(entries.map(e => [manifestKey(e.path), { path: e.path, sha256: e.sha256, ext: e.ext, size: e.size }]));
+  return setDoc(kitTexturesDoc(id, teamId), { teamId: Number(teamId), files, updatedBy: actorUid, updatedAt: serverTimestamp() }, { merge: true });
 }

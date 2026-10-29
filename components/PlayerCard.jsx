@@ -1,225 +1,126 @@
 import React, { memo, useState } from 'react';
-import { Lock, DollarSign, ArrowLeftRight, Check, Star } from 'lucide-react';
-import { getFlagUrl, formatPriceShort, getPosColorClass } from '../utils/helpers.js';
+import { ArrowLeftRight, Lock, Star } from 'lucide-react';
+import { getFlagUrl, formatPriceShort, formatPriceCompact, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
-/* ── Position accent colors ── */
-const POS_COLOR = {
-  DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444',
-  MC: '#22c55e', MCD: '#22c55e', MO: '#22c55e', MI: '#22c55e', MD: '#22c55e',
-  DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6',
-  PT: '#eab308',
-};
-
-/* ── OVR color tiers (static thresholds, zero-alloc) ──
-   Antes eran verdes neón puros (#19ffb2, #32f718) — quedaban "sucios"/chillones.
-   Ahora usan la misma paleta que ya tienen las píldoras de stats (.stat-c-* en
-   index.css), para que se vea consistente en toda la card. */
-const OVR_COLOR_THRESHOLDS = [
-  [90, '#1ec9a4'],
-  [85, '#a0dd00'],
-  [75, '#ffc400'],
-  [65, '#ec7d22'],
-];
-const OVR_COLOR_DEFAULT = '#9ca3af';
-function getOvrColor(ovr) {
-  for (let i = 0; i < OVR_COLOR_THRESHOLDS.length; i++) {
-    if (ovr >= OVR_COLOR_THRESHOLDS[i][0]) return OVR_COLOR_THRESHOLDS[i][1];
-  }
-  return OVR_COLOR_DEFAULT;
-}
-
-/* ── Cache de fotos que ya sabemos que fallan (404) ──
-   Persiste entre remounts/re-renders de la card (scroll, virtualización,
-   cambios de filtro) para no volver a intentar cargar la foto real ni
-   mostrar el spinner de nuevo — eso era lo que causaba el parpadeo. */
+// Photos that already failed (404) stay on the placeholder across remounts while scrolling the virtual grid.
 const brokenImageIds = new Set();
-const loadedImageIds = new Set();
 
+const ICON_BUTTON = 'relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center transition-colors before:absolute before:-inset-1.5 before:content-[""]';
+
+/**
+ * Marketplace player card (docs/DESIGN_SYSTEM.md: square photo, OVR in the stat colour, position colour).
+ * The whole card is one "open" button; wishlist and compare are sibling buttons above it, never nested.
+ * States: owned = accent border + "En tu plantel"; comparing = accent ring; locked = dimmed photo + buyer crest.
+ */
 export const PlayerCard = memo(function PlayerCard({
   player,
   onSelectPlayer,
   isInMyCart,
   isLockedByOther,
   lockedTeamName,
+  lockedTeamLogo,
   onCompare,
   isComparing,
   isWishlisted,
   onToggleWishlist,
-  lockedTeamLogo,
+  density = 'comfortable',
 }) {
+  const [hasPhotoError, setHasPhotoError] = useState(() => brokenImageIds.has(player.Id));
   const ovr = player.OVR_CALCULADO || 0;
-  const ovrColor = getOvrColor(ovr);
-  const [imgState, setImgState] = useState(() => {
-    const isBroken = brokenImageIds.has(player.Id);
-    const isLoaded = isBroken || loadedImageIds.has(player.Id);
-    return { loaded: isLoaded, error: isBroken };
-  });
-  const posColor = POS_COLOR[player.POS_NOMBRE] || '#9ca3af';
+  const isCompact = density === 'compact';
   const flagUrl = getFlagUrl(player.Country1);
 
-  /* ── Dynamic card border ── */
-  const borderColor = isInMyCart
-    ? 'rgba(16,185,129,0.5)'
-    : isComparing
-      ? 'rgba(99,102,241,0.6)'
-      : 'rgba(255,255,255,0.07)';
+  const stateLabel = isInMyCart ? 'en tu plantel' : isLockedByOther ? `fichado por ${lockedTeamName || 'otro club'}` : 'disponible';
+  const frameClass = isInMyCart
+    ? 'border-accent/70'
+    : 'border-line/[0.12] hover:border-line/30';
+  const ringClass = isComparing ? 'ring-2 ring-accent ring-offset-2 ring-offset-canvas' : '';
 
-  const cardBg = isInMyCart
-    ? 'linear-gradient(168deg, #062a1a 0%, #021a11 100%)'
-    : 'linear-gradient(168deg, #1a1a1f 0%, #0c0c0e 100%)';
+  const compareButton = (
+    <button
+      type="button"
+      onClick={(event) => onCompare?.(player, event)}
+      aria-label={isComparing ? `Quitar a ${player.Name} del comparador` : `Comparar a ${player.Name}`}
+      aria-pressed={Boolean(isComparing)}
+      title={isComparing ? 'Quitar del comparador' : 'Comparar'}
+      className={`${ICON_BUTTON} ${isComparing ? 'bg-accent text-on-accent' : 'bg-canvas/80 text-ink-2 hover:text-ink hover:bg-canvas'}`}
+    >
+      <ArrowLeftRight className="w-4 h-4" aria-hidden="true" />
+    </button>
+  );
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelectPlayer?.(player.Id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelectPlayer?.(player.Id);
-        }
-      }}
-      aria-label={`Ver detalles de ${player.Name}, ${player.POS_NOMBRE}, OVR ${ovr}`}
-      className={`player-card w-full text-left cursor-pointer ${isLockedByOther ? 'player-card--locked' : ''} ${isInMyCart ? 'player-card--owned' : ''} ${isComparing ? 'player-card--comparing' : ''} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent`}
-      style={{
-        '--pos-accent': posColor,
-        '--ovr-color': ovrColor,
-        background: cardBg,
-        border: `1px solid ${borderColor}`,
-        width: '100%',
-        height: '100%',
-        boxShadow: isInMyCart
-          ? 'inset 0 1px 0 rgba(16,185,129,0.08)'
-          : 'none',
-      }}
-    >
-      {/* ═══════════ PRICE HEADER (TOP) ═══════════ */}
-      <div className="player-card__price-header">
-        <DollarSign className="w-3.5 h-3.5 text-success-soft flex-shrink-0" />
-        <span className="player-card__price">
-          {formatPriceShort(player.Precio)}
-        </span>
-      </div>
+    <article data-market-card className={`group relative flex flex-col h-full rounded-xl border bg-surface hover:bg-raised transition-colors ${frameClass} ${ringClass}`}>
+      <button
+        type="button"
+        onClick={() => onSelectPlayer?.(player.Id)}
+        aria-label={`Ver ficha de ${player.Name}, ${player.POS_NOMBRE}, media ${ovr}, ${formatPriceShort(player.Precio)}, ${stateLabel}`}
+        className="absolute inset-0 z-[1] rounded-xl"
+      />
 
-      {/* ═══════════ PHOTO AREA ═══════════ */}
-      <div className="player-card__photo-wrapper">
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(player.Id); }}
-          aria-label={isWishlisted ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-          aria-pressed={isWishlisted}
-          className={`absolute top-2 right-2 z-20 min-w-11 min-h-11 flex items-center justify-center rounded-full transition-all duration-200 backdrop-blur-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300
-            ${isWishlisted ? 'bg-warning/25 text-warning-soft' : 'bg-black/40 text-white/60 hover:bg-black/60 hover:text-ink'}`}
-          title={isWishlisted ? "Quitar de Favoritos" : "Añadir a Favoritos"}
-        >
-          <Star className="w-4 h-4" fill={isWishlisted ? "currentColor" : "none"} />
-        </button>
-        {/* Subtle position-colored glow behind the player */}
-        <div
-          className="player-card__glow"
-          style={{
-            background: `radial-gradient(ellipse at 50% 70%, ${posColor}30 0%, transparent 65%)`,
-          }}
-        />
-
-        {!imgState.loaded && (
-          <div className="absolute inset-0 bg-white/[0.03] animate-pulse" />
-        )}
+      <div className="relative aspect-square overflow-hidden rounded-t-[11px] bg-raised pointer-events-none">
         <img
-          src={imgState.error ? `https://placehold.co/200x240/111/333?text=${player.Name?.substring(0, 2) ?? '?'}` : `/fotos_jugadores/${player.Id}.webp`}
-          alt={player.Name}
+          src={hasPhotoError ? playerPlaceholder(player.Name?.substring(0, 2) ?? '?') : `/fotos_jugadores/${player.Id}.webp`}
+          alt=""
           loading="lazy"
           decoding="async"
           width="200"
-          height="240"
-          fetchPriority="low"
-          onLoad={() => {
-            loadedImageIds.add(player.Id);
-            if (!imgState.loaded) setImgState({ loaded: true, error: false });
-          }}
-          onError={() => {
-            brokenImageIds.add(player.Id);
-            if (!imgState.error) setImgState({ loaded: true, error: true });
-          }}
-          className="player-card__photo"
-          style={{
-            filter: isLockedByOther ? 'grayscale(0.7) brightness(0.5)' : 'none',
-            opacity: imgState.loaded ? 1 : 0,
-          }}
+          height="200"
+          onError={() => { brokenImageIds.add(player.Id); setHasPhotoError(true); }}
+          className={`w-full h-full object-cover object-top ${isLockedByOther ? 'opacity-35 grayscale' : ''}`}
         />
-
-        {/* Bottom gradient fade over photo — ensures info legibility */}
-        <div className="player-card__photo-fade" />
-
-        {/* ═══════════ INFO STRIP — OVR + Flag + Position ═══════════ */}
-        <div className="player-card__info-strip">
-          {/* OVR Badge */}
-          <div className="player-card__ovr-badge" style={{ background: `${ovrColor}22`, borderColor: `${ovrColor}60` }}>
-            <span className="player-card__ovr" style={{ color: ovrColor }}>
-              {ovr}
-            </span>
-          </div>
-
-          {/* Flag */}
-          <img
-            src={flagUrl}
-            alt=""
-            className="player-card__flag"
-            onError={e => (e.target.style.display = 'none')}
-          />
-
-          {/* Position Badge */}
-          <span
-            className="player-card__pos"
-            style={{
-              color: '#181818ff',
-              background: posColor,
-              boxShadow: `0 2px 8px ${posColor}50`,
-            }}
-          >
-            {player.POS_NOMBRE}
-          </span>
-        </div>
-
-        {/* ── COMPARE BUTTON (centered, hover reveal) ── */}
-        {!isLockedByOther && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onCompare?.(player, e); }}
-            className={`player-card__compare-btn ${isComparing ? 'player-card__compare-btn--active' : ''}`}
-            title="Comparar"
-            aria-label="Comparar jugador"
-          >
-            <ArrowLeftRight className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* ── LOCKED OVERLAY — VENDIDO badge ── */}
+        <span data-card-ovr className={`absolute left-1.5 top-1.5 min-w-8 h-8 px-1 rounded-md flex items-center justify-center font-display num text-lg font-bold leading-none ${getStatAndOvrColorClass(ovr)}`}>
+          {ovr}
+        </span>
+        <span data-card-pos className={`absolute left-1.5 bottom-1.5 px-1.5 py-0.5 rounded text-[11px] font-bold leading-tight ${getPosColorClass(player.POS_NOMBRE)}`}>
+          {player.POS_NOMBRE}
+        </span>
         {isLockedByOther && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-red-900/50 backdrop-blur-[1px] rounded-none">
-            {lockedTeamLogo ? (
-              <img src={lockedTeamLogo} alt="Vendido" width={64} height={64} className="w-16 h-16 object-contain drop-shadow-xl" />
-            ) : (
-              <div className="bg-red-600/90 text-ink font-bold text-xs uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg shadow-lg border border-red-400/30 rotate-[-8deg]">
-                VENDIDO
-              </div>
-            )}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {lockedTeamLogo
+              ? <img src={lockedTeamLogo} alt="" width={56} height={56} className="w-1/3 aspect-square object-contain" />
+              : <Lock className="w-1/4 h-auto text-ink-2" aria-hidden="true" />}
           </div>
         )}
-
-        {/* ── OWNED INDICATOR — EN TU EQUIPO badge ── */}
-        {isInMyCart && !isLockedByOther && (
-          <>
-            <div className="player-card__owned-stripe" />
-            <div className="absolute top-2 left-2 z-30 bg-accent text-on-accent font-bold text-[8px] uppercase tracking-wider px-2 py-1 rounded shadow-md">
-              EN TU EQUIPO
-            </div>
-          </>
-        )}
       </div>
 
-      {/* ═══════════ NAME FOOTER (BOTTOM) ═══════════ */}
-      <div className="player-card__name-bar">
-        <h3 className="player-card__name">{player.Name}</h3>
+      <div className="absolute right-1.5 top-1.5 z-[2] flex flex-col gap-1.5">
+        <button
+          type="button"
+          onClick={() => onToggleWishlist?.(player.Id)}
+          aria-label={isWishlisted ? `Quitar a ${player.Name} de favoritos` : `Agregar a ${player.Name} a favoritos`}
+          aria-pressed={Boolean(isWishlisted)}
+          title={isWishlisted ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          className={`${ICON_BUTTON} bg-canvas/80 ${isWishlisted ? 'text-warning-soft' : 'text-ink-2 hover:text-ink hover:bg-canvas'}`}
+        >
+          <Star className="w-4 h-4" fill={isWishlisted ? 'currentColor' : 'none'} aria-hidden="true" />
+        </button>
+        {!isLockedByOther && !isCompact && compareButton}
       </div>
-    </div>
+
+      <div className="flex-1 flex flex-col justify-between gap-1 p-2 sm:p-2.5 min-w-0 pointer-events-none">
+        <h3 data-card-name className="text-sm font-semibold text-ink truncate">{player.Name}</h3>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <span data-card-price className="font-display num text-base font-semibold text-ink whitespace-nowrap">{formatPriceCompact(player.Precio)}</span>
+          {/* Compact cards are ~100 px wide on phones: compare sits here instead of stacking over the photo. */}
+          {isCompact && !isLockedByOther && <span className="relative z-[2] pointer-events-auto">{compareButton}</span>}
+          {!isCompact && (
+            isInMyCart ? (
+              <span className="text-xs font-semibold text-accent-soft truncate">En tu plantel</span>
+            ) : isLockedByOther ? (
+              <span className="flex items-center gap-1 text-xs text-ink-3 min-w-0">
+                <Lock className="w-3 h-3 shrink-0" aria-hidden="true" /><span className="truncate">{lockedTeamName || 'Fichado'}</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-ink-3 whitespace-nowrap">
+                {flagUrl && <img src={flagUrl} alt="" width={16} height={12} className="w-4 h-3 rounded-[2px] object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />}
+                <span className="num">{player.Age}</span> años
+              </span>
+            )
+          )}
+        </div>
+      </div>
+    </article>
   );
 });

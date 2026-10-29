@@ -26,6 +26,11 @@ export function isTyping(target) {
   return false;
 }
 
+/** True while a modal dialog is open (any element with aria-modal="true", BaseModal or hand-made). */
+export function isDialogOpen() {
+  return typeof document !== 'undefined' && Boolean(document.querySelector?.('[aria-modal="true"]'));
+}
+
 /**
  * Hook para registrar y gestionar atajos de teclado globales en la aplicación.
  * Solo se activan cuando no hay inputs, textareas o elementos editables con foco.
@@ -118,6 +123,12 @@ export function useKeyboardShortcuts({
       if (e.key === '?' || (e.shiftKey && (e.key === '/' || e.code === 'Slash'))) {
         e.preventDefault();
         setIsHelpOpen((prev) => !prev);
+        return;
+      }
+
+      // Single-key shortcuts only act on the page: inside an open dialog they used to switch tabs or open the
+      // cart behind it (WCAG 2.1.4).
+      if (isDialogOpen()) {
         return;
       }
 

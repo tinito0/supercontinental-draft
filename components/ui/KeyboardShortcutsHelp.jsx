@@ -83,7 +83,7 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl text-xs font-bold text-ink bg-accent/20 hover:bg-accent/30 border border-accent/30 transition active:scale-95 cursor-pointer"
+            className="px-4 py-1.5 rounded-xl text-xs font-bold text-ink bg-accent/20 hover:bg-accent/30 border border-accent/30 transition active:scale-[0.97] cursor-pointer"
           >
             Entendido
           </button>
@@ -127,7 +127,7 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
         </div>
 
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-accent/10 border border-accent/20 text-accent-soft text-xs">
-          <Info className="w-4 h-4 shrink-0 text-accent mt-0.5" />
+          <Info className="w-4 h-4 shrink-0 text-accent-soft mt-0.5" />
           <p className="leading-relaxed">
             Los atajos están deshabilitados automáticamente mientras escribes en campos de búsqueda o texto.
           </p>

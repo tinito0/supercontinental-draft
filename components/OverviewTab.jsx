@@ -7,14 +7,17 @@ import { PageHeader, SectionHeader } from './ui/PageHeader.jsx';
 import { Stat } from './ui/Stat.jsx';
 import { Button } from './ui/Button.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
+import { GOLD_CUP_PLACES, LEAGUE_POINTS, LEAGUE_SIZE, teamMatchResult } from '../utils/competitionRules.js';
 
 const sameName = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
 const goalDiff = t => (Number(t.gf) || 0) - (Number(t.gc) || 0);
 const RESULT = {
   V: { label: 'Victoria', className: 'bg-success text-canvas' },
-  E: { label: 'Empate', className: 'bg-warning text-canvas' },
+  P: { label: 'Definido por penales', className: 'bg-warning text-canvas' },
+  E: { label: 'Empate sin tanda cargada', className: 'bg-raised text-ink-2' },
   D: { label: 'Derrota', className: 'bg-danger text-ink' },
 };
+const FORM_CHAR = { win: 'V', shootoutWin: 'P', shootoutLoss: 'P', loss: 'D', draw: 'E' };
 
 function Crest({ src, name, className = '' }) {
   return (
@@ -57,10 +60,12 @@ function MatchFocus({ match, teamName, getLogo }) {
   );
 }
 
+// Same zones as the tournament table (components/tournament/LeagueTableView.jsx): 1-8 Gold Cup, 9-12 Silver Cup.
 function StandingRow({ team, position, isUser, getLogo }) {
+  const isGold = position <= GOLD_CUP_PLACES;
   return (
-    <tr className={isUser ? 'bg-accent/10' : ''}>
-      <td className={`text-center num font-semibold ${position <= 4 ? 'text-success-soft' : 'text-ink-3'}`}>{position}</td>
+    <tr className={`border-l-[3px] ${isGold ? 'border-accent' : 'border-line/20'} ${isUser ? 'bg-accent/10' : ''}`}>
+      <td className={`text-center num font-semibold ${isGold ? 'text-accent-soft' : 'text-ink-3'}`}>{position}</td>
       <td>
         <span className="flex items-center gap-2.5 min-w-0">
           <Crest src={getLogo(team.name)} className="w-5 h-5 shrink-0" />
@@ -68,9 +73,11 @@ function StandingRow({ team, position, isUser, getLogo }) {
           {isUser && <span className="sr-only">(tu club)</span>}
         </span>
       </td>
-      <td className="text-center num">{team.pj}</td>
+      <td className="text-center num">{Number(team.pj) || 0}</td>
+      <td className="text-center num hidden sm:table-cell">{Number(team.pg) || 0}</td>
+      <td className="text-center num hidden sm:table-cell">{Number(team.gpen) || 0}</td>
       <td className="text-center num">{goalDiff(team)}</td>
-      <td className="text-right num font-display text-base font-bold text-ink">{team.pts}</td>
+      <td className="text-right num font-display text-base font-bold text-ink">{Number(team.pts) || 0}</td>
     </tr>
   );
 }
@@ -108,8 +115,9 @@ export const OverviewTab = memo(function OverviewTab({
   const leagueTable = useMemo(() => {
     if (!Array.isArray(tournamentData?.league)) return [];
     return tournamentData.league
+      // El orden guardado ya es el oficial (desempates del reglamento y orden manual del admin): no se reordena acá.
       .filter(t => t.name && t.name !== 'Club...')
-      .sort((a, b) => (Number(b.pts) || 0) - (Number(a.pts) || 0) || goalDiff(b) - goalDiff(a));
+      .slice(0, LEAGUE_SIZE);
   }, [tournamentData?.league]);
 
   const userRankIndex = useMemo(() => leagueTable.findIndex(t => sameName(t.name, teamName)), [leagueTable, teamName]);
@@ -124,12 +132,11 @@ export const OverviewTab = memo(function OverviewTab({
   const nextMatch = useMemo(() => userMatches.find(m => m.status !== 'completed') || null, [userMatches]);
   const lastMatch = finished.length ? finished[finished.length - 1] : null;
 
-  const recentForm = useMemo(() => finished.slice(-5).map(m => {
-    const home = sameName(m.homeTeam, teamName);
-    const mine = Number(home ? m.homeScore : m.awayScore) || 0;
-    const theirs = Number(home ? m.awayScore : m.homeScore) || 0;
-    return mine > theirs ? 'V' : mine === theirs ? 'E' : 'D';
-  }), [finished, teamName]);
+  const recentForm = useMemo(() => finished
+    .map(m => teamMatchResult(teamName, m))
+    .filter(Boolean)
+    .slice(-5)
+    .map(({ result }) => FORM_CHAR[result]), [finished, teamName]);
 
   const topPlayers = useMemo(() => [...ownedCart].sort((a, b) => (b.OVR_CALCULADO || 0) - (a.OVR_CALCULADO || 0)).slice(0, 5), [ownedCart]);
   const averageOvr = useMemo(() => (ownedCart.length ? Math.round(ownedCart.reduce((acc, p) => acc + (p.OVR_CALCULADO || 0), 0) / ownedCart.length) : 0), [ownedCart]);
@@ -206,19 +213,29 @@ export const OverviewTab = memo(function OverviewTab({
             {tournamentLoading ? <StandingsSkeleton /> : leagueTable.length > 0 ? (
               <div className="overflow-x-auto mt-3">
                 <table className="data-table table-fixed [&_td]:px-2 [&_th]:px-2 sm:[&_td]:px-3 sm:[&_th]:px-3">
-                  <caption className="sr-only">Primeros seis clubes de la liga{userRankIndex >= 6 ? ' y la posición de tu club' : ''}</caption>
+                  <caption className="sr-only">Tabla de la liga, en el orden oficial del torneo</caption>
                   <thead>
-                    <tr><th scope="col" className="w-10 !text-center">#</th><th scope="col">Club</th><th scope="col" className="w-12 !text-center">PJ</th><th scope="col" className="w-12 !text-center">DG</th><th scope="col" className="w-14 !text-right">Pts</th></tr>
+                    <tr>
+                      <th scope="col" className="w-10 !text-center">#</th>
+                      <th scope="col">Club</th>
+                      <th scope="col" className="w-12 !text-center">PJ</th>
+                      <th scope="col" className="w-12 !text-center hidden sm:table-cell"><abbr title="Ganados en los 90'" className="no-underline">G</abbr></th>
+                      <th scope="col" className="w-12 !text-center hidden sm:table-cell"><abbr title="Ganados por penales" className="no-underline">GP</abbr></th>
+                      <th scope="col" className="w-12 !text-center">DG</th>
+                      <th scope="col" className="w-14 !text-right">Pts</th>
+                    </tr>
                   </thead>
                   <tbody>
-                    {leagueTable.slice(0, 6).map((team, idx) => (
+                    {leagueTable.map((team, idx) => (
                       <StandingRow key={team.id || team.name} team={team} position={idx + 1} isUser={sameName(team.name, teamName)} getLogo={getLogo} />
                     ))}
-                    {userRankIndex >= 6 && userLeagueStats && (
-                      <StandingRow team={userLeagueStats} position={userRankIndex + 1} isUser getLogo={getLogo} />
-                    )}
                   </tbody>
                 </table>
+                <p className="px-5 sm:px-6 py-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-3 border-t border-line/[0.08]">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-accent" aria-hidden="true" />1-{GOLD_CUP_PLACES}: Copa de Oro</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-line/40" aria-hidden="true" />{GOLD_CUP_PLACES + 1}-{LEAGUE_SIZE}: Copa de Plata</span>
+                  <span>Victoria {LEAGUE_POINTS.REGULATION_WIN} pts · por penales {LEAGUE_POINTS.SHOOTOUT_WIN} · derrota {LEAGUE_POINTS.LOSS}</span>
+                </p>
               </div>
             ) : (
               <p className="px-6 py-8 text-center text-sm text-ink-3">Todavía no hay posiciones registradas.</p>
@@ -244,7 +261,7 @@ export const OverviewTab = memo(function OverviewTab({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink group-hover:text-accent-soft transition-colors">{player.Name}</span>
                       <span className="flex items-center gap-2 text-xs text-ink-3 mt-0.5">
-                        <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                        <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                         {player.Age > 0 && <span>{player.Age} años</span>}
                         <span className="num">{formatPriceShort(player.Precio)}</span>
                       </span>

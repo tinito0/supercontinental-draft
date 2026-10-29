@@ -24,9 +24,10 @@ describe('kit config.txt (synthetic, patch format)', () => {
     expect(getKitValue(cfg, 'Collar')).toBe('1'); // input not mutated
   });
 
-  it('enforces the ranges documented in the patch comments', () => {
+  it('enforces the ranges kserv.lua accepts (the comment range only for keys kserv.lua does not list)', () => {
     const cfg = parseKitConfig(SYNTHETIC_KIT_CONFIG);
-    expect(() => setKitValue(cfg, 'Collar', 131)).toThrow(expect.objectContaining({ code: 'OUT_OF_RANGE' }));
+    expect(setKitValue(cfg, 'Collar', 131).after).toBe('131'); // comment says 1 to 130, kserv.lua 1 to 135
+    expect(() => setKitValue(cfg, 'Collar', 136)).toThrow(expect.objectContaining({ code: 'OUT_OF_RANGE' }));
     expect(() => setKitValue(cfg, 'TightKit', 2)).toThrow(expect.objectContaining({ code: 'OUT_OF_RANGE' }));
     expect(() => setKitValue(cfg, 'ShirtModel', 150)).toThrow(expect.objectContaining({ code: 'OUT_OF_RANGE' }));
     expect(setKitValue(cfg, 'ShirtModel', 176).after).toBe('176');

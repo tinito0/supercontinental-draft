@@ -4,7 +4,7 @@ import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, setDoc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, addDoc, deleteDoc, collection } from 'firebase/firestore';
 
 const APP = 'scl-draft-2025';
 const HARDCODED_ADMIN = '2Qn5j9a9ABW66iPyFL6ZfqwXBqG3';
@@ -151,5 +151,91 @@ describe('Super Admin', () => {
 
   it('documents the pre-existing catch-all: the hardcoded app admin bypasses field checks', async () => {
     await assertSucceeds(addDoc(opsOf(as(HARDCODED_ADMIN)), op('someone-else', { type: 'db.drop' })));
+  });
+});
+
+describe('validation record (meta/validation)', () => {
+  const validation = (db, fields = {}) => setDoc(doc(db, `${base}/pes_workspaces/league/meta/validation`), {
+    passed: true, errors: 0, warnings: 0, preexisting: 0, checkedAt: 'x', ...fields,
+  });
+
+  it('any PES role records its own validation, with the result fields only', async () => {
+    await assertSucceeds(validation(as('draft'), { checkedBy: 'draft' }));
+    await assertFails(validation(as('draft'), { checkedBy: 'super' }));
+    await assertFails(validation(as('draft'), { checkedBy: 'draft', note: 'x' }));
+    await assertFails(deleteDoc(doc(as('draft'), `${base}/pes_workspaces/league/meta/validation`)));
+  });
+});
+
+describe('deleting a workspace (Editor PES → Fuentes → Eliminar espacio)', () => {
+  const seedWorkspaceChildren = () => env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, `${base}/pes_workspaces/league/exports/e1`), { exportedBy: 'super' });
+    await setDoc(doc(db, `${base}/pes_workspaces/league/meta/validation`), { passed: true });
+  });
+
+  it('the Super Admin deletes the history, exports, validation and the workspace itself', async () => {
+    await seedWorkspaceChildren();
+    const db = as('super');
+    await assertSucceeds(deleteDoc(doc(db, `${base}/pes_workspaces/league/ops/byLusitano`)));
+    await assertSucceeds(deleteDoc(doc(db, `${base}/pes_workspaces/league/exports/e1`)));
+    await assertSucceeds(deleteDoc(doc(db, `${base}/pes_workspaces/league/meta/validation`)));
+    await assertSucceeds(deleteDoc(doc(db, `${base}/pes_workspaces/league`)));
+  });
+
+  it('Kit Managers and the Draft Admin cannot delete a workspace, its history or its exports', async () => {
+    await seedWorkspaceChildren();
+    for (const uid of ['lusitano', 'draft']) {
+      const db = as(uid);
+      await assertFails(deleteDoc(doc(db, `${base}/pes_workspaces/league`)));
+      await assertFails(deleteDoc(doc(db, `${base}/pes_workspaces/league/ops/byLusitano`)));
+      await assertFails(deleteDoc(doc(db, `${base}/pes_workspaces/league/exports/e1`)));
+    }
+  });
+});
+
+describe('shared kit-server textures (kit_textures/{teamId})', () => {
+  const ref = (db, ws, team) => doc(db, `${base}/pes_workspaces/${ws}/kit_textures/${team}`);
+  const entry = { 'ligue%201%2Fpsg%2Fp1%2Fu0114p1_back%2Eftex': { path: 'Ligue 1/PSG/p1/u0114p1_back.ftex', sha256: 'a'.repeat(64), ext: '.ftex', size: 10 } };
+  const manifest = (uid, team, extra = {}) => ({ teamId: team, files: entry, updatedBy: uid, updatedAt: new Date(), ...extra });
+
+  it('every PES role can read a manifest; users without a role cannot', async () => {
+    await env.withSecurityRulesDisabled(ctx => setDoc(ref(ctx.firestore(), 'league', 101), manifest('super', 101)));
+    for (const uid of ['super', 'lusitano', 'draft']) await assertSucceeds(getDoc(ref(as(uid), 'league', 101)));
+    await assertFails(getDoc(ref(as('nobody'), 'league', 101)));
+  });
+
+  it('the Super Admin shares textures of any team', async () => {
+    await assertSucceeds(setDoc(ref(as('super'), 'league', 114), manifest('super', 114)));
+  });
+
+  it('a Kit Manager shares textures of league teams only, signed with their own uid', async () => {
+    const db = as('lusitano');
+    await assertSucceeds(setDoc(ref(db, 'league', 101), manifest('lusitano', 101)));
+    await assertFails(setDoc(ref(db, 'league', 114), manifest('lusitano', 114)));
+    await assertFails(setDoc(ref(db, 'league', 102), manifest('super', 102)));
+    await assertSucceeds(setDoc(ref(db, 'open', 114), manifest('lusitano', 114)));
+  });
+
+  it('rejects other fields, a teamId that does not match the document, and the Draft Admin', async () => {
+    await assertFails(setDoc(ref(as('super'), 'league', 101), manifest('super', 101, { extra: true })));
+    await assertFails(setDoc(ref(as('super'), 'league', 101), manifest('super', 102)));
+    await assertFails(setDoc(ref(as('draft'), 'league', 101), manifest('draft', 101)));
+  });
+
+  it('an update only adds entries: changing or removing a shared file is denied', async () => {
+    await env.withSecurityRulesDisabled(ctx => setDoc(ref(ctx.firestore(), 'league', 101), manifest('super', 101)));
+    const db = as('lusitano');
+    const key = Object.keys(entry)[0];
+    const added = { ...entry, other: { path: 'Ligue 1/PSG/p1/x.ftex', sha256: 'b'.repeat(64), ext: '.ftex', size: 1 } };
+    await assertSucceeds(setDoc(ref(db, 'league', 101), manifest('lusitano', 101, { files: added })));
+    await assertFails(setDoc(ref(db, 'league', 101), manifest('lusitano', 101, { files: { ...added, [key]: { ...entry[key], sha256: 'c'.repeat(64) } } })));
+    await assertFails(setDoc(ref(db, 'league', 101), manifest('lusitano', 101, { files: { other: added.other } })));
+  });
+
+  it('only the Super Admin deletes a manifest', async () => {
+    await env.withSecurityRulesDisabled(ctx => setDoc(ref(ctx.firestore(), 'league', 101), manifest('super', 101)));
+    await assertFails(deleteDoc(ref(as('lusitano'), 'league', 101)));
+    await assertSucceeds(deleteDoc(ref(as('super'), 'league', 101)));
   });
 });

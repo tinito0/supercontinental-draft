@@ -1,0 +1,65 @@
+; generated with Kit Studio 2021 v1.4.1
+; shirt parameters
+ShortSleevesModel=1                               ; 1=Normal (players), 2=Kappa (players), 3=Referee kits only
+ShirtModel=144                                    ; 144, 151=Semi-long short sleeves, 160, 176=Legacy
+Collar=34                                         ; 1 to 130
+TightKit=0                                        ; 0=Off, 1=On
+ShirtPattern=2                                    ; 0 to 6
+WinterCollar=34                                   ; 1 to 130
+LongSleevesType=62                                ; 62=Normal & Undershirt, 187=Only Undershirt
+SleeveLimits=0                                    ; 0=No limits, 1=Only long sleeves, 2 = Only short sleeves
+
+; shirt - back side
+Name=0                                            ; 0=On, 1=Off
+NameShape=0                                       ; 0=Straight, 1=Light curve, 2=Medium curve, 3=Extreme curve
+NameY=37                                          ; 0 to 39
+NameSize=8                                        ; 0 to 20
+NameStretch=1                                     ; 0 to 3
+BackNumberY=18                                    ; 0 to 29
+BackNumberSize=23                                 ; 0 to 28
+BackNumberSpacing=8                               ; 0 to 14
+BackNumberType=0                                  ; 0=Normal, 1=Forced two-digit
+
+; shirt - front side
+ChestNumberX=0                                    ; 0 to 29
+ChestNumberY=0                                    ; 0 to 29
+ChestNumberSize=0                                 ; 0 to 28
+
+; shorts parameters
+ShortsModel=0                                     ; 1 to 16 (17 and above tend make some parts of the pants black)
+ShortsNumberSide=0                                ; 0=Left, 1=Right
+ShortsNumberX=20                                  ; 0 to 31 (number invisible if using 30 or 31)
+ShortsNumberY=8                                   ; 0 to 31 (number invisible if using 30 or 31)
+ShortsNumberSize=16                               ; 0 to 28
+
+; texture files
+KitFile=u4138g1
+BackNumbersFile=u4138g1_num
+ChestNumbersFile=
+LegNumbersFile=u4138g1_num
+NameFontFile=u4138g1_name
+
+; kit colors
+ShirtColor1=#e8c62a
+ShirtColor2=#e8c62a
+UndershirtColor=#e8c62a
+ShortsColor=#e8c62a
+SocksColor=#e8c62a
+
+; sleeve badge positions
+RightShortX=14                                    ; 0 to 31
+RightShortY=14                                    ; 0 to 31
+RightLongX=14                                     ; 0 to 31
+RightLongY=14                                     ; 0 to 31
+LeftShortX=14                                     ; 0 to 31
+LeftShortY=16                                     ; 0 to 31
+LeftLongX=14                                      ; 0 to 31
+LeftLongY=16                                      ; 0 to 31
+
+; kit colors from UniColor.bin
+UniColor_Color1=#e8c62a
+UniColor_Color2=#e8c62a
+
+; values added by kserv.lua
+CaptainArmband=2
+Unk_Offset0x1C_Bits0to1=2

@@ -1,84 +1,80 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FolderOpen, RotateCcw, Loader2, AlertTriangle, Save } from 'lucide-react';
-import { Button, Pill } from './PesUi.jsx';
+import { RotateCcw, Loader2, AlertTriangle } from 'lucide-react';
+import { Tabs } from '../ui/Tabs.jsx';
+import { Button } from './PesUi.jsx';
 import { getKitValue } from '../../pes/kits/kitConfig.js';
 import { parseKitPack, selectKitParts, fitParts } from '../../pes/kits/kitModels.js';
-import { KitGL, LIGHT_PRESETS, lightState } from './kit3d/kitRenderer.js';
-import { composeKitTexture } from './kit3d/kitDecals.js';
-import { loadKitTextures } from './kit3d/loadKitTextures.js';
-import { canPickFolder, pickGameFolder, rememberedGameFolder, readerFromFiles } from './kit3d/gameFolder.js';
+import { resolveKitRender, availableCollars } from '../../pes/kits/kitRenderConfig.js';
+import { CollarPicker } from './kit3d/CollarPicker.jsx';
+import { KitGL, lightState } from './kit3d/kitRenderer.js';
+import { composeKitTexture, fallbackKitTexture } from './kit3d/kitDecals.js';
 import { kitPixels, fabricPreview, fabricTextures } from './kit3d/fabricPreview.js';
-import { FABRICS } from '../../pes/kits/fabricMaps.js';
 import { TEXTURE_SLOTS } from '../../pes/kits/kitTextures.js';
+import { useKitGL } from './kit3d/useKitGL.js';
+import { useKitAssets } from './kit3d/useKitAssets.js';
+import { ViewPanel, ShirtPanel, LetteringPanel, FabricPanel, DiagnosticsPanel } from './kit3d/KitViewerPanels.jsx';
 
 let packPromise = null;
 /** Garment models (≈1.6 MB), downloaded the first time a kit is shown. */
 function loadPack() {
-  packPromise ??= fetch('/pes/kitpack.bin')
+  packPromise ??= fetch('/kit3d/kitpack.bin')
     .then(r => { if (!r.ok) throw new Error(`No se pudieron descargar los modelos 3D (${r.status}).`); return r.arrayBuffer(); })
     .then(b => parseKitPack(new Uint8Array(b)))
     .catch(e => { packPromise = null; throw e; });
   return packPromise;
 }
 
-const SLOT_LABEL = { kit: 'Kit', nrm: 'Relieve (nrm)', srm: 'Brillo (srm)', name: 'Letras', back: 'Números espalda', chest: 'Número pecho', leg: 'Número short' };
 const hex3 = h => { const n = parseInt(String(h || '#888888').replace('#', ''), 16) || 0x888888; return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
 const DEFAULT_VIEW = { yaw: 0, pitch: 0.1, dist: 0 };
-
-/** Game-folder access (read only): remembered handle, picker, or folder input fallback. */
-function useGameFolder() {
-  const [folder, setFolder] = useState(null);
-  const [error, setError] = useState(null);
-  useEffect(() => { rememberedGameFolder().then(setFolder).catch(() => setFolder(null)); }, []);
-  const run = async fn => { setError(null); try { setFolder(await fn()); } catch (e) { if (e?.name !== 'AbortError') setError(e); } };
-  return {
-    folder, error,
-    pick: () => run(pickGameFolder),
-    allow: () => run(() => rememberedGameFolder({ prompt: true })),
-    fromFiles: files => run(() => readerFromFiles(files)),
-  };
-}
+const TEXTURED = new Set(['shirt', 'sleeve', 'shorts', 'collar', 'socks']);
 
 /**
- * @param {{ onImportTexture?: (slot: object, file: string, tex: object) => Promise<void> }} props
+ * 3D preview of one kit: textures resolved from the kit-server (workspace → cloud → local folder), names and
+ * numbers drawn with the kit's font sheets, config.txt values applied, with a diagnostics tab.
+ * @param {{ kits: object, teamId: number, kit: string, cfg: object, version: number, players?: object[],
+ *   workspaceId?: string, uid?: string, canShare?: boolean,
+ *   onImportTexture?: (slot: object, file: string, tex: object) => Promise<void>,
+ *   onSetValues?: (values: Record<string, string>) => Promise<void> }} props
  *   onImportTexture: saves a generated texture into the kit (same path as PesKitTextures import); omitted = read only.
+ *   onSetValues: writes config.txt values (kit.set operations); omitted = collars can be previewed but not saved.
+ *   canShare: the user may share the kit-server textures found locally (Super Admin, Kit Manager of the team).
  */
-export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], onImportTexture }) {
+export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], workspaceId, uid, canShare, onImportTexture, onSetValues }) {
   const canvasRef = useRef(null);
-  const glRef = useRef(null);
   const viewRef = useRef({ ...DEFAULT_VIEW });
   const fitRef = useRef(null);
+  const { glRef, epoch, error: glError } = useKitGL(canvasRef);
   const [pack, setPack] = useState(null);
-  const [status, setStatus] = useState({ loading: true, error: null });
+  const [packError, setPackError] = useState(null);
+  const [tab, setTab] = useState('view');
   const [opts, setOpts] = useState({ sleeve: 'short', socks: 'long', tuck: 'out', captain: false, light: 'estadio-noche', decals: true });
   const [sample, setSample] = useState({ name: 'JUGADOR', number: '10' });
   const [fabric, setFabric] = useState({ mode: 'auto', fabric: 'malla', repeat: 48, strength: 0.5, emboss: 0.6 });
   const [saving, setSaving] = useState(null);
-  const [tex, setTex] = useState({ textures: {}, files: {}, errors: [], loading: false });
-  const game = useGameFolder();
+  const [collarPreview, setCollarPreview] = useState(null);
+  const [model, setModel] = useState({ base: [], collarNote: null });
+  const assets = useKitAssets({ kits, teamId, kit, version, workspaceId, uid, canShare });
+  const tex = assets.textures;
+
   const value = useMemo(() => k => getKitValue(cfg, k), [cfg]);
   const goalkeeper = /^g\d/i.test(String(kit || '').split('/').pop());
+  const render = useMemo(() => resolveKitRender(cfg, { sleeve: opts.sleeve, goalkeeper, collarPreview }), [cfg, opts.sleeve, goalkeeper, collarPreview]);
+  const collars = useMemo(() => (pack ? availableCollars(pack, cfg) : []), [pack, cfg]);
+  const colors = useMemo(() => ({
+    shirt: hex3(value('ShirtColor1')), sleeve: hex3(value('ShirtColor1')), collar: hex3(value('ShirtColor2')),
+    shorts: hex3(value('ShortsColor')), socks: hex3(value('SocksColor')), undershirt: hex3(value('UndershirtColor') || value('ShirtColor1')),
+  }), [value]);
+  const scene = useMemo(() => ({ light: opts.light, textured: TEXTURED, colors }), [opts.light, colors]);
 
-  // WebGL context + garment models.
-  useEffect(() => {
-    const R = KitGL.make(canvasRef.current);
-    if (!R) { setStatus({ loading: false, error: new Error('Tu navegador no tiene WebGL: no se puede mostrar el kit en 3D.') }); return undefined; }
-    glRef.current = R;
-    let alive = true;
-    loadPack().then(p => { if (alive) { setPack(p); setStatus({ loading: false, error: null }); } })
-      .catch(e => alive && setStatus({ loading: false, error: e }));
-    return () => { alive = false; glRef.current = null; R.gl.getExtension('WEBGL_lose_context')?.loseContext(); };
-  }, []);
+  // A previewed collar belongs to the kit on screen.
+  useEffect(() => { setCollarPreview(null); setSaving(null); }, [teamId, kit]);
 
-  // Textures of the kit (workspace first, then the game folder).
+  // Garment models: downloaded once per session, independent of the WebGL context.
   useEffect(() => {
     let alive = true;
-    setTex(t => ({ ...t, loading: true }));
-    loadKitTextures({ kits, teamId, kit, reader: game.folder?.read ? game.folder : null })
-      .then(r => alive && setTex({ ...r, loading: false }))
-      .catch(e => alive && setTex({ textures: {}, files: {}, errors: [e.message], loading: false }));
+    loadPack().then(p => { if (alive) setPack(p); }).catch(e => { if (alive) setPackError(e); });
     return () => { alive = false; };
-  }, [kits, teamId, kit, game.folder, version]);
+  }, []);
 
   const draw = () => {
     const R = glRef.current, fit = fitRef.current, c = canvasRef.current;
@@ -89,30 +85,36 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     KitGL.setTex(R, 4, L.env.canvas);
     KitGL.draw(R, {
       fit, yaw: fit.yaw0 + V.yaw, pitch: V.pitch, dist: V.dist, panX: 0, panY: 0, fov: 48, ortho: false, bg: true, bgBlur: 2,
-      bump: 1, nrm: true, glossK: 1, debug: 0, defSpec: 0.3, defRough: 0.6, L,
-      textured: new Set(['shirt', 'sleeve', 'shorts', 'collar', 'socks']),
-      colors: { shirt: hex3(value('ShirtColor1')), sleeve: hex3(value('ShirtColor1')), collar: hex3(value('ShirtColor2')), shorts: hex3(value('ShortsColor')), socks: hex3(value('SocksColor')) },
+      bump: 1, nrm: true, glossK: 1, debug: 0, defSpec: 0.3, defRough: 0.6, L, textured: TEXTURED, colors,
     });
   };
 
-  // Parts follow config.txt (collar, shorts model, tight kit) and the view options.
+  // Parts follow config.txt (collar or winter collar, shorts model, tight kit, sleeve limits) and the view options.
   useEffect(() => {
     if (!pack || !glRef.current || !cfg) return;
-    const { parts } = selectKitParts(pack, value, { ...opts, goalkeeper });
+    const { parts, collar, collarExact } = selectKitParts(pack, value, {
+      ...opts, sleeve: render.sleeve, goalkeeper, collar: render.collar, undershirtOnly: render.undershirtOnly,
+    });
     KitGL.upload(glRef.current, parts);
     fitRef.current = fitParts(parts);
+    const shown = collar ? Number(collar.split('_')[1]) : null;
+    setModel({
+      base: parts.filter(p => p.k === 'shirt' || p.k === 'sleeve'),
+      collarNote: render.collar && !collarExact
+        ? (shown ? `No hay modelo del cuello ${render.collar}: se muestra el ${shown}, el más parecido.` : `No hay modelo del cuello ${render.collar}.`)
+        : null,
+    });
     draw();
-  }, [pack, cfg, opts.sleeve, opts.socks, opts.tuck, opts.captain, goalkeeper]);
+  }, [pack, cfg, render, opts.socks, opts.tuck, opts.captain, goalkeeper, epoch]);
 
   // Relief/shine: the kit's own _nrm/_srm, or maps generated from the chosen fabric (live preview).
-  const useGenerated = fabric.mode === 'gen' || (fabric.mode === 'auto' && !tex.textures.nrm);
-  const kitPx = useMemo(() => kitPixels(tex.textures.kit?.canvas), [tex]);
+  const useGenerated = fabric.mode === 'gen' || (fabric.mode === 'auto' && !tex.nrm);
+  const kitPx = useMemo(() => kitPixels(tex.kit?.canvas), [tex]);
   const maps = useMemo(() => {
-    if (!useGenerated) return { nrm: tex.textures.nrm?.canvas || null, srm: tex.textures.srm?.canvas || null };
+    if (!useGenerated) return { nrm: tex.nrm?.canvas || null, srm: tex.srm?.canvas || null };
     const generated = fabricPreview(kitPx, fabric);
-    // The kit-server ships _srm (shine) for many kits but never _nrm: in automatic mode the relief is
-    // generated and the kit's own shine map is kept.
-    return fabric.mode === 'auto' && tex.textures.srm ? { ...generated, srm: tex.textures.srm.canvas } : generated;
+    // PES 2021 kits ship _srm (shine) but no _nrm: in automatic mode the relief is generated and the kit's shine kept.
+    return fabric.mode === 'auto' && tex.srm ? { ...generated, srm: tex.srm.canvas } : generated;
   }, [useGenerated, kitPx, tex, fabric.mode, fabric.fabric, fabric.repeat, fabric.strength, fabric.emboss]);
 
   const saveFabric = async () => {
@@ -129,18 +131,24 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     } catch (e) { setSaving({ error: e }); }
   };
 
-  // Kit texture with name/numbers + relief/shine maps.
+  // Kit texture with name/numbers drawn with the kit's font sheets where config.txt puts them.
+  const composed = useMemo(() => {
+    if (!cfg || typeof document === 'undefined') return { canvas: null, notes: [] };
+    const fonts = { name: tex.name?.canvas, name_ex: tex.name_ex?.canvas, back: tex.back?.canvas, chest: tex.chest?.canvas, leg: tex.leg?.canvas };
+    return composeKitTexture(tex.kit?.canvas || null, value, fonts, opts.decals ? sample : { name: '', number: '' }, render);
+  }, [tex, cfg, value, sample, opts.decals, render]);
+  // Collar thumbnails only need the shirt: a texture that does not change while typing a name.
+  const plainTexture = useMemo(() => (typeof document === 'undefined' || !cfg ? null : tex.kit?.canvas || fallbackKitTexture(value)), [tex, cfg, value]);
+
   useEffect(() => {
     const R = glRef.current;
-    if (!R || !cfg) return;
-    const t = tex.textures;
-    const fonts = { name: t.name?.canvas, back: t.back?.canvas, chest: t.chest?.canvas, leg: t.leg?.canvas };
-    KitGL.setTex(R, 0, composeKitTexture(t.kit?.canvas || null, value, fonts, opts.decals ? sample : { name: '', number: '' }));
+    if (!R || !composed.canvas) return;
+    KitGL.setTex(R, 0, composed.canvas);
     KitGL.setTex(R, 1, maps.nrm);
     KitGL.setTex(R, 2, maps.srm);
-    KitGL.setTex(R, 3, t.kit?.gloss || null);
+    KitGL.setTex(R, 3, tex.kit?.gloss || null);
     draw();
-  }, [tex, cfg, sample, opts.decals, pack, maps]);
+  }, [composed, tex, pack, maps, epoch]);
 
   useEffect(() => { draw(); }, [opts.light]);
 
@@ -183,125 +191,86 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
   });
 
   const set = patch => setOpts(o => ({ ...o, ...patch }));
-  const sel = 'select min-h-9 w-40 text-xs';
-  const field = 'input min-h-9 text-sm';
-  const t = tex.textures;
-  const found = Object.entries(tex.files || {}).filter(([, f]) => f);
+  const saveCollar = async (n, winter) => {
+    await onSetValues(winter && cfg.keys.has('WinterCollar') ? { Collar: String(n), WinterCollar: String(n) } : { Collar: String(n) });
+  };
+  const configNotes = [...render.notes, ...(model.collarNote ? [{ key: 'Collar', level: 'warn', text: model.collarNote }] : []), ...composed.notes];
+  const assetProblems = assets.assets.filter(a => (a.status === 'missing' && !a.optional) || a.status === 'error' || a.status === 'invalid').length;
+  const warnCount = configNotes.filter(n => n.level === 'warn').length + assetProblems;
+  const kitAsset = assets.assets.find(a => a.slot === 'kit');
+  const error = glError || packError;
+
+  const tabs = [
+    { id: 'view', label: 'Vista' },
+    { id: 'shirt', label: 'Camiseta' },
+    { id: 'letters', label: 'Letras' },
+    { id: 'fabric', label: 'Tela' },
+    { id: 'diag', label: 'Diagnóstico', count: warnCount || null },
+  ];
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
-      <div className="relative self-start">
-        <canvas ref={canvasRef} tabIndex={0} aria-label={`Kit ${kit} en 3D. Arrastrá para girar, rueda o +/− para acercar, flechas para mover, doble clic para volver al frente.`}
-          className="w-full aspect-[4/5] max-h-[560px] rounded-xl bg-canvas cursor-grab active:cursor-grabbing focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
-        {(status.loading || tex.loading) && <span className="absolute top-2 left-2 flex items-center gap-1 text-[11px] text-ink-2"><Loader2 className="w-3.5 h-3.5 animate-spin" />Cargando…</span>}
-        {status.error && <p className="absolute inset-x-2 top-2 text-xs text-danger-soft bg-black/60 rounded p-2" role="alert">{status.error.message}</p>}
-        <Button className="absolute bottom-2 right-2" onClick={() => { Object.assign(viewRef.current, DEFAULT_VIEW); draw(); }} aria-label="Volver al frente"><RotateCcw className="w-3.5 h-3.5" /></Button>
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_25rem]">
+      <div className="space-y-2 lg:sticky lg:top-4 self-start">
+        <div className="relative">
+          <canvas ref={canvasRef} tabIndex={0} aria-label={`Kit ${kit} en 3D. Arrastrá para girar, rueda o +/− para acercar, flechas para mover, doble clic para volver al frente.`}
+            className="w-full aspect-[4/5] max-h-[72vh] rounded-xl bg-canvas cursor-grab active:cursor-grabbing focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+          {(!pack || assets.loading) && !error && (
+            <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-md bg-canvas/85 px-2 py-1 text-xs text-ink-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />{pack ? 'Buscando texturas…' : 'Cargando modelos 3D…'}
+            </span>
+          )}
+          {error && <p className="absolute inset-x-3 top-3 text-xs text-danger-soft bg-canvas/90 border border-danger/30 rounded-lg p-2" role="alert">{error.message}</p>}
+          <Button className="absolute bottom-3 right-3" onClick={() => { Object.assign(viewRef.current, DEFAULT_VIEW); draw(); }} aria-label="Volver al frente">
+            <RotateCcw className="w-4 h-4" aria-hidden="true" />
+          </Button>
+        </div>
+        <KitStatusLine kitAsset={kitAsset} loading={assets.loading} warnCount={warnCount} onShowDiagnostics={() => setTab('diag')} />
       </div>
 
-      <div className="space-y-5 text-xs text-ink-2 [&_fieldset+fieldset]:border-t [&_fieldset+fieldset]:border-line/[0.08] [&_fieldset+fieldset]:pt-4">
-        <fieldset className="space-y-2">
-          <legend className="eyebrow mb-2">Vista</legend>
-          <label className="flex items-center justify-between gap-2">Luz
-            <select className={sel} value={opts.light} onChange={e => set({ light: e.target.value })}>
-              {Object.entries(LIGHT_PRESETS).map(([k, p]) => <option key={k} value={k}>{p.n}</option>)}
-            </select>
-          </label>
-          {!goalkeeper && (
-            <label className="flex items-center justify-between gap-2">Mangas
-              <select className={sel} value={opts.sleeve} onChange={e => set({ sleeve: e.target.value })}><option value="short">Cortas</option><option value="long">Largas</option></select>
-            </label>
-          )}
-          <label className="flex items-center justify-between gap-2">Medias
-            <select className={sel} value={opts.socks} onChange={e => set({ socks: e.target.value })}><option value="long">Largas</option><option value="middle">Medias</option><option value="short">Cortas</option></select>
-          </label>
-          <label className="flex items-center justify-between gap-2">Camiseta
-            <select className={sel} value={opts.tuck} onChange={e => set({ tuck: e.target.value })}><option value="out">Afuera</option><option value="in">Adentro</option></select>
-          </label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={opts.captain} onChange={e => set({ captain: e.target.checked })} />Cinta de capitán</label>
-        </fieldset>
-
-        <fieldset className="space-y-2">
-          <legend className="eyebrow mb-2">Nombre y número</legend>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={opts.decals} onChange={e => set({ decals: e.target.checked })} />Mostrar con las fuentes del kit</label>
-          {players.length > 0 && (
-            <select className="select min-h-9 w-full text-xs" aria-label="Jugador del plantel" value="" onChange={e => { const p = players[Number(e.target.value)]; if (p) setSample({ name: p.name, number: String(p.number) }); }}>
-              <option value="">Usar un jugador del plantel…</option>
-              {players.map((p, i) => <option key={`${p.number}-${p.name}`} value={i}>{p.number} · {p.name}</option>)}
-            </select>
-          )}
-          <div className="flex gap-2">
-            <input className={`${field} flex-1 min-w-0`} aria-label="Nombre en la espalda" value={sample.name} maxLength={16} onChange={e => setSample(s => ({ ...s, name: e.target.value }))} />
-            <input className={`${field} w-16 num text-center`} aria-label="Número" inputMode="numeric" value={sample.number} maxLength={2} onChange={e => setSample(s => ({ ...s, number: e.target.value.replace(/\D/g, '') }))} />
-          </div>
-          {value('Name') === '1' && <p className="text-[11px] text-ink-3">Este kit tiene el nombre apagado (Name=1).</p>}
-        </fieldset>
-
-        <fieldset className="space-y-2">
-          <legend className="eyebrow mb-2">Tela (relieve y brillo)</legend>
-          <label className="flex items-center justify-between gap-2">Mapas
-            <select className={sel} value={fabric.mode} onChange={e => setFabric(f => ({ ...f, mode: e.target.value }))}>
-              <option value="auto">{tex.textures.nrm ? 'Los del kit' : tex.textures.srm ? 'Relieve generado + brillo del kit' : 'Generados'} (automático)</option>
-              <option value="kit" disabled={!tex.textures.nrm}>Los del kit (_nrm/_srm)</option>
-              <option value="gen">Generar con una tela</option>
-            </select>
-          </label>
-          {useGenerated && (
-            <>
-              <label className="flex items-center justify-between gap-2">Tela
-                <select className={sel} value={fabric.fabric} onChange={e => setFabric(f => ({ ...f, fabric: e.target.value }))}>
-                  {FABRICS.map(f => <option key={f.k} value={f.k} title={f.d}>{f.n}</option>)}
-                </select>
-              </label>
-              <label className="flex items-center justify-between gap-2">Tamaño de la trama
-                <input type="range" min={16} max={96} step={4} value={fabric.repeat} onChange={e => setFabric(f => ({ ...f, repeat: Number(e.target.value) }))} />
-              </label>
-              <label className="flex items-center justify-between gap-2">Relieve de la trama
-                <input type="range" min={0} max={1} step={0.05} value={fabric.strength} onChange={e => setFabric(f => ({ ...f, strength: Number(e.target.value) }))} />
-              </label>
-              <label className="flex items-center justify-between gap-2">Relieve de escudo y sponsor
-                <input type="range" min={0} max={1} step={0.05} value={fabric.emboss} disabled={!kitPx} onChange={e => setFabric(f => ({ ...f, emboss: Number(e.target.value) }))} />
-              </label>
-              {onImportTexture && (
-                <Button variant="primary" disabled={saving?.busy} onClick={saveFabric}><Save className="w-3.5 h-3.5" />{saving?.busy ? 'Generando 2048 px…' : 'Guardar nrm y srm en el kit'}</Button>
+      <div className="min-w-0 space-y-4">
+        <Tabs tabs={tabs} value={tab} onChange={setTab} label="Opciones de la vista 3D" />
+        <div role="tabpanel" aria-label={tabs.find(t => t.id === tab)?.label}>
+          {tab === 'view' && <ViewPanel opts={opts} set={set} render={render} goalkeeper={goalkeeper} />}
+          {tab === 'shirt' && (
+            <ShirtPanel render={render} collarPreview={collarPreview}>
+              {pack && (
+                <CollarPicker pack={pack} collars={collars} baseParts={model.base} texture={plainTexture} scene={scene}
+                  saved={render.savedCollar} preview={collarPreview} onPreview={setCollarPreview} onUse={onSetValues ? saveCollar : undefined} />
               )}
-              {saving?.done && <p className="text-[11px] text-success-soft">{saving.done}</p>}
-              {saving?.error && <p className="text-[11px] text-danger-soft" role="alert">{saving.error.message}</p>}
-            </>
+            </ShirtPanel>
           )}
-        </fieldset>
-
-        <fieldset className="space-y-1.5">
-          <legend className="eyebrow mb-2">Texturas</legend>
-          {found.map(([slot, file]) => (
-            <p key={slot} className="flex items-center justify-between gap-2">
-              <span className="truncate min-w-0" title={t[slot]?.path || file}>{SLOT_LABEL[slot]}: <span className="text-ink-3">{file}</span></span>
-              {t[slot] ? <Pill tone="green">{t[slot].source === 'workspace' ? 'subida' : t[slot].from || 'del juego'}</Pill> : <Pill tone="amber">no encontrada</Pill>}
-            </p>
-          ))}
-          {!t.kit && <p className="text-[11px] text-ink-3">Sin la textura del kit se usan los colores del config.txt.</p>}
-          {tex.errors.map(e => <p key={e} className="flex gap-1 text-[11px] text-warning-soft"><AlertTriangle className="w-3.5 h-3.5 shrink-0" />{e}</p>)}
-          <GameFolderControls game={game} />
-        </fieldset>
+          {tab === 'letters' && (
+            <LetteringPanel opts={opts} set={set} sample={sample} setSample={setSample} players={players}
+              nameOff={value('Name') === '1'} assets={assets.assets} />
+          )}
+          {tab === 'fabric' && (
+            <FabricPanel fabric={fabric} setFabric={setFabric} hasNrm={Boolean(tex.nrm)} hasSrm={Boolean(tex.srm)} useGenerated={useGenerated}
+              canEmboss={Boolean(kitPx)} onSave={onImportTexture ? saveFabric : undefined} saving={saving} />
+          )}
+          {tab === 'diag' && (
+            <DiagnosticsPanel assets={assets.assets} notes={configNotes} local={assets.local} cloud={assets.cloud} share={assets.share}
+              canShare={assets.canShare} pendingShare={assets.pendingShare} onShare={assets.shareKit} error={assets.error} />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function GameFolderControls({ game }) {
-  const { folder, error } = game;
+/** One line under the preview: where the kit texture came from, and how many things need attention. */
+function KitStatusLine({ kitAsset, loading, warnCount, onShowDiagnostics }) {
+  if (loading || !kitAsset) return null;
+  const text = kitAsset.status === 'found'
+    ? `Textura ${kitAsset.file} · ${kitAsset.sourceLabel}`
+    : kitAsset.status === 'empty' ? 'El kit no tiene KitFile: colores del config.txt' : `Sin ${kitAsset.file}: colores del config.txt`;
   return (
-    <div className="pt-1 space-y-1.5">
-      {folder?.read && <p className="text-[11px] text-ink-3">Carpeta del juego: <b>{folder.name}</b>{folder.hasSiderIni ? ` · ${folder.roots.length} carpetas de sider.ini` : ''}{folder.fallbackRoots?.length ? ` + ${folder.fallbackRoots.length} de livecpk como respaldo` : ''}</p>}
-      {folder?.pending && <Button onClick={game.allow}><FolderOpen className="w-3.5 h-3.5" />Permitir leer «{folder.name}»</Button>}
-      {canPickFolder() ? (
-        <Button onClick={game.pick}><FolderOpen className="w-3.5 h-3.5" />{folder?.read ? 'Cambiar carpeta del juego' : 'Abrir carpeta de PES 2021'}</Button>
-      ) : (
-        <label className="block text-[11px] text-ink-3">Elegí la carpeta de texturas (…/texture/#windx11):
-          <input type="file" webkitdirectory="" multiple className="mt-1 block w-full text-[11px]" onChange={e => e.target.files?.length && game.fromFiles(e.target.files)} />
-        </label>
+    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+      <span className={kitAsset.status === 'found' ? 'text-ink-3' : 'text-warning-soft'}>{text}</span>
+      {warnCount > 0 && (
+        <button type="button" onClick={onShowDiagnostics} className="flex items-center gap-1 min-h-10 rounded-md text-warning-soft hover:underline underline-offset-2">
+          <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />{warnCount} aviso(s) · ver diagnóstico
+        </button>
       )}
-      <p className="text-[11px] text-ink-3">Orden de búsqueda: carpeta del kit en kit-server, carpetas de sider.ini y después el resto de livecpk. Se leen desde tu PC solo para la vista previa; no se suben ni se modifican.</p>
-      {error && <p className="text-[11px] text-danger-soft" role="alert">{error.message}</p>}
     </div>
   );
 }

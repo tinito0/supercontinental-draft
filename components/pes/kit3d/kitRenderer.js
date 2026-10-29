@@ -1,7 +1,11 @@
 // WebGL renderer of the 3D kit preview: stadium-style lights, generated 360° environments and a
 // fabric shader with normal / shine maps. Extracted verbatim from PES Editor Rebuilt js/kit3d.js
 // (K3LIGHTS, K3ENV.scene, K3GL; BSD-3-Clause, copyright AgustinMarconi27) — see pes/THIRD_PARTY_NOTICES.md.
-// Only the export wrapper, the light-state helper and the removal of the HDR import / UV picking differ.
+// Only the export wrapper, the light-state helper and the removal of the HDR import / UV picking differ, plus
+// Supercontinental's lifecycle fixes: make() returns null instead of throwing (lost context, failed shader),
+// draw()/upload() skip a lost context, draw() disables its vertex attributes after each pass (a deleted mesh
+// buffer left enabled made the next background pass fail with "attrib array enabled but no buffer bound"),
+// and dispose() frees GPU objects without killing the context.
 /* eslint-disable */
 export const LIGHT_PRESETS = {
   'estudio': { n: 'Estudio', key: [-35, 32, 1.4, '#fff6ea'], fill: [55, 8, .5, '#cfe0ff'], rim: [175, 28, .9, '#ffffff'], amb: .55, exp: 1.05, env: 'estudio' },
@@ -93,10 +97,13 @@ export const KitGL = (() => {
   const PFS = `precision highp float;varying vec2 vt;void main(){vec2 u=clamp(vt,0.,1.)*4095.;float uh=floor(u.x/16.),ul=mod(floor(u.x),16.),vh=floor(u.y/256.),vl=mod(floor(u.y),256.);gl_FragColor=vec4(uh/255.,(ul*16.+vh)/255.,vl/255.,1.);}`;
   const PVS = `attribute vec3 p;attribute vec2 t;uniform mat4 mvp;uniform float grow;varying vec2 vt;void main(){vt=t;gl_Position=mvp*vec4(p*grow,1.);}`;
   function make(canvas) {
-    const gl = canvas.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, premultipliedAlpha: false, alpha: true }); if (!gl) return null;
+    try { return build(canvas); } catch { return null; }
+  }
+  function build(canvas) {
+    const gl = canvas.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, premultipliedAlpha: false, alpha: true }); if (!gl || gl.isContextLost()) return null;
     gl.getExtension('OES_standard_derivatives');
-    const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
-    const prog = (v, f) => { const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, v)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, f)); gl.linkProgram(pr); return pr; };
+    const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o) || 'No se pudo compilar el shader (contexto WebGL perdido).'); return o; };
+    const prog = (v, f) => { const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, v)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, f)); gl.linkProgram(pr); if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr) || 'No se pudo enlazar el programa WebGL.'); return pr; };
     const pr = prog(VS, FS), bp = prog(BVS, BFS), pp = prog(PVS, PFS); gl.useProgram(pr);
     const U = (p, n) => gl.getUniformLocation(p, n), loc = { p: gl.getAttribLocation(pr, 'p'), n: gl.getAttribLocation(pr, 'n'), t: gl.getAttribLocation(pr, 't') };
     for (const n of ['mvp', 'mv', 'grow', 'tex', 'nrm', 'srm', 'gls', 'env', 'env2', 'useTex', 'useN', 'useS', 'useG', 'bump', 'col', 'glossK', 'debug', 'L1', 'C1', 'L2', 'C2', 'L3', 'C3', 'amb', 'specK', 'expo', 'defSpec', 'defRough', 'envInt', 'envYaw', 'envMix', 'useEnv']) loc[n] = U(pr, n);
@@ -115,9 +122,9 @@ export const KitGL = (() => {
     for (const { m } of parts) for (const me of m.meshes) for (let i = 0; i < me.pos.length / 3; i++) { const k = key(me.pos[i * 3], me.pos[i * 3 + 1], me.pos[i * 3 + 2]); let v = acc.get(k); if (!v) acc.set(k, v = [0, 0, 0]); v[0] += me.nrm[i * 3]; v[1] += me.nrm[i * 3 + 1]; v[2] += me.nrm[i * 3 + 2]; }
     return parts.map(({ k, m }) => ({ k, m: { meshes: m.meshes.map(me => { const n = new Float32Array(me.nrm.length); for (let i = 0; i < me.pos.length / 3; i++) { const v = acc.get(key(me.pos[i * 3], me.pos[i * 3 + 1], me.pos[i * 3 + 2])), l = Math.hypot(v[0], v[1], v[2]) || 1, o = me.nrm; const d = (o[i * 3] * v[0] + o[i * 3 + 1] * v[1] + o[i * 3 + 2] * v[2]) / l; if (d > .5) { n[i * 3] = v[0] / l; n[i * 3 + 1] = v[1] / l; n[i * 3 + 2] = v[2] / l; } else { n[i * 3] = o[i * 3]; n[i * 3 + 1] = o[i * 3 + 1]; n[i * 3 + 2] = o[i * 3 + 2]; } } return Object.assign({}, me, { nrm: n }); }) } }));
   }
-  const ORDER = { shirt: 0, shorts: 1, socks: 2, sleeve: 3, collar: 4 };
+  const ORDER = { shirt: 0, undershirt: 1, shorts: 2, socks: 3, sleeve: 4, collar: 5 };
   function upload(R, parts) {
-    const { gl } = R; for (const b of R.bufs) for (const x of [b.p, b.n, b.t, b.i]) gl.deleteBuffer(x); R.bufs = [];
+    const { gl } = R; if (gl.isContextLost()) return; for (const b of R.bufs) for (const x of [b.p, b.n, b.t, b.i]) gl.deleteBuffer(x); R.bufs = [];
     for (const { k, m } of [...parts].sort((a, b) => (ORDER[a.k] ?? 9) - (ORDER[b.k] ?? 9))) for (const me of m.meshes) {
       const mk = (data, tgt = gl.ARRAY_BUFFER) => { const o = gl.createBuffer(); gl.bindBuffer(tgt, o); gl.bufferData(tgt, data, gl.STATIC_DRAW); return o; };
       R.bufs.push({ k, p: mk(me.pos), n: mk(me.nrm), t: mk(me.uv), i: mk(me.idx, gl.ELEMENT_ARRAY_BUFFER), c: me.idx.length, uv: me.hasUV });
@@ -125,7 +132,7 @@ export const KitGL = (() => {
   }
   // slot: 0 kit, 1 normal, 2 srm, 3 brillo (alfa del kit), 4 y 5 entorno
   function setTex(R, slot, src, wrap) {
-    const { gl } = R; R.rev = R.rev || {}; if (R.src[slot] === src && (!src || R.rev[slot] === (src.__rev || 0))) return; R.src[slot] = src; R.rev[slot] = src ? src.__rev || 0 : 0;
+    const { gl } = R; if (gl.isContextLost()) return; R.rev = R.rev || {}; if (R.src[slot] === src && (!src || R.rev[slot] === (src.__rev || 0))) return; R.src[slot] = src; R.rev[slot] = src ? src.__rev || 0 : 0;
     if (R.tx[slot]) { gl.deleteTexture(R.tx[slot]); R.tx[slot] = null; } if (!src) return;
     const t = R.tx[slot] = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + slot); gl.bindTexture(gl.TEXTURE_2D, t);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
@@ -148,6 +155,7 @@ export const KitGL = (() => {
   }
   const bindMesh = (gl, attrs, b) => { for (const [at, bf, n] of attrs) { if (at < 0) continue; gl.bindBuffer(gl.ARRAY_BUFFER, bf); gl.enableVertexAttribArray(at); gl.vertexAttribPointer(at, n, gl.FLOAT, false, 0, 0); } gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b.i); };
   function draw(R, sc) {
+    if (R.gl.isContextLost()) return null;
     const { gl, loc } = R, c = gl.canvas, W = c.width, H = c.height; gl.viewport(0, 0, W, H); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const M = matrices(R, sc), Lt = sc.L, hasEnv = !!R.tx[4];
     // fondo
@@ -173,9 +181,17 @@ export const KitGL = (() => {
       bindMesh(gl, [[loc.p, b.p, 3], [loc.n, b.n, 3], [loc.t, b.t, 2]], b); gl.drawElements(gl.TRIANGLES, b.c, gl.UNSIGNED_SHORT, 0);
     }
     gl.disable(gl.POLYGON_OFFSET_FILL);
+    for (const at of [loc.p, loc.n, loc.t]) if (at >= 0) gl.disableVertexAttribArray(at);
     return M;
   }
-  return { make, upload, setTex, draw };
+  /** Frees every GPU object of a renderer; the context itself stays usable (e.g. by a remount). */
+  function dispose(R) {
+    const { gl } = R; if (gl.isContextLost()) return;
+    for (const b of R.bufs) for (const x of [b.p, b.n, b.t, b.i]) gl.deleteBuffer(x); R.bufs = [];
+    for (const k of Object.keys(R.tx)) if (R.tx[k]) gl.deleteTexture(R.tx[k]); R.tx = {}; R.src = {}; R.rev = {};
+    gl.deleteBuffer(R.quad); for (const p of [R.pr, R.bp, R.pp]) gl.deleteProgram(p);
+  }
+  return { make, upload, setTex, draw, dispose };
 })();
 
 /** Light + environment of a preset, in the shape KitGL.draw expects (sc.L). */
@@ -183,4 +199,24 @@ export function lightState(presetKey) {
   const PR = LIGHT_PRESETS[presetKey] || LIGHT_PRESETS.estudio;
   const env = KitEnv.scene(PR.env);
   return { key: PR.key, fill: PR.fill, rim: PR.rim, amb: PR.amb, exp: PR.exp, spec: 1, envInt: 1, envYaw: 0, sh: env.sh, env, envMix: 1 };
+}
+
+let thumbRenderer = null;
+/**
+ * One offscreen renderer shared by every thumbnail (collar picker): browsers keep only a few WebGL contexts
+ * alive and drop the oldest — the main viewer — when a component creates a new one per render. Recreated
+ * only if the browser lost it.
+ * @param {number} size canvas size in pixels
+ */
+export function sharedThumbRenderer(size) {
+  if (thumbRenderer && !thumbRenderer.gl.isContextLost()) {
+    const c = thumbRenderer.gl.canvas;
+    if (c.width !== size) { c.width = size; c.height = size; }
+    return thumbRenderer;
+  }
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  thumbRenderer = KitGL.make(c);
+  return thumbRenderer;
 }

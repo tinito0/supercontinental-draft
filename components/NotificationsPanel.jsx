@@ -1,11 +1,18 @@
 import React, { memo, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRightLeft, BadgeDollarSign, Bell, Check, ChevronRight, Info, X } from 'lucide-react';
+import { Tabs } from './ui/Tabs.jsx';
+
+const NOTIFICATION_FILTERS = [
+  { id: 'all', label: 'Todas' },
+  { id: 'market', label: 'Mercado' },
+  { id: 'system', label: 'Sistema' },
+];
 
 const TYPE_CONFIG = {
   warning: { icon: AlertTriangle, wrap: 'bg-warning/10 border-warning/20 text-amber-200 hover:bg-warning/15', iconColor: ' text-warning-soft' },
   offer: { icon: BadgeDollarSign, wrap: 'bg-success/10 border-success/20 text-emerald-200 hover:bg-success/15', iconColor: ' text-success-soft' },
   transfer: { icon: ArrowRightLeft, wrap: 'bg-accent/10 border-accent/20 text-accent-soft hover:bg-accent/15', iconColor: ' text-accent-soft' },
-  info: { icon: Info, wrap: 'bg-accent/10 border-accent/20 text-accent-soft hover:bg-accent/15', iconColor: ' text-accent' },
+  info: { icon: Info, wrap: 'bg-accent/10 border-accent/20 text-accent-soft hover:bg-accent/15', iconColor: ' text-accent-soft' },
   default: { icon: Bell, wrap: ' bg-raised/60 border-line/15 text-ink-2 hover:bg-raised', iconColor: ' text-ink-3' },
 };
 
@@ -24,7 +31,7 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? () => onClick(notif) : undefined}
       onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(notif); } } : undefined}
-      className={`group relative flex items-start gap-2.5 p-3 pr-8 rounded-xl text-sm border transition-all duration-150 ${wrap} ${
+      className={`group relative flex items-start gap-2.5 p-3 pr-8 rounded-xl text-sm border transition-colors duration-fast ${wrap} ${
         isClickable ? 'cursor-pointer hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-accent/40' : ''
       }`}
     >
@@ -35,9 +42,9 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
       <div className="min-w-0 flex-1 pl-1">
         <p className={`text-xs leading-snug ${isUnread ? 'font-bold text-ink' : 'font-medium text-ink-2'}`}>{notif.text}</p>
         <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-line/[0.08]">
-          <span className="text-[10px] text-ink-3 font-medium">{notif.time}</span>
+          <span className="text-[11px] text-ink-3 font-medium">{notif.time}</span>
           {isClickable && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-accent group-hover:translate-x-0.5 transition-transform">
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-accent-soft group-hover:translate-x-0.5 transition-transform">
               Ver <ChevronRight className="w-3 h-3" />
             </span>
           )}
@@ -48,7 +55,7 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDismiss(notif); }}
-          className="absolute top-2 right-2 min-w-6 min-h-6 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-white/10 transition cursor-pointer"
+          className="absolute top-1 right-1 min-w-10 min-h-10 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-white/10 transition cursor-pointer"
           title="Descartar"
           aria-label="Descartar notificación"
         >
@@ -88,13 +95,13 @@ export const NotificationsPanel = memo(function NotificationsPanel({
     <div
       role="region"
       aria-label="Panel de notificaciones"
-      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-surface border border-line/20 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200"
+      className="absolute top-16 right-4 w-[25rem] max-w-[calc(100vw-2rem)] bg-surface border border-line/20 rounded-2xl shadow-xl z-50 overflow-hidden origin-top-right animate-in fade-in slide-in-from-top-3"
     >
       <div className="flex justify-between items-center p-3.5 border-b border-line/20 bg-surface/60">
         <div className="flex items-center gap-2">
           <h4 className="font-bold text-ink text-sm">Notificaciones</h4>
           {unreadCount > 0 && (
-            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-ink text-[10px] font-bold flex items-center justify-center tabular-nums">
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-ink text-[11px] font-bold flex items-center justify-center tabular-nums">
               {unreadCount}
             </span>
           )}
@@ -104,7 +111,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
             <button
               type="button"
               onClick={onMarkAllRead}
-              className="px-2 py-1 flex items-center gap-1 text-xs text-accent hover:underline font-medium cursor-pointer"
+              className="px-2 min-h-11 flex items-center gap-1 text-xs text-accent-soft hover:underline font-medium cursor-pointer"
               title="Marcar todas como leídas"
               aria-label="Marcar todas las notificaciones como leídas"
             >
@@ -115,7 +122,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
             <button
               type="button"
               onClick={onClear}
-              className="px-2 py-1 text-xs text-ink-3 hover:text-ink-2 font-medium cursor-pointer"
+              className="px-2 min-h-11 text-xs text-ink-3 hover:text-ink-2 font-medium cursor-pointer"
               aria-label="Borrar todas las notificaciones"
             >
               Borrar todo
@@ -123,23 +130,8 @@ export const NotificationsPanel = memo(function NotificationsPanel({
           )}
         </div>
       </div>
-      <div className="flex gap-1.5 px-3 pt-2.5" role="tablist" aria-label="Filtrar notificaciones">
-        {[['all', 'Todas'], ['market', 'Mercado'], ['system', 'Sistema']].map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={filter === id}
-            onClick={() => setFilter(id)}
-            className={`min-h-7 rounded-lg px-2.5 text-xs font-semibold transition cursor-pointer ${
-              filter === id
-                ? ' bg-white text-slate-950 shadow-sm'
-                : ' text-ink-3 hover:bg-raised'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="px-3 pt-2.5">
+        <Tabs tabs={NOTIFICATION_FILTERS} value={filter} onChange={setFilter} label="Filtrar notificaciones" />
       </div>
       <div
         role="feed"

@@ -2,12 +2,13 @@ import React, { memo, useState } from 'react';
 import { ArrowRight, BadgeDollarSign } from 'lucide-react';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { formatPriceShort, getFlagUrl } from '../utils/helpers.js';
+import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
 function getOvrBadgeClass(ovr) {
   const value = Number(ovr) || 0;
   if (value >= 90) return 'bg-warning/15 text-warning-soft border-warning/30';
   if (value >= 85) return 'bg-accent/15 text-accent-soft border-accent/30';
-  if (value >= 80) return 'bg-accent/15 text-accent border-accent/30';
+  if (value >= 80) return 'bg-accent/15 text-accent-soft border-accent/30';
   return 'bg-slate-500/15 text-ink-3 border-slate-500/30';
 }
 
@@ -47,12 +48,12 @@ export const TransferPlayerCard = memo(function TransferPlayerCard({
   const toLogo = transfer?.teamLogo || toTeam.logoUrl;
   const ovrBadgeStyle = getOvrBadgeClass(ovr);
   const photoSrc = imgError
-    ? `https://placehold.co/220x260/101318/4b5563?text=${encodeURIComponent(playerName.slice(0, 2))}`
+    ? playerPlaceholder(playerName.slice(0, 2))
     : `/fotos_jugadores/${playerId}.webp`;
 
   return (
     <article
-      className={`relative overflow-hidden rounded-xl border border-line/[0.12] bg-surface shadow-sm transition-all hover:shadow-md ${
+      className={`relative overflow-hidden rounded-xl border border-line/[0.12] bg-surface shadow-sm transition-shadow hover:shadow-md ${
         compact ? 'max-w-none' : 'mx-auto max-w-[340px]'
       }`}
     >
@@ -60,7 +61,7 @@ export const TransferPlayerCard = memo(function TransferPlayerCard({
       <div className="flex items-center justify-between px-3.5 py-2 bg-surface/80 border-b border-line/15">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-success-soft">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-success-soft">
             Traspaso Oficial
           </span>
         </div>
@@ -85,10 +86,10 @@ export const TransferPlayerCard = memo(function TransferPlayerCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border tabular-nums ${ovrBadgeStyle}`}>
+              <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold border tabular-nums ${ovrBadgeStyle}`}>
                 {ovr || '--'}
               </span>
-              <span className="text-[10px] font-semibold text-ink-3 uppercase">
+              <span className="text-[11px] font-semibold text-ink-3 uppercase">
                 {position}
               </span>
               {country && (

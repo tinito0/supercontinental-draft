@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Send, X, MessageSquareText, Handshake, HelpCircle, Image, Search, ShieldAlert } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
+import { useModalDialog } from '../hooks/useModalDialog.js';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { getTeamMentionOptions, hasTransferIntent, normalizeChatText } from '../utils/managerChatUtils.js';
 
@@ -261,26 +262,27 @@ export const ManagerChat = memo(function ManagerChat({
       onClose={handleClose}
       size="xl"
       showClose={false}
+      ariaLabel="Chat de managers"
       className="!p-0 sm:!max-w-3xl h-[85vh] sm:h-[80vh]"
       contentClassName="!p-0 !overflow-hidden flex flex-col h-full min-h-0"
     >
       <div className="flex flex-col h-full min-h-0 bg-surface">
         <div className="flex items-center justify-between px-4 py-3 border-b border-line/20 bg-surface/80">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent-soft">
               <MessageSquareText className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-ink">Chat de Managers</h2>
+              <h2 className="text-sm font-bold text-ink">Chat de managers</h2>
               <p className="text-xs text-ink-3 truncate">Negociaciones y traspasos directos entre equipos.</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition" title="Ver tutorial y reglas">
-              <HelpCircle className="w-4 h-4" />
+            <button type="button" onClick={() => setShowTutorial(true)} className="w-11 h-11 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition-colors" title="Cómo se usa y reglas" aria-label="Cómo se usa el chat y reglas">
+              <HelpCircle className="w-4 h-4" aria-hidden="true" />
             </button>
-            <button onClick={handleClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition">
-              <X className="w-4 h-4" />
+            <button type="button" onClick={handleClose} className="w-11 h-11 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition-colors" aria-label="Cerrar chat">
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -296,7 +298,7 @@ export const ManagerChat = memo(function ManagerChat({
             >
               {messages.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-center px-6">
-                  <p className="text-xs text-ink-3 font-medium">Todavía no hay mensajes en la sala. Empieza una conversación o menciona a otro mánager.</p>
+                  <p className="text-xs text-ink-3 font-medium">Todavía no hay mensajes. Empezá la conversación o mencioná a otro manager.</p>
                 </div>
               ) : (
                 messages.map(message => {
@@ -307,9 +309,9 @@ export const ManagerChat = memo(function ManagerChat({
                       <div className={`manager-chat-bubble rounded-xl px-3 py-2 border ${mine ? 'bg-accent text-ink border-accent' : ' bg-surface border-line/20 text-ink'}`}>
                         <div className="flex items-center gap-1.5 mb-1">
                           <img src={message.senderLogoUrl || DEFAULT_LOGO} alt="" width={16} height={16} className="w-4 h-4 rounded object-contain bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
-                          <span className={`text-[11px] font-bold truncate ${mine ? 'text-accent-soft' : ' text-ink'}`}>{message.senderTeamName || 'Manager'}</span>
+                          <span className={`text-[11px] font-bold truncate ${mine ? 'text-ink/85' : ' text-ink'}`}>{message.senderTeamName || 'Manager'}</span>
                           {isTransfer && (
-                            <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.2 rounded ${mine ? 'bg-white/20 text-ink' : ' text-success-soft bg-success/10 border border-success/20'}`}>
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.2 rounded ${mine ? 'bg-white/20 text-ink' : ' text-success-soft bg-success/10 border border-success/20'}`}>
                               <Handshake className="w-3 h-3" /> Traspaso
                             </span>
                           )}
@@ -324,7 +326,7 @@ export const ManagerChat = memo(function ManagerChat({
                             onError={e => { e.target.style.display = 'none'; }}
                           />
                         )}
-                        <div className={`text-[10px] text-right mt-1 font-medium ${mine ? 'text-accent-soft' : 'text-ink-3'}`}>{getMessageDate(message.createdAt)}</div>
+                        <div className={`text-[11px] text-right mt-1 font-medium ${mine ? 'text-ink/85' : 'text-ink-3'}`}>{getMessageDate(message.createdAt)}</div>
                       </div>
                     </div>
                   );
@@ -336,7 +338,7 @@ export const ManagerChat = memo(function ManagerChat({
             <form onSubmit={handleSend} className="manager-chat-composer shrink-0 p-3 border-t border-line/20 bg-surface/90">
               {transferIntent && (
                 <div className="mb-2 inline-flex items-center gap-2 text-[11px] text-success-soft font-bold bg-success/10 border border-success/20 px-2 py-1 rounded-lg">
-                  <Handshake className="w-3.5 h-3.5" /> Se marcara como conversacion de traspaso.
+                  <Handshake className="w-3.5 h-3.5" /> Se marca como conversación de traspaso.
                 </div>
               )}
               {spamWarning && (
@@ -385,12 +387,12 @@ export const ManagerChat = memo(function ManagerChat({
                     </>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-warning-soft font-bold">Falta configurar VITE_GIPHY_API_KEY o VITE_KLIPY_API_KEY. Mientras tanto, pega una URL de GIF directo y sale igual.</p>
+                      <p className="text-xs text-warning-soft font-bold">Falta configurar VITE_GIPHY_API_KEY o VITE_KLIPY_API_KEY. Mientras tanto, pegá la URL de un GIF y sale igual.</p>
                       <input
                         value={gifUrl}
                         onChange={e => setGifUrl(e.target.value)}
                         placeholder="https://media.giphy.com/... o https://media.klipy.com/..."
-                        className="w-full bg-slate-950 border border-line/[0.12] rounded-lg px-3 py-2 text-xs text-ink outline-none focus:border-accent/60"
+                        className="input w-full text-xs"
                       />
                     </div>
                   )}
@@ -405,7 +407,7 @@ export const ManagerChat = memo(function ManagerChat({
               <div className="flex items-end gap-2">
                 <div className="relative flex-1">
                   {mentionSuggestions.length > 0 && (
-                    <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-line/[0.12] bg-slate-950 shadow-2xl overflow-hidden">
+                    <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-line/20 bg-surface shadow-lg overflow-hidden">
                       {mentionSuggestions.map((team, idx) => (
                         <button
                           key={team.id}
@@ -425,16 +427,16 @@ export const ManagerChat = memo(function ManagerChat({
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={handleComposerKeyDown}
-                    placeholder={`Escribe un mensaje como ${userProfile?.teamName || 'manager'}...`}
+                    placeholder={`Escribí como ${userProfile?.teamName || 'manager'}…`}
                     aria-label="Escribir mensaje para los managers"
-                    className="w-full max-h-28 min-h-[44px] resize-none bg-slate-950 border border-line/20 rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-accent placeholder:text-ink-3"
+                    className="w-full max-h-28 min-h-[44px] resize-none bg-canvas border border-line/55 rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-accent placeholder:text-ink-3"
                     maxLength={500}
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowGifPicker(prev => !prev)}
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${showGifPicker || selectedGifUrl ? 'bg-accent text-ink' : ' bg-white/[0.05] text-ink-3 hover:text-ink'}`}
+                  className={`w-11 h-11 shrink-0 rounded-lg flex items-center justify-center transition-colors ${showGifPicker || selectedGifUrl ? 'bg-accent text-ink' : ' bg-white/[0.05] text-ink-3 hover:text-ink'}`}
                   title="Mandar GIF"
                   aria-label="Seleccionar o buscar GIF"
                 >
@@ -443,8 +445,8 @@ export const ManagerChat = memo(function ManagerChat({
                 <button
                   type="submit"
                   disabled={(!text.trim() && !selectedGifUrl) || isSending}
-                  className="w-9 h-9 rounded-lg bg-accent text-ink flex items-center justify-center hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
-                  title={isSending ? 'Hay una operación en curso' : (!text.trim() && !selectedGifUrl) ? 'Completa los datos requeridos primero' : 'Enviar'}
+                  className="w-11 h-11 rounded-lg bg-accent text-ink flex items-center justify-center hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                  title={isSending ? 'Hay una operación en curso' : (!text.trim() && !selectedGifUrl) ? 'Escribí un mensaje o elegí un GIF' : 'Enviar'}
                   aria-label="Enviar mensaje al chat"
                 >
                   <Send className="w-4 h-4" />
@@ -454,46 +456,58 @@ export const ManagerChat = memo(function ManagerChat({
           </section>
         </div>
 
-        {showTutorial && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-accent/20 bg-slate-950 shadow-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-line/[0.12] bg-accent/10">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-ink uppercase tracking-tight">Chat de Managers</h3>
-                    <p className="text-sm text-accent-soft/80 font-semibold mt-1">Para hablar de traspasos, tantear jugadores y dejar constancia antes de que alguno se haga el distraido.</p>
-                  </div>
-                  <button onClick={closeTutorial} className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-white/10">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-accent-soft mb-2">Como se usa</h4>
-                  <ul className="space-y-2 text-sm text-ink-2 font-medium">
-                    <li>Escribi <span className="text-ink font-bold">@aspra</span> o las primeras letras y elegi el autocomplete. Si engancha bien, queda en negrita e italica y llega notificacion.</li>
-                    <li>Si escribis palabras como oferta, traspaso, vender o negociar, el mensaje queda marcado como tema de traspaso.</li>
-                    <li>El boton de GIF busca en GIPHY o KLIPY. Si no hay clave configurada, pega una URL de GIF y listo, modo potrero.</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-warning-soft mb-2">Reglas anti-spam</h4>
-                  <ul className="space-y-2 text-sm text-ink-2 font-medium">
-                    <li>Maximo 6 mensajes por minuto por navegador. Respira, Bielsa tampoco manda todo junto.</li>
-                    <li>No repetir el mismo mensaje en loop. Si la oferta es mala, spamearla no la hace Champions.</li>
-                    <li>GIFs si, catarata eterna no. Uno bueno pega mas que diez medio pelo.</li>
-                    <li>Chicana futbolera vale; bardo personal, insultos pesados o romper las bolas porque si, afuera.</li>
-                  </ul>
-                </div>
-                <button onClick={closeTutorial} className="w-full py-3 rounded-xl bg-accent hover:bg-accent text-ink font-bold uppercase tracking-wide transition">
-                  Entendido, vamos a negociar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {showTutorial && <ChatTutorial onClose={closeTutorial} />}
       </div>
     </BaseModal>
   );
 });
+
+function ChatTutorial({ onClose }) {
+  const panelRef = useRef(null);
+  useModalDialog(panelRef, true, onClose);
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onClose}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="chat-tutorial-title"
+        tabIndex={-1}
+        className="w-full max-w-lg max-h-full overflow-y-auto overscroll-contain rounded-2xl border border-line/20 bg-surface shadow-lg"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-line/10">
+          <div>
+            <h3 id="chat-tutorial-title" className="font-display text-xl font-bold text-ink">Chat de managers</h3>
+            <p className="text-sm text-ink-2 mt-1">Para hablar de traspasos, tantear jugadores y dejar constancia antes de que alguno se haga el distraído.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Cerrar ayuda del chat" className="w-11 h-11 shrink-0 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition-colors">
+            <X className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="p-5 space-y-5">
+          <div>
+            <h4 className="text-sm font-semibold text-ink mb-2">Cómo se usa</h4>
+            <ul className="space-y-2 text-sm text-ink-2">
+              <li>Escribí <span className="text-ink font-bold">@aspra</span> o las primeras letras y elegí del autocompletado. Si engancha, queda en negrita e itálica y le llega una notificación.</li>
+              <li>Si escribís palabras como oferta, traspaso, vender o negociar, el mensaje queda marcado como tema de traspaso.</li>
+              <li>El botón de GIF busca en GIPHY o KLIPY. Si no hay clave configurada, pegá la URL de un GIF y listo, modo potrero.</li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-ink mb-2">Reglas anti-spam</h4>
+            <ul className="space-y-2 text-sm text-ink-2">
+              <li>Máximo 6 mensajes por minuto por navegador. Respirá, Bielsa tampoco manda todo junto.</li>
+              <li>No repitas el mismo mensaje en loop. Si la oferta es mala, spamearla no la hace Champions.</li>
+              <li>GIFs sí, catarata eterna no. Uno bueno pega más que diez medio pelo.</li>
+              <li>Chicana futbolera vale; bardo personal, insultos pesados o romper las bolas porque sí, afuera.</li>
+            </ul>
+          </div>
+          <button type="button" onClick={onClose} className="btn btn-primary w-full">
+            Entendido, vamos a negociar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

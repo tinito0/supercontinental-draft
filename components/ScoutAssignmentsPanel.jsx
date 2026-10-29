@@ -14,56 +14,56 @@ const MONTHLY_SEARCH_LIMIT = 5;
 const DEFAULT_SCOUTS = [
   { id: 'scout-rapido', name: 'Tomás Ibarra', quality: 58, durationHours: 1, specialty: 'Respuesta rápida', description: 'Vuelve rápido, pero puede traer jugadores con más variación respecto a lo pedido.' },
   { id: 'scout-equilibrado', name: 'Martín Sosa', quality: 74, durationHours: 2, specialty: 'Búsqueda confiable', description: 'Buen balance entre tiempo y precisión. Ideal para búsquedas normales.' },
-  { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 4, imageUrl: '/scouts/fefe-farfan.webp', specialty: 'Elite total', description: 'El mejor ojeador de todos. Tarda mas porque filtra fino y prioriza coincidencias premium.' },
-  { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantanea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para testear resultados.' },
+  { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 4, imageUrl: '/scouts/fefe-farfan.webp', specialty: 'Élite total', description: 'El mejor ojeador de todos. Tarda más porque filtra fino y prioriza coincidencias premium.' },
+  { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantánea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para probar resultados. Solo lo ve el admin.' },
 ];
 
 const SCOUT_TUTORIAL_STEPS = [
   {
     targetSelector: '[data-scout-target="scout-picker"]',
     title: 'Elegir ojeador',
-    description: 'Aca elegis quien sale a buscar. Fefe Farfan es el mas preciso; los otros vuelven antes pero tienen mas margen de error.',
+    description: 'Acá elegís quién sale a buscar. Fefe Farfan es el más preciso; los otros vuelven antes pero tienen más margen de error.',
   },
   {
     targetSelector: '[data-scout-target="position"]',
     title: 'Zona del campo',
-    description: 'Podes buscar cualquier posicion o enfocar por delantero, mediocampista, defensor o arquero.',
+    description: 'Podés buscar cualquier posición o enfocarte en delanteros, mediocampistas, defensores o arqueros.',
   },
   {
     targetSelector: '[data-scout-target="specific-position"]',
-    title: 'Posicion especifica',
-    description: 'Si queres hilar fino, marca una o varias posiciones puntuales segun aptitud. Si lo dejas en ninguna, busca toda la linea.',
+    title: 'Posición específica',
+    description: 'Si querés hilar fino, marcá una o varias posiciones puntuales según aptitud. Si no marcás ninguna, busca en toda la línea.',
   },
   {
     targetSelector: '[data-scout-target="area"]',
-    title: 'Area de busqueda',
-    description: 'Filtra por pais o region para buscar talentos de una zona concreta.',
+    title: 'Zona de búsqueda',
+    description: 'Filtrá por país o región para buscar talentos de una zona concreta.',
   },
   {
     targetSelector: '[data-scout-target="attention"]',
     title: 'Aspecto principal',
-    description: 'Decidi si el ojeador prioriza valoracion general, una habilidad puntual o promesas jovenes.',
+    description: 'Decidí si el ojeador prioriza la valoración general, una habilidad puntual o promesas jóvenes.',
   },
   {
     targetSelector: '[data-scout-target="budget"]',
     title: 'Presupuesto',
-    description: 'Si elegis considerar, el ojeador intenta respetar tu presupuesto disponible o el maximo que cargues.',
+    description: 'Si elegís tenerlo en cuenta, el ojeador intenta respetar tu presupuesto disponible o el máximo que cargues.',
   },
   {
     targetSelector: '[data-scout-target="attributes"]',
     title: 'Atributos',
-    description: 'Podes pedir hasta dos atributos, por ejemplo Velocidad 80 y Definicion 75.',
+    description: 'Podés pedir hasta dos atributos, por ejemplo Velocidad 80 y Definición 75.',
   },
   {
     targetSelector: '[data-scout-target="submit"]',
-    title: 'Enviar scout',
-    description: 'Cuando este todo listo, mandas la asignacion. Se descuenta del cupo mensual y los resultados llegan al vencer el tiempo.',
+    title: 'Enviar ojeador',
+    description: 'Cuando esté todo listo, mandás la asignación. Se descuenta del cupo mensual y los resultados llegan cuando termina el tiempo.',
   },
 ];
 
 
 const attentionOptions = [
-  { id: 'overall', label: 'Valoracion general' },
+  { id: 'overall', label: 'Valoración general' },
   { id: 'skill', label: 'Por habilidad' },
   { id: 'potential', label: 'Joven promesa' },
 ];
@@ -205,13 +205,13 @@ function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
     : `M 0 0 H ${window.innerWidth} V ${window.innerHeight} H 0 Z`;
 
   return (
-    <div className="scout-guide-layer" role="dialog" aria-modal="true" aria-label="Tutorial de scouting">
-      <svg className="scout-guide-backdrop" width="100%" height="100%" aria-hidden="true">
+    <div className="guide-layer" role="dialog" aria-modal="true" aria-label="Tutorial de scouting">
+      <svg className="guide-backdrop" width="100%" height="100%" aria-hidden="true">
         <path d={path} fill="rgba(0,0,0,0.72)" fillRule="evenodd" />
       </svg>
       {spotlightRect && (
         <div
-          className="scout-guide-ring"
+          className="guide-ring"
           style={{
             left: spotlightRect.x,
             top: spotlightRect.y,
@@ -220,8 +220,8 @@ function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
           }}
         />
       )}
-      <div className="scout-guide-popover" style={tooltipStyle}>
-        <button type="button" onClick={onClose} className="scout-guide-skip">Saltar</button>
+      <div className="guide-popover" style={tooltipStyle}>
+        <button type="button" onClick={onClose} className="guide-close">Saltar</button>
         <div className="eyebrow mb-2">
           Paso {stepIndex + 1} de {steps.length}
         </div>
@@ -735,7 +735,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-ink truncate">{player.Name}</p>
                           <p className="flex items-center gap-2 mt-1 text-xs text-ink-3">
-                            <span className={`px-1.5 rounded text-[10px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                            <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                             <img src={getFlagUrl(player.Country1)} alt="" className="w-4 h-3 rounded-[2px]" onError={e => { e.currentTarget.style.display = 'none'; }} />
                             {player.Age} años
                           </p>

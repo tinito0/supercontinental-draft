@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { X, Save, Edit2, Trophy, ShieldAlert, LayoutGrid, Star, CalendarDays } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
+import { X, Save, Edit2, Trophy, LayoutGrid, Star, CalendarDays } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 import { Spinner } from './ui/Spinner.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { normalizeTournamentView } from '../utils/tournamentViews.js';
+import { seedGoldCup as seedGoldCupBracket } from '../utils/bracketModel.js';
+import { normalizeTournament } from '../utils/tournamentModel.js';
+import { LEAGUE_ROUNDS, roundStatus } from './tournament/tournamentEngine.js';
+import { TieBreakEditor } from './tournament/TieBreakEditor.jsx';
 import {
-  TournamentActionButton,
-  TournamentTabButton,
   tournamentBackdropClass,
   tournamentShellClass,
 } from './TournamentUI.jsx';
@@ -22,7 +24,15 @@ import {
   RepechajeView,
   StatsView,
   buildAutomaticTournamentData,
+  buildAutomaticTournamentReport,
+  rankLeague,
+  suggestSwissRound,
+  drawFirstRound,
+  roundNumber,
 } from './tournament/index.js';
+import { Alert } from './ui/Alert.jsx';
+import { confirmAction } from './ui/ConfirmDialog.jsx';
+import { draftUrl } from '../utils/siteRoutes.js';
 
 export {
   TournamentTeamsContext,
@@ -51,98 +61,46 @@ export const TournamentModal = memo(function TournamentModal({
 }) {
   const [activeTab, setActiveTab] = useState(() => normalizeTournamentView(initialTab));
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  // Avisos del último guardado (empates sin tanda, empates en la tabla): no bloquean.
+  const [saveWarnings, setSaveWarnings] = useState([]);
   const [localData, setLocalData] = useState(null);
-  const isObsMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'obs';
+  const editBaselineRef = useRef('');
+  const editBaseRef = useRef(null);
+  // Las vistas de OBS viven en screens/ObsScreen.jsx (BroadcastOverlay); acá siempre es la vista de la app.
+  const isObsMode = false;
 
   useEffect(() => {
     setActiveTab(normalizeTournamentView(initialTab));
   }, [initialTab]);
 
-  // Close on Escape key
+  // Escape lo maneja BaseModal (que además no cierra mientras se escribe en un campo). Un segundo listener
+  // acá llamaba onClose dos veces y cerraba aunque el foco estuviera en un input.
+
+  // Fuera del modo edición la copia local sigue a Firestore; al editar queda fija y se guarda como diferencia
+  // contra su base (services/tournamentService.js), así que lo que otro admin guarde mientras tanto no se pisa.
   useEffect(() => {
-    if (!isVisible || isPage) return; // as a page there is nothing to close
-    const handleEsc = (e) => {
-      if (e.key === 'Escape' && onClose) onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [isVisible, isPage, onClose]);
+    if (isEditing) return;
+    if (tournamentData) setLocalData(normalizeTournament(tournamentData));
+    else setLocalData(prev => prev || normalizeTournament(null));
+  }, [tournamentData, isEditing]);
 
-  useEffect(() => {
-    if (tournamentData && !isEditing) {
-      const safeData = JSON.parse(JSON.stringify(tournamentData));
-      if (!Array.isArray(safeData.league)) safeData.league = [];
-      // STRICT 12-TEAM CAP: SuperContinental League has exactly 12 teams
-      if (safeData.league.length > 12) {
-        safeData.league = safeData.league.slice(0, 12);
-      }
-      while (safeData.league.length < 12) {
-        safeData.league.push({ id: crypto.randomUUID(), name: 'Club...', pj: 0, pg: 0, gpen: 0, pp: 0, pts: 0, gf: 0, gc: 0 });
-      }
-      safeData.league.forEach(t => {
-        if (!t.id) t.id = crypto.randomUUID();
-      });
-
-      if (!safeData.bracket) safeData.bracket = { quarters: [], semis: [], final: {}, repechaje: { r1: [], r2: [], semis: [], final: {} } };
-      if (!safeData.bracket.repechaje) safeData.bracket.repechaje = { r1: [], r2: [], semis: [], final: {} };
-
-      const fillArray = (arr, requiredLength) => {
-        if (!Array.isArray(arr)) arr = [];
-        while (arr.length < requiredLength) {
-          arr.push({ teamA: '', teamB: '', scoreA: '', scoreB: '' });
-        }
-        return arr;
-      };
-
-      safeData.bracket.repechaje.r1 = fillArray(safeData.bracket.repechaje.r1, 4);
-      safeData.bracket.repechaje.r2 = fillArray(safeData.bracket.repechaje.r2, 2);
-      safeData.bracket.repechaje.semis = fillArray(safeData.bracket.repechaje.semis, 2);
-      safeData.bracket.quarters = fillArray(safeData.bracket.quarters, 4);
-      safeData.bracket.semis = fillArray(safeData.bracket.semis, 2);
-
-      // Estadísticas
-      if (!safeData.topScorers) safeData.topScorers = Array(5).fill(null).map(() => ({ name: '', team: '', goals: '' }));
-      if (!safeData.topAssisters) safeData.topAssisters = Array(5).fill(null).map(() => ({ name: '', team: '', assists: '' }));
-      if (!Array.isArray(safeData.matches)) safeData.matches = [];
-
-      setLocalData(safeData);
-    } else if (!tournamentData && !localData) {
-      setLocalData({
-        league: Array(12).fill(null).map(() => ({ id: crypto.randomUUID(), name: 'Club...', pj: 0, pg: 0, gpen: 0, pp: 0, pts: 0, gf: 0, gc: 0 })),
-        bracket: {
-          quarters: Array(4).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-          semis: Array(2).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-          final: { teamA: '', teamB: '', scoreA: '', scoreB: '' },
-          repechaje: {
-            r1: Array(4).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-            r2: Array(2).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-            semis: Array(2).fill(null).map(() => ({ teamA: '', teamB: '', scoreA: '', scoreB: '' })),
-            final: { teamA: '', teamB: '', scoreA: '', scoreB: '' },
-          },
-        },
-        topScorers: Array(5).fill(null).map(() => ({ name: '', team: '', goals: '' })),
-        topAssisters: Array(5).fill(null).map(() => ({ name: '', team: '', assists: '' })),
-        matches: [],
-      });
-    }
-  }, [tournamentData, allTeams, isEditing]);
+  // Otro guardado mientras se edita: no bloquea (se combina al guardar), pero se avisa.
+  const editStartDataRef = useRef(null);
+  const changedWhileEditing = isEditing && editStartDataRef.current !== null && editStartDataRef.current !== tournamentData;
 
   const teamOptions = useMemo(() => Object.entries(allTeams || {})
     .map(([id, team]) => ({ id, name: String(team?.teamName || '').trim() }))
     .filter(team => team.name)
     .sort((a, b) => a.name.localeCompare(b.name)), [allTeams]);
 
-  const obsContentScale = activeTab === 'repechaje' ? 0.50
-    : activeTab === 'bracket' ? 0.65
-      : activeTab === 'stats' ? 0.82
-        : activeTab === 'matches' ? 0.78
-          : 1;
-
   const getTeamLogo = useCallback((teamName) => {
     if (!teamName || !allTeams) return DEFAULT_LOGO;
     const target = teamName.trim().toLowerCase();
     const foundId = Object.keys(allTeams).find(id => allTeams[id].teamName.trim().toLowerCase() === target);
-    return foundId ? allTeams[foundId].logoUrl : DEFAULT_LOGO;
+    // Un club sin escudo cargado (logoUrl vacío) mostraba una imagen rota: usa el escudo de la liga.
+    return (foundId && allTeams[foundId].logoUrl) || DEFAULT_LOGO;
   }, [allTeams]);
 
   const getPlayerPhoto = useCallback((name) => {
@@ -152,22 +110,18 @@ export const TournamentModal = memo(function TournamentModal({
     return found ? `/fotos_jugadores/${found.Id || found.id}.webp` : null;
   }, [allPlayers]);
 
-  const sortLeague = (data) => {
-    const sorted = { ...data };
-    sorted.league = [...(sorted.league || [])].slice(0, 12);
-    sorted.league.sort((a, b) => {
-      if (a.name === 'Club...') return 1;
-      if (b.name === 'Club...') return -1;
-      const ptsA = Number(a.pts) || 0;
-      const ptsB = Number(b.pts) || 0;
-      if (ptsB !== ptsA) return ptsB - ptsA;
-      const dgA = (Number(a.gf) || 0) - (Number(a.gc) || 0);
-      const dgB = (Number(b.gf) || 0) - (Number(b.gc) || 0);
-      if (dgB !== dgA) return dgB - dgA;
-      return (Number(b.gf) || 0) - (Number(a.gf) || 0);
-    });
-    return sorted;
-  };
+  // Empates sin desempate posible con la tabla que quedaría al guardar (sin el orden manual, para poder cambiarlo).
+  const liveTies = useMemo(() => {
+    if (!isEditing || !localData) return [];
+    return rankLeague(buildAutomaticTournamentReport(localData).data.league).unresolvedTies;
+  }, [isEditing, localData]);
+
+  const finalRanking = useMemo(() => {
+    if (!localData) return null;
+    const data = buildAutomaticTournamentReport(localData).data;
+    if (!roundStatus(data, LEAGUE_ROUNDS).complete) return null;
+    return rankLeague(data.league, data.tieBreakOrder).league;
+  }, [localData]);
 
   const clearLeagueSlot = useCallback((index) => {
     setLocalData(prev => {
@@ -177,14 +131,79 @@ export const TournamentModal = memo(function TournamentModal({
     });
   }, []);
 
-  const handleSave = () => {
-    const sortedData = sortLeague(buildAutomaticTournamentData(localData));
-    if (sortedData.league.length > 12) {
-      sortedData.league = sortedData.league.slice(0, 12);
+  const startEditing = () => {
+    editBaselineRef.current = JSON.stringify(localData);
+    editBaseRef.current = JSON.parse(editBaselineRef.current);
+    editStartDataRef.current = tournamentData;
+    setSaveError(null);
+    setIsEditing(true);
+  };
+
+  const hasUnsavedChanges = () => isEditing && JSON.stringify(localData) !== editBaselineRef.current;
+
+  // Se sale del modo edición solo si el guardado terminó bien: si falla, los cambios siguen en pantalla.
+  // Tabla, desempates, fecha suiza automática y avance de copas los recalcula el servicio al guardar.
+  const handleSave = async () => {
+    if (isSaving) return;
+    setSaveError(null);
+    setIsSaving(true);
+    try {
+      const result = await onUpdateTournament(localData, { base: editBaseRef.current });
+      if (!result?.ok) {
+        setSaveError(result?.conflicts?.length ? `${result.error} ${result.conflicts.join(' ')}` : (result?.error || 'No se pudo guardar.'));
+        return;
+      }
+      setSaveWarnings([
+        ...(result.issues || []),
+        ...(result.unresolvedTies || []).map(group => `Empate en la tabla sin desempate posible: ${group.join(', ')}. Ordenalos con «Editar».`),
+        ...(result.warnings || []),
+        ...(result.generatedRound ? [`Se armó la ${result.generatedRound} con la tabla actual. Ya está publicada.`] : []),
+        ...(result.cupChanges?.length ? [`Copas: ${result.cupChanges.join(' · ')}.`] : []),
+      ]);
+      editStartDataRef.current = null;
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
     }
-    setLocalData(sortedData);
-    onUpdateTournament(sortedData);
+  };
+
+  const setTieBreakOrder = useCallback((order) => {
+    setLocalData(prev => ({ ...prev, tieBreakOrder: order }));
+  }, []);
+
+  // «Armar Copa de Oro»: cuartos 1-8, 4-5, 2-7, 3-6 con la tabla final; desde ahí los ganadores pasan solos.
+  const seedGoldCup = async () => {
+    const result = seedGoldCupBracket(localData.bracket, finalRanking);
+    if (!result.ok) {
+      setSaveWarnings([result.reason]);
+      return;
+    }
+    const isConfirmed = await confirmAction({
+      title: '¿Armar los cuartos de la Copa de Oro?',
+      details: result.bracket.quarters.map(match => `${match.teamA} vs ${match.teamB}`),
+      message: 'Se publican cuando presiones Guardar.',
+      confirmLabel: 'Armar cuartos',
+      tone: 'primary',
+    });
+    if (!isConfirmed) return;
+    setLocalData(prev => ({ ...prev, bracket: result.bracket }));
+  };
+
+  const confirmDiscard = () => confirmAction({
+    title: '¿Descartar los cambios?',
+    message: 'Lo que editaste del torneo y no guardaste se pierde.',
+    confirmLabel: 'Descartar cambios',
+  });
+
+  const handleCancelEditing = async () => {
+    if (hasUnsavedChanges() && !(await confirmDiscard())) return;
+    setIsEditing(false); // el efecto de sincronización vuelve a cargar los datos guardados
+  };
+
+  const handleClose = async () => {
+    if (hasUnsavedChanges() && !(await confirmDiscard())) return;
     setIsEditing(false);
+    onClose?.();
   };
 
   const updateMatchGeneric = useCallback((path, index, field, value) => {
@@ -263,14 +282,64 @@ export const TournamentModal = memo(function TournamentModal({
     }));
   }, []);
 
-  const removeTournamentMatch = useCallback((matchId) => {
-    if (!window.confirm('¿Eliminar este partido? Se aplicará al presionar Guardar.')) return;
+  // La fecha suiza se arma sola al guardar el último resultado de una fecha. Este botón es el respaldo manual (por
+  // ejemplo si el admin borró una fecha generada para rehacerla): mismos ids fijos, así que nunca la duplica.
+  const suggestNextRound = useCallback(async () => {
+    const suggestion = suggestSwissRound(localData);
+    if (!suggestion.ok) {
+      setSaveWarnings([suggestion.reason]);
+      return;
+    }
+    const isConfirmed = await confirmAction({
+      title: `¿Agregar la ${suggestion.round}?`,
+      details: suggestion.pairs.map(([home, away]) => `${home} vs ${away}`),
+      message: 'Se guardan cuando presiones Guardar.',
+      confirmLabel: 'Agregar partidos',
+      tone: 'primary',
+    });
+    if (!isConfirmed) return;
+    setSaveWarnings([]);
+    setLocalData(prev => {
+      const ids = new Set((prev.matches || []).map(match => match.id));
+      return { ...prev, matches: [...(prev.matches || []), ...suggestion.matches.filter(match => !ids.has(match.id))] };
+    });
+  }, [localData]);
+
+  // Fecha 1 por sorteo: el día que arranca la copa. Se ve el resultado antes de aceptarlo y se publica al Guardar; de
+  // la Fecha 2 en adelante los cruces se arman solos al terminar cada fecha.
+  const drawRoundOne = useCallback(async () => {
+    const draw = drawFirstRound(localData);
+    if (!draw.ok) {
+      setSaveWarnings([draw.reason]);
+      return;
+    }
+    const isConfirmed = await confirmAction({
+      title: '¿Usar este sorteo de la Fecha 1?',
+      details: draw.pairs.map(([home, away]) => `${home} vs ${away}`),
+      message: 'Se publica cuando presiones Guardar. Si cancelás, podés volver a sortear.',
+      confirmLabel: 'Usar sorteo',
+      tone: 'primary',
+    });
+    if (!isConfirmed) return;
+    setSaveWarnings([]);
+    setLocalData(prev => ({ ...prev, matches: [...(prev.matches || []), ...draw.matches] }));
+  }, [localData]);
+  // Antes del `if (!localData)` de abajo: el torneo todavía puede no haber cargado.
+  const needsRoundOneDraw = !(localData?.matches || []).some(match => roundNumber(match.round) === 1);
+
+  const removeTournamentMatch = useCallback(async (matchId) => {
+    const isConfirmed = await confirmAction({
+      title: '¿Eliminar el partido?',
+      message: 'Se aplica cuando presiones Guardar.',
+      confirmLabel: 'Eliminar partido',
+    });
+    if (!isConfirmed) return;
     setLocalData(prev => ({ ...prev, matches: (prev.matches || []).filter(match => match.id !== matchId) }));
   }, []);
 
   const [copiedObs, setCopiedObs] = useState(null);
-  const copyObsUrl = async (label, query) => {
-    const url = `${window.location.origin}/torneo?mode=obs&${query}`;
+  const copyObsUrl = async (label, scene) => {
+    const url = draftUrl(`/overlay?scene=${scene}`);
     try {
       await navigator.clipboard.writeText(url);
       setCopiedObs({ label, ok: true });
@@ -278,7 +347,6 @@ export const TournamentModal = memo(function TournamentModal({
       setCopiedObs({ label, ok: false, url });
     }
   };
-  const handleCopyObsLink = (view) => copyObsUrl(view === 'groups' ? 'Tabla' : 'Bracket', `view=${view}`);
 
   const pendingMatchesCount = useMemo(() => {
     if (!localData?.matches || !Array.isArray(localData.matches)) return 0;
@@ -307,12 +375,73 @@ export const TournamentModal = memo(function TournamentModal({
     );
   }
 
+  const tabContent = (
+    <>
+      {activeTab === 'matches' && (
+        <MatchCenter
+          matches={localData.matches}
+          isEditing={isEditing}
+          onUpdate={updateTournamentMatch}
+          onAdd={addTournamentMatch}
+          onSuggestRound={suggestNextRound}
+          onRemove={removeTournamentMatch}
+          getTeamLogo={getTeamLogo}
+          isObsMode={isObsMode}
+        />
+      )}
+
+      {activeTab === 'groups' && (
+        <LeagueTableView
+          localData={localData}
+          isEditing={isEditing}
+          isObsMode={isObsMode}
+          userTeamName={userTeamName}
+          getTeamLogo={getTeamLogo}
+          updateLeagueTeam={updateLeagueTeam}
+          clearLeagueSlot={clearLeagueSlot}
+        />
+      )}
+
+      {activeTab === 'bracket' && (
+        <BracketView
+          localData={localData}
+          isEditing={isEditing}
+          isObsMode={isObsMode}
+          getTeamLogo={getTeamLogo}
+          updateGeneric={updateGeneric}
+        />
+      )}
+
+      {activeTab === 'repechaje' && (
+        <RepechajeView
+          localData={localData}
+          isEditing={isEditing}
+          isObsMode={isObsMode}
+          getTeamLogo={getTeamLogo}
+          updateGeneric={updateGeneric}
+        />
+      )}
+
+      {activeTab === 'stats' && (
+        <StatsView
+          localData={localData}
+          isEditing={isEditing}
+          isObsMode={isObsMode}
+          getTeamLogo={getTeamLogo}
+          getPlayerPhoto={getPlayerPhoto}
+          updateStat={updateStat}
+        />
+      )}
+    </>
+  );
+
   const content = (
     <>
       <div className={`${tournamentBackdropClass} z-0`}></div>
       <div className="relative z-10 w-full h-full flex flex-col" onClick={e => e.stopPropagation()}>
           {!isObsMode && (
-            <div className={`flex flex-col shrink-0 gap-4 ${isPage ? 'pb-4' : 'px-4 sm:px-6 py-4 border-b border-line/10'}`}>
+            // Los avisos (empates, errores) no pueden tapar todo: la cabecera tiene un alto máximo y scrollea sola.
+            <div className={`flex flex-col shrink-0 gap-4 max-h-[55dvh] overflow-y-auto custom-scrollbar ${isPage ? 'pb-4' : 'px-4 sm:px-6 py-4 border-b border-line/10'}`}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <p className="eyebrow mb-1.5">Competición</p>
@@ -327,23 +456,62 @@ export const TournamentModal = memo(function TournamentModal({
                     <details className="relative">
                       <summary className="btn btn-secondary list-none cursor-pointer [&::-webkit-details-marker]:hidden">Enlaces OBS</summary>
                       <div className="absolute right-0 top-full mt-2 z-dropdown panel p-2 w-56 flex flex-col">
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => handleCopyObsLink('groups')}>Copiar enlace de la tabla</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => handleCopyObsLink('bracket')}>Copiar enlace del bracket</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Goleadores', 'view=goleadores')}>Copiar enlace de goleadores</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Plata', 'view=bracket&tournament=copa-plata')}>Copiar enlace de Copa de Plata</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Tabla', 'tabla')}>Copiar enlace de la tabla</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Oro', 'bracket')}>Copiar enlace de la Copa de Oro</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Goleadores', 'goleadores')}>Copiar enlace de goleadores</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Plata', 'repechaje')}>Copiar enlace de Copa de Plata</button>
                       </div>
                     </details>
                   )}
+                  {isAdmin && isEditing && (
+                    <button type="button" className="btn btn-ghost" onClick={handleCancelEditing} disabled={isSaving}>
+                      Cancelar
+                    </button>
+                  )}
                   {isAdmin && (
-                    <button type="button" className={`btn ${isEditing ? 'btn-primary' : 'btn-secondary'}`} onClick={() => (isEditing ? handleSave() : setIsEditing(true))}>
-                      {isEditing ? <><Save className="w-4 h-4" aria-hidden="true" />Guardar</> : <><Edit2 className="w-4 h-4" aria-hidden="true" />Editar</>}
+                    <button
+                      type="button"
+                      className={`btn ${isEditing ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => (isEditing ? handleSave() : startEditing())}
+                      disabled={isSaving}
+                    >
+                      {isEditing
+                        ? <><Save className="w-4 h-4" aria-hidden="true" />{isSaving ? 'Guardando…' : 'Guardar'}</>
+                        : <><Edit2 className="w-4 h-4" aria-hidden="true" />Editar</>}
                     </button>
                   )}
                   {!isPage && onClose && (
-                    <button type="button" onClick={onClose} className="btn btn-ghost btn-icon" aria-label="Cerrar torneo"><X className="w-5 h-5" aria-hidden="true" /></button>
+                    <button type="button" onClick={handleClose} className="btn btn-ghost btn-icon" aria-label="Cerrar torneo"><X className="w-5 h-5" aria-hidden="true" /></button>
                   )}
                 </div>
               </div>
+              {saveError && isEditing && <Alert tone="danger">{saveError}</Alert>}
+              {changedWhileEditing && (
+                <Alert tone="info">Otro admin guardó cambios del torneo mientras editabas. Al guardar se combinan con los tuyos; si tocaron lo mismo, se avisa y no se pisa nada.</Alert>
+              )}
+              {isAdmin && localData.swissStatus?.blocked && (
+                <Alert tone="warning" title={`No se pudo armar la Fecha ${localData.swissStatus.blocked.round}`}>
+                  {localData.swissStatus.blocked.reason} Cargá esa fecha a mano con «Agregar partido».
+                </Alert>
+              )}
+              {isAdmin && isEditing && needsRoundOneDraw && (
+                <Alert tone="info" title="La Fecha 1 se sortea">
+                  <span className="mr-2">El día que arranca la copa, sorteá los cruces de la Fecha 1 entre los clubes de la tabla. Las fechas siguientes se arman solas al terminar cada una.</span>
+                  <button type="button" className="btn btn-primary btn-sm min-h-11 mt-2" onClick={drawRoundOne}>Sortear Fecha 1</button>
+                </Alert>
+              )}
+              {isAdmin && isEditing && <TieBreakEditor groups={liveTies} order={localData.tieBreakOrder || []} onChange={setTieBreakOrder} />}
+              {isAdmin && isEditing && activeTab === 'bracket' && finalRanking && !localData.bracket?.quarters?.some(match => match?.teamA || match?.teamB) && (
+                <Alert tone="info" title="La liga terminó">
+                  <span className="mr-2">Armá los cuartos de la Copa de Oro con la tabla final (1-8, 4-5, 2-7, 3-6). Después los ganadores pasan solos.</span>
+                  <button type="button" className="btn btn-secondary btn-sm min-h-11 mt-2" onClick={seedGoldCup}>Armar Copa de Oro</button>
+                </Alert>
+              )}
+              {saveWarnings.length > 0 && (
+                <Alert tone="warning" title="Revisá la tabla">
+                  <ul className="list-disc space-y-0.5 pl-4">{saveWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
+                </Alert>
+              )}
               {copiedObs && (
                 <p role="status" className={`text-xs ${copiedObs.ok ? 'text-success-soft' : 'text-warning-soft'}`}>
                   {copiedObs.ok ? `Enlace OBS de ${copiedObs.label} copiado.` : <>No se pudo copiar. Enlace: <code className="text-ink-2 break-all">{copiedObs.url}</code></>}
@@ -352,89 +520,21 @@ export const TournamentModal = memo(function TournamentModal({
               <Tabs label="Secciones del torneo" value={activeTab} onChange={setActiveTab} tabs={[
                 { id: 'matches', label: 'Partidos', icon: CalendarDays, count: pendingMatchesCount || null },
                 { id: 'groups', label: 'Tabla', icon: LayoutGrid },
-                { id: 'bracket', label: 'Brackets', icon: Trophy },
-                { id: 'repechaje', label: 'Copa de Plata', icon: Trophy, hidden: !isAdmin },
-                { id: 'stats', label: 'Goleadores', icon: Star, hidden: !isAdmin },
+                { id: 'bracket', label: 'Copa de Oro', icon: Trophy },
+                { id: 'repechaje', label: 'Copa de Plata', icon: Trophy },
+                { id: 'stats', label: 'Goleadores', icon: Star },
               ]} />
             </div>
           )}
 
-          <div className={`flex-grow relative ${isObsMode ? 'flex flex-col items-center justify-center p-0 overflow-hidden' : `w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar ${isPage ? '' : 'p-3 sm:p-6'}`}`}>
-            <div
-              className={isObsMode ? 'w-[1920px] h-[1080px] flex flex-col items-center justify-center transition-transform duration-500 origin-center' : 'w-full max-w-7xl mx-auto flex flex-col'}
-              style={{
-                transform: isObsMode ? `scale(${obsContentScale})` : undefined,
-                contain: isObsMode ? 'content' : undefined,
-              }}
-            >
-              {activeTab === 'matches' && (
-                <MatchCenter
-                  matches={localData.matches}
-                  isEditing={isEditing}
-                  onUpdate={updateTournamentMatch}
-                  onAdd={addTournamentMatch}
-                  onRemove={removeTournamentMatch}
-                  getTeamLogo={getTeamLogo}
-                />
-              )}
-
-              {activeTab === 'groups' && (
-                <LeagueTableView
-                  localData={localData}
-                  isEditing={isEditing}
-                  isObsMode={isObsMode}
-                  userTeamName={userTeamName}
-                  getTeamLogo={getTeamLogo}
-                  updateLeagueTeam={updateLeagueTeam}
-                  clearLeagueSlot={clearLeagueSlot}
-                />
-              )}
-
-              {activeTab === 'bracket' && (
-                <BracketView
-                  localData={localData}
-                  isEditing={isEditing}
-                  isObsMode={isObsMode}
-                  getTeamLogo={getTeamLogo}
-                  updateGeneric={updateGeneric}
-                />
-              )}
-
-              {activeTab === 'repechaje' && (
-                <RepechajeView
-                  localData={localData}
-                  isEditing={isEditing}
-                  isObsMode={isObsMode}
-                  getTeamLogo={getTeamLogo}
-                  updateGeneric={updateGeneric}
-                />
-              )}
-
-              {activeTab === 'stats' && (
-                <StatsView
-                  localData={localData}
-                  isEditing={isEditing}
-                  isObsMode={isObsMode}
-                  getTeamLogo={getTeamLogo}
-                  getPlayerPhoto={getPlayerPhoto}
-                  updateStat={updateStat}
-                />
-              )}
+          <div className={`flex-grow relative w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar ${isPage ? '' : 'p-3 sm:p-6'}`}>
+            <div className={`w-full mx-auto flex flex-col ${activeTab === 'bracket' || activeTab === 'repechaje' ? '' : 'max-w-7xl'}`}>
+              {tabContent}
             </div>
           </div>
         </div>
     </>
   );
-
-  if (isObsMode) {
-    return (
-      <TournamentTeamsContext.Provider value={teamOptions}>
-        <div className={`w-[1920px] h-[1080px] overflow-hidden ${tournamentShellClass}`}>
-          {content}
-        </div>
-      </TournamentTeamsContext.Provider>
-    );
-  }
 
   if (isPage) {
     return (
@@ -450,9 +550,10 @@ export const TournamentModal = memo(function TournamentModal({
     <TournamentTeamsContext.Provider value={teamOptions}>
       <BaseModal
         isOpen={true}
-        onClose={onClose}
+        onClose={handleClose}
         size="full"
         showClose={false}
+        ariaLabel="Torneo"
         className={`!p-0 ${tournamentShellClass}`}
         contentClassName="!p-0 !overflow-hidden flex flex-col"
       >
