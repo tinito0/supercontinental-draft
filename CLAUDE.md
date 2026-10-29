@@ -18,9 +18,19 @@ npm test             # vitest run (unit + PES engine; excludes tests/rules and v
 npx vitest run tests/pes/kits.test.js   # single file
 npm run test:rules   # Firestore rules tests on the emulator (needs Java 21: export JAVA_HOME="$USERPROFILE/.jdks/jdk-21.0.12.1+1"; PATH="$JAVA_HOME/bin:$PATH")
 npm run pes:claims   # dry run; `-- --apply` with GOOGLE_APPLICATION_CREDENTIALS sets pes_role custom claims
-firebase deploy                          # hosting (dist/) + rules; project supercont-d62df
-firebase deploy --only firestore:rules
+git push origin master                   # production deploy: Vercel builds and publishes master
+firebase deploy --only firestore:rules   # rules only; project supercont-d62df
 ```
+
+**Hosting is Vercel** (`https://supercontinental-draft.vercel.app`), deployed by its Git integration on every push to
+`master`. `vercel.json` holds headers, redirects and the SPA fallback; with `cleanUrls` the fallback must rewrite to
+`/`, not `/index.html` (that 404s every route). Don't deploy with the Vercel CLI: the build (~44k files, mostly
+`fotos_jugadores`) exceeds its upload limits. The `VITE_*` env vars live in the Vercel project settings. Firebase
+still provides Auth, Firestore, rules and Storage; Firebase Hosting (`supercont-d62df.web.app`) is a frozen
+pre-migration build, so don't deploy hosting there. If the site domain changes, update `SITE_URL` in
+`utils/sharePages.js`, the canonical/`og:` tags in `index.html`, `LEGACY_HOSTS` in `utils/overlayPopup.js`, the
+Firebase Auth authorized domains and the Supabase secrets `MARKET_ALLOWED_ORIGINS`, `COMMUNITY_ALLOWED_ORIGINS` and
+`OVERLAY_SITE_URL`.
 
 There is no linter or type checker; plain JS/JSX, ES modules. Env vars: copy `.env.example` to `.env`
 (Firebase `VITE_FIREBASE_*`; Supabase vars are only needed for PES textures).
@@ -45,7 +55,7 @@ There is no linter or type checker; plain JS/JSX, ES modules. Env vars: copy `.e
 (`components/admin/LeagueContentAdminSection.jsx`, `utils/leagueContent.js`). The **draft** lives under `/draft`, mounted with
 `<BrowserRouter basename="/draft">`; nothing on the league site links to it (managers type `/draft`, `/DRAFT` is
 normalised). Inside the draft every path below is relative to `/draft`; URLs that are copied or shared must go
-through `draftUrl()`. Old draft URLs redirect: paths in `firebase.json` `hosting.redirects`, query modes
+through `draftUrl()`. Old draft URLs redirect: paths in `vercel.json` `redirects`, query modes
 (`/?mode=obs`, `/torneo?mode=…`) in `legacyDraftRedirect()`. The two public fronts share
 `components/landing/SiteChrome.jsx` (nav, footer, section titles), `RuleGroups.jsx` and `FollowLeague.jsx`.
 
