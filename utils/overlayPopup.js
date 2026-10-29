@@ -2,6 +2,7 @@
 // doc public/data/broadcast/overlay (lo escribe el admin desde components/admin/obs/ObsSceneStudio.jsx, lo lee components/broadcast/
 // OverlayPopup.jsx). El QR se arma acá, sin servicios externos. Puro; tests/overlayPopup.test.js.
 import qrcode from 'qrcode-generator';
+import { SITE_URL } from './sharePages.js';
 
 export const POPUP_LIMITS = { TITLE: 60, TEXT: 140, URL: 300, MIN_SECONDS: 5, MAX_SECONDS: 600 };
 export const POPUP_POSITIONS = ['right', 'left', 'center'];
@@ -24,6 +25,22 @@ export const DEFAULT_POPUP = {
   shownAt: null,
 };
 
+// Hosts de Firebase Hosting, donde vivía la web antes de Vercel. Los popups guardados y los que arma la función
+// match-feed sin OVERLAY_SITE_URL todavía pueden traerlos.
+const LEGACY_HOSTS = new Set(['supercont-d62df.web.app', 'supercont-d62df.firebaseapp.com']);
+
+/** Un enlace a un host viejo pasa a la web actual (mismo path, query y hash); cualquier otro queda igual. */
+export function currentSiteUrl(href) {
+  let url;
+  try {
+    url = new URL(href);
+  } catch {
+    return href;
+  }
+  if (!LEGACY_HOSTS.has(url.host)) return href;
+  return new URL(`${url.pathname}${url.search}${url.hash}`, SITE_URL).href;
+}
+
 /**
  * Solo https (el QR lo abre un celular cualquiera) y corto, para que el código siga legible en el stream.
  * @returns {{ ok: true, url: string } | { ok: false, reason: string }}
@@ -40,7 +57,7 @@ export function normalizePopupUrl(input) {
   if (url.protocol !== 'https:') return { ok: false, reason: 'El enlace tiene que empezar con https://' };
   if (url.username || url.password) return { ok: false, reason: 'El enlace no puede llevar usuario ni contraseña.' };
   if (url.href.length > POPUP_LIMITS.URL) return { ok: false, reason: `El enlace es demasiado largo (máximo ${POPUP_LIMITS.URL} caracteres).` };
-  return { ok: true, url: url.href };
+  return { ok: true, url: currentSiteUrl(url.href) };
 }
 
 const clip = (value, max) => String(value ?? '').trim().slice(0, max);

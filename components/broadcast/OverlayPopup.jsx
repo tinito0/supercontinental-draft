@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
-import { nextArrival, popupRemainingMs, qrSvgPath, timedRemainingMs } from '../../utils/overlayPopup.js';
+import { currentSiteUrl, nextArrival, popupRemainingMs, qrSvgPath, timedRemainingMs } from '../../utils/overlayPopup.js';
 import { CommunityFrame } from './CommunityFrame.jsx';
 
 // Tarjeta con QR para la comunidad, sobre el overlay de OBS (1920×1080), con el marco de la transmisión
@@ -66,7 +66,8 @@ function displayUrl(href) {
 export const OverlayPopup = memo(function OverlayPopup({ popup, loaded = true }) {
   const remaining = useRemaining(popup, popupRemainingMs, loaded);
   if (remaining === 0) return null;
-  const host = displayUrl(popup.url);
+  const url = currentSiteUrl(popup.url);
+  const host = displayUrl(url);
   const isLeaving = remaining !== null && remaining <= LEAVE_MS;
   return (
     // La key reinicia la animación de entrada cada vez que el admin vuelve a mostrarlo (nuevo shownAt).
@@ -79,7 +80,7 @@ export const OverlayPopup = memo(function OverlayPopup({ popup, loaded = true })
     >
       <div className="scl-popup-qr">
         {/* 200 px: unos 6 px por módulo, lo mínimo para que se escanee desde la tele con la compresión del stream. */}
-        <QrCode url={popup.url} size={200} />
+        <QrCode url={url} size={200} />
       </div>
       <div className="scl-popup-copy">
         {popup.text

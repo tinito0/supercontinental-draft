@@ -1,6 +1,24 @@
 // Popup con QR del overlay de OBS (utils/overlayPopup.js): datos sintéticos.
 import qrcode from 'qrcode-generator';
-import { buildPopup, nextArrival, normalizePopupUrl, popupRemainingMs, qrSvgPath, timedRemainingMs, POPUP_LIMITS } from '../utils/overlayPopup.js';
+import { buildPopup, currentSiteUrl, nextArrival, normalizePopupUrl, popupRemainingMs, qrSvgPath, timedRemainingMs, POPUP_LIMITS } from '../utils/overlayPopup.js';
+import { SITE_URL } from '../utils/sharePages.js';
+
+describe('currentSiteUrl', () => {
+  it('moves links on the old Firebase hosts to the current site, keeping path and query', () => {
+    expect(currentSiteUrl('https://supercont-d62df.web.app/en-vivo')).toBe(`${SITE_URL}/en-vivo`);
+    expect(currentSiteUrl('https://supercont-d62df.firebaseapp.com/torneo?x=1#t')).toBe(`${SITE_URL}/torneo?x=1#t`);
+  });
+
+  it('leaves other links and garbage untouched', () => {
+    expect(currentSiteUrl('https://example.com/torneo')).toBe('https://example.com/torneo');
+    expect(currentSiteUrl('not a url')).toBe('not a url');
+    expect(currentSiteUrl('')).toBe('');
+  });
+
+  it('normalizePopupUrl stores the current site for an old-host link', () => {
+    expect(normalizePopupUrl('https://supercont-d62df.web.app/')).toEqual({ ok: true, url: `${SITE_URL}/` });
+  });
+});
 
 const form = extra => ({ visible: true, title: 'Seguí la liga', text: 'Escaneá', url: 'https://example.com/torneo', position: 'right', autoHideSec: 30, ...extra });
 
