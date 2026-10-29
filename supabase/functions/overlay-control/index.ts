@@ -3,7 +3,7 @@
 // Escribe artifacts/{APP_ID}/public/data/broadcast/overlay (solo los campos del comando). Ver docs/MATCH_FEED.md.
 //
 // Secrets: FIREBASE_SERVICE_ACCOUNT y MATCH_FEED_TOKEN (los mismos de match-feed: el token ya identifica a esa PC).
-// Opcional: OVERLAY_SITE_URL (default https://supercont-d62df.web.app), base de los enlaces del QR.
+// Opcional: OVERLAY_SITE_URL (default https://supercontinental-draft.vercel.app), base de los enlaces del QR.
 // Deploy con --no-verify-jwt, igual que match-feed.
 import { SignJWT, importPKCS8 } from 'npm:jose@6.2.12';
 import { createFirestore } from '../_shared/firestoreRest.js';

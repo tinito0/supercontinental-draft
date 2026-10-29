@@ -99,7 +99,7 @@ El camino es Macro Deck → `pes-collector/bridge/scl-obs.cmd` → `obs.mjs` →
 - **Desplegar una vez:**
   - `npx supabase functions deploy overlay-control --no-verify-jwt`;
   - usa los secrets `FIREBASE_SERVICE_ACCOUNT` y `MATCH_FEED_TOKEN`, los mismos que `match-feed`;
-  - `OVERLAY_SITE_URL` es opcional: es la base de los enlaces del QR y por defecto vale `https://supercont-d62df.web.app`.
+  - `OVERLAY_SITE_URL` es opcional: es la base de los enlaces del QR y por defecto vale `https://supercontinental-draft.vercel.app`.
 - **Crear un botón en Macro Deck 3:** acción integrada **HTTP → Send HTTP Request**:
   - método `POST`;
   - URL `https://pcmhsucbtonnaikiatuy.supabase.co/functions/v1/overlay-control`;

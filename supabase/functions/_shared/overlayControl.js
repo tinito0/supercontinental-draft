@@ -10,7 +10,7 @@ export const OVERLAY_SCENES = ['live', 'previa', 'descanso', 'final', 'partidos'
 export const OVERLAY_TOGGLES = { marcador: 'showScoreboard', lower: 'showLowerThird', ticker: 'showTicker', auto: 'autoPopup' };
 
 /** Base de los enlaces del QR si la función no tiene OVERLAY_SITE_URL. */
-export const DEFAULT_SITE_URL = 'https://supercont-d62df.web.app';
+export const DEFAULT_SITE_URL = 'https://supercontinental-draft.vercel.app';
 
 export const POPUP_PRESETS = [
   { id: 'vota', title: 'Votá al mejor del partido', text: 'Escaneá, predecí y elegí al MVP. Sin cuenta.', path: '/en-vivo' },

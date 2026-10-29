@@ -16,7 +16,7 @@ import { APP_ID } from '../_shared/marketConstants.js';
 const serviceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT') ?? '{}');
 const projectId: string = serviceAccount.project_id;
 const salt = Deno.env.get('COMMUNITY_SALT') ?? '';
-const allowedOrigins = (Deno.env.get('COMMUNITY_ALLOWED_ORIGINS') || 'https://supercont-d62df.web.app,https://supercont-d62df.firebaseapp.com')
+const allowedOrigins = (Deno.env.get('COMMUNITY_ALLOWED_ORIGINS') || 'https://supercontinental-draft.vercel.app,https://supercont-d62df.web.app,https://supercont-d62df.firebaseapp.com')
   .split(',').map(origin => origin.trim()).filter(Boolean);
 const MAX_BODY_BYTES = 1024;
 

@@ -63,7 +63,7 @@ andando antes de publicar las reglas y la app**.
    npx supabase login
    npx supabase secrets set --project-ref pcmhsucbtonnaikiatuy \
      FIREBASE_SERVICE_ACCOUNT="$(cat ruta/a/la-clave.json)" \
-     MARKET_ALLOWED_ORIGINS="https://supercont-d62df.web.app,https://supercont-d62df.firebaseapp.com"
+     MARKET_ALLOWED_ORIGINS="https://supercontinental-draft.vercel.app,https://supercont-d62df.web.app,https://supercont-d62df.firebaseapp.com"
    ```
    Agregá a `MARKET_ALLOWED_ORIGINS` tu dominio propio si tenés uno, y `http://localhost:5173` para desarrollo.
 3. **Publicar la función** con la verificación de JWT de Supabase apagada. La función verifica el token de

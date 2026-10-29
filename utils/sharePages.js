@@ -3,7 +3,7 @@
 // HTML por página (dist/torneo.html, dist/equipos/{id}.html, …) con este bloque de etiquetas; firebase.json
 // `cleanUrls` los sirve en /torneo y /equipos/{id}. Puro; tests/sharePages.test.js.
 
-export const SITE_URL = 'https://supercont-d62df.firebaseapp.com';
+export const SITE_URL = 'https://supercontinental-draft.vercel.app';
 export const SITE_NAME = 'SuperContinental League';
 export const SHARE_START = '<!-- share:start -->';
 export const SHARE_END = '<!-- share:end -->';
