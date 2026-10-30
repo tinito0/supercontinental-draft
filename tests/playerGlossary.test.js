@@ -4,10 +4,11 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PLAYER_SKILLS_MAP } from '../utils/constants.js';
-import { COM_STYLE_KEYS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, SKILL_INFO } from '../utils/playerGlossary.js';
+import { COM_STYLE_KEYS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../utils/playerGlossary.js';
 
 const ROOT = path.resolve(__dirname, '..');
 const players = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/jugadores.json'), 'utf8'));
+const marketPositions = new Set(players.map(p => p.POS_NOMBRE));
 const marketStyles = [...new Set(players.map(p => p.PlayingStyle).filter(Boolean))];
 
 describe('player glossary', () => {
@@ -31,5 +32,13 @@ describe('player glossary', () => {
 
   it('keeps the COM styles inside the skill map', () => {
     COM_STYLE_KEYS.forEach(key => expect(PLAYER_SKILLS_MAP[key]).toBeTruthy());
+  });
+
+  it('gives every playing style its positions, using the market position codes', () => {
+    const withPositions = Object.keys(PLAYING_STYLE_INFO).filter(style => style !== 'Ninguno');
+    expect(Object.keys(PLAYING_STYLE_POSITIONS).sort()).toEqual(withPositions.sort());
+    Object.entries(PLAYING_STYLE_POSITIONS).forEach(([style, positions]) => {
+      positions.forEach(pos => expect(marketPositions.has(pos), `${style}: ${pos} no existe en el mercado`).toBe(true));
+    });
   });
 });

@@ -32,6 +32,32 @@ export const PLAYING_STYLE_INFO = {
   'Ninguno': 'Sin estilo de juego asignado: se comporta de forma neutra en el campo.',
 };
 
+// Posiciones donde se usa cada estilo, con los códigos del mercado (POS_NOMBRE de jugadores.json), no los del juego:
+// DFC es el DEC del juego, ED/EI son EXD/EXI y MD/MI son MDD/MDI.
+export const PLAYING_STYLE_POSITIONS = {
+  'Cazagoles': ['DC', 'SD'],
+  'Señuelo': ['DC', 'SD', 'MO'],
+  'Hombre de Área': ['DC'],
+  'Referente': ['DC'],
+  'Extremo Prolífico': ['ED', 'EI'],
+  'Extremo Móvil': ['ED', 'EI', 'MD', 'MI'],
+  'Especialista en Centros': ['ED', 'EI', 'MD', 'MI'],
+  'El Diez Clásico': ['SD', 'MO', 'MC'],
+  'Jugador de Huecos': ['SD', 'MO', 'MD', 'MI', 'MC'],
+  'Creador de Jugadas': ['SD', 'ED', 'EI', 'MO', 'MD', 'MI'],
+  'Omnipresente': ['MO', 'MD', 'MI', 'MC', 'MCD'],
+  'Organizador': ['MC', 'MCD'],
+  'El Destructor': ['MC', 'MCD', 'DFC'],
+  'El Protector': ['MCD'],
+  'Atacante Extra': ['DFC'],
+  'Creación': ['DFC'],
+  'Lateral Ofensivo': ['LD', 'LI'],
+  'Lateral Defensivo': ['LD', 'LI'],
+  'Lateral Finalizador': ['LD', 'LI'],
+  'Portero Ofensivo': ['PT'],
+  'Portero Defensivo': ['PT'],
+};
+
 // Orden y agrupación con que se muestran los estilos en la lista.
 export const PLAYING_STYLE_GROUPS = [
   { title: 'Delanteros', styles: ['Cazagoles', 'Señuelo', 'Hombre de Área', 'Referente'] },
