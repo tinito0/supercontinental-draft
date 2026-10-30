@@ -1,13 +1,14 @@
 import React from 'react';
 import { PLAYER_SKILLS_MAP } from '../../utils/constants.js';
-import { COM_STYLE_KEYS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../../utils/playerGlossary.js';
+import { COM_STYLE_KEYS, OWN_SUMMARY_SKILLS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../../utils/playerGlossary.js';
 
-function Entry({ name, aka, positions, children }) {
+function Entry({ name, aka, tag, positions, children }) {
   return (
     <div className="py-3 sm:grid sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-6">
       <dt className="text-base font-semibold text-ink">
         {name}
         {aka && <span className="block text-sm font-medium text-ink-2">También: {aka}</span>}
+        {tag && <span className="block text-sm font-medium text-ink-2">{tag}</span>}
         {positions && (
           <span className="block text-sm font-medium text-ink-2 num">
             <span className="sr-only">Posiciones: </span>{positions.join(' · ')}
@@ -19,11 +20,12 @@ function Entry({ name, aka, positions, children }) {
   );
 }
 
-function StyleText({ summary, detail, examples }) {
+function StyleText({ summary, detail, warning, examples }) {
   return (
     <>
       <p className="text-base font-medium leading-relaxed text-ink">{summary}</p>
       {detail && <p className="text-base leading-relaxed text-ink-2">{detail}</p>}
+      {warning && <p className="text-base leading-relaxed text-ink-2"><span className="font-semibold text-ink">Ojo:</span> {warning}</p>}
       {examples?.length > 0 && <p className="text-sm text-ink-2"><span className="font-semibold text-ink">Ejemplos:</span> {examples.join(', ')}.</p>}
     </>
   );
@@ -40,7 +42,7 @@ function Group({ title, note, children }) {
 }
 
 const skillEntries = keys => keys.map(key => (
-  <Entry key={key} name={PLAYER_SKILLS_MAP[key]}>
+  <Entry key={key} name={PLAYER_SKILLS_MAP[key]} tag={OWN_SUMMARY_SKILLS.includes(key) ? 'Resumen propio' : undefined}>
     <p className="text-base leading-relaxed text-ink">{SKILL_INFO[key]}</p>
   </Entry>
 ));
@@ -70,7 +72,7 @@ export function PlayerGlossary() {
       <section aria-labelledby="glossary-skills" className="space-y-5">
         <div>
           <h4 id="glossary-skills" className="section-title">Habilidades</h4>
-          <p className="text-sm text-ink-2 mt-1">Resumen propio de cada habilidad, todavía sin comparar con los textos del juego.</p>
+          <p className="text-sm text-ink-2 mt-1">Textos del juego. Los marcados «Resumen propio» todavía no se compararon con el juego.</p>
         </div>
         <Group title="Habilidades del jugador">{skillEntries(skillKeys)}</Group>
         <Group title="Estilos COM" note="Los marca el juego en la ficha y se filtran junto con las habilidades.">

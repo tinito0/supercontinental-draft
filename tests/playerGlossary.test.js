@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PLAYER_SKILLS_MAP } from '../utils/constants.js';
-import { COM_STYLE_KEYS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../utils/playerGlossary.js';
+import { COM_STYLE_KEYS, OWN_SUMMARY_SKILLS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../utils/playerGlossary.js';
 
 const ROOT = path.resolve(__dirname, '..');
 const players = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/jugadores.json'), 'utf8'));
@@ -35,6 +35,10 @@ describe('player glossary', () => {
 
   it('has no description for a skill that is not in the filters', () => {
     expect(Object.keys(SKILL_INFO).sort()).toEqual(Object.keys(PLAYER_SKILLS_MAP).sort());
+  });
+
+  it('marks as own summary only skills that exist', () => {
+    OWN_SUMMARY_SKILLS.forEach(key => expect(SKILL_INFO[key], key).toBeTruthy());
   });
 
   it('keeps the COM styles inside the skill map', () => {
