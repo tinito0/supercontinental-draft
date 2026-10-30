@@ -369,6 +369,133 @@ export async function migrateAccount({ tx, appId, user, newUser, now = new Date(
   return { from: oldUid, to: newUid, players: locks.length, offers: sent.length + received.length };
 }
 
+const UID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+// Same limit as the «Mánager en la liga» field of the club card (utils/leagueContent.js CLUB_PROFILE_FIELDS).
+const CLUB_MANAGER_MAX = 80;
+// Per-user collections that belong to the club and move with it. presence and pes_roles stay with the person.
+const CLUB_USER_COLLECTIONS = ['cart', 'saved_filters', 'scout_searches', 'scout_usage'];
+// Profile fields about the person, not the club: never copied to the new manager. isAdmin and role above all.
+const PERSONAL_PROFILE_FIELDS = new Set([
+  'isAdmin', 'role', 'email', 'providers',
+  'migratedTo', 'migratedFrom', 'migratedAt', 'clubTransferredTo', 'clubTransferredFrom', 'clubTransferredAt',
+]);
+// Firestore commits at most 500 writes; leave room so the commit never fails half-planned.
+const MAX_TRANSFER_WRITES = 480;
+
+/**
+ * Admin «Cambiar manager» (components/admin/ClubTransferDialog.jsx): moves a whole club from one account to
+ * another, in one transaction. The target is a pending, empty team, created when the new manager signed in.
+ *
+ * Moved: profile and public team, player locks, cart, saved filters, scouting, offers, transfers, the club page
+ * (league_content `club-{uid}`, plus the new manager's name on its card), the on-air overlay, shared formations and
+ * the Draft → PES assignment of every PES workspace. Not moved on purpose: chat messages (they stay the old
+ * manager's), community votes and PES roles (personal). Tournament tables name clubs, not accounts.
+ * The old profile keeps `clubTransferredTo`, so hooks/useAuth.js shuts that account out instead of re-creating a club.
+ */
+export async function transferClub({ tx, appId, user, fromUid, toUid, managerName = '', now = new Date() }) {
+  if (!user?.isAdmin) throw new MarketError('Solo el administrador puede cambiar el manager de un club.', 403);
+  if (!UID_PATTERN.test(String(fromUid || '')) || !UID_PATTERN.test(String(toUid || '')) || fromUid === toUid) {
+    throw new MarketError('Elegí un club y una cuenta nueva distintos.');
+  }
+  const manager = String(managerName || '').trim().slice(0, CLUB_MANAGER_MAX);
+  const paths = marketPaths(appId);
+  const base = `artifacts/${appId}`;
+  const userCollection = (uid, name) => `${base}/users/${uid}/${name}`;
+  const clubPage = uid => `${base}/public/data/league_content/club-${uid}`;
+  const overlayPath = `${base}/public/data/broadcast/overlay`;
+
+  const [oldProfile, oldTeam, newProfile, newTeam, locks, newLocks, sent, received, newSent, newReceived, bought, sold,
+    oldClub, newClub, overlay, formations, workspaces, newCart] = await Promise.all([
+    tx.get(paths.profile(fromUid)), tx.get(paths.team(fromUid)), tx.get(paths.profile(toUid)), tx.get(paths.team(toUid)),
+    tx.query(paths.locks, [['lockedBy', '==', fromUid]]),
+    tx.query(paths.locks, [['lockedBy', '==', toUid]]),
+    tx.query(paths.offers, [['senderId', '==', fromUid]]),
+    tx.query(paths.offers, [['targetTeamId', '==', fromUid]]),
+    tx.query(paths.offers, [['senderId', '==', toUid]]),
+    tx.query(paths.offers, [['targetTeamId', '==', toUid]]),
+    tx.query(paths.transfers, [['teamId', '==', fromUid]]),
+    tx.query(paths.transfers, [['fromTeamId', '==', fromUid]]),
+    tx.get(clubPage(fromUid)), tx.get(clubPage(toUid)), tx.get(overlayPath),
+    tx.query(`${base}/public/data/shared_formations`, [['createdBy', '==', fromUid]]),
+    tx.query(`${base}/pes_workspaces`, []),
+    tx.query(userCollection(toUid, 'cart'), []),
+  ]);
+  const userRows = await Promise.all(CLUB_USER_COLLECTIONS.map(name => tx.query(userCollection(fromUid, name), [])));
+
+  if (!oldProfile || !oldTeam) throw new MarketError('Ese club no existe o ya pasó a otra cuenta.', 404);
+  // The old account is shut out afterwards (hooks/useAuth.js): an admin account would lose access to Administración.
+  if (ADMIN_USER_IDS.includes(fromUid) || oldProfile.data.isAdmin === true || oldProfile.data.role === 'admin') {
+    throw new MarketError('Ese club es de una cuenta de administrador: no se puede pasar a otro manager.', 409);
+  }
+  if (!newProfile || !newTeam) throw new MarketError('La cuenta nueva no tiene equipo: el manager nuevo tiene que entrar primero a /draft.', 404);
+  if (newTeam.data.approved !== false) {
+    throw new MarketError('La cuenta nueva tiene que ser un equipo pendiente de aprobación, recién ingresado.', 409);
+  }
+  const newHasActivity = newLocks.length > 0 || newCart.length > 0
+    || [...newSent, ...newReceived].some(offer => OPEN_OFFER_STATUSES.includes(offer.data.status));
+  if (newHasActivity) throw new MarketError('La cuenta nueva ya tiene jugadores u ofertas: tiene que estar vacía.', 409);
+
+  const at = now.toISOString();
+  const clubProfileData = Object.fromEntries(Object.entries(oldProfile.data).filter(([key]) => !PERSONAL_PROFILE_FIELDS.has(key)));
+  const personalData = Object.fromEntries(Object.entries(newProfile.data).filter(([key]) => PERSONAL_PROFILE_FIELDS.has(key)));
+  tx.set(paths.profile(toUid), { ...clubProfileData, ...personalData, userId: toUid, clubTransferredFrom: fromUid, clubTransferredAt: at });
+  tx.set(paths.team(toUid), { ...oldTeam.data, userId: toUid, rosterUpdatedAt: at });
+  tx.update(paths.profile(fromUid), { clubTransferredTo: toUid, clubTransferredAt: at });
+  tx.delete(paths.team(fromUid));
+
+  locks.forEach(lock => tx.update(paths.lock(lock.id), { lockedBy: toUid }));
+  // Offer history entries keep the old teamId: they are a log, shown by team name.
+  sent.forEach(offer => tx.update(paths.offer(offer.id), { senderId: toUid }));
+  received.forEach(offer => tx.update(paths.offer(offer.id), { targetTeamId: toUid }));
+  bought.forEach(entry => tx.update(paths.transfer(entry.id), { teamId: toUid }));
+  sold.forEach(entry => tx.update(paths.transfer(entry.id), { fromTeamId: toUid }));
+  CLUB_USER_COLLECTIONS.forEach((name, index) => userRows[index].forEach(row => {
+    tx.set(`${userCollection(toUid, name)}/${row.id}`, row.data);
+    tx.delete(`${userCollection(fromUid, name)}/${row.id}`);
+  }));
+
+  if (oldClub || manager) {
+    const page = oldClub?.data || newClub?.data || {};
+    tx.set(clubPage(toUid), {
+      ...page,
+      body: page.body ?? '',
+      profile: { ...(page.profile || {}), ...(manager ? { manager } : {}) },
+      updatedAt: now,
+      updatedBy: user.uid,
+    });
+    if (oldClub) tx.delete(clubPage(fromUid));
+  }
+  const overlayPatch = {};
+  if (overlay?.data.homeTeamId === fromUid) overlayPatch.homeTeamId = toUid;
+  if (overlay?.data.awayTeamId === fromUid) overlayPatch.awayTeamId = toUid;
+  if (Object.keys(overlayPatch).length) tx.update(overlayPath, overlayPatch);
+  formations.forEach(row => tx.update(`${base}/public/data/shared_formations/${row.id}`, { createdBy: toUid }));
+  const renameKey = (map = {}) => Object.fromEntries(Object.entries(map).map(([key, value]) => [key === fromUid ? toUid : key, value]));
+  const pesMoved = workspaces.filter(ws => ws.data.draftMap?.[fromUid] !== undefined || ws.data.draftCoaches?.[fromUid] !== undefined);
+  pesMoved.forEach(ws => {
+    const patch = {};
+    if (ws.data.draftMap) patch.draftMap = renameKey(ws.data.draftMap);
+    if (ws.data.draftCoaches) patch.draftCoaches = renameKey(ws.data.draftCoaches);
+    tx.update(`${base}/pes_workspaces/${ws.id}`, patch);
+  });
+
+  if (tx.writes && tx.writes.length > MAX_TRANSFER_WRITES) {
+    throw new MarketError('El club tiene demasiados registros para moverlos de una vez. Avisale al desarrollador.', 413);
+  }
+  return {
+    from: fromUid,
+    to: toUid,
+    teamName: oldTeam.data.teamName || '',
+    players: locks.length,
+    offers: sent.length + received.length,
+    transfers: bought.length + sold.length,
+    clubPage: Boolean(oldClub || manager),
+    overlay: Object.keys(overlayPatch).length > 0,
+    formations: formations.length,
+    pesWorkspaces: pesMoved.length,
+  };
+}
+
 /** Entry point shared by the Edge Function and the tests. */
 export async function handleMarketAction({ firestore, appId, catalog, user, body, now = new Date(), verifyIdToken }) {
   const action = body?.action;
@@ -402,6 +529,12 @@ export async function handleMarketAction({ firestore, appId, catalog, user, body
       throw new MarketError('La sesión de la cuenta de Google no es válida. Volvé a intentarlo.', 401);
     }
     return firestore.runTransaction(tx => migrateAccount({ tx, appId, user, newUser, now }));
+  }
+  if (action === 'transferClub') {
+    // Checked before opening a transaction, and again inside transferClub.
+    if (!user?.isAdmin) throw new MarketError('Solo el administrador puede cambiar el manager de un club.', 403);
+    const { fromUid, toUid, managerName } = body;
+    return firestore.runTransaction(tx => transferClub({ tx, appId, user, fromUid, toUid, managerName, now }));
   }
   throw new MarketError('Acción desconocida.');
 }

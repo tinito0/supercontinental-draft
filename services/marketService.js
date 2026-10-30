@@ -42,3 +42,5 @@ export const acceptOffer = ({ offerId }) => callMarket('acceptOffer', { offerId 
 export const releasePlayer = ({ playerId }) => callMarket('release', { playerId });
 /** Moves the signed-in (old email) account's club to the Google account whose ID token is given. */
 export const migrateAccount = ({ newIdToken }) => callMarket('migrateAccount', { newIdToken });
+/** Admin only: moves the club of `fromUid` to the pending, empty team of `toUid` (market.js transferClub). */
+export const transferClub = ({ fromUid, toUid, managerName }) => callMarket('transferClub', { fromUid, toUid, managerName });
