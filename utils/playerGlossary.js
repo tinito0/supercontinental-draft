@@ -1,39 +1,127 @@
-// Qué hace cada estilo de juego y cada habilidad de jugador (PES 2021), para el «¿Qué es?» de Filtros.
-// Los estilos se indexan por el texto exacto de `PlayingStyle` en jugadores.json; las habilidades por la
-// clave de PLAYER_SKILLS_MAP (utils/constants.js). tests/playerGlossary.test.js avisa si falta alguna.
+// What each playing style and each player skill does (PES 2021), for the «¿Qué es?» list in Filtros.
+// Playing styles are keyed by the exact `PlayingStyle` text in jugadores.json, skills by their PLAYER_SKILLS_MAP key
+// (utils/constants.js). tests/playerGlossary.test.js fails if one is missing.
+//
+// Playing style texts come from the league owner (2026-10-30): `summary` is the game's own one-liner, `detail` and
+// `examples` his explanation, lightly edited (typos, first-person asides removed). `aka` holds the other names the
+// game uses. Skill texts are our own summaries and have not been checked against the game (the UI says so).
 
 export const PLAYING_STYLE_INFO = {
-  // Delanteros
-  'Cazagoles': 'Delantero que vive cerca del área rival, atento al rebote y al pase final. Se ubica en la espalda de los defensores para definir de primera.',
-  'Señuelo': 'Delantero que se mueve para llevarse marcas y abrir espacios. Su trabajo es liberar a los compañeros, no tanto convertir.',
-  'Hombre de Área': 'Se queda dentro del área esperando centros y pases cortos para definir. Participa poco en la construcción del juego.',
-  'Referente': 'Delantero de referencia: recibe de espaldas, aguanta la marca y descarga para los que llegan. Muy útil en el juego aéreo.',
-  // Extremos y mediapuntas
-  'Extremo Prolífico': 'Extremo que encara hacia adentro del área para definir o asistir. Gana la línea de fondo y busca el gol más que el centro.',
-  'Extremo Móvil': 'Extremo que no se queda pegado a la banda: se mueve por todo el frente de ataque y se mete por el centro.',
-  'Especialista en Centros': 'Prioriza los centros desde la banda. Ancho por la derecha o izquierda, busca la línea de fondo y manda la pelota al área.',
-  'El Diez Clásico': 'Mediapunta creativo que pide la pelota entre líneas y maneja el ritmo del ataque con pases y gambetas.',
-  'Jugador de Huecos': 'Se mueve por los espacios libres entre las líneas rivales para recibir y filtrar pases o definir.',
-  // Mediocampistas
-  'Creador de Jugadas': 'Mediocampista creativo: se mueve por todo el campo buscando el pase clave y generando situaciones de gol.',
-  'Omnipresente': 'Box-to-box: sube a apoyar el ataque y vuelve a defender. Cubre mucha cancha y exige buena resistencia.',
-  'Organizador': 'Reparte el juego desde el mediocampo, se ofrece como opción de pase y equilibra entre defensa y ataque.',
-  'El Destructor': 'Mediocampista que corta el juego rival: presiona, roba y marca de cerca. Poco aporte ofensivo.',
-  'El Protector': 'Se queda delante de la defensa para cubrir el espacio y proteger a los centrales. No suele adelantarse.',
-  // Defensores
-  'Atacante Extra': 'Defensor que se suma al ataque en jugadas de pelota parada o cuando el equipo carga con todo.',
-  'Creación': 'Defensor central que sale jugando: inicia la jugada con pases precisos desde atrás en lugar de revolear.',
-  'Lateral Ofensivo': 'Lateral que sube constantemente por la banda para sumarse al ataque y llegar a la línea de fondo.',
-  'Lateral Defensivo': 'Lateral que prioriza marcar y se queda atrás cubriendo su banda. Casi no pasa de mitad de cancha.',
-  'Lateral Finalizador': 'Lateral que se mete hacia adentro y llega al área rival para rematar, como un mediocampista más.',
-  // Arqueros
-  'Portero Ofensivo': 'Arquero que adelanta su posición y sale a cortar balones detrás de la defensa. Juega como líbero.',
-  'Portero Defensivo': 'Arquero que se queda en la línea de gol y prioriza atajar sin arriesgar salidas.',
-  'Ninguno': 'Sin estilo de juego asignado: se comporta de forma neutra en el campo.',
+  'Cazagoles': {
+    summary: 'Atacante muy ofensivo que se desmarca fácilmente.',
+    detail: 'Siempre intenta romper el fuera de juego y busca huecos en la defensa para llegar solo al punto penal y recibir pases hacia atrás. Juega mano a mano con la línea defensiva: muchas veces queda en offside o solo frente al arquero.',
+    examples: ['Agüero', 'Mbappé', 'Cristiano Ronaldo', 'Cavani', 'Haaland'],
+  },
+  'Señuelo': {
+    summary: 'Jugador que crea espacios en la defensa para que lo aprovechen sus compañeros.',
+    detail: 'Puede ser pivoteando, arrastrando marcas o aguantando la pelota. Participa más del juego que un Cazagoles y le gusta salir mucho más del área.',
+    examples: ['Luis Suárez', 'Lewandowski', 'Firmino', 'Benzema', 'Thomas Müller', 'Diego Costa'],
+  },
+  'Hombre de Área': {
+    summary: 'Delantero que acecha en el área rival a la espera del balón.',
+    detail: 'El 9 de raza: se queda en el área esperando un mínimo descuido de la defensa o un gran pase para marcar. Se parece al Cazagoles, pero en una jugada de ataque casi nunca se lo ve fuera del área.',
+    examples: ['Icardi', 'Falcao', 'Huntelaar', 'Palermo'],
+  },
+  'Referente': {
+    aka: 'Proteger el balón',
+    summary: 'Jugador que se convierte en el referente en ataque al controlar el balón en una posición avanzada.',
+    detail: 'No tiene que ver con ser el líder del ataque: es para jugadores que aguantan y juegan mucho de espaldas al arco. Ideal para tirarle pelotazos desde la defensa, que la baje y juegue con sus compañeros.',
+    examples: ['Ibrahimovic', 'Lukaku', 'Giroud', 'Dzeko', 'Guerrero', 'Rondón', 'Gignac', 'Pratto'],
+  },
+  'Extremo Prolífico': {
+    summary: 'Jugador que se sitúa en la banda para recibir pases, y va hacia dentro si se presenta la oportunidad.',
+    detail: 'Prioriza estar bien abierto y empieza la jugada por la banda, pero se cierra si aparece la posibilidad, como un pase en diagonal o un centro desde la banda opuesta.',
+    examples: ['Neymar', 'Salah', 'Mané', 'Bale', 'Dembélé', 'Sterling'],
+  },
+  'Extremo Móvil': {
+    aka: 'Ala móvil',
+    summary: 'Jugador que tiende a desmarcarse hacia dentro desde la banda al centro para recibir pases.',
+    detail: 'Con o sin pelota: cuando recibe contra la banda prefiere avanzar hacia el medio o en diagonal antes que hacia adelante, por ejemplo para después tirar un centro.',
+    examples: ['Messi', 'Éverton', 'Salah'],
+  },
+  'Especialista en Centros': {
+    summary: 'Jugador que se pega a la línea de banda esperando la ocasión de poner un centro.',
+    detail: 'Prioriza el centro antes que cualquier otra opción, incluso abusando de ellos.',
+    examples: ['Beckham', 'Candreva', 'Marcos Acuña'],
+  },
+  'El Diez Clásico': {
+    summary: 'El clásico jugador con talento que prefiere el juego de toque y los pases precisos al movimiento.',
+    detail: 'Sus movimientos son más estáticos: prioriza los pases sobre el recorrido físico. El enganche clásico.',
+    examples: ['Özil', 'Mata', 'Ganso', 'Dani Parejo', 'Éver Banega', 'Fábregas', 'Zidane', 'Platini', 'Riquelme'],
+  },
+  'Jugador de Huecos': {
+    summary: 'Un jugador con instinto goleador que no duda en lanzarse al ataque a la primera oportunidad.',
+    detail: 'Quienes jugaron al PES 13 lo pueden comparar con la carta «Adicto al gol». Con o sin pelota avanza hacia un hueco para ocuparlo: por ejemplo, pasa la pelota y sigue al ataque aprovechando el espacio creado.',
+    examples: ['Bruno Fernandes', 'Havertz', 'Cuadrado', 'Di María', 'Carrasco', 'Gündogan', 'Lemar'],
+  },
+  'Creador de Jugadas': {
+    summary: 'Jugador que aprovecha los huecos en defensa para iniciar los ataques y hacer asistencias de gol.',
+    detail: 'Agarra la pelota y le gusta orquestar el ataque. Al empezar la jugada está en la mitad de cancha o en 3/4, pero no se queda ahí: llega a posiciones de gol si la jugada lo amerita, y se acerca a sus compañeros para que le den la pelota.',
+    examples: ['Messi', 'Hazard', 'Papu Gómez', 'Dybala', 'Insigne', 'Ilicic', 'Bernardo Silva', 'Neymar'],
+  },
+  'Omnipresente': {
+    summary: 'Jugador infatigable que no deja de correr por todo el campo durante los 90 minutos.',
+    detail: 'No habla de jugadores que no se cansan, sino de la iniciativa de ir de área a área: sube y baja constantemente por banda, por el centro o por ambos, y ocupa posiciones defensivas u ofensivas según la jugada. Puede serlo con poca resistencia (hará esos recorridos a menor ritmo), y tener mucha resistencia no lo convierte en omnipresente.',
+    examples: ['Kanté', 'Pogba', 'Wijnaldum', 'Nainggolan', 'Koke', 'Lallana', 'Ramsey', 'Vidal'],
+  },
+  'Organizador': {
+    summary: 'Jugador que se mueve en posiciones retrasadas listo para iniciar el ataque.',
+    detail: 'Como un Creador de Jugadas pero más retrasado: en general no pasa del 3/4 de cancha. Se ofrece todo el tiempo para iniciar el ataque con pases y conexiones con sus compañeros.',
+    examples: ['Kroos', 'Thiago', 'Kimmich', 'Verratti', 'Modric', 'Pjanic', 'Jorginho', 'Xhaka', 'Brozovic'],
+  },
+  'El Destructor': {
+    summary: 'Jugador batallador que contiene los ataques rivales a base de presión y entradas duras.',
+    detail: 'En general agresivo: batalla mucho para intentar cortar siempre la jugada del rival.',
+    examples: ['Casemiro', 'Torreira', 'Medel', 'Lucas Leiva', 'Krychowiak', 'Fernando Reges', 'Pepe', 'Koulibaly', 'Chiellini', 'Godín'],
+  },
+  'El Protector': {
+    aka: 'Medio escudo',
+    summary: 'Mediocampista que se queda atrás para defender la retaguardia.',
+    detail: 'Mediocampista defensivo que cubre espacios metiéndose entre los centrales: el famoso «5 tapón». Casi nunca sube al ataque desde esta posición.',
+    examples: ['Fabinho', 'N. Mendy', 'Luiz Gustavo', 'Dier'],
+  },
+  'Atacante Extra': {
+    summary: 'Defensa al que le gusta sumarse al ataque y asediar al área contraria a la mínima oportunidad.',
+    detail: 'Muy parecido a un Lateral Ofensivo, pero por el centro: cuando el equipo ataca se para en zonas avanzadas como opción de pase o se mete al área para intentar anotar. En Europa es muy común ver centrales parados en 3/4 de cancha haciendo esto.',
+    examples: ['Sergio Ramos', 'Piqué', 'Upamecano', 'David Luiz', 'Yerry Mina', 'Toloi'],
+  },
+  'Creación': {
+    summary: 'Jugador al que le gusta retrasar su posición para recibir el balón y lanzar ataques desde atrás.',
+    detail: 'El defensor que empieza la jugada desde atrás distribuyendo la pelota, con pases cortos o largos.',
+    examples: ['Hummels', 'Thiago Silva', 'Koundé', 'Alderweireld', 'Vertonghen', 'Marquinhos', 'Laporte', 'Umtiti'],
+  },
+  'Lateral Ofensivo': {
+    summary: 'Jugador con mentalidad de ataque que correrá a sumarse al ataque a la menor oportunidad.',
+    detail: 'El lateral de moda: siempre es una opción de ataque por la banda y prefiere ayudar en ofensiva antes que quedarse esperando el contraataque. El estilo solo dice si sube al ataque, no si es bueno atacando o defendiendo.',
+    examples: ['Jordi Alba', 'Alex Sandro', 'Carvajal', 'Semedo', 'Cancelo', 'Davies'],
+  },
+  'Lateral Defensivo': {
+    summary: 'Todo un seguro atrás que prefiere mantenerse retrasado y cumplir con las funciones defensivas.',
+    detail: 'Lo contrario al Lateral Ofensivo: le gusta quedarse más retrasado, cubriendo el espacio a la espera del contraataque rival.',
+    examples: ['Lucas Hernández', 'Azpilicueta', 'Pavard', 'D’Ambrosio', 'Mercado'],
+  },
+  'Lateral Finalizador': {
+    summary: 'Lateral ofensivo que disfruta sumándose al ataque en zonas centrales adelantadas.',
+    detail: 'A diferencia del Lateral Ofensivo, que se queda más en la banda, se cierra de 3/4 de cancha en adelante: colabora en la elaboración de la jugada o termina dentro del área para finalizarla.',
+    examples: ['Marcelo', 'Theo Hernández', 'Tagliafico', 'Milton Casco', 'Dani Alves (en Europa)'],
+  },
+  'Portero Ofensivo': {
+    summary: 'Portero que a menudo hace las veces de líbero y que sale para cubrir el área tras la defensa.',
+    detail: 'No se queda esperando en el arco: se adelanta para cubrir la espalda de la defensa u ofrecerse como opción de pase, y ante una pelota a la espalda de los defensores prefiere salir a cortarla.',
+    examples: ['Neuer', 'Ter Stegen', 'Alisson', 'De Gea', 'Ederson'],
+  },
+  'Portero Defensivo': {
+    summary: 'Portero seguro que prefiere quedarse cerca de la línea de gol.',
+    detail: 'Lo contrario al Portero Ofensivo: cuida el arco y casi nunca sale del área. Sale a cortar un mano a mano, pero no a lugares poco comunes como los ofensivos.',
+    examples: ['Oblak', 'Courtois', 'Handanovic', 'Sirigu', 'Buffon', 'Armani'],
+  },
+  'Ninguno': {
+    summary: 'Sin estilo de juego asignado.',
+  },
 };
 
-// Posiciones donde se usa cada estilo, con los códigos del mercado (POS_NOMBRE de jugadores.json), no los del juego:
-// DFC es el DEC del juego, ED/EI son EXD/EXI y MD/MI son MDD/MDI.
+// Market position codes (POS_NOMBRE in jugadores.json), not the game's: the game's DEC is DFC here, EXD/EXI are
+// ED/EI and MDD/MDI are MD/MI. Source: the league owner, 2026-10-30.
 export const PLAYING_STYLE_POSITIONS = {
   'Cazagoles': ['DC', 'SD'],
   'Señuelo': ['DC', 'SD', 'MO'],
@@ -58,7 +146,6 @@ export const PLAYING_STYLE_POSITIONS = {
   'Portero Defensivo': ['PT'],
 };
 
-// Orden y agrupación con que se muestran los estilos en la lista.
 export const PLAYING_STYLE_GROUPS = [
   { title: 'Delanteros', styles: ['Cazagoles', 'Señuelo', 'Hombre de Área', 'Referente'] },
   { title: 'Extremos y mediapuntas', styles: ['Extremo Prolífico', 'Extremo Móvil', 'Especialista en Centros', 'El Diez Clásico', 'Jugador de Huecos'] },
@@ -68,11 +155,10 @@ export const PLAYING_STYLE_GROUPS = [
   { title: 'Otro', styles: ['Ninguno'] },
 ];
 
-// Estilos COM: en PLAYER_SKILLS_MAP conviven con las habilidades, pero el juego los trata aparte.
+// COM styles share PLAYER_SKILLS_MAP with the skills, but the game treats them separately, so the list shows them apart.
 export const COM_STYLE_KEYS = ['Trickster', 'MazingRun', 'SpeedingBullet', 'IncisiveRun', 'LongBallExpert', 'EarlyCross', 'LongRanger'];
 
 export const SKILL_INFO = {
-  // Estilos COM: los siete primeros de PLAYER_SKILLS_MAP; en la lista van aparte (COM_STYLE_KEYS).
   Trickster: 'Encara y gambetea seguido con movimientos vistosos para superar a su marcador.',
   MazingRun: 'Se mete en diagonal con la pelota pegada al pie, esquivando rivales en el camino.',
   SpeedingBullet: 'Arranca con la pelota a toda velocidad y casi sin perder el control al correr.',
@@ -80,8 +166,7 @@ export const SKILL_INFO = {
   LongBallExpert: 'Prefiere los pases largos para cambiar el juego y habilitar a los delanteros.',
   EarlyCross: 'Centra rápido, sin esperar a llegar a la línea de fondo.',
   LongRanger: 'Remata desde afuera del área con frecuencia.',
-  // Gambetas y control
-  ScissorsFeint: 'Pasa el pie por encima de la pelota para engañar al defensor.',
+  ScissorsFeint: 'Permite a los jugadores ejecutar la tijera a gran velocidad.',
   DoubleTouch: 'Toca dos veces seguidas para sacarse al rival de encima.',
   FlipFlap: 'Cambia de dirección con toques de la parte externa e interna del pie.',
   MarseilleTurn: 'Giro de 360° protegiendo la pelota con el cuerpo.',
@@ -90,7 +175,6 @@ export const SKILL_INFO = {
   CutBehindAndTurn: 'Pasa la pelota por detrás de su pierna de apoyo para girar.',
   ScotchMove: 'Usa el cuerpo del defensor o el piso para rebotar la pelota y escapar de la marca.',
   StepOnSkillcontrol: 'Frena y mueve la pelota con la suela para cambiar de ritmo.',
-  // Cabeceo y remates
   HeadingSpecial: 'Gana de arriba y cabecea con más potencia y precisión.',
   LongRangeDrive: 'Pegada fuerte con trayectoria recta desde afuera del área.',
   Chipshotcontrol: 'Tiros por encima del arquero con más control.',
@@ -101,23 +185,20 @@ export const SKILL_INFO = {
   AcrobaticFinishing: 'Define con chilenas, voleas y remates en el aire.',
   HeelTrick: 'Remata o pasa con el talón.',
   FirstTimeShot: 'Patea de primera sin controlar.',
-  // Pases
   OneTouchPass: 'Pasa de primera con más precisión.',
   ThroughPassing: 'Mejora los pases filtrados entre la defensa rival.',
-  WeightedPass: 'Pases con potencia y precisión para largas distancias.',
+  WeightedPass: 'Le da efecto hacia atrás a los pases elevados, así la pelota frena al caer y es más fácil de controlar.',
   PinpointCrossing: 'Centros muy precisos al área.',
   OutsideCurler: 'Pasa o centra con el exterior del pie, con efecto.',
   Rabona: 'Patea cruzando la pierna de apoyo por detrás.',
   NoLookPass: 'Pasa mirando para otro lado y confunde a la marca.',
   LowLoftedPass: 'Levanta la pelota con poca altura para pasar sobre un rival.',
-  // Arqueros y pelota parada
-  GKLowPunt: 'El arquero saca con precisión a un compañero cercano.',
-  GKHighPunt: 'El arquero saca con potencia a larga distancia.',
+  GKLowPunt: 'El arquero saca de volea con trayectoria baja.',
+  GKHighPunt: 'El arquero saca de volea con trayectoria alta.',
   LongThrow: 'Tira el lateral muy lejos, hasta el área.',
-  GKLongThrow: 'Lanza con la mano hasta mitad de cancha.',
+  GKLongThrow: 'El arquero lanza con la mano a larga distancia.',
   PenaltySpecialist: 'Más probabilidades de convertir desde los doce pasos.',
   GKPenaltySaver: 'Más chances de atajar penales.',
-  // Defensa y mentalidad
   Gamesmanship: 'Se tira, hace tiempo y provoca faltas del rival.',
   ManMarking: 'Se pega al rival que tiene asignado y lo sigue por todo el campo.',
   TrackBack: 'Vuelve a defender cuando pierde la pelota.',

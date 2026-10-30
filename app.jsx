@@ -979,7 +979,7 @@ function App() {
     const gruposSeleccionados = Object.keys(f.grupos).filter(k => f.grupos[k]);
     const selectedSkills = Object.keys(f.skills).filter(skill => f.skills[skill]);
     const normalizedCountry = normalizarString(f.country);
-    // Un filtro guardado antes de existir «Juega bien de» no trae estos campos.
+    // Filters saved before «Juega de» existed do not have these fields.
     const versatilePos = f.versatilePos || [];
     const versatileLevel = f.versatileLevel || 2;
 

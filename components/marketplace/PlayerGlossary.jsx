@@ -2,35 +2,50 @@ import React from 'react';
 import { PLAYER_SKILLS_MAP } from '../../utils/constants.js';
 import { COM_STYLE_KEYS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../../utils/playerGlossary.js';
 
-function Entry({ name, positions, text }) {
+function Entry({ name, aka, positions, children }) {
   return (
     <div className="py-3 sm:grid sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-6">
       <dt className="text-base font-semibold text-ink">
         {name}
+        {aka && <span className="block text-sm font-medium text-ink-2">También: {aka}</span>}
         {positions && (
           <span className="block text-sm font-medium text-ink-2 num">
             <span className="sr-only">Posiciones: </span>{positions.join(' · ')}
           </span>
         )}
       </dt>
-      <dd className="text-base leading-relaxed text-ink mt-1 sm:mt-0 sm:max-w-[62ch]">{text}</dd>
+      <dd className="mt-1 sm:mt-0 sm:max-w-[62ch] space-y-1.5">{children}</dd>
     </div>
+  );
+}
+
+function StyleText({ summary, detail, examples }) {
+  return (
+    <>
+      <p className="text-base font-medium leading-relaxed text-ink">{summary}</p>
+      {detail && <p className="text-base leading-relaxed text-ink-2">{detail}</p>}
+      {examples?.length > 0 && <p className="text-sm text-ink-2"><span className="font-semibold text-ink">Ejemplos:</span> {examples.join(', ')}.</p>}
+    </>
   );
 }
 
 function Group({ title, note, children }) {
   return (
     <div>
-      <h5 className="eyebrow !text-ink-2">{title}</h5>
+      <h5 className="eyebrow eyebrow-strong">{title}</h5>
       {note && <p className="text-sm text-ink-2 mt-1">{note}</p>}
       <dl className="mt-2 divide-y divide-line/10">{children}</dl>
     </div>
   );
 }
 
-const skillEntries = keys => keys.map(key => <Entry key={key} name={PLAYER_SKILLS_MAP[key]} text={SKILL_INFO[key]} />);
+const skillEntries = keys => keys.map(key => (
+  <Entry key={key} name={PLAYER_SKILLS_MAP[key]}>
+    <p className="text-base leading-relaxed text-ink">{SKILL_INFO[key]}</p>
+  </Entry>
+));
 
-/** Qué hace cada estilo de juego (campo `PlayingStyle`) y cada habilidad, en el orden en que aparecen los filtros. */
+/** What each playing style (`PlayingStyle` field) and each skill does, in the order the filters list them. */
 export function PlayerGlossary() {
   const comKeys = COM_STYLE_KEYS.filter(key => PLAYER_SKILLS_MAP[key]);
   const skillKeys = Object.keys(PLAYER_SKILLS_MAP).filter(key => !COM_STYLE_KEYS.includes(key));
@@ -40,13 +55,23 @@ export function PlayerGlossary() {
         <h4 id="glossary-styles" className="section-title">Estilos de juego</h4>
         {PLAYING_STYLE_GROUPS.map(group => (
           <Group key={group.title} title={group.title}>
-            {group.styles.map(style => <Entry key={style} name={style} positions={PLAYING_STYLE_POSITIONS[style]} text={PLAYING_STYLE_INFO[style]} />)}
+            {group.styles.map(style => {
+              const info = PLAYING_STYLE_INFO[style];
+              return (
+                <Entry key={style} name={style} aka={info.aka} positions={PLAYING_STYLE_POSITIONS[style]}>
+                  <StyleText {...info} />
+                </Entry>
+              );
+            })}
           </Group>
         ))}
       </section>
 
       <section aria-labelledby="glossary-skills" className="space-y-5">
-        <h4 id="glossary-skills" className="section-title">Habilidades</h4>
+        <div>
+          <h4 id="glossary-skills" className="section-title">Habilidades</h4>
+          <p className="text-sm text-ink-2 mt-1">Resumen propio de cada habilidad, todavía sin comparar con los textos del juego.</p>
+        </div>
         <Group title="Habilidades del jugador">{skillEntries(skillKeys)}</Group>
         <Group title="Estilos COM" note="Los marca el juego en la ficha y se filtran junto con las habilidades.">
           {skillEntries(comKeys)}

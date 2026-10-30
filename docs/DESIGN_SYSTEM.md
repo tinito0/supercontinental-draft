@@ -166,7 +166,8 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
 - CSS (`index.css @layer components`): `.btn .btn-primary|secondary|ghost|danger|success .btn-sm|lg .btn-icon`,
   `.input .select .field-label .field-help .field-error`, `.panel .panel-flat .well`, `.tab-list .tab`,
   `.chip` (removable filter tokens only), `.data-table`, `.skeleton`, `.kbd`, `.eyebrow .page-title .section-title
-  .num .font-display`.
+  .num .font-display`. `.eyebrow-strong` lifts an eyebrow to `ink-2`, only for group titles inside long reading lists
+  (the Filtros glossary), where `ink-3` at 11px got lost between 16px entries (owner feedback, 2026-10-30).
 - React (`components/ui`): `Page`, `PageHeader`, `SectionHeader`, `Button`, `IconButton`, `Field`, `Tabs`,
   `Alert`, `Stat`, `EmptyState`, `Spinner`, `Badge` (states only), `BaseModal` (dialogs; Escape inside a field
   only leaves the field).
