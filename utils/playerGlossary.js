@@ -4,7 +4,8 @@
 //
 // Playing style texts come from the league owner (2026-10-30): `summary` is the game's own one-liner, `detail` and
 // `examples` his explanation, lightly edited (typos, first-person asides removed). `aka` holds the other names the
-// game uses. Skill texts are our own summaries and have not been checked against the game (the UI says so).
+// game uses. `warning` is a tactical caveat from a PES 2021 tutorial the owner chose
+// (youtube.com/watch?v=1y8ljb2TumM, 2026-10-30), only where the video gives one.
 
 export const PLAYING_STYLE_INFO = {
   'Cazagoles': {
@@ -47,11 +48,13 @@ export const PLAYING_STYLE_INFO = {
   'El Diez Clásico': {
     summary: 'El clásico jugador con talento que prefiere el juego de toque y los pases precisos al movimiento.',
     detail: 'Sus movimientos son más estáticos: prioriza los pases sobre el recorrido físico. El enganche clásico.',
+    warning: 'Casi no se desmarca y siempre pide la pelota al pie: si en el medio no hay otro que se mueva, el ataque se queda sin opciones.',
     examples: ['Özil', 'Mata', 'Ganso', 'Dani Parejo', 'Éver Banega', 'Fábregas', 'Zidane', 'Platini', 'Riquelme'],
   },
   'Jugador de Huecos': {
     summary: 'Un jugador con instinto goleador que no duda en lanzarse al ataque a la primera oportunidad.',
     detail: 'Quienes jugaron al PES 13 lo pueden comparar con la carta «Adicto al gol». Con o sin pelota avanza hacia un hueco para ocuparlo: por ejemplo, pasa la pelota y sigue al ataque aprovechando el espacio creado.',
+    warning: 'Se va arriba a la primera oportunidad: si juega de MO o de MC puede dejar vacío el lugar del enganche.',
     examples: ['Bruno Fernandes', 'Havertz', 'Cuadrado', 'Di María', 'Carrasco', 'Gündogan', 'Lemar'],
   },
   'Creador de Jugadas': {
@@ -72,6 +75,7 @@ export const PLAYING_STYLE_INFO = {
   'El Destructor': {
     summary: 'Jugador batallador que contiene los ataques rivales a base de presión y entradas duras.',
     detail: 'En general agresivo: batalla mucho para intentar cortar siempre la jugada del rival.',
+    warning: 'Con presión agresiva en las instrucciones de defensa presiona todavía más. Si juega de central, tiende a salir a presionar y puede dejar un hueco atrás.',
     examples: ['Casemiro', 'Torreira', 'Medel', 'Lucas Leiva', 'Krychowiak', 'Fernando Reges', 'Pepe', 'Koulibaly', 'Chiellini', 'Godín'],
   },
   'El Protector': {
@@ -93,6 +97,7 @@ export const PLAYING_STYLE_INFO = {
   'Lateral Ofensivo': {
     summary: 'Jugador con mentalidad de ataque que correrá a sumarse al ataque a la menor oportunidad.',
     detail: 'El lateral de moda: siempre es una opción de ataque por la banda y prefiere ayudar en ofensiva antes que quedarse esperando el contraataque. El estilo solo dice si sube al ataque, no si es bueno atacando o defendiendo.',
+    warning: 'Sube en todas las jugadas: suma mucho en ataque, pero deja un hueco grande atrás.',
     examples: ['Jordi Alba', 'Alex Sandro', 'Carvajal', 'Semedo', 'Cancelo', 'Davies'],
   },
   'Lateral Defensivo': {
@@ -158,6 +163,9 @@ export const PLAYING_STYLE_GROUPS = [
 // COM styles share PLAYER_SKILLS_MAP with the skills, but the game treats them separately, so the list shows them apart.
 export const COM_STYLE_KEYS = ['Trickster', 'MazingRun', 'SpeedingBullet', 'IncisiveRun', 'LongBallExpert', 'EarlyCross', 'LongRanger'];
 
+// Skill texts: the game's own descriptions as read aloud in a PES 2021 skills tutorial the owner chose
+// (transcript pasted on 2026-10-30, cleaned of speech-to-text errors), «Tijera» from the owner.
+// OWN_SUMMARY_SKILLS are the ones the video does not read out: those are our own summary and the UI says so.
 export const SKILL_INFO = {
   Trickster: 'Encara y gambetea seguido con movimientos vistosos para superar a su marcador.',
   MazingRun: 'Se mete en diagonal con la pelota pegada al pie, esquivando rivales en el camino.',
@@ -168,43 +176,45 @@ export const SKILL_INFO = {
   LongRanger: 'Remata desde afuera del área con frecuencia.',
   ScissorsFeint: 'Permite a los jugadores ejecutar la tijera a gran velocidad.',
   DoubleTouch: 'Toca dos veces seguidas para sacarse al rival de encima.',
-  FlipFlap: 'Cambia de dirección con toques de la parte externa e interna del pie.',
+  FlipFlap: 'Permite ejecutar el látigo.',
   MarseilleTurn: 'Giro de 360° protegiendo la pelota con el cuerpo.',
-  Sombrero: 'Levanta la pelota por encima del rival para pasarlo.',
+  Sombrero: 'Permite hacerse el autopase levantando la pelota por encima del rival.',
   CrossOverTurn: 'Cambia de dirección rápido cruzando la pelota.',
   CutBehindAndTurn: 'Pasa la pelota por detrás de su pierna de apoyo para girar.',
   ScotchMove: 'Usa el cuerpo del defensor o el piso para rebotar la pelota y escapar de la marca.',
-  StepOnSkillcontrol: 'Frena y mueve la pelota con la suela para cambiar de ritmo.',
-  HeadingSpecial: 'Gana de arriba y cabecea con más potencia y precisión.',
-  LongRangeDrive: 'Pegada fuerte con trayectoria recta desde afuera del área.',
-  Chipshotcontrol: 'Tiros por encima del arquero con más control.',
-  LongRangeShot: 'Mejora precisión y potencia de los remates desde lejos.',
-  KnuckleShot: 'Patea con trayectoria impredecible, sin rotación.',
-  DippingShots: 'El tiro baja rápido después de pasar al arquero.',
-  RisingShots: 'El tiro sube y se mantiene en el aire más tiempo.',
-  AcrobaticFinishing: 'Define con chilenas, voleas y remates en el aire.',
-  HeelTrick: 'Remata o pasa con el talón.',
-  FirstTimeShot: 'Patea de primera sin controlar.',
-  OneTouchPass: 'Pasa de primera con más precisión.',
-  ThroughPassing: 'Mejora los pases filtrados entre la defensa rival.',
-  WeightedPass: 'Le da efecto hacia atrás a los pases elevados, así la pelota frena al caer y es más fácil de controlar.',
-  PinpointCrossing: 'Centros muy precisos al área.',
-  OutsideCurler: 'Pasa o centra con el exterior del pie, con efecto.',
-  Rabona: 'Patea cruzando la pierna de apoyo por detrás.',
-  NoLookPass: 'Pasa mirando para otro lado y confunde a la marca.',
-  LowLoftedPass: 'Levanta la pelota con poca altura para pasar sobre un rival.',
-  GKLowPunt: 'El arquero saca de volea con trayectoria baja.',
-  GKHighPunt: 'El arquero saca de volea con trayectoria alta.',
-  LongThrow: 'Tira el lateral muy lejos, hasta el área.',
-  GKLongThrow: 'El arquero lanza con la mano a larga distancia.',
-  PenaltySpecialist: 'Más probabilidades de convertir desde los doce pasos.',
-  GKPenaltySaver: 'Más chances de atajar penales.',
-  Gamesmanship: 'Se tira, hace tiempo y provoca faltas del rival.',
-  ManMarking: 'Se pega al rival que tiene asignado y lo sigue por todo el campo.',
-  TrackBack: 'Vuelve a defender cuando pierde la pelota.',
-  Interception: 'Anticipa los pases rivales y corta líneas de pase.',
-  AcrobaticClear: 'Despeja con chilena o volea desde situaciones complicadas.',
-  Captaincy: 'Mejora el rendimiento de los compañeros que juegan con él.',
-  SuperSub: 'Rinde mejor cuando entra desde el banco.',
-  FightingSpirit: 'Sigue rindiendo igual aunque esté cansado o su equipo pierda.',
+  StepOnSkillcontrol: 'Permite pisar el balón para recortar y perfilarse para el remate.',
+  HeadingSpecial: 'Mejora la precisión de los cabezazos.',
+  LongRangeDrive: 'Permite a los jugadores ejecutar disparos con efecto de gran precisión.',
+  Chipshotcontrol: 'Permite ejecutar la vaselina con precisión.',
+  LongRangeShot: 'Mejora la precisión de los remates de larga distancia.',
+  KnuckleShot: 'Disparo sin rotación del balón.',
+  DippingShots: 'El disparo se eleva y después baja al llegar al arco.',
+  RisingShots: 'El disparo sale rasante y se va elevando.',
+  AcrobaticFinishing: 'Permite rematar con piruetas, por ejemplo cuando llega un centro.',
+  HeelTrick: 'Permite a los jugadores pasar o disparar con el taco.',
+  FirstTimeShot: 'Mejora la técnica y la precisión del remate de primera.',
+  OneTouchPass: 'Mejora la técnica y la precisión de los pases al primer toque.',
+  ThroughPassing: 'Aumenta la precisión de los pases en profundidad.',
+  WeightedPass: 'Permite imprimir efecto de retroceso a los pases bombeados y en profundidad para darles mayor precisión.',
+  PinpointCrossing: 'Sirve para el cambio de frente: pases cruzados largos y precisos.',
+  OutsideCurler: 'Permite a los jugadores disparar y pasar con el exterior de la bota.',
+  Rabona: 'Permite ejecutar la rabona.',
+  NoLookPass: 'Mira para otro lado cuando pasa la pelota y engaña a la marca.',
+  LowLoftedPass: 'En vez del pase por abajo, hace un globito bajo por encima del rival.',
+  GKLowPunt: 'Mejora la precisión de los saques cortos del arquero.',
+  GKHighPunt: 'Saque largo y potente del arquero.',
+  LongThrow: 'Saque de banda muy largo.',
+  GKLongThrow: 'Aumenta el alcance de los saques de meta.',
+  PenaltySpecialist: 'Mejora la precisión en los penales.',
+  GKPenaltySaver: 'Mejora las reacciones del arquero en los penales.',
+  Gamesmanship: 'Permite a los jugadores provocar faltas.',
+  ManMarking: 'Permite a los jugadores perseguir a un rival y seguirlo por todo el campo.',
+  TrackBack: 'Jugador ofensivo que presiona constantemente al rival que lleva el balón para recuperarlo.',
+  Interception: 'Da mayor habilidad para interceptar pases.',
+  AcrobaticClear: 'Despeja con piruetas en situaciones incómodas.',
+  Captaincy: 'Mejora el rendimiento del equipo cuando el jugador es el capitán.',
+  SuperSub: 'Mejora el rendimiento del jugador cuando entra en la segunda parte del partido.',
+  FightingSpirit: 'Permite a los jugadores rendir mejor en condiciones de presión, cansancio y adversidad.',
 };
+
+export const OWN_SUMMARY_SKILLS = [...COM_STYLE_KEYS, 'DoubleTouch', 'MarseilleTurn', 'CrossOverTurn', 'CutBehindAndTurn', 'ScotchMove'];
