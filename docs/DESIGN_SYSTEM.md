@@ -76,9 +76,11 @@ Radii: `rounded-md` 6px small controls · `rounded-lg` 8px buttons, fields · `r
 a label, category or state is `rounded-md`, never a pill. Shadows `shadow-sm`/`shadow-md`/`shadow-lg` only (no custom
 ones, no `drop-shadow` on crests) for things that float or panels on canvas.
 
-**Depth and blur.** Blur exists only on the scrim of `BaseModal` (`backdrop-blur-sm`): one floating layer at a time.
-Sticky bars, popovers, the mobile sidebar scrim and the other full-screen scrims use a solid or near-opaque token fill
-instead. No glow (`box-shadow` with blur in an accent color); the only halos are the one-shot `.value-flash` and
+**Depth and blur.** No `backdrop-filter` blur anywhere. The `BaseModal` scrim is a near-opaque `bg-canvas/90`; it had
+`backdrop-blur-sm` until 2026-10-30, when it was measured dropping scrolling inside a long dialog (Filtros with its
+glossary) to about 15 fps (headless Chromium, CPU 4x, 99 % of frames late; 60 fps without it). Firefox-based browsers
+pay even more for it. Sticky bars, popovers, the mobile sidebar scrim and the other full-screen scrims also use a solid
+or near-opaque token fill. No glow (`box-shadow` with blur in an accent color); the only halos are the one-shot `.value-flash` and
 `.row-flash`.
 
 Type: **Barlow** text, **Barlow Condensed** (`font-display`) for page/section titles, numbers, scoreboards.
@@ -199,7 +201,7 @@ tap a starter to take him in hand, then another starter (swap), a substitute (su
 ## Don'ts
 
 Pills for metadata · cards inside cards · `font-black` and uppercase on every label · text under 11px ·
-`text-accent` for text (use `text-accent-soft`) · white text on a data color · blur outside the modal scrim ·
+`text-accent` for text (use `text-accent-soft`) · white text on a data color · `backdrop-filter` blur ·
 a second accent hue (cyan) · `transition: all` · emoji as icons ·
 `bg-[#hex]` literals (use tokens) · light-mode classes (the app is dark only) · `window.alert` for feedback ·
 icon-only buttons without `aria-label` · buttons without `type` · hardcoded season labels or invented data ·

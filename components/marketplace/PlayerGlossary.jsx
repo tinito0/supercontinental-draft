@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { FILTER_SKILL_KEYS, PLAYER_SKILLS_MAP } from '../../utils/constants.js';
 import { OWN_SUMMARY_SKILLS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../../utils/playerGlossary.js';
 
@@ -47,8 +47,11 @@ const skillEntries = keys => keys.map(key => (
   </Entry>
 ));
 
-/** What each playing style (`PlayingStyle` field) and each skill does, in the order the filters list them. */
-export function PlayerGlossary() {
+/**
+ * What each playing style (`PlayingStyle` field) and each skill does, in the order the filters list them.
+ * Static content: memo keeps the ~70 entries from re-rendering on every filter click in the dialog.
+ */
+export const PlayerGlossary = memo(function PlayerGlossary() {
   return (
     <div className="space-y-8">
       <section aria-labelledby="glossary-styles" className="space-y-5">
@@ -76,4 +79,4 @@ export function PlayerGlossary() {
       </section>
     </div>
   );
-}
+});

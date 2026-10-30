@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback, memo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useDeferredValue, memo, useRef, Suspense } from 'react';
 import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, FILTER_SKILL_KEYS, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID } from './utils/constants.js';
 import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from './supabase/functions/_shared/franchise.js';
 import { formatPriceShort, normalizarString, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
 import { fetchRawPlayers, buildMarketPlayers } from './utils/playerCatalog.js';
-import { matchesVersatility } from './utils/marketFilters.js';
+import { sortMarketPlayers } from './utils/marketFilters.js';
 import { LeftSidebar } from './components/LeftSidebar.jsx';
 import { TopHeader } from './components/TopHeader.jsx';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -971,11 +971,14 @@ function App() {
 
 
 
-  // --- OPTIMIZACIÓN 2: Filtros con useMemo (Automático) ---
-  // Reemplaza a 'applyFilters' y 'filteredPlayers' state
+  // The catalog is sorted once per sort option and the filters walk that list: Array#sort is stable, so the result
+  // is the same as filtering first and sorting after, without re-sorting 27k players on every filter click.
+  const sortedPlayers = useMemo(() => sortMarketPlayers(allPlayers, sortConfig), [allPlayers, sortConfig]);
+  // Filter clicks update the dialog at once; the recount and the result list follow when React has a moment.
+  const deferredFilters = useDeferredValue(filters);
   const filteredPlayers = useMemo(() => {
-    let players = allPlayers;
-    const f = filters;
+    let players = sortedPlayers;
+    const f = deferredFilters;
     const gruposSeleccionados = Object.keys(f.grupos).filter(k => f.grupos[k]);
     // Only filterable skills: a filter saved while the COM styles were offered may still have one switched on.
     const selectedSkills = FILTER_SKILL_KEYS.filter(skill => f.skills?.[skill]);
@@ -992,84 +995,47 @@ function App() {
       players = players.filter(p => wishlist.includes(p.Id));
     }
 
-    const matchMin = (val, min) => min === "" || val >= parseInt(min, 10);
-    const matchMax = (val, max) => max === "" || val <= parseInt(max, 10);
-
-    // Pre-calcular filtros de stats detalladas activas una sola vez
-    const activeDetailedStatFilters = [];
-    for (let i = 0; i < ALL_DETAILED_STAT_KEYS.length; i++) {
-      const k = ALL_DETAILED_STAT_KEYS[i];
-      const min = f[`${k}Min`];
-      const max = f[`${k}Max`];
-      if ((min !== "" && min !== undefined) || (max !== "" && max !== undefined)) {
-        activeDetailedStatFilters.push({
-          key: k,
-          minVal: min !== "" && min !== undefined ? parseInt(min, 10) : -Infinity,
-          maxVal: max !== "" && max !== undefined ? parseInt(max, 10) : Infinity,
-        });
+    // Only the filters that are set become checks, so each player runs just those. With none set the sorted list is
+    // returned as is. An empty or missing field means «not set».
+    const isSet = v => v !== '' && v !== undefined && v !== null;
+    const checks = [];
+    if (marketStatus.status === 'FranchiseMarket') checks.push(isFranchiseEligible);
+    if (f.region) checks.push(p => getRegionById(p.Country1) === f.region);
+    [['OVR_CALCULADO', 'ovr'], ['Age', 'age'], ['Precio', 'price']].forEach(([field, name]) => {
+      if (isSet(f[`${name}Min`])) { const min = parseInt(f[`${name}Min`], 10); checks.push(p => p[field] >= min); }
+      if (isSet(f[`${name}Max`])) { const max = parseInt(f[`${name}Max`], 10); checks.push(p => p[field] <= max); }
+    });
+    if (isSet(f.id)) checks.push(p => String(p.Id).includes(f.id));
+    if (searchName !== '') checks.push(p => Boolean(p.searchableName && p.searchableName.includes(searchName)));
+    if (isSet(f.pos)) checks.push(p => p.POS_NOMBRE === f.pos);
+    if (isSet(f.country)) {
+      checks.push(p => (normalizedCountryNamesById[p.Country1] || '').includes(normalizedCountry)
+        || (normalizedCountryNamesById[p.Country2] || '').includes(normalizedCountry));
+    }
+    if (gruposSeleccionados.length) checks.push(p => gruposSeleccionados.includes(p.Grupo));
+    if (isSet(f.playingStyle)) checks.push(p => p.PlayingStyle === f.playingStyle);
+    if (isSet(f.foot)) checks.push(p => p.Foot === f.foot);
+    if (versatilePos.length) {
+      // Same rule as matchesVersatility, with the AptitudeXX field names built once instead of per player.
+      const fields = versatilePos.map(pos => `Aptitude${pos}`);
+      checks.push(p => fields.every(field => (p[field] || 0) >= versatileLevel));
+    }
+    if (selectedSkills.length) checks.push(p => selectedSkills.every(skill => p[skill]));
+    for (const k of ALL_DETAILED_STAT_KEYS) {
+      const min = f[`${k}Min`], max = f[`${k}Max`];
+      if (isSet(min) || isSet(max)) {
+        const minVal = isSet(min) ? parseInt(min, 10) : -Infinity;
+        const maxVal = isSet(max) ? parseInt(max, 10) : Infinity;
+        checks.push(p => { const val = p[k] || 0; return val >= minVal && val <= maxVal; });
       }
     }
-    const hasDetailedFilters = activeDetailedStatFilters.length > 0;
 
-    players = players.filter(p => {
-      if (marketStatus.status === 'FranchiseMarket') {
-        if (!isFranchiseEligible(p)) return false;
-      }
-
-      if (f.region) {
-        const pRegion = getRegionById(p.Country1);
-        if (pRegion !== f.region) return false;
-      }
-
-      const country1Name = normalizedCountryNamesById[p.Country1] || "";
-      const country2Name = normalizedCountryNamesById[p.Country2] || "";
-
-      const matchBasic =
-        matchMin(p.OVR_CALCULADO, f.ovrMin) && matchMax(p.OVR_CALCULADO, f.ovrMax) &&
-        matchMin(p.Age, f.ageMin) && matchMax(p.Age, f.ageMax) &&
-        matchMin(p.Precio, f.priceMin) && matchMax(p.Precio, f.priceMax) &&
-        (f.id === "" || String(p.Id).includes(f.id)) &&
-        (searchName === "" || (p.searchableName && p.searchableName.includes(searchName))) &&
-        (f.pos === "" || p.POS_NOMBRE === f.pos) &&
-        (f.country === "" || country1Name.includes(normalizedCountry) || country2Name.includes(normalizedCountry)) &&
-        (gruposSeleccionados.length === 0 || gruposSeleccionados.includes(p.Grupo)) &&
-        (f.playingStyle === "" || p.PlayingStyle === f.playingStyle) &&
-        (f.foot === "" || p.Foot === f.foot) &&
-        matchesVersatility(p, versatilePos, versatileLevel) &&
-        (selectedSkills.length === 0 || selectedSkills.every(skill => p[skill]));
-
-      if (!matchBasic) return false;
-
-      if (hasDetailedFilters) {
-        for (let i = 0; i < activeDetailedStatFilters.length; i++) {
-          const filter = activeDetailedStatFilters[i];
-          const val = p[filter.key] || 0;
-          if (val < filter.minVal || val > filter.maxVal) return false;
-        }
-      }
-
+    if (checks.length === 0) return players;
+    return players.filter(p => {
+      for (let i = 0; i < checks.length; i++) if (!checks[i](p)) return false;
       return true;
     });
-
-    // Ordenamiento integrado optimizado sin switches dentro del comparator
-    const sorted = [...players];
-    const { key, direction } = sortConfig;
-    const isAsc = direction === 'asc';
-
-    if (key === 'precio') {
-      sorted.sort(isAsc ? (a, b) => a.Precio - b.Precio : (a, b) => b.Precio - a.Precio);
-    } else if (key === 'edad') {
-      sorted.sort(isAsc ? (a, b) => a.Age - b.Age : (a, b) => b.Age - a.Age);
-    } else if (key === 'nombre') {
-      sorted.sort(isAsc
-        ? (a, b) => (a.searchableName || '').localeCompare(b.searchableName || '')
-        : (a, b) => (b.searchableName || '').localeCompare(a.searchableName || ''));
-    } else {
-      sorted.sort(isAsc ? (a, b) => a.OVR_CALCULADO - b.OVR_CALCULADO : (a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO);
-    }
-
-    return sorted;
-  }, [allPlayers, filters, sortConfig, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName]);
+  }, [sortedPlayers, deferredFilters, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName]);
 
   const resetFilters = useCallback(() => {
     setFilters(prev => ({ ...initialFilters, name: prev.name }));

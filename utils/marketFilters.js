@@ -23,6 +23,27 @@ export const VERSATILE_LEVELS = [
   { value: 1, label: 'Aceptable o mejor', chip: ' (aceptable)' },
 ];
 
+/**
+ * A sorted copy of the market list for the toolbar's sort option (`key`: ovr, precio, edad or nombre). The sort is
+ * stable, so filtering the result keeps the same order as sorting the filtered list.
+ */
+export function sortMarketPlayers(players, { key, direction } = {}) {
+  const sorted = [...players];
+  const isAsc = direction === 'asc';
+  if (key === 'precio') {
+    sorted.sort(isAsc ? (a, b) => a.Precio - b.Precio : (a, b) => b.Precio - a.Precio);
+  } else if (key === 'edad') {
+    sorted.sort(isAsc ? (a, b) => a.Age - b.Age : (a, b) => b.Age - a.Age);
+  } else if (key === 'nombre') {
+    sorted.sort(isAsc
+      ? (a, b) => (a.searchableName || '').localeCompare(b.searchableName || '')
+      : (a, b) => (b.searchableName || '').localeCompare(a.searchableName || ''));
+  } else {
+    sorted.sort(isAsc ? (a, b) => a.OVR_CALCULADO - b.OVR_CALCULADO : (a, b) => b.OVR_CALCULADO - a.OVR_CALCULADO);
+  }
+  return sorted;
+}
+
 /** True when the player has at least `level` aptitude in every one of `positions`. No positions: everyone passes. */
 export function matchesVersatility(player, positions, level) {
   if (!positions || positions.length === 0) return true;

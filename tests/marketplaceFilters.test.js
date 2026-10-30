@@ -5,7 +5,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { SearchBar } from '../components/SearchBar.jsx';
 import { FiltrosModal } from '../components/FiltrosModal.jsx';
-import { getActiveFilterChips, countActiveFilters, isInvertedRange, matchesVersatility, VERSATILE_MAX } from '../utils/marketFilters.js';
+import { getActiveFilterChips, countActiveFilters, isInvertedRange, matchesVersatility, sortMarketPlayers, VERSATILE_MAX } from '../utils/marketFilters.js';
 import { isTyping } from '../hooks/useKeyboardShortcuts.js';
 
 const baseFilters = {
@@ -151,6 +151,21 @@ describe('versatility filter', () => {
     const saved = { ...baseFilters, skills: { Trickster: true, DoubleTouch: true } };
     expect(getActiveFilterChips(saved).map(c => c.id)).toEqual(['skill-DoubleTouch']);
     expect(countActiveFilters({ ...baseFilters, skills: { Trickster: true } })).toBe(0);
+  });
+
+  it('sorting once and filtering gives the same list as filtering and sorting (stable sort)', () => {
+    // Synthetic: ties on every key, so a non-stable order would show.
+    const players = Array.from({ length: 60 }, (_, i) => ({
+      Id: i, OVR_CALCULADO: 70 + (i % 4), Precio: i % 3, Age: 20 + (i % 5), searchableName: ['ana', 'bea', 'ana'][i % 3], AptitudeMC: i % 2 ? 2 : 0,
+    }));
+    const keep = p => matchesVersatility(p, ['MC'], 2);
+    for (const key of ['ovr', 'precio', 'edad', 'nombre']) {
+      for (const direction of ['asc', 'desc']) {
+        const sortThenFilter = sortMarketPlayers(players, { key, direction }).filter(keep).map(p => p.Id);
+        const filterThenSort = sortMarketPlayers(players.filter(keep), { key, direction }).map(p => p.Id);
+        expect(sortThenFilter, `${key} ${direction}`).toEqual(filterThenSort);
+      }
+    }
   });
 
   it('caps the selection at three positions', () => {

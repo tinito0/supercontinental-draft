@@ -52,7 +52,7 @@ export function BaseModal({
       aria-modal="true"
       aria-label={ariaLabel || (typeof title === 'string' ? title : 'Ventana emergente')}
       ref={backdropRef}
-      className="modal-backdrop fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in"
+      className="modal-backdrop fixed inset-0 z-modal flex items-end sm:items-center justify-center sm:p-4 bg-canvas/90 animate-in fade-in"
       data-closing={isClosing ? '' : undefined}
       inert={isClosing ? '' : undefined}
       onClick={isClosing ? undefined : onClose}
