@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, HelpCircle, RotateCcw, Save, Search, SlidersHorizontal, X } from 'lucide-react';
 import { addDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
-import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
+import { DETAILED_STAT_KEYS, FILTER_SKILL_KEYS, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
 import { getActiveFilterChips, isInvertedRange, VERSATILE_LEVELS, VERSATILE_MAX, VERSATILE_POSITIONS } from '../utils/marketFilters.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { ActiveFilterChips } from './marketplace/ActiveFilterChips.jsx';
@@ -314,8 +314,8 @@ export const FiltrosModal = memo(function FiltrosModal({
               <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />¿Qué hace cada una?
             </button>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {Object.entries(PLAYER_SKILLS_MAP).map(([key, name]) => (
-                <ToggleButton key={key} label={name} value={key} onToggle={handleSkillToggle} isChecked={filters.skills[key]} />
+              {FILTER_SKILL_KEYS.map(key => (
+                <ToggleButton key={key} label={PLAYER_SKILLS_MAP[key]} value={key} onToggle={handleSkillToggle} isChecked={filters.skills[key]} />
               ))}
             </div>
           </FilterSection>

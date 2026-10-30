@@ -1,6 +1,6 @@
 import React from 'react';
-import { PLAYER_SKILLS_MAP } from '../../utils/constants.js';
-import { COM_STYLE_KEYS, OWN_SUMMARY_SKILLS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../../utils/playerGlossary.js';
+import { FILTER_SKILL_KEYS, PLAYER_SKILLS_MAP } from '../../utils/constants.js';
+import { OWN_SUMMARY_SKILLS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../../utils/playerGlossary.js';
 
 function Entry({ name, aka, tag, positions, children }) {
   return (
@@ -49,8 +49,6 @@ const skillEntries = keys => keys.map(key => (
 
 /** What each playing style (`PlayingStyle` field) and each skill does, in the order the filters list them. */
 export function PlayerGlossary() {
-  const comKeys = COM_STYLE_KEYS.filter(key => PLAYER_SKILLS_MAP[key]);
-  const skillKeys = Object.keys(PLAYER_SKILLS_MAP).filter(key => !COM_STYLE_KEYS.includes(key));
   return (
     <div className="space-y-8">
       <section aria-labelledby="glossary-styles" className="space-y-5">
@@ -74,10 +72,7 @@ export function PlayerGlossary() {
           <h4 id="glossary-skills" className="section-title">Habilidades</h4>
           <p className="text-sm text-ink-2 mt-1">Textos del juego. Los marcados «Resumen propio» todavía no se compararon con el juego.</p>
         </div>
-        <Group title="Habilidades del jugador">{skillEntries(skillKeys)}</Group>
-        <Group title="Estilos COM" note="Los marca el juego en la ficha y se filtran junto con las habilidades.">
-          {skillEntries(comKeys)}
-        </Group>
+        <dl className="divide-y divide-line/10">{skillEntries(FILTER_SKILL_KEYS)}</dl>
       </section>
     </div>
   );
