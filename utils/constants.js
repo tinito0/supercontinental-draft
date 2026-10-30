@@ -65,6 +65,12 @@ export const PLAYER_SKILLS_MAP = {
   'FightingSpirit': 'Espíritu de lucha'
 };
 
+// COM playing styles: the game sets them on the player's card, but they do not change how he plays when the user
+// controls the team (owner, 2026-10-30), so the market filters and the glossary leave them out. The player card still
+// lists them.
+export const COM_STYLE_KEYS = ['Trickster', 'MazingRun', 'SpeedingBullet', 'IncisiveRun', 'LongBallExpert', 'EarlyCross', 'LongRanger'];
+export const FILTER_SKILL_KEYS = Object.keys(PLAYER_SKILLS_MAP).filter(key => !COM_STYLE_KEYS.includes(key));
+
 export const COUNTRY_CODE_MAP = {
   '1': 'AF', '2': 'BH', '3': 'BD', '5': 'BN', '7': 'CN', '8': 'HK', '9': 'IN', '10': 'ID',
   '11': 'IR', '12': 'IQ', '13': 'JP', '14': 'JO', '15': 'KP', '16': 'KR', '17': 'KW', '18': 'LA',

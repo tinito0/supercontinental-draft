@@ -160,20 +160,11 @@ export const PLAYING_STYLE_GROUPS = [
   { title: 'Otro', styles: ['Ninguno'] },
 ];
 
-// COM styles share PLAYER_SKILLS_MAP with the skills, but the game treats them separately, so the list shows them apart.
-export const COM_STYLE_KEYS = ['Trickster', 'MazingRun', 'SpeedingBullet', 'IncisiveRun', 'LongBallExpert', 'EarlyCross', 'LongRanger'];
-
-// Skill texts: the game's own descriptions as read aloud in a PES 2021 skills tutorial the owner chose
-// (transcript pasted on 2026-10-30, cleaned of speech-to-text errors), «Tijera» from the owner.
-// OWN_SUMMARY_SKILLS are the ones the video does not read out: those are our own summary and the UI says so.
+// Skill texts, keyed by FILTER_SKILL_KEYS (COM styles are left out, see utils/constants.js): the game's own
+// descriptions as read aloud in a PES 2021 skills tutorial the owner chose (transcript pasted on 2026-10-30, cleaned
+// of speech-to-text errors), «Tijera» from the owner. OWN_SUMMARY_SKILLS are the ones the video does not read out:
+// those are our own summary and the UI says so.
 export const SKILL_INFO = {
-  Trickster: 'Encara y gambetea seguido con movimientos vistosos para superar a su marcador.',
-  MazingRun: 'Se mete en diagonal con la pelota pegada al pie, esquivando rivales en el camino.',
-  SpeedingBullet: 'Arranca con la pelota a toda velocidad y casi sin perder el control al correr.',
-  IncisiveRun: 'Llega desde segunda línea con carreras que rompen la defensa rival.',
-  LongBallExpert: 'Prefiere los pases largos para cambiar el juego y habilitar a los delanteros.',
-  EarlyCross: 'Centra rápido, sin esperar a llegar a la línea de fondo.',
-  LongRanger: 'Remata desde afuera del área con frecuencia.',
   ScissorsFeint: 'Permite a los jugadores ejecutar la tijera a gran velocidad.',
   DoubleTouch: 'Toca dos veces seguidas para sacarse al rival de encima.',
   FlipFlap: 'Permite ejecutar el látigo.',
@@ -217,4 +208,4 @@ export const SKILL_INFO = {
   FightingSpirit: 'Permite a los jugadores rendir mejor en condiciones de presión, cansancio y adversidad.',
 };
 
-export const OWN_SUMMARY_SKILLS = [...COM_STYLE_KEYS, 'DoubleTouch', 'MarseilleTurn', 'CrossOverTurn', 'CutBehindAndTurn', 'ScotchMove'];
+export const OWN_SUMMARY_SKILLS = ['DoubleTouch', 'MarseilleTurn', 'CrossOverTurn', 'CutBehindAndTurn', 'ScotchMove'];

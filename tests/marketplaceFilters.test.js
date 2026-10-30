@@ -51,9 +51,9 @@ describe('marketplace search bar', () => {
   });
 
   it('shows stat ranges and skills as chips and counts them (they used to be invisible in the toolbar)', () => {
-    const filters = { ...baseFilters, SpeedMin: '85', skills: { Trickster: true } };
+    const filters = { ...baseFilters, SpeedMin: '85', skills: { DoubleTouch: true } };
     const labels = getActiveFilterChips(filters).map(chip => chip.label);
-    expect(labels).toEqual(['Mago del balón', 'Velocidad 85–99']);
+    expect(labels).toEqual(['Doble toque', 'Velocidad 85–99']);
     expect(countActiveFilters(filters)).toBe(2);
     const html = searchBar(filters);
     expect(html).toContain('Velocidad 85–99');
@@ -145,6 +145,12 @@ describe('versatility filter', () => {
 
   it('ignores a saved filter from before the field existed', () => {
     expect(getActiveFilterChips(baseFilters).some(c => c.id === 'versatile')).toBe(false);
+  });
+
+  it('ignores a COM style left on in a saved filter (no chip, not counted)', () => {
+    const saved = { ...baseFilters, skills: { Trickster: true, DoubleTouch: true } };
+    expect(getActiveFilterChips(saved).map(c => c.id)).toEqual(['skill-DoubleTouch']);
+    expect(countActiveFilters({ ...baseFilters, skills: { Trickster: true } })).toBe(0);
   });
 
   it('caps the selection at three positions', () => {

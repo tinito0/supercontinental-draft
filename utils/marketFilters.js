@@ -1,6 +1,6 @@
 // Active marketplace filters as removable chips: the single source for the toolbar chips, the "Filtros" count
 // and the filters dialog. The name search is a search, not a filter, so it is never a chip or counted.
-import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MAP } from './constants.js';
+import { DETAILED_STAT_KEYS, FILTER_SKILL_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MAP } from './constants.js';
 
 const DETAILED_STATS = Object.values(DETAILED_STAT_KEYS).flat();
 
@@ -55,9 +55,10 @@ export function getActiveFilterChips(filters) {
   Object.entries(filters.grupos || {}).forEach(([group, enabled]) => {
     if (enabled) chips.push({ id: `grupo-${group}`, label: group, clear: prev => ({ ...prev, grupos: { ...prev.grupos, [group]: false } }) });
   });
-  Object.entries(filters.skills || {}).forEach(([skill, enabled]) => {
-    if (enabled) {
-      chips.push({ id: `skill-${skill}`, label: PLAYER_SKILLS_MAP[skill] || skill, clear: prev => ({ ...prev, skills: { ...prev.skills, [skill]: false } }) });
+  // COM styles are not filters any more; one left on in a saved filter must not show up as a chip.
+  FILTER_SKILL_KEYS.forEach(skill => {
+    if (filters.skills?.[skill]) {
+      chips.push({ id: `skill-${skill}`, label: PLAYER_SKILLS_MAP[skill], clear: prev => ({ ...prev, skills: { ...prev.skills, [skill]: false } }) });
     }
   });
   DETAILED_STATS.forEach(stat => {

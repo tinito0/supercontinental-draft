@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo, useRef, Suspense } from 'react';
-import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID } from './utils/constants.js';
+import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, FILTER_SKILL_KEYS, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID } from './utils/constants.js';
 import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from './supabase/functions/_shared/franchise.js';
 import { formatPriceShort, normalizarString, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
 import { fetchRawPlayers, buildMarketPlayers } from './utils/playerCatalog.js';
@@ -977,7 +977,8 @@ function App() {
     let players = allPlayers;
     const f = filters;
     const gruposSeleccionados = Object.keys(f.grupos).filter(k => f.grupos[k]);
-    const selectedSkills = Object.keys(f.skills).filter(skill => f.skills[skill]);
+    // Only filterable skills: a filter saved while the COM styles were offered may still have one switched on.
+    const selectedSkills = FILTER_SKILL_KEYS.filter(skill => f.skills?.[skill]);
     const normalizedCountry = normalizarString(f.country);
     // Filters saved before «Juega de» existed do not have these fields.
     const versatilePos = f.versatilePos || [];
