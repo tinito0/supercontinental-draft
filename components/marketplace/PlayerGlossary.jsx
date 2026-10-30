@@ -4,9 +4,9 @@ import { COM_STYLE_KEYS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, SKILL_INFO } 
 
 function Entry({ name, text }) {
   return (
-    <div className="py-2.5 sm:grid sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4">
-      <dt className="text-sm font-semibold text-ink">{name}</dt>
-      <dd className="text-sm text-ink-2 mt-0.5 sm:mt-0">{text}</dd>
+    <div className="py-3 sm:grid sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-6">
+      <dt className="text-base font-semibold text-ink">{name}</dt>
+      <dd className="text-base leading-relaxed text-ink mt-1 sm:mt-0 sm:max-w-[62ch]">{text}</dd>
     </div>
   );
 }
@@ -14,8 +14,8 @@ function Entry({ name, text }) {
 function Group({ title, note, children }) {
   return (
     <div>
-      <h5 className="eyebrow">{title}</h5>
-      {note && <p className="text-xs text-ink-3 mt-1">{note}</p>}
+      <h5 className="eyebrow !text-ink-2">{title}</h5>
+      {note && <p className="text-sm text-ink-2 mt-1">{note}</p>}
       <dl className="mt-2 divide-y divide-line/10">{children}</dl>
     </div>
   );
