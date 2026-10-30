@@ -1,11 +1,18 @@
 import React from 'react';
 import { PLAYER_SKILLS_MAP } from '../../utils/constants.js';
-import { COM_STYLE_KEYS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, SKILL_INFO } from '../../utils/playerGlossary.js';
+import { COM_STYLE_KEYS, PLAYING_STYLE_GROUPS, PLAYING_STYLE_INFO, PLAYING_STYLE_POSITIONS, SKILL_INFO } from '../../utils/playerGlossary.js';
 
-function Entry({ name, text }) {
+function Entry({ name, positions, text }) {
   return (
     <div className="py-3 sm:grid sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-6">
-      <dt className="text-base font-semibold text-ink">{name}</dt>
+      <dt className="text-base font-semibold text-ink">
+        {name}
+        {positions && (
+          <span className="block text-sm font-medium text-ink-2 num">
+            <span className="sr-only">Posiciones: </span>{positions.join(' · ')}
+          </span>
+        )}
+      </dt>
       <dd className="text-base leading-relaxed text-ink mt-1 sm:mt-0 sm:max-w-[62ch]">{text}</dd>
     </div>
   );
@@ -33,7 +40,7 @@ export function PlayerGlossary() {
         <h4 id="glossary-styles" className="section-title">Estilos de juego</h4>
         {PLAYING_STYLE_GROUPS.map(group => (
           <Group key={group.title} title={group.title}>
-            {group.styles.map(style => <Entry key={style} name={style} text={PLAYING_STYLE_INFO[style]} />)}
+            {group.styles.map(style => <Entry key={style} name={style} positions={PLAYING_STYLE_POSITIONS[style]} text={PLAYING_STYLE_INFO[style]} />)}
           </Group>
         ))}
       </section>
