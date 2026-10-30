@@ -8,6 +8,8 @@ UI text is Spanish (Rioplatense); code, comments and docs are mostly English (ol
 - `docs/ARCHITECTURE.md` — layers, kit viewer and formation editor data flow, known structural risks
 - `docs/PES_ENGINE.md` — binary formats, field evidence, roles, setup, export, limitations
 - `docs/DESIGN_SYSTEM.md` — tokens, UI primitives, layout and copy rules (read before any UI work)
+- `docs/GUIA_ADMIN_LIGA.md` — (Spanish) updating the market, adding teams, changing a club's manager, editing or
+  deleting clubs; read it before touching `scripts/main.py`, the catalog, team admin or the league size
 
 ## Commands
 
