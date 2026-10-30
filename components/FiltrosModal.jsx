@@ -2,7 +2,7 @@ import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, HelpCircle, RotateCcw, Save, Search, SlidersHorizontal, X } from 'lucide-react';
 import { addDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
-import { getActiveFilterChips, isInvertedRange } from '../utils/marketFilters.js';
+import { getActiveFilterChips, isInvertedRange, VERSATILE_LEVELS, VERSATILE_MAX, VERSATILE_POSITIONS } from '../utils/marketFilters.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { ActiveFilterChips } from './marketplace/ActiveFilterChips.jsx';
 import { PlayerGlossary } from './marketplace/PlayerGlossary.jsx';
@@ -23,10 +23,10 @@ const RANGES = [
   ['Precio ($M)', 'priceMin', 'priceMax', 'Mín', 'Máx'],
 ];
 
-const ToggleButton = memo(function ToggleButton({ label, value, onToggle, isChecked }) {
+const ToggleButton = memo(function ToggleButton({ label, value, onToggle, isChecked, disabled = false, title, className = '' }) {
   return (
-    <button type="button" onClick={() => onToggle(value)} aria-pressed={Boolean(isChecked)}
-      className={`min-h-11 rounded-lg px-3 text-sm font-semibold border transition-colors text-left
+    <button type="button" onClick={() => onToggle(value)} aria-pressed={Boolean(isChecked)} disabled={disabled} title={title}
+      className={`min-h-11 rounded-lg px-3 text-sm font-semibold border transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${className}
         ${isChecked ? 'bg-accent/15 border-accent/50 text-ink' : 'bg-raised border-line/[0.14] text-ink-2 hover:border-line/30 hover:text-ink'}`}>
       {label}
     </button>
@@ -142,6 +142,15 @@ export const FiltrosModal = memo(function FiltrosModal({
   const handleNumericChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
   const handleGroupToggle = (group) => setFilters(prev => ({ ...prev, grupos: { ...prev.grupos, [group]: !prev.grupos[group] } }));
   const handleSkillToggle = (skill) => setFilters(prev => ({ ...prev, skills: { ...prev.skills, [skill]: !prev.skills[skill] } }));
+  const versatilePos = filters.versatilePos || [];
+  const versatileLevel = filters.versatileLevel || 2;
+  const versatileFull = versatilePos.length >= VERSATILE_MAX;
+  const handleVersatileToggle = (pos) => setFilters(prev => {
+    const current = prev.versatilePos || [];
+    if (current.includes(pos)) return { ...prev, versatilePos: current.filter(p => p !== pos) };
+    if (current.length >= VERSATILE_MAX) return prev;
+    return { ...prev, versatilePos: [...current, pos] };
+  });
   const handleStatRangeChange = (key, type, val) => setFilters(prev => ({ ...prev, [`${key}${type}`]: val }));
   const showGlossary = () => {
     setGlossaryOpen(true);
@@ -243,6 +252,32 @@ export const FiltrosModal = memo(function FiltrosModal({
                   {uniquePlayingStyles.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </label>
+              <fieldset className="sm:col-span-2">
+                <legend className="field-label">Juega bien de</legend>
+                <p className="text-sm text-ink-2 mb-2">Elegí hasta {VERSATILE_MAX} posiciones: salen los jugadores con aptitud en todas.</p>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {VERSATILE_POSITIONS.map(pos => {
+                    const isChecked = versatilePos.includes(pos);
+                    const isBlocked = versatileFull && !isChecked;
+                    return (
+                      <ToggleButton key={pos} label={pos} value={pos} onToggle={handleVersatileToggle} isChecked={isChecked}
+                        disabled={isBlocked} title={isBlocked ? `Máximo ${VERSATILE_MAX} posiciones: sacá una para elegir otra` : undefined}
+                        className="text-center num" />
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-3" role="radiogroup" aria-label="Nivel de aptitud">
+                  <span className="text-sm text-ink-2 mr-1">Nivel:</span>
+                  {VERSATILE_LEVELS.map(level => (
+                    <button key={level.value} type="button" role="radio" aria-checked={versatileLevel === level.value}
+                      onClick={() => setFilters(p => ({ ...p, versatileLevel: level.value }))}
+                      className={`min-h-11 rounded-lg px-3 text-sm font-semibold border transition-colors
+                        ${versatileLevel === level.value ? 'bg-accent/15 border-accent/50 text-ink' : 'bg-raised border-line/[0.14] text-ink-2 hover:border-line/30 hover:text-ink'}`}>
+                      {level.label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
           </section>
         </div>

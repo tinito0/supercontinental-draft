@@ -3,6 +3,7 @@ import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, DEFAULT_BUDGET, DEFAULT_LOGO, AD
 import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from './supabase/functions/_shared/franchise.js';
 import { formatPriceShort, normalizarString, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
 import { fetchRawPlayers, buildMarketPlayers } from './utils/playerCatalog.js';
+import { matchesVersatility } from './utils/marketFilters.js';
 import { LeftSidebar } from './components/LeftSidebar.jsx';
 import { TopHeader } from './components/TopHeader.jsx';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -142,6 +143,7 @@ const initialFilters = {
     Delanteros: false, Mediocampistas: false, Defensores: false, Arqueros: false,
   },
   playingStyle: '', foot: '',
+  versatilePos: [], versatileLevel: 2,
   skills: Object.keys(PLAYER_SKILLS_MAP).reduce((acc, key) => ({ ...acc, [key]: false }), {}),
   wishlistOnly: false,
   ...initialDetailedStats
@@ -977,6 +979,9 @@ function App() {
     const gruposSeleccionados = Object.keys(f.grupos).filter(k => f.grupos[k]);
     const selectedSkills = Object.keys(f.skills).filter(skill => f.skills[skill]);
     const normalizedCountry = normalizarString(f.country);
+    // Un filtro guardado antes de existir «Juega bien de» no trae estos campos.
+    const versatilePos = f.versatilePos || [];
+    const versatileLevel = f.versatileLevel || 2;
 
     // Usamos el nombre con debounce para que no filtre en cada letra
     const searchName = normalizarString(debouncedName);
@@ -1029,6 +1034,7 @@ function App() {
         (gruposSeleccionados.length === 0 || gruposSeleccionados.includes(p.Grupo)) &&
         (f.playingStyle === "" || p.PlayingStyle === f.playingStyle) &&
         (f.foot === "" || p.Foot === f.foot) &&
+        matchesVersatility(p, versatilePos, versatileLevel) &&
         (selectedSkills.length === 0 || selectedSkills.every(skill => p[skill]));
 
       if (!matchBasic) return false;
