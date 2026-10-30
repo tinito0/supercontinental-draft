@@ -1,10 +1,11 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, RotateCcw, Save, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, HelpCircle, RotateCcw, Save, Search, SlidersHorizontal, X } from 'lucide-react';
 import { addDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
 import { getActiveFilterChips, isInvertedRange } from '../utils/marketFilters.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { ActiveFilterChips } from './marketplace/ActiveFilterChips.jsx';
+import { PlayerGlossary } from './marketplace/PlayerGlossary.jsx';
 
 // Label colours a manager can give a saved filter (stored by id in Firestore; ids must not change).
 const filterColors = [
@@ -50,11 +51,14 @@ function RangeInputs({ label, minKey, maxKey, minPlaceholder, maxPlaceholder, fi
 }
 
 /** Collapsible group: a heading button, no box around it (hairline between groups). */
-function FilterSection({ title, description, defaultOpen = true, children }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+function FilterSection({ id, title, description, defaultOpen = true, open, onOpenChange, children }) {
+  const [innerOpen, setInnerOpen] = useState(defaultOpen);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : innerOpen;
+  const toggle = () => (isControlled ? onOpenChange(!open) : setInnerOpen(prev => !prev));
   return (
-    <section className="border-t border-line/[0.08] pt-4 first:border-t-0 first:pt-0">
-      <button type="button" onClick={() => setIsOpen(prev => !prev)} aria-expanded={isOpen} className="min-h-11 w-full flex items-center justify-between gap-3 text-left">
+    <section id={id} className="border-t border-line/[0.08] pt-4 first:border-t-0 first:pt-0 scroll-mt-4">
+      <button type="button" onClick={toggle} aria-expanded={isOpen} className="min-h-11 w-full flex items-center justify-between gap-3 text-left">
         <span>
           <span className="section-title block">{title}</span>
           {description && <span className="block text-xs text-ink-3 mt-0.5">{description}</span>}
@@ -85,6 +89,7 @@ export const FiltrosModal = memo(function FiltrosModal({
   const [selectedColor, setSelectedColor] = useState('cyan');
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
   const savingFilterRef = useRef(false);
   const activeChips = useMemo(() => getActiveFilterChips(filters), [filters]);
 
@@ -138,6 +143,11 @@ export const FiltrosModal = memo(function FiltrosModal({
   const handleGroupToggle = (group) => setFilters(prev => ({ ...prev, grupos: { ...prev.grupos, [group]: !prev.grupos[group] } }));
   const handleSkillToggle = (skill) => setFilters(prev => ({ ...prev, skills: { ...prev.skills, [skill]: !prev.skills[skill] } }));
   const handleStatRangeChange = (key, type, val) => setFilters(prev => ({ ...prev, [`${key}${type}`]: val }));
+  const showGlossary = () => {
+    setGlossaryOpen(true);
+    // The section mounts its content on the same render; wait a frame so there is something to scroll to.
+    requestAnimationFrame(() => document.getElementById('filters-glossary')?.scrollIntoView({ block: 'start' }));
+  };
   // Enter in a field applies the filters; it never submits anything else or closes the dialog by itself.
   const onFieldKeyDown = e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); };
 
@@ -222,7 +232,12 @@ export const FiltrosModal = memo(function FiltrosModal({
                 </select>
               </label>
               <label className="sm:col-span-2">
-                <span className="field-label">Estilo de juego</span>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="field-label">Estilo de juego</span>
+                  <button type="button" onClick={showGlossary} className="inline-flex items-center gap-1 min-h-11 -my-2 px-1 text-xs font-semibold text-accent-soft hover:text-ink">
+                    <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />¿Qué es?
+                  </button>
+                </span>
                 <select value={filters.playingStyle} onChange={e => setFilters(p => ({ ...p, playingStyle: e.target.value }))} className="select">
                   <option value="">Cualquiera</option>
                   {uniquePlayingStyles.map(s => <option key={s} value={s}>{s}</option>)}
@@ -259,11 +274,18 @@ export const FiltrosModal = memo(function FiltrosModal({
           </FilterSection>
 
           <FilterSection title="Habilidades" description="Skills puntuales del jugador." defaultOpen={false}>
+            <button type="button" onClick={showGlossary} className="inline-flex items-center gap-1 min-h-11 -mt-2 mb-1 text-xs font-semibold text-accent-soft hover:text-ink">
+              <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />¿Qué hace cada una?
+            </button>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {Object.entries(PLAYER_SKILLS_MAP).map(([key, name]) => (
                 <ToggleButton key={key} label={name} value={key} onToggle={handleSkillToggle} isChecked={filters.skills[key]} />
               ))}
             </div>
+          </FilterSection>
+
+          <FilterSection id="filters-glossary" title="¿Qué es?" description="Qué hace cada estilo de juego y cada habilidad." open={glossaryOpen} onOpenChange={setGlossaryOpen}>
+            <PlayerGlossary />
           </FilterSection>
 
           <FilterSection title="Filtros guardados" description={userId ? 'Cargá un filtro guardado o guardá el armado actual.' : 'Iniciá sesión para guardar filtros.'}>
