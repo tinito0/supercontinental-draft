@@ -14,6 +14,22 @@ const VALUE_CHIPS = [
   ['pos', 'Posición'], ['foot', 'Pie'], ['country', 'País'], ['region', 'Región'], ['playingStyle', 'Estilo'],
 ];
 
+// «Juega bien de»: aptitud por posición (AptitudeXX en jugadores.json: 0 no puede, 1 se defiende, 2 domina).
+// Sin PT: la aptitud de arquero casi nunca se combina con otra posición.
+export const VERSATILE_POSITIONS = ['DC', 'SD', 'ED', 'EI', 'MO', 'MD', 'MI', 'MC', 'MCD', 'LI', 'DFC', 'LD'];
+export const VERSATILE_MAX = 3;
+export const VERSATILE_LEVELS = [
+  { value: 2, label: 'Buena', chip: '' },
+  { value: 1, label: 'Aceptable o mejor', chip: ' (aceptable)' },
+];
+
+/** True when the player has at least `level` aptitude in every one of `positions`. No positions: everyone passes. */
+export function matchesVersatility(player, positions, level) {
+  if (!positions || positions.length === 0) return true;
+  const min = level || 2;
+  return positions.every(pos => (player[`Aptitude${pos}`] || 0) >= min);
+}
+
 /**
  * @param {object} filters marketplace filter state (see initialFilters in app.jsx)
  * @returns {{ id: string, label: string, clear: (prev: object) => object }[]} chips in display order
@@ -28,6 +44,14 @@ export function getActiveFilterChips(filters) {
   VALUE_CHIPS.forEach(([key, name]) => {
     if (filters[key]) chips.push({ id: key, label: `${name} ${filters[key]}`, clear: prev => ({ ...prev, [key]: '' }) });
   });
+  if (filters.versatilePos?.length) {
+    const level = VERSATILE_LEVELS.find(l => l.value === (filters.versatileLevel || 2)) || VERSATILE_LEVELS[0];
+    chips.push({
+      id: 'versatile',
+      label: `Juega de ${filters.versatilePos.join(' + ')}${level.chip}`,
+      clear: prev => ({ ...prev, versatilePos: [], versatileLevel: 2 }),
+    });
+  }
   Object.entries(filters.grupos || {}).forEach(([group, enabled]) => {
     if (enabled) chips.push({ id: `grupo-${group}`, label: group, clear: prev => ({ ...prev, grupos: { ...prev.grupos, [group]: false } }) });
   });

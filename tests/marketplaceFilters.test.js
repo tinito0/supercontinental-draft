@@ -5,7 +5,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { SearchBar } from '../components/SearchBar.jsx';
 import { FiltrosModal } from '../components/FiltrosModal.jsx';
-import { getActiveFilterChips, countActiveFilters, isInvertedRange } from '../utils/marketFilters.js';
+import { getActiveFilterChips, countActiveFilters, isInvertedRange, matchesVersatility, VERSATILE_MAX } from '../utils/marketFilters.js';
 import { isTyping } from '../hooks/useKeyboardShortcuts.js';
 
 const baseFilters = {
@@ -109,5 +109,45 @@ describe('Escape while typing', () => {
     expect(isTyping({ tagName: 'SELECT' })).toBe(true);
     expect(isTyping({ tagName: 'DIV', isContentEditable: true })).toBe(true);
     expect(isTyping({ tagName: 'BUTTON' })).toBe(false);
+  });
+});
+
+// «Juega bien de»: synthetic players, only the AptitudeXX fields matter.
+describe('versatility filter', () => {
+  const player = { AptitudeMC: 2, AptitudeMCD: 2, AptitudeMO: 1, AptitudeDFC: 0 };
+
+  it('lets everyone through with no positions chosen', () => {
+    expect(matchesVersatility(player, [], 2)).toBe(true);
+    expect(matchesVersatility({}, undefined, undefined)).toBe(true);
+  });
+
+  it('requires the level in every chosen position (all at once, not any)', () => {
+    expect(matchesVersatility(player, ['MC', 'MCD'], 2)).toBe(true);
+    expect(matchesVersatility(player, ['MC', 'MO'], 2)).toBe(false);
+    expect(matchesVersatility(player, ['MC', 'MO'], 1)).toBe(true);
+    expect(matchesVersatility(player, ['MC', 'DFC'], 1)).toBe(false);
+  });
+
+  it('defaults to good aptitude (2) and treats a missing field as 0', () => {
+    expect(matchesVersatility(player, ['MO'])).toBe(false);
+    expect(matchesVersatility(player, ['LD'], 1)).toBe(false);
+  });
+
+  it('shows one removable chip that names the positions and the level', () => {
+    const good = getActiveFilterChips({ ...baseFilters, versatilePos: ['MC', 'MCD'], versatileLevel: 2 });
+    expect(good.map(c => c.label)).toContain('Juega de MC + MCD');
+    const ok = getActiveFilterChips({ ...baseFilters, versatilePos: ['MC', 'MO'], versatileLevel: 1 });
+    const chip = ok.find(c => c.id === 'versatile');
+    expect(chip.label).toBe('Juega de MC + MO (aceptable)');
+    expect(chip.clear({ versatilePos: ['MC'], versatileLevel: 1 })).toEqual({ versatilePos: [], versatileLevel: 2 });
+    expect(countActiveFilters({ ...baseFilters, versatilePos: ['MC'] })).toBe(1);
+  });
+
+  it('ignores a saved filter from before the field existed', () => {
+    expect(getActiveFilterChips(baseFilters).some(c => c.id === 'versatile')).toBe(false);
+  });
+
+  it('caps the selection at three positions', () => {
+    expect(VERSATILE_MAX).toBe(3);
   });
 });
