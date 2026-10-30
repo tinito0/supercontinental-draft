@@ -166,7 +166,7 @@ export const SKILL_INFO = {
   LongBallExpert: 'Prefiere los pases largos para cambiar el juego y habilitar a los delanteros.',
   EarlyCross: 'Centra rápido, sin esperar a llegar a la línea de fondo.',
   LongRanger: 'Remata desde afuera del área con frecuencia.',
-  ScissorsFeint: 'Pasa el pie por encima de la pelota para engañar al defensor.',
+  ScissorsFeint: 'Permite a los jugadores ejecutar la tijera a gran velocidad.',
   DoubleTouch: 'Toca dos veces seguidas para sacarse al rival de encima.',
   FlipFlap: 'Cambia de dirección con toques de la parte externa e interna del pie.',
   MarseilleTurn: 'Giro de 360° protegiendo la pelota con el cuerpo.',
