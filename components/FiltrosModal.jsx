@@ -58,7 +58,7 @@ function FilterSection({ id, title, description, defaultOpen = true, open, onOpe
   const toggle = () => (isControlled ? onOpenChange(!open) : setInnerOpen(prev => !prev));
   return (
     <section id={id} className="border-t border-line/[0.08] pt-4 first:border-t-0 first:pt-0 scroll-mt-4">
-      <button type="button" onClick={toggle} aria-expanded={isOpen} className="min-h-11 w-full flex items-center justify-between gap-3 text-left">
+      <button type="button" id={id ? `${id}-toggle` : undefined} onClick={toggle} aria-expanded={isOpen} className="min-h-11 w-full flex items-center justify-between gap-3 text-left">
         <span>
           <span className="section-title block">{title}</span>
           {description && <span className="block text-xs text-ink-3 mt-0.5">{description}</span>}
@@ -155,7 +155,11 @@ export const FiltrosModal = memo(function FiltrosModal({
   const showGlossary = () => {
     setGlossaryOpen(true);
     // The section mounts its content on the same render; wait a frame so there is something to scroll to.
-    requestAnimationFrame(() => document.getElementById('filters-glossary')?.scrollIntoView({ block: 'start' }));
+    // Focus follows the view, so keyboard and screen-reader users land on the glossary too.
+    requestAnimationFrame(() => {
+      document.getElementById('filters-glossary')?.scrollIntoView({ block: 'start' });
+      document.getElementById('filters-glossary-toggle')?.focus({ preventScroll: true });
+    });
   };
   // Enter in a field applies the filters; it never submits anything else or closes the dialog by itself.
   const onFieldKeyDown = e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); };
@@ -240,20 +244,21 @@ export const FiltrosModal = memo(function FiltrosModal({
                   {REGIONES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </label>
-              <label className="sm:col-span-2">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="field-label">Estilo de juego</span>
+              {/* The «¿Qué es?» button stays outside the <label>: inside it, it would become the labelled control. */}
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="filter-playing-style" className="field-label">Estilo de juego</label>
                   <button type="button" onClick={showGlossary} className="inline-flex items-center gap-1 min-h-11 -my-2 px-1 text-xs font-semibold text-accent-soft hover:text-ink">
                     <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />¿Qué es?
                   </button>
-                </span>
-                <select value={filters.playingStyle} onChange={e => setFilters(p => ({ ...p, playingStyle: e.target.value }))} className="select">
+                </div>
+                <select id="filter-playing-style" value={filters.playingStyle} onChange={e => setFilters(p => ({ ...p, playingStyle: e.target.value }))} className="select">
                   <option value="">Cualquiera</option>
                   {uniquePlayingStyles.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-              </label>
+              </div>
               <fieldset className="sm:col-span-2">
-                <legend className="field-label">Juega bien de</legend>
+                <legend className="field-label">Juega de</legend>
                 <p className="text-sm text-ink-2 mb-2">Elegí hasta {VERSATILE_MAX} posiciones: salen los jugadores con aptitud en todas.</p>
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                   {VERSATILE_POSITIONS.map(pos => {
@@ -266,15 +271,11 @@ export const FiltrosModal = memo(function FiltrosModal({
                     );
                   })}
                 </div>
-                <div className="flex flex-wrap items-center gap-2 mt-3" role="radiogroup" aria-label="Nivel de aptitud">
-                  <span className="text-sm text-ink-2 mr-1">Nivel:</span>
+                <div className="flex flex-wrap items-center gap-2 mt-3" role="group" aria-labelledby="versatile-level-label">
+                  <span id="versatile-level-label" className="text-sm text-ink-2 mr-1">Nivel de aptitud</span>
                   {VERSATILE_LEVELS.map(level => (
-                    <button key={level.value} type="button" role="radio" aria-checked={versatileLevel === level.value}
-                      onClick={() => setFilters(p => ({ ...p, versatileLevel: level.value }))}
-                      className={`min-h-11 rounded-lg px-3 text-sm font-semibold border transition-colors
-                        ${versatileLevel === level.value ? 'bg-accent/15 border-accent/50 text-ink' : 'bg-raised border-line/[0.14] text-ink-2 hover:border-line/30 hover:text-ink'}`}>
-                      {level.label}
-                    </button>
+                    <ToggleButton key={level.value} label={level.label} value={level.value} isChecked={versatileLevel === level.value}
+                      onToggle={value => setFilters(p => ({ ...p, versatileLevel: value }))} />
                   ))}
                 </div>
               </fieldset>

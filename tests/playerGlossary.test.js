@@ -1,5 +1,5 @@
-// El «¿Qué es?» de Filtros explica cada estilo de juego y cada habilidad. Estos checks usan el
-// public/jugadores.json real y PLAYER_SKILLS_MAP, así que una habilidad o un estilo nuevo sin texto falla acá.
+// The «¿Qué es?» list in Filtros explains every playing style and skill. These checks use the real
+// public/jugadores.json and PLAYER_SKILLS_MAP, so a new style or skill without a text fails here.
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,7 +13,14 @@ const marketStyles = [...new Set(players.map(p => p.PlayingStyle).filter(Boolean
 
 describe('player glossary', () => {
   it.each(marketStyles)('explains the playing style «%s»', style => {
-    expect(PLAYING_STYLE_INFO[style], `falta el estilo ${style}`).toBeTruthy();
+    expect(PLAYING_STYLE_INFO[style]?.summary, `falta el estilo ${style}`).toBeTruthy();
+  });
+
+  it('gives every playing style except «Ninguno» an explanation and real examples', () => {
+    Object.entries(PLAYING_STYLE_INFO).filter(([style]) => style !== 'Ninguno').forEach(([style, info]) => {
+      expect(info.detail, `${style} sin explicación`).toBeTruthy();
+      expect(info.examples?.length, `${style} sin ejemplos`).toBeGreaterThan(0);
+    });
   });
 
   it('lists every playing style in exactly one group, and only styles that exist', () => {

@@ -14,8 +14,8 @@ const VALUE_CHIPS = [
   ['pos', 'Posición'], ['foot', 'Pie'], ['country', 'País'], ['region', 'Región'], ['playingStyle', 'Estilo'],
 ];
 
-// «Juega bien de»: aptitud por posición (AptitudeXX en jugadores.json: 0 no puede, 1 se defiende, 2 domina).
-// Sin PT: la aptitud de arquero casi nunca se combina con otra posición.
+// «Juega de»: aptitude per position (AptitudeXX in jugadores.json: 0 cannot play it, 1 copes, 2 masters it).
+// No PT: goalkeeper aptitude almost never combines with another position.
 export const VERSATILE_POSITIONS = ['DC', 'SD', 'ED', 'EI', 'MO', 'MD', 'MI', 'MC', 'MCD', 'LI', 'DFC', 'LD'];
 export const VERSATILE_MAX = 3;
 export const VERSATILE_LEVELS = [

@@ -112,7 +112,7 @@ describe('Escape while typing', () => {
   });
 });
 
-// «Juega bien de»: synthetic players, only the AptitudeXX fields matter.
+// «Juega de»: synthetic players, only the AptitudeXX fields matter.
 describe('versatility filter', () => {
   const player = { AptitudeMC: 2, AptitudeMCD: 2, AptitudeMO: 1, AptitudeDFC: 0 };
 

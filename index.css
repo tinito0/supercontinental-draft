@@ -204,6 +204,8 @@
   .eyebrow {
     @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3;
   }
+  /* Group titles inside long reading lists (the Filtros glossary): ink-3 at 11px got lost between 16px entries. */
+  .eyebrow-strong { @apply text-ink-2; }
   .page-title {
     @apply font-display text-[28px] sm:text-[32px] font-bold leading-none text-ink tracking-tight;
   }
