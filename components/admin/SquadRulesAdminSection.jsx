@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ListChecks } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState.jsx';
+import { Alert } from '../ui/Alert.jsx';
 import { ruleTarget } from '../SquadRulesStats.jsx';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { buildTeamRuleRows, BENCH_MIN_AVG_OVR } from '../../utils/squadRules.js';
@@ -43,11 +44,27 @@ function RuleFigure({ rule }) {
  * Administración → Reglas: every club against the reglamento's squad rules, live from the public teams and the
  * player locks. The bench is read from the lineup each club last saved, so a club that never saved a full XI
  * shows the rule as not measured yet. Clubs that fail something come first.
+ * The app downloads the player catalog only for the market tabs, so this tab asks for it (onRequestCatalog) when it
+ * opens; without that it waited forever on the skeleton.
  */
-export function SquadRulesAdminSection({ allTeams, playerLocks, allPlayers }) {
+export function SquadRulesAdminSection({ allTeams, playerLocks, allPlayers, onRequestCatalog, loadError = '', onRetry }) {
   const playersById = useMemo(() => new Map((allPlayers || []).map(player => [String(player.Id), player])), [allPlayers]);
   const rows = useMemo(() => buildTeamRuleRows(allTeams, playerLocks, playersById), [allTeams, playerLocks, playersById]);
-  const isLoading = !allPlayers?.length;
+  const hasPlayers = Boolean(allPlayers?.length);
+
+  useEffect(() => {
+    if (!hasPlayers) onRequestCatalog?.();
+  }, [hasPlayers, onRequestCatalog]);
+
+  if (!hasPlayers && loadError) {
+    return (
+      <Alert tone="danger" title="No se pudieron cargar los planteles"
+        action={onRetry && <button type="button" onClick={onRetry} className="btn btn-secondary btn-sm min-h-11">Reintentar</button>}>
+        {loadError}
+      </Alert>
+    );
+  }
+  const isLoading = !hasPlayers;
 
   if (isLoading) {
     return (

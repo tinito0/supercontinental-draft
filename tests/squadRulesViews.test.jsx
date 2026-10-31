@@ -53,4 +53,10 @@ describe('SquadRulesAdminSection', () => {
     const html = renderToStaticMarkup(<SquadRulesAdminSection allTeams={{}} playerLocks={{}} allPlayers={[]} />);
     expect(html).toContain('Cargando los planteles');
   });
+
+  it('shows the catalog error with a retry instead of loading forever', () => {
+    const html = renderToStaticMarkup(<SquadRulesAdminSection allTeams={{}} playerLocks={{}} allPlayers={[]} loadError="Sin conexión" onRetry={() => {}} />);
+    expect(html).toContain('No se pudieron cargar los planteles');
+    expect(html).toContain('Reintentar');
+  });
 });

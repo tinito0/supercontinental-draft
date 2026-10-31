@@ -72,7 +72,8 @@ export const AdminModal = memo(function AdminModal({
       {activeTab === 'equipos' && <TeamsAdminSection {...props} />}
       {activeTab === 'reglas' && (
         <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>
-          <SquadRulesAdminSection allTeams={props.allTeams} playerLocks={props.playerLocks} allPlayers={props.allPlayers} />
+          <SquadRulesAdminSection allTeams={props.allTeams} playerLocks={props.playerLocks} allPlayers={props.allPlayers}
+            onRequestCatalog={props.onRequestCatalog} loadError={props.playersLoadError} onRetry={props.onRetryCatalog} />
         </Suspense>
       )}
       {activeTab === 'torneo' && (

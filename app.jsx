@@ -330,6 +330,9 @@ function App() {
   const [countryMap, setCountryMap] = useState({});
   const [hasLoadedPlayerDatabase, setHasLoadedPlayerDatabase] = useState(false);
   const [catalogReloadKey, setCatalogReloadKey] = useState(0);
+  // A view outside the catalog tabs that needs the players (Administración → Reglas) asks for them once.
+  const [isCatalogRequested, setIsCatalogRequested] = useState(false);
+  const requestPlayerCatalog = useCallback(() => setIsCatalogRequested(true), []);
   const [playersLoadError, setPlayersLoadError] = useState('');
   const [countriesLoadError, setCountriesLoadError] = useState('');
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
@@ -724,8 +727,8 @@ function App() {
     const tabsThatNeedPlayers = new Set(['Marketplace', 'My Team', 'Tactics', 'Scouting', 'Other Teams']);
     const modalsThatNeedPlayers = new Set(['filters', 'cart', 'teams', 'compare']);
     return tabsThatNeedPlayers.has(activeTab) || modalsThatNeedPlayers.has(modalRoute) || Boolean(selectedPlayerId) || compareList.length > 0
-      || squadNeedsCatalog;
-  }, [activeTab, compareList.length, location.pathname, modalRoute, selectedPlayerId, squadNeedsCatalog]);
+      || squadNeedsCatalog || isCatalogRequested;
+  }, [activeTab, compareList.length, location.pathname, modalRoute, selectedPlayerId, squadNeedsCatalog, isCatalogRequested]);
 
   const dismissedNotifIdsRef = useRef(new Set(
     (() => {
@@ -1955,6 +1958,9 @@ function App() {
                       allTeams={allTeams}
                       playerLocks={playerLocks}
                       allPlayers={allPlayers}
+                      onRequestCatalog={requestPlayerCatalog}
+                      playersLoadError={playersLoadError}
+                      onRetryCatalog={retryPlayerCatalog}
                       storage={storage}
                       db={db}
                       showStatusMessage={showStatusMessage}
@@ -2135,6 +2141,9 @@ function App() {
           allTeams={allTeams}
           playerLocks={playerLocks}
           allPlayers={allPlayers}
+          onRequestCatalog={requestPlayerCatalog}
+          playersLoadError={playersLoadError}
+          onRetryCatalog={retryPlayerCatalog}
           storage={storage}
           db={db}
           showStatusMessage={showStatusMessage}
