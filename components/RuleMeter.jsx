@@ -29,9 +29,20 @@ export function RuleMeter({ fill, tick = null, tone, className = '' }) {
   );
 }
 
-/** The rule's state in words with an icon, so it never depends on color alone. */
-export function RuleState({ tone, children, className = '' }) {
+/**
+ * The rule's state in words with an icon, so it never depends on color alone. `quiet`: a passing rule shows only the
+ * check (its words stay for screen readers), so in a long board what fails is what stands out.
+ */
+export function RuleState({ tone, children, quiet = false, className = '' }) {
   const Icon = ICON[tone];
+  if (quiet && tone === 'ok') {
+    return (
+      <span className={`inline-flex items-center ${TEXT.ok} ${className}`}>
+        <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+        <span className="sr-only">{children}</span>
+      </span>
+    );
+  }
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${TEXT[tone]} ${className}`}>
       <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />

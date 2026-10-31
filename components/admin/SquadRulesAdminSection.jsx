@@ -8,12 +8,42 @@ import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { buildTeamRuleRows, BENCH_MIN_AVG_OVR } from '../../utils/squadRules.js';
 
 const COLUMNS = [
-  { id: 'squad', label: 'Plantel' },
-  { id: 'bench', label: 'Media del banco' },
-  { id: 'locals', label: 'Locales' },
+  { id: 'squad', label: 'Plantel', short: 'Plantel' },
+  { id: 'bench', label: 'Media del banco', short: 'Banco' },
+  { id: 'locals', label: 'Locales', short: 'Locales' },
 ];
 
 const VALUE_TEXT = { ok: 'text-ink', fail: 'text-danger-soft', idle: 'text-ink-2' };
+
+function ClubName({ row }) {
+  return (
+    <span className="flex items-center gap-3 min-w-0">
+      <img src={row.logoUrl || DEFAULT_LOGO} alt="" width={32} height={32} className="w-8 h-8 object-contain shrink-0"
+        onError={(e) => { e.currentTarget.src = DEFAULT_LOGO; }} />
+      <span className="min-w-0">
+        <span className="block font-display text-base font-bold text-ink truncate">{row.teamName}</span>
+        <span className={`block text-xs ${row.result.ok ? 'text-success-soft' : 'text-ink-3'}`}>
+          {row.result.ok ? 'En regla' : `Cumple ${row.result.rules.filter(rule => rule.ok).length} de 3`}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/** A rule in the board: figure against its minimum, bar, and the state (only the check when it passes). */
+function RuleCell({ rule, className = '' }) {
+  const tone = ruleTone(rule);
+  return (
+    <div className={className}>
+      <span className="flex items-baseline gap-1.5">
+        <span className={`font-display num text-xl font-bold leading-none ${VALUE_TEXT[tone]}`}>{rule.value}</span>
+        <span className="text-xs text-ink-3 num whitespace-nowrap">{ruleTarget(rule)}</span>
+      </span>
+      <RuleMeter fill={rule.fill} tick={rule.tick} tone={tone} className="mt-2 w-full sm:w-32" />
+      <RuleState tone={tone} quiet className="mt-1.5">{rule.detail}</RuleState>
+    </div>
+  );
+}
 
 /**
  * Administración → Reglas: every club against the reglamento's squad rules, live from the public teams and the
@@ -59,8 +89,25 @@ export function SquadRulesAdminSection({ allTeams, playerLocks, allPlayers }) {
         <Stat label="Sin cupo local" value={failingOn('locals')} tone={failingOn('locals') ? 'danger' : 'default'} hint="Menos de 7 locales" size="sm" />
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="data-table min-w-[44rem]">
+      {/* Phones: one block per club with its three rules side by side; a 4-column table only scrolled sideways. */}
+      <ul className="sm:hidden divide-y divide-line/[0.08] border-y border-line/[0.08]">
+        {rows.map(row => (
+          <li key={row.userId} className="py-4">
+            <ClubName row={row} />
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              {COLUMNS.map(column => (
+                <div key={column.id} className="min-w-0">
+                  <p className="text-xs text-ink-3 truncate">{column.short}</p>
+                  <RuleCell rule={row.result.rules.find(item => item.id === column.id)} className="mt-1" />
+                </div>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="data-table min-w-[40rem]">
           <thead>
             <tr>
               <th scope="col" className="text-left">Club</th>
@@ -70,32 +117,12 @@ export function SquadRulesAdminSection({ allTeams, playerLocks, allPlayers }) {
           <tbody>
             {rows.map(row => (
               <tr key={row.userId}>
-                <td className="py-3">
-                  <span className="flex items-center gap-3 min-w-0">
-                    <img src={row.logoUrl || DEFAULT_LOGO} alt="" width={32} height={32} className="w-8 h-8 object-contain shrink-0"
-                      onError={(e) => { e.currentTarget.src = DEFAULT_LOGO; }} />
-                    <span className="min-w-0">
-                      <span className="block font-display text-base font-bold text-ink truncate">{row.teamName}</span>
-                      <span className={`block text-xs ${row.result.ok ? 'text-success-soft' : 'text-ink-3'}`}>
-                        {row.result.ok ? 'En regla' : `${row.result.rules.filter(rule => rule.ok).length} de 3 reglas`}
-                      </span>
-                    </span>
-                  </span>
-                </td>
-                {COLUMNS.map(column => {
-                  const rule = row.result.rules.find(item => item.id === column.id);
-                  const tone = ruleTone(rule);
-                  return (
-                    <td key={column.id} className="py-3 align-top">
-                      <span className="flex items-baseline gap-1.5">
-                        <span className={`font-display num text-xl font-bold leading-none ${VALUE_TEXT[tone]}`}>{rule.value}</span>
-                        <span className="text-xs text-ink-3 num">{ruleTarget(rule)}</span>
-                      </span>
-                      <RuleMeter fill={rule.fill} tick={rule.tick} tone={tone} className="mt-2 w-32 max-w-full" />
-                      <RuleState tone={tone} className="mt-1.5">{rule.detail}</RuleState>
-                    </td>
-                  );
-                })}
+                <td className="py-3"><ClubName row={row} /></td>
+                {COLUMNS.map(column => (
+                  <td key={column.id} className="py-3 align-top">
+                    <RuleCell rule={row.result.rules.find(item => item.id === column.id)} />
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
