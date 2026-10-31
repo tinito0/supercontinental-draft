@@ -1,0 +1,41 @@
+# Publishes the Supabase Edge Function `market` (docs/MARKET_FUNCTION.md) from GitHub, so a deploy does not need a
+# computer with the Supabase CLI. Manual: Actions → deploy-market → Run workflow (works from the phone).
+# Only from master, and only after the market tests pass.
+# Needs the repository secret SUPABASE_ACCESS_TOKEN (a personal access token from
+# supabase.com/dashboard/account/tokens). The function's own secrets (FIREBASE_SERVICE_ACCOUNT, MARKET_ALLOWED_ORIGINS)
+# already live in Supabase and are not touched.
+name: deploy-market
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-market
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # Catalog in sync with jugadores.json, shared constants, market logic, «Cambiar manager».
+      - run: npx vitest run tests/marketFunction.test.js tests/clubTransfer.test.js tests/budgetCalculations.test.js --reporter=default --reporter=github-actions
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy market
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions)."; exit 1; }
+          supabase functions deploy market --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy

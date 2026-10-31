@@ -65,6 +65,9 @@ jugadores fichados (`player_locks`) entre el catálogo viejo y el nuevo.
    ```
    Necesitás `npx supabase login` la primera vez. Si el proyecto de Supabase estaba pausado (plan gratis, 7 días sin
    uso), reactivalo desde el dashboard antes.
+   **Sin computadora** (desde el celular): mergeá a `master` y en GitHub → Actions → **deploy-market** → Run
+   workflow. Corre los tests del mercado y publica (`.github/workflows/deploy-market.yml`). Necesita el secreto
+   `SUPABASE_ACCESS_TOKEN` cargado una vez (ver «Publicar desde el celular» al final).
 8. **Publicá la web**: commit en una rama, PR, merge a `master`. Vercel hace el build.
 9. **Probá en la web**: buscá un jugador nuevo y uno que cambió de precio, y mirá que el presupuesto de un club
    conocido sea el que esperabas.
@@ -195,3 +198,19 @@ presupuesto base, nombre, escudo y permisos. Es el mejor momento para actualizar
 Tests de «Cambiar manager»: `tests/clubTransfer.test.js` (Firestore en memoria, corre con `npm test`) y el bloque
 `transferClub` de `tests/rules/marketFunction.test.js` (emulador, `npm run test:rules`). Después de cambiar
 `market.js` hay que volver a publicar la función (sección 1, paso 7).
+
+**GitHub Actions** (`.github/workflows/tests.yml`): cada push corre `npm test` y los tests del emulador, así no hace
+falta Java en la computadora. Los fallos aparecen como anotaciones en la corrida (pestaña Actions o el PR).
+
+---
+
+## Publicar desde el celular (una sola vez)
+
+1. En supabase.com → tu avatar → **Account** → **Access Tokens** → **Generate new token**. Ponele un nombre
+   (por ejemplo «github-deploy») y copiá el token: se muestra una sola vez.
+2. En GitHub → el repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
+   Nombre: `SUPABASE_ACCESS_TOKEN`. Valor: el token. Guardar.
+3. Desde ahí, cada publicación es: **Actions** → **deploy-market** → **Run workflow** (rama `master`).
+
+El token da acceso a tu cuenta de Supabase: no lo pegues en ningún otro lado. Si lo perdés o se filtra, borralo en
+Access Tokens y generá otro.
