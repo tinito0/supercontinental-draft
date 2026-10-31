@@ -405,8 +405,11 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   // --- LÓGICA DE ESTADÍSTICAS ---
   const ledger = useMemo(
-    () => buildClubLedger({ squad: cart, offerHistory, userId: userId || userProfile?.uid, feeRate: TRANSFER_FEE_RATE }),
-    [cart, offerHistory, userId, userProfile?.uid],
+    () => buildClubLedger({
+      squad: cart, offerHistory, userId: userId || userProfile?.uid, feeRate: TRANSFER_FEE_RATE,
+      priceOf: id => Number(playerMap.get(id)?.Precio) || 0,
+    }),
+    [cart, offerHistory, userId, userProfile?.uid, playerMap],
   );
 
   const statsData = useMemo(() => {

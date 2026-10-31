@@ -1,8 +1,10 @@
 // Club ledger for "Mi equipo → Finanzas": what the season's signings, purchases and sales cost or brought in.
 // Signings are charged at the catalog price (the budget formula, supabase/functions/_shared/budget.js); a
-// transfer's amount is the last entry of the accepted offer's history (the market function writes it), and the
-// seller receives it minus the league fee. Informational: the budget itself comes from useBudget. Pure.
+// transfer's amount is the last entry of the accepted offer's history (the market function writes it). The seller
+// receives what that entry says (sellerNet); older entries without it are recomputed with the fee on the premium only
+// (transferFee.js), from the player's catalog price. Informational: the budget itself comes from useBudget. Pure.
 import { toUnits } from '../supabase/functions/_shared/budget.js';
+import { transferSplit } from '../supabase/functions/_shared/transferFee.js';
 
 const acceptedAmount = offer => Number(offer?.history?.at?.(-1)?.amount ?? offer?.offerAmount) || 0;
 
@@ -12,8 +14,9 @@ const acceptedAmount = offer => Number(offer?.history?.at?.(-1)?.amount ?? offer
  * @param {object[]} args.offerHistory closed offers involving the club
  * @param {string} args.userId
  * @param {number} args.feeRate TRANSFER_FEE_RATE
+ * @param {(playerId: string) => number} [args.priceOf] catalog price in millions, for sales recorded before sellerNet
  */
-export function buildClubLedger({ squad = [], offerHistory = [], userId, feeRate }) {
+export function buildClubLedger({ squad = [], offerHistory = [], userId, feeRate, priceOf = () => 0 }) {
   const accepted = offerHistory.filter(offer => offer.status === 'accepted');
   const purchases = accepted
     .filter(offer => offer.senderId === userId)
@@ -22,7 +25,10 @@ export function buildClubLedger({ squad = [], offerHistory = [], userId, feeRate
     .filter(offer => offer.targetTeamId === userId)
     .map(offer => {
       const amount = acceptedAmount(offer);
-      const net = Math.round(amount * (1 - feeRate));
+      const recorded = Number(offer?.history?.at?.(-1)?.sellerNet);
+      const net = Number.isFinite(recorded) && recorded > 0
+        ? recorded
+        : transferSplit(amount, toUnits(priceOf(String(offer.playerId))), feeRate).sellerNet;
       return { id: offer.id, playerId: offer.playerId, name: offer.playerName, club: offer.senderTeamName, amount, fee: amount - net, net };
     });
 

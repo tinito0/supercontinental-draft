@@ -4,6 +4,7 @@
 // Validations mirror the previous client code in app.jsx (handleAddToCart) and
 // services/transferService.js (acceptTransferOffer).
 import { ADMIN_USER_IDS, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from './marketConstants.js';
+import { transferSplit } from './transferFee.js';
 import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from './franchise.js';
 import { toUnits, spentOnLocks, committedInOffers } from './budget.js';
 import { parseOpenTime } from './marketTime.js';
@@ -195,8 +196,8 @@ export async function acceptOffer({ tx, appId, catalog, user, offerId, now = new
   }
 
   const at = now.toISOString();
-  const sellerNet = Math.round(amount * (1 - TRANSFER_FEE_RATE));
-  const transferFee = amount - sellerNet;
+  // The fee is charged on the premium only (transferFee.js): the seller keeps the full base value.
+  const { sellerNet, fee: transferFee } = transferSplit(amount, baseCost, TRANSFER_FEE_RATE);
   // Names, crests and player data come from the team documents and the catalog, never from the offer:
   // its creator writes those fields, and they end up in the lock and the public feed.
   const buyerName = buyerTeam.data.teamName || 'Equipo comprador';
@@ -230,7 +231,7 @@ export async function acceptOffer({ tx, appId, catalog, user, offerId, now = new
     senderTeamLogo: buyerLogo,
     history: appendHistory(offer, {
       type: 'accepted', title: 'Traspaso aceptado', teamId: user.uid,
-      teamName: user.uid === buyerId ? buyerName : sellerName, amount, at,
+      teamName: user.uid === buyerId ? buyerName : sellerName, amount, sellerNet, transferFee, at,
     }),
   });
   // Other open offers for this player can no longer be accepted and kept the buyers' money frozen.

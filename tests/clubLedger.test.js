@@ -16,13 +16,13 @@ const offerHistory = [
 ];
 
 describe('buildClubLedger', () => {
-  it('charges signings at catalog price, purchases at the accepted amount, and nets sales after the fee', () => {
-    const ledger = buildClubLedger({ squad, offerHistory, userId: 'me', feeRate: 0.15 });
+  it('charges signings at catalog price, purchases at the accepted amount, and nets sales after the fee on the premium', () => {
+    const ledger = buildClubLedger({ squad, offerHistory, userId: 'me', feeRate: 0.15, priceOf: id => (id === '9' ? 30 : 0) });
     expect(ledger.signings.map(s => s.name)).toEqual(['Firmado']);
     expect(ledger.purchases).toMatchObject([{ name: 'Comprado', amount: 22000000 }]);
-    expect(ledger.sales).toMatchObject([{ name: 'Vendido', amount: 40000000, fee: 6000000, net: 34000000 }]);
+    expect(ledger.sales).toMatchObject([{ name: 'Vendido', amount: 40000000, fee: 1500000, net: 38500000 }]);
     expect(ledger.totals).toEqual({
-      spentOnSignings: 10000000, spentOnPurchases: 22000000, receivedFromSales: 34000000, fees: 6000000, net: 2000000,
+      spentOnSignings: 10000000, spentOnPurchases: 22000000, receivedFromSales: 38500000, fees: 1500000, net: 6500000,
     });
   });
 

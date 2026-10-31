@@ -5,6 +5,7 @@ import { offerExpiresAt } from '../supabase/functions/_shared/offerExpiry.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { db } from '../config/firebase.js';
 import { APP_ID, DEFAULT_LOGO, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
+import { transferSplit } from '../supabase/functions/_shared/transferFee.js';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
 export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamName, targetTeamId, senderId, senderTeamName, senderTeamLogo, remainingBudget }) => {
@@ -16,6 +17,12 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
   const [success, setSuccess] = useState(false);
 
   if (!isVisible) return null;
+
+  // Live split of the amount being typed (fee on the premium only, as the market function charges it).
+  const offerValue = Number(offerAmount);
+  const offerSplit = offerAmount !== '' && Number.isFinite(offerValue) && player && offerValue >= Number(player.Precio)
+    ? transferSplit(Math.round(offerValue * 1000000), Math.round(Number(player.Precio) * 1000000), TRANSFER_FEE_RATE)
+    : null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -191,8 +198,10 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-[11px] text-ink-3">
-                El vendedor recibe el {Math.round((1 - TRANSFER_FEE_RATE) * 100)}%; comisión {Math.round(TRANSFER_FEE_RATE * 100)}%.
+              <p className="mt-1 text-xs text-ink-3">
+                {offerSplit
+                  ? <>El vendedor recibe <span className="num font-semibold text-ink-2">${(offerSplit.sellerNet / 1000000).toFixed(2)}M</span>; la liga se queda con <span className="num">${(offerSplit.fee / 1000000).toFixed(2)}M</span>, el {Math.round(TRANSFER_FEE_RATE * 100)}% de lo que pagás por encima del valor base.</>
+                  : <>La liga cobra el {Math.round(TRANSFER_FEE_RATE * 100)}% solo de lo que se pague por encima del valor base; el vendedor siempre se queda con el valor base completo.</>}
               </p>
             </div>
 

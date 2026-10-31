@@ -129,7 +129,7 @@ describe('acceptOffer', () => {
     await expect(accept('seller')).resolves.toMatchObject({ amount: 11000000 });
 
     expect((await read(`${base}/public/data/teams/buyer`)).budget).toBe(BUDGET + 10000000 - 11000000);
-    expect((await read(`${base}/public/data/teams/seller`)).budget).toBe(BUDGET + 9350000 - 10000000);
+    expect((await read(`${base}/public/data/teams/seller`)).budget).toBe(BUDGET + 10850000 - 10000000);
     expect((await read(`${base}/public/data/teams/buyer`)).roster.map(p => p.Id)).toEqual(['7511']);
     expect((await read(`${base}/public/data/teams/seller`)).roster).toEqual([]);
     expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'buyer', isFranchise: false });
@@ -137,7 +137,7 @@ describe('acceptOffer', () => {
     expect((await read(`${base}/public/data/offers/o1`)).history.at(-1)).toMatchObject({ type: 'accepted', teamId: 'seller' });
     expect(await read(`${base}/public/data/offers/o2`)).toMatchObject({ status: 'rejected' });
     const feed = await readAll(`${base}/public/data/transfers`);
-    expect(feed[0]).toMatchObject({ type: 'transfer', teamId: 'buyer', fromTeamId: 'seller', price: 11, sellerReceives: 9.35 });
+    expect(feed[0]).toMatchObject({ type: 'transfer', teamId: 'buyer', fromTeamId: 'seller', price: 11, sellerReceives: 10.85, transferFee: 0.15 });
     // The buyer's committed funds no longer include o2's 10.5 M.
     await expect(sign('mallory', 9000)).resolves.toBeTruthy();
   });
