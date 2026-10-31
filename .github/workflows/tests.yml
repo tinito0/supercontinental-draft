@@ -1,7 +1,8 @@
 # Runs the whole test suite on GitHub, so nothing depends on having a computer with Java at hand:
 # - unit: npm test (vitest, includes the PES engine tests that skip without the game files)
 # - rules: npm run test:rules, i.e. firestore.rules and the market Edge Function logic on the Firestore emulator
-# Failures show as annotations on the run (vitest github-actions reporter), readable without opening the logs.
+# Failures show as annotations on the run (vitest github-actions reporter), and each job ends with a notice that
+# counts passed, failed and skipped tests, so the result is readable on the phone without opening the logs.
 name: tests
 
 on:
@@ -27,7 +28,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npx vitest run --reporter=default --reporter=github-actions
+      - run: npx vitest run --reporter=default --reporter=github-actions --reporter=json --outputFile.json=vitest-unit.json
+      - if: always()
+        run: node scripts/ci-test-summary.mjs vitest-unit.json unit
 
   rules:
     runs-on: ubuntu-latest
@@ -46,4 +49,6 @@ jobs:
       # firebase-tools is not a dependency of the app; a pinned version keeps the emulator stable between runs.
       - run: >
           npx -y firebase-tools@13.35.1 emulators:exec --only firestore --project demo-scl
-          "npx vitest run --config vitest.rules.config.js --reporter=default --reporter=github-actions"
+          "npx vitest run --config vitest.rules.config.js --reporter=default --reporter=github-actions --reporter=json --outputFile.json=vitest-rules.json"
+      - if: always()
+        run: node scripts/ci-test-summary.mjs vitest-rules.json rules transferClub
