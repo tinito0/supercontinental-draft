@@ -10,6 +10,8 @@ import { formationReducer, initialFormationState } from '../utils/lineupReducer.
 import { useStatusSwap } from '../hooks/useStatusSwap.js';
 import { SquadSection, SquadRow } from './formation/SquadList.jsx';
 import { TeamStrength } from './formation/TeamStrength.jsx';
+import { BenchRule } from './formation/BenchRule.jsx';
+import { checkBench, benchBlockMessage, formatAverage, BENCH_MIN_AVG_OVR } from '../utils/squadRules.js';
 import { TacticsPanel, RolesPanel } from './formation/StrategyPanels.jsx';
 import {
   normalizeFormationStates, resetForFormation, layoutForState, moveSlot, setFluid, copyBaseTo, resetState,
@@ -36,7 +38,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const [availability, setAvailability] = useState({});
   const [matchBench, setMatchBench] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveIndicator, setSaveIndicator] = useState(null); // 'saving' | 'saved' | 'error' | null
+  const [saveIndicator, setSaveIndicator] = useState(null); // 'saving' | 'saved' | 'error' | 'blocked' | null
   const saveIndicatorTimerRef = useRef(null);
   const pendingAutoSaveRef = useRef(false);
   const hasLoadedRef = useRef(false);
@@ -279,7 +281,17 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     const validSavedIds = new Set(Object.values(lineupToSave).map(String));
     const setPiecesToSave = (overrideSetPieces && typeof overrideSetPieces === 'object') ? overrideSetPieces : (setPieces || {});
     const tacticsToSave = (overrideTactics && typeof overrideTactics === 'object') ? overrideTactics : (tactics || DEFAULT_TACTICS);
-    
+
+    // Reglamento: with 21+ players and a full XI the bench must average 73 or more. Nothing is written while it
+    // doesn't, so the last valid lineup stays saved; the status line says why until the next save.
+    const benchCheck = checkBench(cart || [], lineupToSave);
+    if (benchCheck.applies && !benchCheck.ok) {
+      if (saveIndicatorTimerRef.current) clearTimeout(saveIndicatorTimerRef.current);
+      setSaveIndicator('blocked');
+      if (!isLineupObject) showStatusMessage?.('error', benchBlockMessage(benchCheck));
+      return;
+    }
+
     setIsSaving(true);
     setSaveIndicator('saving');
     try {
@@ -391,6 +403,9 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     () => starterRows.filter(row => row.player).map(row => ({ pos: row.role, ovr: row.player.OVR_CALCULADO })),
     [starterRows],
   );
+
+  // The bench rule for the lineup on the board right now (the saved one may be older).
+  const currentBench = useMemo(() => checkBench(cart || [], sanitizeLineup(lineup)), [cart, lineup, sanitizeLineup]);
 
   const handlePlayerClick = useCallback((player) => {
     // A starter in hand and a substitute picked: a substitution, saved like a placement on the pitch.
@@ -748,6 +763,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   const PlayerList = (
     <div className="flex-grow overflow-y-auto px-3 pt-3 lg:px-4 custom-scrollbar pb-20 lg:pb-4">
       <TeamStrength starters={strengthStarters} className="px-1 pb-1" />
+      <BenchRule check={currentBench} className="px-1 pt-2 pb-1" />
       <SquadSection
         title="Titulares"
         count={strengthStarters.length}
@@ -862,12 +878,14 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
             <span role="status" className="text-xs font-medium">
               {shownSaveStatus && (
                 <span key={shownSaveStatus} data-leaving={isSaveStatusLeaving || undefined} className={`status-swap items-center gap-1.5 ${
-                  shownSaveStatus === 'saving' ? 'text-accent-soft' : shownSaveStatus === 'error' ? 'text-danger-soft' : 'text-success-soft'
+                  shownSaveStatus === 'saving' ? 'text-accent-soft' : (shownSaveStatus === 'error' || shownSaveStatus === 'blocked') ? 'text-danger-soft' : 'text-success-soft'
                 }`}>
                   {shownSaveStatus === 'saving' ? (
                     <><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />Guardando…</>
                   ) : shownSaveStatus === 'error' ? (
                     <><X className="w-3.5 h-3.5" aria-hidden="true" />No se pudo guardar</>
+                  ) : shownSaveStatus === 'blocked' ? (
+                    <><X className="w-3.5 h-3.5" aria-hidden="true" />Sin guardar: banco {formatAverage(currentBench.average)} (mín. {BENCH_MIN_AVG_OVR})</>
                   ) : (
                     <><Check className="w-3.5 h-3.5" aria-hidden="true" />Guardado automático</>
                   )}

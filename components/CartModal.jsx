@@ -18,6 +18,8 @@ import { PageHeader } from './ui/PageHeader.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 import { Stat } from './ui/Stat.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
+import { SquadRulesStats } from './SquadRulesStats.jsx';
+import { evaluateSquadRules } from '../utils/squadRules.js';
 import {
   acceptTransferOffer,
   rejectTransferOffer,
@@ -273,6 +275,14 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     }
     return map;
   }, [allPlayers]);
+
+  // The saved lineup and the club country live on the public team doc (the board writes both copies).
+  const ownTeam = allTeams?.[userId || userProfile?.uid];
+  const squadRules = useMemo(() => evaluateSquadRules({
+    squad: cart.map(player => ({ ...playerMap.get(String(player.Id)), ...player })),
+    lineup: ownTeam?.lineup || userProfile?.lineup,
+    teamCountry: ownTeam?.country ?? userProfile?.country,
+  }), [cart, playerMap, ownTeam?.lineup, ownTeam?.country, userProfile?.lineup, userProfile?.country]);
 
   const offerPlayer = (offer) => playerMap.get(String(offer.playerId)) || { Id: offer.playerId, Name: offer.playerName };
 
@@ -638,6 +648,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           )}
         />
         {finances}
+        <SquadRulesStats result={squadRules} className="border-b border-line/[0.08] pb-5" />
         {tabList}
         <div>{content}</div>
       </Page>
@@ -657,6 +668,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       </div>
       <div className="flex-grow min-h-0 overflow-y-auto px-4 sm:px-6 py-4 space-y-5 custom-scrollbar">
         {finances}
+        <SquadRulesStats result={squadRules} className="border-b border-line/[0.08] pb-5" />
         {tabList}
         <div>{content}</div>
       </div>

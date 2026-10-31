@@ -1,5 +1,5 @@
 import React, { useState, useMemo, memo } from 'react';
-import { X, Search, Users, ExternalLink, ArrowUpDown, ChevronDown, ChevronsUpDown, Star } from 'lucide-react';
+import { X, Search, Users, ExternalLink, ArrowUpDown, ChevronDown, ChevronsUpDown, Star, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
@@ -9,6 +9,9 @@ import { PageHeader } from './ui/PageHeader.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 import { Stat } from './ui/Stat.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
+import { evaluateSquadRules } from '../utils/squadRules.js';
+
+const RULE_SHORT = { squad: 'plantel', bench: 'banco', locals: 'locales' };
 
 const POS_GROUPS = [
   { id: 'TODOS', label: 'Todos' },
@@ -109,7 +112,9 @@ export const TeamsModal = memo(function TeamsModal({
         return (Number(b.OVR_CALCULADO) || 0) - (Number(a.OVR_CALCULADO) || 0);
       });
       const topPlayerId = [...team.players].sort((a, b) => (Number(b.OVR_CALCULADO) || 0) - (Number(a.OVR_CALCULADO) || 0))[0]?.Id;
-      return { ...team, players: sortedPlayers, totalCost, avgOvr, topPlayerId };
+      const rules = evaluateSquadRules({ squad: team.players, lineup: team.lineup, teamCountry: team.country });
+      const brokenRules = rules.rules.filter(rule => rule.applies && !rule.ok).map(rule => RULE_SHORT[rule.id]);
+      return { ...team, players: sortedPlayers, totalCost, avgOvr, topPlayerId, brokenRules };
     });
   }, [playersByTeam]);
 
@@ -248,6 +253,11 @@ export const TeamsModal = memo(function TeamsModal({
                     <span className="num">{selectedPosGroup === 'TODOS' ? team.players.length : `${displayedPlayers.length}/${team.players.length}`}</span> jugadores
                     <span className="sm:hidden"> · <span className="num">{formatPriceShort(team.totalCost)}</span></span>
                   </span>
+                  {team.brokenRules.length > 0 && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-danger-soft mt-0.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />Incumple: {team.brokenRules.join(', ')}
+                    </span>
+                  )}
                 </span>
                 <span className="hidden sm:block text-right shrink-0">
                   <span className="block eyebrow">Invertido</span>

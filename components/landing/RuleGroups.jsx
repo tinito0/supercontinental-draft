@@ -2,10 +2,10 @@ import React from 'react';
 import { Reveal } from './Reveal.jsx';
 import { RULE_GROUPS } from './rules.js';
 
-/** The draft rules in two columns (draft landing and the league site's Reglamento). */
+/** The draft rules, one column per group (draft landing and the league site's Reglamento). */
 export function RuleGroups() {
   return (
-    <div className="grid gap-10 md:grid-cols-2 md:gap-14">
+    <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3 md:gap-14">
       {RULE_GROUPS.map((group, gi) => (
         <Reveal key={group.title} delay={gi * 100}>
           <h3 className="section-title border-b border-line/[0.14] pb-3 text-accent-soft">{group.title}</h3>

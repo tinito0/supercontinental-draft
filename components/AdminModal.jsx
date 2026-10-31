@@ -1,5 +1,5 @@
 import React, { useState, memo, lazy, Suspense } from 'react';
-import { Settings, Users, Trophy, FileText, MessageSquarePlus, Globe, Vote } from 'lucide-react';
+import { Settings, Users, Trophy, FileText, MessageSquarePlus, Globe, Vote, ListChecks } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
@@ -27,10 +27,13 @@ export {
 const LeagueContentAdminSection = lazy(() => import('./admin/LeagueContentAdminSection.jsx'));
 // Votos del público (predicción, MVP, encuestas de las copas).
 const CommunityAdminSection = lazy(() => import('./admin/CommunityAdminSection.jsx'));
+// Squad rules of every club (banco, plantel mínimo, locales).
+const SquadRulesAdminSection = lazy(() => import('./admin/SquadRulesAdminSection.jsx'));
 
 const ADMIN_TABS = [
   { id: 'general', label: 'Configuración', icon: Settings },
   { id: 'equipos', label: 'Equipos y usuarios', icon: Users },
+  { id: 'reglas', label: 'Reglas', icon: ListChecks },
   { id: 'torneo', label: 'Torneo y transmisión', icon: Trophy },
   { id: 'comunidad', label: 'Comunidad', icon: Vote },
   { id: 'web', label: 'Web pública', icon: Globe },
@@ -67,6 +70,11 @@ export const AdminModal = memo(function AdminModal({
     <>
       {activeTab === 'general' && <GeneralAdminSection {...props} />}
       {activeTab === 'equipos' && <TeamsAdminSection {...props} />}
+      {activeTab === 'reglas' && (
+        <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>
+          <SquadRulesAdminSection allTeams={props.allTeams} playerLocks={props.playerLocks} allPlayers={props.allPlayers} />
+        </Suspense>
+      )}
       {activeTab === 'torneo' && (
         <TournamentBroadcastAdminSection
           tournamentData={tournamentData}
@@ -101,7 +109,7 @@ export const AdminModal = memo(function AdminModal({
       <Page className="pb-16">
         {isEditorOnly
           ? <PageHeader eyebrow="Gestión" title="Web pública" description="Los textos del sitio de la liga: su historia, la de cada club y el reglamento de la temporada." />
-          : <PageHeader eyebrow="Gestión" title="Administración" description="Configuración de la liga, equipos y usuarios, torneo y transmisión, y los textos de la web pública." />}
+          : <PageHeader eyebrow="Gestión" title="Administración" description="Configuración de la liga, equipos y usuarios, reglas del plantel, torneo y transmisión, y los textos de la web pública." />}
         {tabs}
         <div>{section}</div>
       </Page>
