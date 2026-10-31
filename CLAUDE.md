@@ -25,7 +25,9 @@ firebase deploy --only firestore:rules   # rules only; project supercont-d62df
 ```
 
 **Hosting is Vercel** (`https://supercontinental-draft.vercel.app`), deployed by its Git integration on every push to
-`master`. `vercel.json` holds headers, redirects and the SPA fallback; with `cleanUrls` the fallback must rewrite to
+`master`. Only `master` deploys (`git.deploymentEnabled` in `vercel.json`): a deployment is ~290 MB (mostly
+`fotos_jugadores`) and the Hobby plan stores 10 GB, so branch previews filled it up; branches are checked by the
+GitHub Actions `tests` workflow instead. `vercel.json` holds headers, redirects and the SPA fallback; with `cleanUrls` the fallback must rewrite to
 `/`, not `/index.html` (that 404s every route). Don't deploy with the Vercel CLI: the build (~44k files, mostly
 `fotos_jugadores`) exceeds its upload limits. The `VITE_*` env vars live in the Vercel project settings. Firebase
 still provides Auth, Firestore, rules and Storage; Firebase Hosting (`supercont-d62df.web.app`) is a frozen
