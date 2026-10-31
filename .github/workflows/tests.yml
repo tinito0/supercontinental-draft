@@ -1,0 +1,49 @@
+# Runs the whole test suite on GitHub, so nothing depends on having a computer with Java at hand:
+# - unit: npm test (vitest, includes the PES engine tests that skip without the game files)
+# - rules: npm run test:rules, i.e. firestore.rules and the market Edge Function logic on the Firestore emulator
+# Failures show as annotations on the run (vitest github-actions reporter), readable without opening the logs.
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx vitest run --reporter=default --reporter=github-actions
+
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci --no-audit --no-fund
+      # firebase-tools is not a dependency of the app; a pinned version keeps the emulator stable between runs.
+      - run: >
+          npx -y firebase-tools@13.35.1 emulators:exec --only firestore --project demo-scl
+          "npx vitest run --config vitest.rules.config.js --reporter=default --reporter=github-actions"
