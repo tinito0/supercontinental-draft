@@ -95,14 +95,9 @@ export function useAuth({
         let profileData;
 
         if (!profileSnap.exists()) {
-          if (isGoogleSignIn) {
-            await signOut(auth);
-            setAuthError("Esta cuenta de Google no tiene un equipo asociado. Si tenés una cuenta antigua, hacé click en 'Migrar cuenta antigua' para vincularla.");
-            setIsAuthReady(true);
-            setIsLoading(false);
-            return;
-          }
-
+          // A first sign-in, with Google or email, gets a team that waits for approval: it cannot sign, offer or chat
+          // until the admin approves it (membership.js, firestore.rules). It is also how a new manager takes over a
+          // club: the admin moves the club to this pending team (Administración → Equipos → Cambiar manager).
           profileData = {
             teamName: `Equipo ${uid.substring(0, 5)}`,
             budget: DEFAULT_BUDGET,
@@ -129,6 +124,15 @@ export function useAuth({
 
         } else {
           profileData = profileSnap.data();
+          // The admin gave this account's club to another manager (market.js transferClub): no way back in, and no
+          // new club either (the missing team below would otherwise be re-created).
+          if (profileData.clubTransferredTo) {
+            await signOut(auth);
+            setAuthError('Tu club pasó a otro manager. Si creés que es un error, hablá con el administrador de la liga.');
+            setIsAuthReady(true);
+            setIsLoading(false);
+            return;
+          }
           if (profileData.isAdmin === true || profileData.role === 'admin') {
             setIsAdmin(true);
           }

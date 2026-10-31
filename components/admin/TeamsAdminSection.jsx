@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { RefreshCw, Search, X, Users, Edit2, Crown, Trash2, Upload, Save, KeyRound, UserCheck } from 'lucide-react';
+import { RefreshCw, Search, X, Users, Edit2, Crown, Trash2, Upload, Save, KeyRound, UserCheck, UserCog } from 'lucide-react';
 import { getDocs, query, collection, getDoc, writeBatch, doc, setDoc, where, runTransaction } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { DEFAULT_LOGO, APP_ID } from '../../utils/constants.js';
@@ -10,6 +10,7 @@ import { commitBatchOperations } from './commitBatchOperations.js';
 import { resizeImageFile } from '../../utils/resizeImage.js';
 import { renameTeamInTournament } from '../../utils/tournamentRename.js';
 import { confirmAction } from '../ui/ConfirmDialog.jsx';
+import { ClubTransferDialog } from './ClubTransferDialog.jsx';
 
 const ACCESS_FILTERS = [
   { id: 'all', label: 'Todos' },
@@ -36,6 +37,8 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
   const [accessFilter, setAccessFilter] = useState('all');
   const [togglingUid, setTogglingUid] = useState('');
   const [editingTeam, setEditingTeam] = useState(null);
+  // «Cambiar manager»: the pending, empty team that receives an existing club (ClubTransferDialog).
+  const [transferTarget, setTransferTarget] = useState(null);
   const [formData, setFormData] = useState({ teamName: '', budget: '', logoUrl: '', country: 204, manualStats: {} });
   const [formErrors, setFormErrors] = useState({});
   const [countryOptions, setCountryOptions] = useState([]);
@@ -413,6 +416,12 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                       <UserCheck size={16} aria-hidden="true" />Aprobar
                     </button>
                   )}
+                  {team.pendingApproval && team.playerCount === 0 && (
+                    <button type="button" onClick={() => setTransferTarget(team)} className="btn btn-secondary btn-sm"
+                      title="El manager nuevo se queda con un club que ya existe">
+                      <UserCog size={16} aria-hidden="true" />Pasarle un club
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleToggleAccess(team)}
@@ -565,6 +574,16 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
               </div>
             </div>
         </BaseModal>
+      )}
+
+      {transferTarget && (
+        <ClubTransferDialog
+          target={transferTarget}
+          teams={teams}
+          onClose={() => setTransferTarget(null)}
+          onDone={() => { setTransferTarget(null); fetchTeams(); }}
+          showStatusMessage={showStatusMessage}
+        />
       )}
     </div>
   );

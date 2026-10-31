@@ -34,6 +34,10 @@ Qué hace el servidor y qué sigue en el navegador:
     existe por separado (`migrateAccount`): perfil, equipo, locks, carrito, ofertas y traspasos en una
     transacción. La cuenta vieja autoriza el pedido y la de Google prueba que es suya con su propio token
     (`screens/LinkGoogleScreen.jsx`, con una instancia secundaria de Firebase).
+  - cambiar el manager de un club (`transferClub`, **solo admin**: `ADMIN_USER_IDS` o claim `admin`): mueve el
+    club entero a un equipo pendiente y vacío, también su página de la web, el overlay, las formaciones
+    compartidas, el scouting y la asignación de Draft → PES; bloquea la cuenta anterior (`clubTransferredTo`). Se
+    niega con cuentas de administrador. Flujo para el admin: `docs/GUIA_ADMIN_LIGA.md` §3.
 - **Navegador (validado por reglas):** enviar/rechazar/contraofertar/retirar ofertas por turnos (montos enteros
   positivos), formación, carrito privado. El carrito es una copia: `hooks/useSquadSync.js` lo alinea con los
   locks, y el presupuesto y las exportaciones salen de los locks (`_shared/budget.js`, compartido con la app).

@@ -65,6 +65,9 @@ jugadores fichados (`player_locks`) entre el catálogo viejo y el nuevo.
    ```
    Necesitás `npx supabase login` la primera vez. Si el proyecto de Supabase estaba pausado (plan gratis, 7 días sin
    uso), reactivalo desde el dashboard antes.
+   **Sin computadora** (desde el celular): mergeá a `master` y en GitHub → Actions → **deploy-market** → Run
+   workflow. Corre los tests del mercado y publica (`.github/workflows/deploy-market.yml`). Necesita el secreto
+   `SUPABASE_ACCESS_TOKEN` cargado una vez (ver «Publicar desde el celular» al final).
 8. **Publicá la web**: commit en una rama, PR, merge a `master`. Vercel hace el build.
 9. **Probá en la web**: buscá un jugador nuevo y uno que cambió de precio, y mirá que el presupuesto de un club
    conocido sea el que esperabas.
@@ -75,9 +78,11 @@ jugadores fichados (`player_locks`) entre el catálogo viejo y el nuevo.
 
 Un equipo del draft **es una cuenta**: el id del club es el id de Firebase del manager. No se crea a mano.
 
-1. **El manager entra** a `/draft` con su cuenta de Google (o email). La app le crea el club solo, con presupuesto
+1. **El manager entra** a `/draft` con su Gmail (botón de Google). La app le crea el club solo, con presupuesto
    `DEFAULT_BUDGET` (200 000 000, `utils/constants.js`) y `approved: false`. Ve la pantalla de espera
-   (`PendingApprovalScreen`): todavía no puede fichar, ofertar ni usar el chat.
+   (`PendingApprovalScreen`): todavía no puede fichar, ofertar ni usar el chat. La app no tiene registro con email:
+   una cuenta de email y contraseña solo existe si la creás vos en la consola de Firebase (Authentication).
+   (Hasta el 2026-10-30 un Gmail nuevo era rechazado; `hooks/useAuth.js` ahora lo deja entrar como pendiente.)
 2. **Vos lo aprobás**: Administración → Equipos y usuarios → **Aprobar** en su tarjeta.
 3. **Editás el club** (botón Editar): nombre, escudo (subís la imagen; se achica y se guarda en Firebase Storage,
    `team_logos/`), país y presupuesto (en pesos, sin puntos).
@@ -104,46 +109,52 @@ Es una tarea de código: hay que revisar reglas de competencia, copas, fixture y
 
 Caso: alguien deja la liga y otra persona sigue con su club (nombre, plantel, historia).
 
-### Lo importante
+El club está atado al id de la cuenta de Firebase, así que cambiar de manager es **mover el club de una cuenta a
+otra**. Lo hace la herramienta «Cambiar manager» (acción `transferClub` de la función del mercado, solo admin).
 
-El club está atado al id de la cuenta. Ese id está en el equipo, el perfil, el plantel (`player_locks.lockedBy`),
-las ofertas, los traspasos, los partidos del torneo (`homeTeamId`/`awayTeamId`), la historia de la web
-(`club-{id}`), la página `/equipos/{id}`, el chat, las noticias y la asignación de Draft → PES.
+### Pasos
 
-Por eso **una cuenta de Gmail nueva que entra sola es un club nuevo, vacío**: no hereda nada.
+1. **El manager nuevo entra** a `/draft` con su Gmail. Queda como equipo pendiente y vacío («Equipo xxxxx»). No lo
+   apruebes.
+2. **Vos**: Administración → Equipos y usuarios → en la tarjeta de ese equipo pendiente, **Pasarle un club** (solo
+   aparece en equipos pendientes y sin jugadores).
+3. Elegí el club que pasa a esa cuenta y, si querés, escribí el nombre del manager nuevo (va a la ficha del club, en
+   «Mánager en la liga»). Confirmá: no se puede deshacer.
+4. Listo. Si el manager nuevo tenía la app abierta en la pantalla de espera, entra al club solo, sin recargar.
 
-### Qué existe hoy
+### Qué pasa a la cuenta nueva
 
-La función del mercado tiene `migrateAccount` (`supabase/functions/_shared/market.js`): mueve un club de una cuenta
-vieja **de email y contraseña** a una cuenta de Google. Mueve perfil, equipo, plantel, carrito, ofertas y traspasos.
-Se dispara sola desde `screens/LinkGoogleScreen.jsx`, que aparece cuando alguien entra con email y contraseña a una
-cuenta que nunca vinculó Google.
+Perfil (formación, dorsales, tácticas, franquicia, favoritos), equipo (nombre, escudo, presupuesto), plantel
+(`player_locks`), carrito, filtros guardados, scouting, ofertas, traspasos, la historia y ficha de la web
+(`club-{id}` → `club-{id nuevo}`, su página pasa a `/equipos/{id nuevo}`), el overlay de transmisión si el club está
+en el aire, las formaciones compartidas y la asignación en Draft → PES de cada espacio de trabajo. Todo en una sola
+transacción: si algo falla, no cambia nada.
 
-**No mueve**: la historia y la ficha del club en la web (`club-{id}`), los partidos del torneo, el chat, las noticias,
-las formaciones compartidas, los datos de scouting ni la asignación en Draft → PES.
+### Qué no pasa
 
-### Según cómo entra hoy el club
+- Los mensajes del chat y los votos de la comunidad: quedan a nombre del manager anterior.
+- Lo personal: email, forma de entrar y permisos (admin, roles del editor PES). La cuenta nueva conserva los suyos.
+- La tabla del torneo no hace falta tocarla: guarda el nombre del club, que no cambia.
 
-**A. La cuenta del club es de email y contraseña (nunca se vinculó a Google).**
-1. El manager que se va le pasa el email y la contraseña al nuevo.
-2. El nuevo entra con esos datos. La app le pide vincular Google: elige **su** Gmail. Ese Gmail no tiene que haber
-   entrado antes a la app (si ya tiene equipo propio, la migración se frena: «Esa cuenta de Google ya tiene su propio
-   equipo»; eliminá ese equipo vacío desde Administración y reintentá).
-3. El club pasa a la cuenta nueva. Desde ahí entra con Google.
-4. Arreglá a mano lo que no se mueve: copiá la historia del club en Web pública al club nuevo y revisá los partidos
-   del torneo y la asignación en Draft → PES.
+### La cuenta anterior
 
-**B. La cuenta del club ya es de Google (lo normal hoy).**
-No hay forma desde la app. Las salidas reales:
-- Que el manager que se va ceda su Gmail (no recomendable: es su cuenta personal).
-- **Construir una herramienta de administración «Cambiar manager»** (tarea de código, no existe): elegir el club y la
-  cuenta nueva, reutilizar `migrateAccount` desde el servidor con permiso de admin y mover también `club-{id}`,
-  partidos del torneo, Draft → PES y lo demás de la lista de arriba. Pedila en una sesión de código con esta sección
-  como especificación.
+Queda bloqueada para siempre: si vuelve a entrar ve «Tu club pasó a otro manager» y no se le crea un club nuevo
+(`clubTransferredTo` en su perfil, `hooks/useAuth.js`). Si querés que vuelva a la liga con otro club, que entre con
+otro Gmail.
 
-Mientras no exista, la alternativa sin código es: el manager nuevo entra con su Gmail (club nuevo), lo aprobás, le
-ponés el mismo nombre, escudo y presupuesto, y eliminás el club viejo. Se pierde el plantel (vuelve al mercado), la
-historia de la web y los vínculos con partidos jugados.
+### Cuándo se frena
+
+- La cuenta nueva no está pendiente o ya tiene jugadores u ofertas.
+- El club ya pasó a otra cuenta.
+- **El club es de una cuenta de administrador** (por ejemplo, la tuya): quedaría bloqueada y perderías el acceso a
+  Administración.
+- Quien lo pide no es admin para el servidor: tu uid tiene que estar en `ADMIN_USER_IDS` o tener el claim `admin`.
+  Ser admin solo por el perfil (`isAdmin`) alcanza para ver Administración, pero no para el servidor.
+
+### Caso especial: un club con cuenta vieja de email
+
+Si el manager de siempre tiene un club con email y contraseña y entra por primera vez con Google, ahora le aparece un
+equipo pendiente vacío en lugar de su club. Usá esta misma herramienta: pasale su club a ese equipo pendiente.
 
 ---
 
@@ -152,8 +163,8 @@ historia de la web y los vínculos con partidos jugados.
 Administración → Equipos y usuarios → **Editar**: nombre, escudo, país, presupuesto y estadísticas manuales.
 
 - El presupuesto que vale es `teams/{id}.budget` (el formulario lo guarda ahí).
-- **Las filas de la tabla del torneo guardan el nombre**, no el id: si renombrás un club con la temporada en curso,
-  revisá la tabla en el gestor del torneo.
+- La tabla del torneo y el overlay identifican a los clubes por nombre: al renombrar, el formulario los actualiza en
+  la misma transacción y te dice dónde («También se renombró en el torneo y el overlay»).
 
 ## 5. Eliminar un club
 
@@ -177,10 +188,29 @@ presupuesto base, nombre, escudo y permisos. Es el mejor momento para actualizar
 | Generar el mercado | `scripts/main.py` (fórmula de precio, mapeos de posición, estilo y aptitud) |
 | Catálogo del servidor | `scripts/build-market-catalog.mjs` → `supabase/functions/_shared/catalog.json` |
 | Presupuesto | `supabase/functions/_shared/budget.js` (lo comparten app y función) |
-| Fichar, liberar, aceptar, migrar cuenta | `supabase/functions/_shared/market.js` |
+| Fichar, liberar, aceptar, migrar cuenta, cambiar manager (`transferClub`) | `supabase/functions/_shared/market.js` |
+| Pantalla «Cambiar manager» | `components/admin/ClubTransferDialog.jsx` (desde `TeamsAdminSection.jsx`) |
 | Alta y aprobación | `hooks/useAuth.js`, `components/admin/TeamsAdminSection.jsx`, `supabase/functions/_shared/membership.js` |
 | Tamaño de la liga y copas | `utils/tournamentModel.js`, `utils/competitionRules.js`, `utils/bracketModel.js` |
 | Draft → PES | `pes/draftTransfer.js`, `components/pes/PesDraftPanel.jsx`, `docs/PES_ENGINE.md` §4b |
 | Reglas de Firestore | `firestore.rules` (`npm run test:rules` + `firebase deploy --only firestore:rules`) |
 
-Pendiente conocido: herramienta «Cambiar manager» para clubes con cuenta de Google (sección 3, caso B).
+Tests de «Cambiar manager»: `tests/clubTransfer.test.js` (Firestore en memoria, corre con `npm test`) y el bloque
+`transferClub` de `tests/rules/marketFunction.test.js` (emulador, `npm run test:rules`). Después de cambiar
+`market.js` hay que volver a publicar la función (sección 1, paso 7).
+
+**GitHub Actions** (`.github/workflows/tests.yml`): cada push corre `npm test` y los tests del emulador, así no hace
+falta Java en la computadora. Los fallos aparecen como anotaciones en la corrida (pestaña Actions o el PR).
+
+---
+
+## Publicar desde el celular (una sola vez)
+
+1. En supabase.com → tu avatar → **Account** → **Access Tokens** → **Generate new token**. Ponele un nombre
+   (por ejemplo «github-deploy») y copiá el token: se muestra una sola vez.
+2. En GitHub → el repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
+   Nombre: `SUPABASE_ACCESS_TOKEN`. Valor: el token. Guardar.
+3. Desde ahí, cada publicación es: **Actions** → **deploy-market** → **Run workflow** (rama `master`).
+
+El token da acceso a tu cuenta de Supabase: no lo pegues en ningún otro lado. Si lo perdés o se filtra, borralo en
+Access Tokens y generá otro.

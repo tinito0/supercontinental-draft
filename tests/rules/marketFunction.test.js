@@ -298,6 +298,47 @@ describe('migrateAccount (old email account → Google account)', () => {
   });
 });
 
+describe('transferClub («Cambiar manager», admin only)', () => {
+  const transfer = (body, opts = { isAdmin: true }) => call('admin', { action: 'transferClub', ...body }, opts);
+
+  beforeEach(async () => {
+    await seed(async db => {
+      // A new manager who just signed in: pending and empty.
+      await setDoc(doc(db, `${base}/public/data/teams/nuevo`), { teamName: 'Equipo nuevo', userId: 'nuevo', approved: false, budget: BUDGET });
+      await setDoc(doc(db, `${base}/users/nuevo/profile/data`), { teamName: 'Equipo nuevo', userId: 'nuevo', providers: ['google.com'] });
+      await setDoc(doc(db, `${base}/users/seller/cart/7511`), { Id: 7511 });
+      await setDoc(doc(db, `${base}/users/seller/scout_searches/s1`), { query: 'DC' });
+      await setDoc(doc(db, `${base}/public/data/league_content/club-seller`), { body: 'Historia', profile: { manager: 'Viejo' } });
+      await setDoc(doc(db, `${base}/public/data/broadcast/overlay`), { homeTeamId: 'seller', awayTeamId: 'buyer' });
+      await setDoc(doc(db, `${base}/pes_workspaces/ws1`), { draftMap: { seller: 101, buyer: 102 } });
+    });
+  });
+
+  it('moves the club, its page, overlay, scouting and Draft → PES slot to the pending account', async () => {
+    await expect(transfer({ fromUid: 'seller', toUid: 'nuevo', managerName: 'Juan' }))
+      .resolves.toMatchObject({ players: 1, offers: 1, clubPage: true, overlay: true, pesWorkspaces: 1 });
+    expect(await read(`${base}/public/data/teams/nuevo`)).toMatchObject({ teamName: 'Team seller', userId: 'nuevo', budget: BUDGET });
+    expect(await read(`${base}/public/data/teams/seller`)).toBeNull();
+    expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'nuevo' });
+    expect(await read(`${base}/public/data/offers/o1`)).toMatchObject({ targetTeamId: 'nuevo' });
+    expect(await read(`${base}/users/nuevo/cart/7511`)).toMatchObject({ Id: 7511 });
+    expect(await read(`${base}/users/nuevo/scout_searches/s1`)).toMatchObject({ query: 'DC' });
+    expect(await read(`${base}/users/seller/scout_searches/s1`)).toBeNull();
+    expect(await read(`${base}/public/data/league_content/club-nuevo`)).toMatchObject({ body: 'Historia', profile: { manager: 'Juan' } });
+    expect(await read(`${base}/public/data/league_content/club-seller`)).toBeNull();
+    expect(await read(`${base}/public/data/broadcast/overlay`)).toMatchObject({ homeTeamId: 'nuevo', awayTeamId: 'buyer' });
+    expect(await read(`${base}/pes_workspaces/ws1`)).toMatchObject({ draftMap: { nuevo: 101, buyer: 102 } });
+    expect(await read(`${base}/users/seller/profile/data`)).toMatchObject({ clubTransferredTo: 'nuevo' });
+  });
+
+  it('refuses a non-admin and an approved target, and changes nothing', async () => {
+    await expectMarketError(transfer({ fromUid: 'seller', toUid: 'nuevo' }, { isAdmin: false }), /administrador/);
+    await expectMarketError(transfer({ fromUid: 'seller', toUid: 'buyer' }), /pendiente/);
+    expect(await read(`${base}/public/data/teams/seller`)).toMatchObject({ teamName: 'Team seller' });
+    expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'seller' });
+  });
+});
+
 describe('request validation', () => {
   it('rejects unknown actions and malformed ids', async () => {
     await expectMarketError(call('mallory', { action: 'nope' }), /desconocida/);
