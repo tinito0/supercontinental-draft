@@ -1,33 +1,36 @@
 import React from 'react';
 import { SoftValue } from '../ui/SoftValue.jsx';
-import { RuleMeter, RuleState, ruleTone } from '../RuleMeter.jsx';
+import { getStatAndOvrColorClass } from '../../utils/helpers.js';
 import { BENCH_MIN_AVG_OVR, formatAverage } from '../../utils/squadRules.js';
 import { strengthBarScale } from '../../utils/teamStrength.js';
 
 /**
- * The reglamento's bench floor next to «Fuerza del once», on the same OVR scale as its bars, with the 73 marked.
- * The average cross-fades and the bar grows as the XI changes, so the manager sees a save would be blocked before
- * making it. `check` comes from checkBench (utils/squadRules.js).
+ * The reglamento's bench floor under «Fuerza del once», drawn like its bars (same OVR scale and stat colours) with the
+ * 73 marked on the track: the manager sees how far the bench is from the floor, not just a pass/fail light. The
+ * average cross-fades and the bar grows as the XI changes. `check` comes from checkBench (utils/squadRules.js).
  */
 export function BenchRule({ check, className = '' }) {
-  const tone = ruleTone(check);
-  const state = tone === 'idle' ? check.reason : tone === 'fail' ? 'Por debajo del mínimo: no se guarda' : 'Cumple';
+  const failing = check.applies && !check.ok;
+  const note = !check.applies ? check.reason : failing ? `Por debajo de ${BENCH_MIN_AVG_OVR}: la alineación no se guarda` : null;
   return (
     <div className={className}>
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="eyebrow">Media del banco</p>
-        <p className="flex items-baseline gap-1.5 text-xs text-ink-3">
-          mín. <span className="num">{BENCH_MIN_AVG_OVR}</span>
-          <SoftValue
-            value={formatAverage(check.average)}
-            className={`font-display num text-xl font-bold ${tone === 'fail' ? 'text-danger-soft' : 'text-ink'}`}
-          />
-        </p>
+      <div className="grid grid-cols-[6.5rem_1fr] items-center gap-3">
+        <p className="text-xs text-ink-2">Banco</p>
+        <div className="flex items-center gap-3">
+          <span className="relative h-1.5 flex-1 rounded-sm bg-overlay" aria-hidden="true">
+            <span className="absolute inset-0 overflow-hidden rounded-sm">
+              <span
+                className={`strength-bar-fill block h-full ${check.average == null ? '' : getStatAndOvrColorClass(check.average)}`}
+                style={{ scale: `${strengthBarScale(check.average)} 1` }}
+              />
+            </span>
+            <span className="absolute -top-1 -bottom-1 w-0.5 rounded-sm bg-ink" style={{ left: `calc(${strengthBarScale(BENCH_MIN_AVG_OVR) * 100}% - 1px)` }} />
+          </span>
+          <SoftValue value={formatAverage(check.average)} className={`w-9 text-right font-display num text-base font-bold ${failing ? 'text-danger-soft' : 'text-ink'}`} />
+        </div>
       </div>
-      <RuleMeter fill={strengthBarScale(check.average)} tick={strengthBarScale(BENCH_MIN_AVG_OVR)} tone={tone} className="mt-2" />
-      <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <RuleState tone={tone}>{state}</RuleState>
-        {check.benchCount > 0 && <span className="text-xs text-ink-3"><span className="num">{check.benchCount}</span> suplentes</span>}
+      <p className={`mt-1 text-xs ${failing ? 'text-danger-soft' : 'text-ink-3'}`}>
+        {note || <>Mínimo <span className="num">{BENCH_MIN_AVG_OVR}</span> · <span className="num">{check.benchCount}</span> suplentes</>}
       </p>
     </div>
   );

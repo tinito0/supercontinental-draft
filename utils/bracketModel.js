@@ -32,16 +32,16 @@ export const CUP_DEFINITIONS = {
   [CUP_IDS.PLATA]: {
     id: CUP_IDS.PLATA,
     name: 'Copa de Plata',
-    subtitle: 'Copa de Plata — Repechaje',
+    subtitle: 'Copa de Plata · Reducidos',
     finalLabel: 'Final Copa de Plata',
     championLabel: 'Campeón Plata',
     tone: 'silver',
     rounds: [
       {
-        id: 'r1', label: 'Preliminares', path: ['repechaje', 'r1'], count: 4,
-        titles: ['Preliminar 1', 'Preliminar 2', 'Preliminar 3', 'Preliminar 4'],
+        id: 'r1', label: '1er Reducido', path: ['repechaje', 'r1'], count: 4,
+        titles: ['1er Reducido · 1', '1er Reducido · 2', '1er Reducido · 3', '1er Reducido · 4'],
       },
-      { id: 'r2', label: 'Cuartos Plata', path: ['repechaje', 'r2'], count: 2, titles: ['Cuartos Plata 1', 'Cuartos Plata 2'] },
+      { id: 'r2', label: '2do Reducido', path: ['repechaje', 'r2'], count: 2, titles: ['2do Reducido · 1', '2do Reducido · 2'] },
       { id: 'semis', label: 'Semifinales Plata', path: ['repechaje', 'semis'], count: 2, titles: ['Semifinal Plata 1', 'Semifinal Plata 2'] },
       { id: 'final', label: 'Final', path: ['repechaje', 'final'], count: 1, titles: ['Final Plata'], isFinal: true },
     ],
@@ -243,7 +243,7 @@ export function chooseBroadcastLayout(rounds, width, height) {
 // ── Avance de las copas ────────────────────────────────────────────────────────────────────────────────────────
 // Decisión del usuario (2026-10-22): el admin arma la Copa de Oro con la tabla final (1-8, 4-5, 2-7, 3-6) y desde ahí
 // los ganadores pasan solos. Copa de Plata: Ronda 1 = 9.° a 12.° contra los 4 perdedores de cuartos de Oro (el 9.°
-// contra el peor ubicado de ellos, el 12.° contra el mejor), después la ronda 2, y en semis entran los 2 perdedores
+// contra el peor ubicado de ellos, el 12.° contra el mejor: 1er Reducido), después el 2do Reducido, y en semis entran los 2 perdedores
 // de semis de Oro. Solo se completan lugares vacíos: nunca se pisa algo cargado a mano.
 
 const isBlank = value => !String(value ?? '').trim();
@@ -327,12 +327,12 @@ export function advanceCups(bracket, ranking = [], { leagueComplete = false } = 
     const losers = q.map(result => result.loser).sort((a, b) => position(a) - position(b));
     // 9.° vs el peor ubicado de los perdedores de cuartos … 12.° vs el mejor.
     for (let k = 0; k < 4; k += 1) {
-      next.repechaje.r1[k] = fillPair(next.repechaje.r1[k], names[8 + k], losers[3 - k], `Preliminar ${k + 1} (Plata)`);
+      next.repechaje.r1[k] = fillPair(next.repechaje.r1[k], names[8 + k], losers[3 - k], `1er Reducido · ${k + 1} (Plata)`);
     }
   }
   const r1 = next.repechaje.r1.map(decided);
-  next.repechaje.r2[0] = fillPair(next.repechaje.r2[0], r1[0]?.winner, r1[1]?.winner, 'Cuartos Plata 1');
-  next.repechaje.r2[1] = fillPair(next.repechaje.r2[1], r1[2]?.winner, r1[3]?.winner, 'Cuartos Plata 2');
+  next.repechaje.r2[0] = fillPair(next.repechaje.r2[0], r1[0]?.winner, r1[1]?.winner, '2do Reducido · 1 (Plata)');
+  next.repechaje.r2[1] = fillPair(next.repechaje.r2[1], r1[2]?.winner, r1[3]?.winner, '2do Reducido · 2 (Plata)');
   const r2 = next.repechaje.r2.map(decided);
   next.repechaje.semis[0] = fillPair(next.repechaje.semis[0], r2[0]?.winner, s[0]?.loser, 'Semifinal Plata 1');
   next.repechaje.semis[1] = fillPair(next.repechaje.semis[1], r2[1]?.winner, s[1]?.loser, 'Semifinal Plata 2');

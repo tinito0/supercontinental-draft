@@ -15,7 +15,7 @@ describe('BenchRule', () => {
   it('says the save is blocked in words, not only in red', () => {
     const html = renderToStaticMarkup(<BenchRule check={checkBench(weakSquad, eleven)} />);
     expect(html).toContain('70,0');
-    expect(html).toContain('Por debajo del mínimo: no se guarda');
+    expect(html).toContain('Por debajo de 73: la alineación no se guarda');
     expect(html).toContain('text-danger-soft');
   });
 
@@ -29,12 +29,11 @@ describe('BenchRule', () => {
 describe('SquadRulesStats', () => {
   it('shows each rule with its minimum and what is missing', () => {
     const html = renderToStaticMarkup(<SquadRulesStats result={evaluateSquadRules({ squad: weakSquad, lineup: eleven, teamCountry: 204 })} />);
-    expect(html).toContain('Reglas del plantel');
+    expect(html).toContain('2 sin cumplir');
     expect(html).toContain('/ 7');
-    expect(html).toContain('Faltan 4');
     expect(html).toContain('mín. 73');
-    expect(html).toContain('Por debajo del mínimo');
-    expect(html).toContain('<span class="num font-semibold text-ink">1</span> de <span class="num">3</span> en regla');
+    expect(html).toContain('Mandá al banco a un jugador de más media');
+    expect(html).toContain('Sumá jugadores del país del club.');
   });
 });
 
@@ -46,8 +45,8 @@ describe('SquadRulesAdminSection', () => {
     const html = renderToStaticMarkup(<SquadRulesAdminSection allTeams={allTeams} playerLocks={playerLocks} allPlayers={allPlayers} />);
     expect(html).toContain('Club Uno');
     expect(html).toContain('Club Dos');
-    expect(html).toContain('0/2');
-    expect(html).toContain('Banco flojo');
+    expect(html).toContain('clubes incumplen alguna regla');
+    expect(html).toContain('Por debajo del mínimo');
   });
 
   it('shows a loading state until the catalog arrives', () => {

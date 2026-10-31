@@ -1,5 +1,5 @@
 import React, { useState, useMemo, memo } from 'react';
-import { X, Search, Users, ExternalLink, ArrowUpDown, ChevronDown, ChevronsUpDown, Star, AlertTriangle } from 'lucide-react';
+import { X, Search, Users, ExternalLink, ArrowUpDown, ChevronDown, ChevronsUpDown, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { DEFAULT_LOGO } from '../utils/constants.js';
@@ -254,9 +254,7 @@ export const TeamsModal = memo(function TeamsModal({
                     <span className="sm:hidden"> · <span className="num">{formatPriceShort(team.totalCost)}</span></span>
                   </span>
                   {team.brokenRules.length > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-danger-soft mt-0.5">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />Incumple: {team.brokenRules.join(', ')}
-                    </span>
+                    <span className="block text-xs text-danger-soft mt-0.5">Incumple: {team.brokenRules.join(', ')}</span>
                   )}
                 </span>
                 <span className="hidden sm:block text-right shrink-0">

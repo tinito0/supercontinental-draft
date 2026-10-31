@@ -360,7 +360,7 @@ export const TournamentModal = memo(function TournamentModal({
       return 'Fase de Liga — Temporada Regular';
     }
     if (activeTab === 'bracket') return 'Fase Eliminatoria — Cuadro Principal';
-    if (activeTab === 'repechaje') return 'Copa de Plata — Repechaje';
+    if (activeTab === 'repechaje') return 'Copa de Plata · Reducidos';
     if (activeTab === 'stats') return 'Estadísticas — Goleadores y Asistidores';
     return 'Supercontinental League';
   }, [activeTab, localData?.matches]);

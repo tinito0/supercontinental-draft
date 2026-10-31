@@ -68,17 +68,6 @@ describe('squadRules', () => {
     expect(weak.rules.find(rule => rule.id === 'bench')).toMatchObject({ ok: false, value: '65,0' });
   });
 
-  test('meters fill up to the minimum and the bench marks its floor', () => {
-    const squad = squadOf([...Array(11).fill(85), ...Array(10).fill(73)], i => ({ Country1: i < 14 ? 204 : 10 }));
-    const rules = evaluateSquadRules({ squad, lineup: firstEleven, teamCountry: 204 }).rules;
-    const [plantel, bench, locals] = rules;
-    expect(plantel).toMatchObject({ fill: 1, tick: null });
-    expect(locals.fill).toBe(1);
-    expect(bench.fill).toBeCloseTo(bench.tick, 5);
-    const half = evaluateSquadRules({ squad: squadOf(Array(7).fill(80)), lineup: {}, teamCountry: 204 }).rules;
-    expect(half[0].fill).toBeCloseTo(7 / 21, 5);
-  });
-
   test('a club without country cannot meet the local quota', () => {
     const result = evaluateSquadRules({ squad: squadOf([80]), lineup: {}, teamCountry: '' });
     expect(result.rules.find(rule => rule.id === 'locals')).toMatchObject({ ok: false, applies: false });

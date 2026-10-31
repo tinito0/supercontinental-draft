@@ -2,8 +2,6 @@
 // The bench is every squad player outside the saved starting XI. Its average is exact (one decimal shown):
 // rounding would let a 72.6 bench pass a 73 floor.
 
-import { strengthBarScale } from './teamStrength.js';
-
 export const BENCH_MIN_AVG_OVR = 73;
 export const SQUAD_MIN_PLAYERS = 21;
 export const LOCAL_MIN_PLAYERS = 7;
@@ -64,9 +62,7 @@ export function checkBench(squad, lineup) {
 /**
  * The three squad rules for a team, in reglamento order.
  * @param {{ squad: object[], lineup: object, teamCountry: number|string }} team
- * `fill` and `tick` (0..1) draw each rule's meter: counts fill up to their minimum (a full bar is the minimum met);
- * the bench uses the same OVR scale as «Fuerza del once», with the 73 floor marked by the tick.
- * @returns {{ ok: boolean, rules: Array<{ id: string, label: string, ok: boolean, applies: boolean, value: string, target: string, detail: string, fill: number, tick: number|null }> }}
+ * @returns {{ ok: boolean, rules: Array<{ id: string, label: string, ok: boolean, applies: boolean, value: string, target: string, detail: string }> }}
  */
 export function evaluateSquadRules({ squad, lineup, teamCountry }) {
   const players = squad || [];
@@ -85,8 +81,6 @@ export function evaluateSquadRules({ squad, lineup, teamCountry }) {
       detail: players.length >= SQUAD_MIN_PLAYERS
         ? 'Cumple'
         : `Faltan ${SQUAD_MIN_PLAYERS - players.length}`,
-      fill: Math.min(1, players.length / SQUAD_MIN_PLAYERS),
-      tick: null,
     },
     {
       id: 'bench',
@@ -96,8 +90,6 @@ export function evaluateSquadRules({ squad, lineup, teamCountry }) {
       value: formatAverage(bench.average),
       target: String(BENCH_MIN_AVG_OVR),
       detail: !bench.applies ? bench.reason : bench.ok ? 'Cumple' : 'Por debajo del mínimo',
-      fill: strengthBarScale(bench.average),
-      tick: strengthBarScale(BENCH_MIN_AVG_OVR),
     },
     {
       id: 'locals',
@@ -109,8 +101,6 @@ export function evaluateSquadRules({ squad, lineup, teamCountry }) {
       detail: !hasCountry
         ? 'Club sin país cargado'
         : locals >= LOCAL_MIN_PLAYERS ? 'Cumple' : `Faltan ${LOCAL_MIN_PLAYERS - locals}`,
-      fill: Math.min(1, locals / LOCAL_MIN_PLAYERS),
-      tick: null,
     },
   ];
   return { ok: rules.every(rule => rule.ok), rules };
