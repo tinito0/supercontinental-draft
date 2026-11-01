@@ -11,7 +11,7 @@ import {
   formatPriceShort,
   getFlagUrl
 } from '../utils/helpers.js';
-import { STATS_JUGADOR_CAMPO, STATS_PORTERO, DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MAP } from '../utils/constants.js';
+import { STATS_JUGADOR_CAMPO, STATS_PORTERO, DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MAP, COM_STYLE_KEYS } from '../utils/constants.js';
 import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from '../supabase/functions/_shared/franchise.js';
 import { TransferProposalModal } from './TransferProposalModal.jsx';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
@@ -355,9 +355,10 @@ const StatSection = memo(function StatSection({ title, statKeys, player }) {
   );
 });
 
-const SkillsSection = memo(function SkillsSection({ player }) {
+// Only player skills: the seven COM playing styles (COM_STYLE_KEYS) share PLAYER_SKILLS_MAP but are not skills.
+export const SkillsSection = memo(function SkillsSection({ player }) {
   const skills = Object.entries(PLAYER_SKILLS_MAP)
-    .filter(([colName]) => player[colName])
+    .filter(([colName]) => player[colName] && !COM_STYLE_KEYS.includes(colName))
     .map(([, displayName]) => displayName);
 
   return (
