@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useCallback, useRef, useState } from 'react';
-import { getPitchPosColors, POSITION_COLORS, getStatAndOvrColorClass } from '../utils/helpers.js';
+import { getPitchPosColors, POSITION_COLORS, getPosColorClass } from '../utils/helpers.js';
 import { clientToPitch, clampPosition, isGoalkeeperSlot } from '../utils/formationStates.js';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 
@@ -12,7 +12,58 @@ const preventNativeDrag = e => e.preventDefault();
 // Markers scale with the pitch (container query units on the pitch box), not with the viewport: the pitch is narrow
 // both on phones and on short desktop screens. 17% of the width is the gap between neighbours in a back five.
 const MARKER_WIDTH = 'min(76px, 17cqw)';
-const AVATAR_SIZE = 'clamp(34px, 12.5cqw, 56px)';
+// Square photo, as PES 2021 shows players on the game-plan pitch. 10% of the width keeps a marker (photo, chip,
+// name) shorter than the 16% gap between the back line and the keeper on a phone.
+const AVATAR_SIZE = 'clamp(28px, 10cqw, 54px)';
+// Chip and name text follow the pitch too, with a floor that stays legible on a 360px phone.
+const CHIP_FONT = 'clamp(9px, 2.6cqw, 11px)';
+const NAME_FONT = 'clamp(10px, 2.9cqw, 12px)';
+
+// Field markings in a 75 × 100 box, the pitch's own 3:4 shape, so circles stay round. Real proportions
+// (105 × 68 m) are scaled to a 69 × 94 field inside a 3-unit margin: the boxes and circle sit where the markers'
+// percentages put the players, at any pitch size. Before, the lines were fixed pixels and drifted off-centre.
+const FIELD = { x: 3, y: 3, w: 69, h: 94 };
+const sx = m => (m / 68) * FIELD.w; // metres across the pitch
+const sy = m => (m / 105) * FIELD.h; // metres along it
+function PitchMarkings() {
+  const cx = FIELD.x + FIELD.w / 2;
+  const cy = FIELD.y + FIELD.h / 2;
+  const box = (depth, width, top) => {
+    const w = sx(width);
+    const h = sy(depth);
+    return <rect x={cx - w / 2} y={top ? FIELD.y : FIELD.y + FIELD.h - h} width={w} height={h} />;
+  };
+  const spot = sy(11);
+  const r = sx(9.15);
+  // The «D»: the part of the circle around the penalty spot that falls outside the box.
+  const arc = top => {
+    const boxEdge = sy(16.5);
+    const dy = boxEdge - spot;
+    const dx = Math.sqrt(r * r - dy * dy);
+    const y = top ? FIELD.y + boxEdge : FIELD.y + FIELD.h - boxEdge;
+    return <path d={`M ${cx - dx} ${y} A ${r} ${r} 0 0 ${top ? 0 : 1} ${cx + dx} ${y}`} />;
+  };
+  return (
+    <svg viewBox="0 0 75 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
+      <g fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="0.35">
+        <rect x={FIELD.x} y={FIELD.y} width={FIELD.w} height={FIELD.h} />
+        <line x1={FIELD.x} y1={cy} x2={FIELD.x + FIELD.w} y2={cy} />
+        <circle cx={cx} cy={cy} r={r} />
+        {box(16.5, 40.3, true)}
+        {box(16.5, 40.3, false)}
+        {box(5.5, 18.3, true)}
+        {box(5.5, 18.3, false)}
+        {arc(true)}
+        {arc(false)}
+      </g>
+      <g fill="rgba(255,255,255,0.6)">
+        <circle cx={cx} cy={cy} r="0.45" />
+        <circle cx={cx} cy={FIELD.y + spot} r="0.4" />
+        <circle cx={cx} cy={FIELD.y + FIELD.h - spot} r="0.4" />
+      </g>
+    </svg>
+  );
+}
 
 // Get last name, max 10 chars
 const getLastName = (name) => {
@@ -52,7 +103,6 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
   // Use shared position color system from helpers.js. The marker shows the role the slot plays (what the export
   // writes, utils/positionRules.js); the player's natural position goes in the tooltip.
   const colors = player ? getPitchPosColors(pos) : POSITION_COLORS.none;
-  const emptyColors = getPitchPosColors(pos);
 
   // For read-only public view with embedded slot data
   const rawReadOnlySlot = readOnlySlots?.[index];
@@ -69,7 +119,6 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
   const playerDorsal = dorsal || readOnlySlot?.dorsal;
   const playerImageId = player?.Id || readOnlySlot?.playerId;
   const hasPlayer = player || readOnlySlot;
-  const ovrColorClass = getStatAndOvrColorClass(playerOvr);
 
   // Compute colors for readOnly slots based on position
   const slotColors = player ? colors : readOnlySlot ? getPitchPosColors(readOnlySlot.pos || pos) : POSITION_COLORS.none;
@@ -92,27 +141,25 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
         ${isHoldingThis ? 'opacity-30 scale-90' : ''}
         ${holdingPlayer && !isHoldingThis ? 'hover:scale-110' : ''}
         ${isReadOnly ? 'cursor-default' : canMove && !isDragging ? 'cursor-grab select-none' : 'cursor-pointer'}
-        ${isRoleTarget ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#183624]' : ''}
+        ${isRoleTarget ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#2f6a33]' : ''}
       `}
       style={{ left: `${x}%`, top: `${y}%`, translate: '-50% -50%', width: MARKER_WIDTH, touchAction: canMove ? 'none' : undefined }}
       title={player ? `${player.Name} · ${pos}${player.POS_NOMBRE && player.POS_NOMBRE !== pos ? ` (posición natural ${player.POS_NOMBRE})` : ''}` : readOnlySlot?.name || pos}
     >
       {hasPlayer ? (
-        <div className="relative flex flex-col items-center">
-          {/* Avatar with the dorsal (top left), OVR (top right) and role (bottom) pinned to it: the marker stays
-              about one avatar tall, so the rows of a formation do not run into each other on small pitches. */}
+        // PES 2021 game-plan card: square photo, the role chip with the OVR beside it, the surname under them.
+        <div className="relative flex flex-col items-center w-full">
           <div className="relative shrink-0" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}>
-            <div
-              className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center border-2 ${slotColors.ring}`}
-              style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.35)' }}
-            >
+            <div className="w-full h-full rounded-md overflow-hidden bg-raised ring-1 ring-black/50 shadow-md">
               {playerImageId && !isCapturing ? (
                 <img
                   src={`/fotos_jugadores/${playerImageId}.webp`}
                   crossOrigin="anonymous"
                   draggable={false}
                   alt={player?.Name || readOnlySlot?.name || pos}
-                  className="w-full h-full object-cover"
+                  width={54}
+                  height={54}
+                  className="w-full h-full object-cover object-top"
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.src = playerPlaceholder((playerName || '?')[0]);
@@ -127,40 +174,37 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
               )}
             </div>
             {playerDorsal && (
-              <span className="absolute -top-1 -left-1.5 bg-white text-black font-bold text-[9px] w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-md num"
-                style={{ textShadow: 'none' }}>
+              <span className="absolute -top-1.5 -left-1.5 min-w-[18px] h-[18px] px-0.5 flex items-center justify-center rounded-sm bg-canvas/90 text-white font-display font-bold text-[10px] leading-none ring-1 ring-white/25 num">
                 {playerDorsal}
               </span>
             )}
-            {playerOvr && (
-              <span className={`absolute -top-1 -right-2 min-w-[20px] px-1 py-[2px] text-center text-[10px] font-bold rounded leading-none shadow-sm num ${ovrColorClass}`}>
-                {playerOvr}
-              </span>
-            )}
-            <span className={`absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 px-1.5 py-[2px] text-[9px] font-bold rounded border ${slotColors.badge} text-ink leading-none shadow-sm whitespace-nowrap`}>
+          </div>
+          <span className="mt-1 flex items-stretch rounded-sm overflow-hidden shadow-sm leading-none" style={{ fontSize: CHIP_FONT }}>
+            <span className={`px-1 py-[3px] font-bold ${getPosColorClass(player ? pos : readOnlySlot?.pos || pos)}`}>
               {player ? pos : readOnlySlot?.pos || pos}
             </span>
-          </div>
-          <span className="block mt-2 text-[11px] font-bold text-ink truncate max-w-full text-center leading-none"
-            style={{ textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}>
+            {playerOvr && (
+              <span className="px-1 py-[3px] font-display font-bold bg-canvas/85 text-white num">{playerOvr}</span>
+            )}
+          </span>
+          <span className="block mt-0.5 font-display font-semibold uppercase text-white truncate max-w-full text-center leading-tight"
+            style={{ fontSize: NAME_FONT, textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
             {playerName}
           </span>
         </div>
       ) : (
-        /* Empty slot: dashed circle the size of an avatar, with the role inside */
+        /* Empty slot: a dashed square the size of a photo, with its role chip where a player's would be */
         <div className="flex flex-col items-center">
-          <div className={`rounded-full border-2 border-dashed flex items-center justify-center
-            transition-colors
-            ${holdingPlayer ? 'border-emerald-400/80 bg-success/20' : 'border-white/30 bg-white/5'}
-            ${!isReadOnly ? 'group-hover:bg-white/15 group-hover:border-white/60' : ''}`}
+          <div className={`rounded-md border-2 border-dashed transition-colors duration-fast
+            ${holdingPlayer ? 'border-success-soft bg-success/20' : 'border-white/40 bg-black/15'}
+            ${!isReadOnly ? 'group-hover:bg-white/15 group-hover:border-white/70' : ''}`}
             style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
-          >
-            <span className={`text-xs font-bold ${emptyColors.text} ${!isReadOnly ? 'group-hover:text-ink' : ''} transition-colors`}>
-              {pos}
-            </span>
-          </div>
-          {/* Same height as a filled marker's name line, so the circle sits where an avatar would */}
-          <span className="block mt-2 h-[11px]" aria-hidden="true" />
+          />
+          <span className={`mt-1 px-1 py-[3px] rounded-sm font-bold leading-none ${getPosColorClass(pos)}`} style={{ fontSize: CHIP_FONT }}>
+            {pos}
+          </span>
+          {/* Same height as a filled marker's name line, so the square sits where a photo would */}
+          <span className="block mt-0.5 leading-tight invisible" style={{ fontSize: NAME_FONT }} aria-hidden="true">·</span>
         </div>
       )}
     </div>
@@ -220,18 +264,20 @@ export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlaye
       onPointerMove={canMove ? moveDrag : undefined}
       onPointerUp={canMove ? endDrag : undefined}
       onPointerCancel={canMove ? endDrag : undefined}
-      className="pitch-canvas-export-target relative w-full aspect-[3/4] bg-[#183624] rounded-xl overflow-hidden border border-emerald-900/40 shadow-xl [container-type:inline-size]"
+      className="pitch-canvas-export-target relative w-full aspect-[3/4] rounded-xl overflow-hidden ring-1 ring-black/40 shadow-lg [container-type:inline-size]"
       style={{
-        backgroundImage: 'repeating-linear-gradient(0deg, #1b3d2b, #1b3d2b 32px, #163222 32px, #163222 64px)'
+        // Mown stripes as in the PES game-plan screen: ten bands, in percent so they follow the pitch size.
+        backgroundColor: '#2f6a33',
+        backgroundImage: 'repeating-linear-gradient(180deg, #33713a 0 10%, #2c6431 10% 20%)',
       }}
     >
-      {/* Pitch Lines */}
-      <div className="absolute inset-4 border border-white/25 pointer-events-none" />
-      <div className="absolute inset-x-4 top-4 h-1/2 border-b border-white/25 pointer-events-none" />
-      <div className="absolute left-1/2 top-4 -translate-x-1/2 w-36 h-18 border-x border-b border-white/25 pointer-events-none" />
-      <div className="absolute left-1/2 bottom-4 -translate-x-1/2 w-36 h-18 border-x border-t border-white/25 pointer-events-none" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border border-white/25 rounded-full pointer-events-none" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white/30 rounded-full pointer-events-none" />
+      <PitchMarkings />
+      {formation?.name && (
+        <span className="absolute left-2 bottom-1.5 font-display font-bold text-white/90 num pointer-events-none"
+          style={{ fontSize: 'clamp(12px, 3.6cqw, 16px)', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }} aria-hidden="true">
+          {formation.name}
+        </span>
+      )}
 
       {/* Slots */}
       {formation?.layout?.map((slot, idx) => {
