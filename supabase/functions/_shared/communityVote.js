@@ -29,7 +29,7 @@ const isScoreValue = value => value !== '' && value != null && Number.isInteger(
 // Las rutas de cada cruce, como utils/bracketModel.js CUP_DEFINITIONS (las funciones no importan fuera de su carpeta).
 const CUP_PATHS = {
   'oro-quarters': ['quarters'], 'oro-semis': ['semis'], 'oro-final': ['final'],
-  'plata-r1': ['repechaje', 'r1'], 'plata-r2': ['repechaje', 'r2'], 'plata-semis': ['repechaje', 'semis'], 'plata-final': ['repechaje', 'final'],
+  'plata-r1': ['repechaje', 'r1'], 'plata-r2': ['repechaje', 'r2'], 'plata-final': ['repechaje', 'final'],
 };
 
 /**

@@ -10,7 +10,7 @@ export const CUP_IDS = { ORO: 'oro', PLATA: 'plata' };
 
 // path: ruta dentro de `bracket` (es la misma que recibe updateGeneric en TournamentModal).
 // Si una ronda tiene la mitad de partidos que la anterior, cada partido recibe a dos (horquilla);
-// si tiene los mismos, recibe a uno (línea recta). Así se dibujan Oro (4-2-1) y Plata (4-2-2-1).
+// si tiene los mismos, recibe a uno (línea recta). Las dos copas son 4-2-1 (Plata: 1er Reducido, 2do Reducido = semis, final).
 export const CUP_DEFINITIONS = {
   [CUP_IDS.ORO]: {
     id: CUP_IDS.ORO,
@@ -41,8 +41,8 @@ export const CUP_DEFINITIONS = {
         id: 'r1', label: '1er Reducido', path: ['repechaje', 'r1'], count: 4,
         titles: ['1er Reducido · 1', '1er Reducido · 2', '1er Reducido · 3', '1er Reducido · 4'],
       },
-      { id: 'r2', label: '2do Reducido', path: ['repechaje', 'r2'], count: 2, titles: ['2do Reducido · 1', '2do Reducido · 2'] },
-      { id: 'semis', label: 'Semifinales Plata', path: ['repechaje', 'semis'], count: 2, titles: ['Semifinal Plata 1', 'Semifinal Plata 2'] },
+      // The 2do Reducido is the Plata semi-final (reglamento T3): its winners play the final.
+      { id: 'r2', label: '2do Reducido (semifinal)', path: ['repechaje', 'r2'], count: 2, titles: ['2do Reducido · 1', '2do Reducido · 2'] },
       { id: 'final', label: 'Final', path: ['repechaje', 'final'], count: 1, titles: ['Final Plata'], isFinal: true },
     ],
   },
@@ -243,8 +243,9 @@ export function chooseBroadcastLayout(rounds, width, height) {
 // ── Avance de las copas ────────────────────────────────────────────────────────────────────────────────────────
 // Decisión del usuario (2026-10-22): el admin arma la Copa de Oro con la tabla final (1-8, 4-5, 2-7, 3-6) y desde ahí
 // los ganadores pasan solos. Copa de Plata: Ronda 1 = 9.° a 12.° contra los 4 perdedores de cuartos de Oro (el 9.°
-// contra el peor ubicado de ellos, el 12.° contra el mejor: 1er Reducido), después el 2do Reducido, y en semis entran los 2 perdedores
-// de semis de Oro. Solo se completan lugares vacíos: nunca se pisa algo cargado a mano.
+// contra el peor ubicado de ellos, el 12.° contra el mejor: 1er Reducido), después el 2do Reducido, que es la semifinal, y
+// sus ganadores juegan la final (2026-11-01: ya no hay semis de Plata ni entran los perdedores de semis de Oro).
+// Solo se completan lugares vacíos: nunca se pisa algo cargado a mano.
 
 const isBlank = value => !String(value ?? '').trim();
 const slotAt = (list, index) => (Array.isArray(list) && list[index] && typeof list[index] === 'object' ? list[index] : { ...EMPTY_BRACKET_MATCH });
@@ -295,7 +296,6 @@ export function advanceCups(bracket, ranking = [], { leagueComplete = false } = 
       ...repechaje,
       r1: Array.from({ length: 4 }, (_, i) => slotAt(repechaje.r1, i)),
       r2: Array.from({ length: 2 }, (_, i) => slotAt(repechaje.r2, i)),
-      semis: Array.from({ length: 2 }, (_, i) => slotAt(repechaje.semis, i)),
       final: repechaje.final && typeof repechaje.final === 'object' ? { ...repechaje.final } : { ...EMPTY_BRACKET_MATCH },
     },
   };
@@ -334,10 +334,7 @@ export function advanceCups(bracket, ranking = [], { leagueComplete = false } = 
   next.repechaje.r2[0] = fillPair(next.repechaje.r2[0], r1[0]?.winner, r1[1]?.winner, '2do Reducido · 1 (Plata)');
   next.repechaje.r2[1] = fillPair(next.repechaje.r2[1], r1[2]?.winner, r1[3]?.winner, '2do Reducido · 2 (Plata)');
   const r2 = next.repechaje.r2.map(decided);
-  next.repechaje.semis[0] = fillPair(next.repechaje.semis[0], r2[0]?.winner, s[0]?.loser, 'Semifinal Plata 1');
-  next.repechaje.semis[1] = fillPair(next.repechaje.semis[1], r2[1]?.winner, s[1]?.loser, 'Semifinal Plata 2');
-  const ps = next.repechaje.semis.map(decided);
-  next.repechaje.final = fillPair(next.repechaje.final, ps[0]?.winner, ps[1]?.winner, 'Final Plata');
+  next.repechaje.final = fillPair(next.repechaje.final, r2[0]?.winner, r2[1]?.winner, 'Final Plata');
 
   return { bracket: changes.length ? next : source, changes, warnings };
 }

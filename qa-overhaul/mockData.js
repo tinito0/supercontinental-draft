@@ -88,7 +88,6 @@ export function scenario(name) {
   fill(['final'], [{ scoreA: 2, scoreB: 2, penaltiesA: 4, penaltiesB: 2 }]);
   fill(['repechaje', 'r1'], [{ scoreA: 1, scoreB: 0 }, { scoreA: 0, scoreB: 2 }, { scoreA: 3, scoreB: 1 }, { scoreA: 1, scoreB: 2 }]);
   fill(['repechaje', 'r2'], [{ scoreA: 2, scoreB: 0 }, { scoreA: 1, scoreB: 1, penaltiesA: 3, penaltiesB: 5 }]);
-  fill(['repechaje', 'semis'], [{ scoreA: 0, scoreB: 1 }, { scoreA: 2, scoreB: 1 }]);
   fill(['repechaje', 'final'], [{ scoreA: 1, scoreB: 0 }]);
   return { tournament: data, liveDocs: [], overlay: { scene: 'repechaje' } };
 }

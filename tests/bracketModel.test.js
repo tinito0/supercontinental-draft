@@ -77,9 +77,10 @@ describe('buildCupRounds', () => {
     expect(rounds[2].matches[0]).toMatchObject({ isFinal: true, path: ['final'] });
   });
 
-  it('Copa de Plata has 4-2-2-1 matches under bracket.repechaje', () => {
+  it('Copa de Plata has 4-2-1 matches under bracket.repechaje (the 2do Reducido is the semi-final)', () => {
     const rounds = buildCupRounds(CUP_IDS.PLATA, fullBracket);
-    expect(rounds.map(r => r.matches.length)).toEqual([4, 2, 2, 1]);
+    expect(rounds.map(r => r.matches.length)).toEqual([4, 2, 1]);
+    expect(rounds.map(r => r.id)).toEqual(['r1', 'r2', 'final']);
     expect(rounds[1].matches[1].path).toEqual(['repechaje', 'r2']);
     expect(rounds[0].matches[3].match.teamA).toBe('O');
   });
@@ -89,7 +90,7 @@ describe('buildCupRounds', () => {
       const oro = buildCupRounds(CUP_IDS.ORO, bracket);
       const plata = buildCupRounds(CUP_IDS.PLATA, bracket);
       expect(oro.flatMap(r => r.matches)).toHaveLength(7);
-      expect(plata.flatMap(r => r.matches)).toHaveLength(9);
+      expect(plata.flatMap(r => r.matches)).toHaveLength(7);
       expect(oro[2].matches[0].match).toEqual({ teamA: '', teamB: '', scoreA: '', scoreB: '' });
     }
   });
@@ -110,10 +111,10 @@ describe('buildBracketColumns', () => {
     expect(columns[3].entries[0].index).toBe(1);
   });
 
-  it('mirrors Plata into 7 columns and lays both cups out linearly with one column per round', () => {
+  it('mirrors Plata into 5 columns like Oro and lays both cups out linearly with one column per round', () => {
     const plata = buildCupRounds(CUP_IDS.PLATA, fullBracket);
-    expect(buildBracketColumns(plata, 'mirrored')).toHaveLength(7);
-    expect(buildBracketColumns(plata, 'linear').map(c => c.entries.length)).toEqual([4, 2, 2, 1]);
+    expect(buildBracketColumns(plata, 'mirrored')).toHaveLength(5);
+    expect(buildBracketColumns(plata, 'linear').map(c => c.entries.length)).toEqual([4, 2, 1]);
     expect(buildBracketColumns(buildCupRounds(CUP_IDS.ORO, {}), 'linear').map(c => c.entries.length)).toEqual([4, 2, 1]);
   });
 });
@@ -190,9 +191,9 @@ describe('chooseBroadcastLayout (OBS)', () => {
     }
   });
 
-  it('an ultrawide (height-limited) source uses the spare width: Oro goes mirrored, Plata (7 columns) does not', () => {
+  it('an ultrawide (height-limited) source uses the spare width: both cups (5 columns) go mirrored', () => {
     expect(chooseBroadcastLayout(buildCupRounds(CUP_IDS.ORO, {}), 2560, 1080).layout).toBe('mirrored');
-    expect(chooseBroadcastLayout(buildCupRounds(CUP_IDS.PLATA, {}), 2560, 1080).layout).toBe('linear');
+    expect(chooseBroadcastLayout(buildCupRounds(CUP_IDS.PLATA, {}), 2560, 1080).layout).toBe('mirrored');
   });
 
   it('linear is chosen whenever mirrored cards would fall under the minimum width', () => {
@@ -234,7 +235,7 @@ describe('cup progression (seedGoldCup / advanceCups)', () => {
       .toEqual([['T09', 'T08'], ['T10', 'T07'], ['T11', 'T06'], ['T12', 'T05']]);
   });
 
-  it('sends the Oro semi-final losers to the Plata semis and builds both finals', async () => {
+  it('sends the 2do Reducido winners straight to the Plata final; Oro semi-final losers do not enter', async () => {
     const { advanceCups } = await import('../utils/bracketModel.js');
     const won = (teamA, teamB) => ({ teamA, teamB, scoreA: 1, scoreB: 0 });
     const bracket = {
@@ -244,8 +245,8 @@ describe('cup progression (seedGoldCup / advanceCups)', () => {
       repechaje: { r1: [won('T09', 'T08'), won('T10', 'T07'), won('T11', 'T06'), won('T12', 'T05')], r2: [won('T09', 'T10'), won('T11', 'T12')] },
     };
     const { bracket: next } = advanceCups(bracket, ranking, { leagueComplete: true });
-    expect(next.repechaje.semis.map(m => [m.teamA, m.teamB])).toEqual([['T09', 'T04'], ['T11', 'T03']]);
-    expect(next.repechaje.final).toMatchObject({ teamA: '', teamB: '' });
+    expect(next.repechaje.final).toMatchObject({ teamA: 'T09', teamB: 'T11' });
+    expect(next.repechaje.semis).toBeUndefined();
   });
 });
 

@@ -42,7 +42,6 @@ export function normalizeTournament(raw) {
         ...repechaje,
         r1: fill(repechaje.r1, 4),
         r2: fill(repechaje.r2, 2),
-        semis: fill(repechaje.semis, 2),
         final: repechaje.final && typeof repechaje.final === 'object' ? { ...emptyMatch(), ...repechaje.final } : emptyMatch(),
       },
     },

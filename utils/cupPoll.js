@@ -23,8 +23,8 @@ export function pollOptionId(name) {
  * Quiénes pueden ganar cada copa, sacado de las llaves (decisión del usuario, 2026-10-23: la encuesta tiene a todos
  * los equipos de esa copa y se habilita cuando se conocen los cruces).
  * - Oro: los 8 de cuartos, cuando los 4 cruces están armados.
- * - Plata: los 8 de los preliminares más los que pasaron los cuartos de Oro (los perdedores de semis de Oro caen a
- *   las semis de Plata), cuando los 4 preliminares están armados.
+ * - Plata: los 8 del 1er Reducido, cuando sus 4 cruces están armados (desde 2026-11-01 los perdedores de semis de
+ *   Oro ya no entran a la Plata: el 2do Reducido es la semifinal).
  * @returns {{ ready: true, teams: string[] } | { ready: false, teams: [], reason: string }}
  */
 export function cupPollTeams(tournamentData, pollId) {
@@ -34,8 +34,8 @@ export function cupPollTeams(tournamentData, pollId) {
     return { ready: true, teams: cleanNames(teamsOf(bracket.quarters)) };
   }
   if (pollId === 'copa-plata') {
-    if (!isDrawn(bracket?.repechaje?.r1)) return { ready: false, teams: [], reason: 'Se habilita cuando estén armados los preliminares de la Copa de Plata (después de los cuartos de Oro).' };
-    return { ready: true, teams: cleanNames([...teamsOf(bracket.repechaje.r1), ...teamsOf(bracket.quarters)]) };
+    if (!isDrawn(bracket?.repechaje?.r1)) return { ready: false, teams: [], reason: 'Se habilita cuando esté armado el 1er Reducido de la Copa de Plata (después de los cuartos de Oro).' };
+    return { ready: true, teams: cleanNames(teamsOf(bracket.repechaje.r1)) };
   }
   return { ready: false, teams: [], reason: 'Encuesta desconocida.' };
 }

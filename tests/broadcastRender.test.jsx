@@ -49,14 +49,14 @@ describe('BroadcastBracket', () => {
     expect(html).not.toMatch(/scale\(/); // no arbitrary CSS scale on the bracket
   });
 
-  it('Plata renders 9 cards in the linear layout (4 columns) without admin controls', () => {
+  it('Plata renders 7 cards in the linear layout (3 columns, like Oro) without admin controls', () => {
     const html = renderToStaticMarkup(<BroadcastBracket cupId={CUP_IDS.PLATA} bracket={bracket} />);
-    expect(count(html, 'data-match-key=')).toBe(9);
+    expect(count(html, 'data-match-key=')).toBe(7);
     expect(html).toContain('data-layout="linear"');
-    expect(html).toContain('data-bracket-columns="4"');
+    expect(html).toContain('data-bracket-columns="3"');
     expect(html).toContain('data-tone="silver"');
     expect(html).not.toMatch(/<(button|input|select)/);
-    expect(html).toContain('0 / 9');
+    expect(html).toContain('0 / 7');
   });
 
   it('renders an empty tournament without crashing', () => {

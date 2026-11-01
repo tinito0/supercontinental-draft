@@ -28,10 +28,10 @@ describe('cupPollTeams', () => {
     expect(result.teams).toHaveLength(8);
   });
 
-  it('uses every team that can still win the Copa de Plata, Oro semi-finalists included', () => {
+  it('uses the 8 teams of the 1er Reducido: Oro semi-finalists no longer drop to the Copa de Plata', () => {
     const result = cupPollTeams({ bracket: { quarters, repechaje: { r1 } } }, 'copa-plata');
     expect(result.ready).toBe(true);
-    expect(result.teams.sort()).toEqual(['O1', 'O2', 'O3', 'O4', 'O5', 'O6', 'O7', 'O8', 'P10', 'P11', 'P12', 'P9']);
+    expect(result.teams.sort()).toEqual(['O5', 'O6', 'O7', 'O8', 'P10', 'P11', 'P12', 'P9']);
   });
 
   it('tells whether a saved poll already has exactly those teams', () => {
