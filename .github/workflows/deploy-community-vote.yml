@@ -1,0 +1,40 @@
+# Publishes the Supabase Edge Function `community-vote` (docs/COMMUNITY_PLATFORM.md) from GitHub, like deploy-market.
+# Manual: Actions → deploy-community-vote → Run workflow (works from the phone). Only from master, and only after the
+# community vote tests pass. Uses the same repository secret SUPABASE_ACCESS_TOKEN; the function's own secrets
+# (FIREBASE_SERVICE_ACCOUNT, COMMUNITY_SALT, COMMUNITY_ALLOWED_ORIGINS) live in Supabase and are not touched.
+name: deploy-community-vote
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-community-vote
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # Vote rules, windows and the fixture/bracket paths the function shares with the app.
+      - run: npx vitest run tests/communityVote.test.js tests/communityVoteWindows.test.js tests/bracketModel.test.js --reporter=default --reporter=github-actions
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy community-vote
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions)."; exit 1; }
+          # --no-verify-jwt: any visitor's browser calls it, without an account.
+          supabase functions deploy community-vote --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy
