@@ -179,6 +179,30 @@ Administración → General → reinicio de temporada (`utils/seasonReset.js`): 
 noticias, formaciones compartidas, carritos y scouting, y devuelve el cupo de jugador franquicia. Mantiene
 presupuesto base, nombre, escudo y permisos. Es el mejor momento para actualizar el mercado (sección 1).
 
+## 7. Publicar las funciones del servidor (sin Claude y sin computadora)
+
+La web (Vercel) se publica sola con cada push a `master`. Las **funciones de Supabase** no: si un cambio toca sus
+archivos, hay que publicarlas a mano. Cada una tiene su botón en GitHub y corre sus tests antes de publicar; si un
+test falla, no publica nada.
+
+| Si cambió algo de… | Archivos | Botón (GitHub → Actions → … → Run workflow, rama `master`) |
+|---|---|---|
+| Fichar, liberar, traspasos, comisión, presupuesto, franquicia, catálogo | `supabase/functions/_shared/market.js`, `budget.js`, `transferFee.js`, `franchise.js`, `marketConstants.js`, `catalog.json` | **deploy-market** |
+| Votos del público (predicción, MVP, encuestas de copa) o la forma de las copas | `supabase/functions/_shared/communityVote.js` y `community-vote/index.ts` | **deploy-community-vote** |
+| Colector de partidos en vivo, overlay | `match-feed`, `overlay-control` | sin botón todavía: `npx supabase functions deploy <nombre> --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy` desde una computadora |
+
+Paso a paso desde el celular:
+
+1. Esperá a que el push a `master` termine en verde (Actions → **tests**).
+2. Actions → elegí el workflow de la tabla → **Run workflow** → rama `master` → **Run workflow**.
+3. Abrí la corrida: tiene que terminar con el tilde verde en «Deploy …». Si queda en rojo en el paso de tests, el
+   cambio rompió algo y la función vieja sigue publicada (nada se cae).
+
+Si la forma de las copas cambia (por ejemplo, la Copa de Plata de 2026-11-01: 1er Reducido → 2do Reducido como
+semifinal → final, sin semis de Plata), además de `utils/bracketModel.js` hay que revisar `CUP_PATHS` en
+`supabase/functions/_shared/communityVote.js` (las rondas que se pueden votar) y después publicar
+**deploy-community-vote**.
+
 ---
 
 ## Para las sesiones de código
@@ -191,7 +215,9 @@ presupuesto base, nombre, escudo y permisos. Es el mejor momento para actualizar
 | Fichar, liberar, aceptar, migrar cuenta, cambiar manager (`transferClub`) | `supabase/functions/_shared/market.js` |
 | Pantalla «Cambiar manager» | `components/admin/ClubTransferDialog.jsx` (desde `TeamsAdminSection.jsx`) |
 | Alta y aprobación | `hooks/useAuth.js`, `components/admin/TeamsAdminSection.jsx`, `supabase/functions/_shared/membership.js` |
-| Tamaño de la liga y copas | `utils/tournamentModel.js`, `utils/competitionRules.js`, `utils/bracketModel.js` |
+| Tamaño de la liga y copas | `utils/tournamentModel.js`, `utils/competitionRules.js`, `utils/bracketModel.js` (Copa de Plata: `CUP_DEFINITIONS` y `advanceCups`) |
+| Reglas del plantel (banco ≥ 73, mínimo 21, 7 locales) | `utils/squadRules.js`; pizarra `components/formation/BenchRule.jsx`, Mi Equipo `components/SquadRulesStats.jsx`, Administración → Reglas `components/admin/SquadRulesAdminSection.jsx` |
+| Comisión de traspasos (15 % sobre la prima) | `supabase/functions/_shared/transferFee.js` (app y función); después **deploy-market** |
 | Draft → PES | `pes/draftTransfer.js`, `components/pes/PesDraftPanel.jsx`, `docs/PES_ENGINE.md` §4b |
 | Reglas de Firestore | `firestore.rules` (`npm run test:rules` + `firebase deploy --only firestore:rules`) |
 
@@ -210,7 +236,8 @@ falta Java en la computadora. Los fallos aparecen como anotaciones en la corrida
    (por ejemplo «github-deploy») y copiá el token: se muestra una sola vez.
 2. En GitHub → el repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
    Nombre: `SUPABASE_ACCESS_TOKEN`. Valor: el token. Guardar.
-3. Desde ahí, cada publicación es: **Actions** → **deploy-market** → **Run workflow** (rama `master`).
+3. Desde ahí, cada publicación es: **Actions** → **deploy-market** o **deploy-community-vote** → **Run workflow**
+   (rama `master`). El mismo secreto sirve para las dos; la sección 7 dice cuál usar.
 
 El token da acceso a tu cuenta de Supabase: no lo pegues en ningún otro lado. Si lo perdés o se filtra, borralo en
 Access Tokens y generá otro.
