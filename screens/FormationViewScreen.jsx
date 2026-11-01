@@ -5,57 +5,67 @@ import { db } from '../config/firebase.js';
 import { Pitch } from '../components/Pitch.jsx';
 import { FORMATIONS, APP_ID } from '../utils/constants.js';
 import { layoutForState, normalizeFormationStates } from '../utils/formationStates.js';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, RotateCw } from 'lucide-react';
+import { loadSharedFormation, FormationNotFoundError } from '../services/sharedFormationService.js';
 
 export default function FormationViewScreen() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Extract formationId from pathname since we use location-based routing, not <Route>
-  const formationId = location.pathname.replace('/tactics/view/', '').replace(/\/$/, '') || null;
+  // Only the id segment: links pasted from chats can carry a trailing slash or extra path.
+  const rawId = location.pathname.replace(/^.*\/tactics\/view\//, '').split('/')[0];
+  const formationId = (() => {
+    try { return rawId ? decodeURIComponent(rawId) : null; } catch { return rawId || null; }
+  })();
 
   const [formationData, setFormationData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [retried, setRetried] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    async function fetchFormation() {
-      try {
-        const formRef = doc(db, `artifacts/${APP_ID}/public/data/shared_formations`, formationId);
-        const formSnap = await getDoc(formRef);
-
-        if (!formSnap.exists() || formSnap.data().isPublic === false) {
-          setError("Esta formación no existe o no está disponible.");
-          setLoading(false);
-          return;
-        }
-
-        setFormationData(formSnap.data());
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching formation:", err);
-        if (!retried) {
-          // Retry once before showing error
-          setRetried(true);
-          setTimeout(fetchFormation, 1500);
-        } else {
-          setError("No se pudo cargar la formación. Intentá de nuevo más tarde.");
-          setLoading(false);
-        }
-      }
+    if (!formationId) {
+      setError('El enlace no tiene una formación.');
+      setLoading(false);
+      return undefined;
     }
-
-    if (formationId) fetchFormation();
-    else { setError("ID de formación no válido."); setLoading(false); }
-  }, [formationId, retried]);
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    // Works without an account: the SDK first, and a plain REST read if the browser blocks its channel.
+    loadSharedFormation(formationId, {
+      readWithSdk: async () => {
+        const snap = await getDoc(doc(db, `artifacts/${APP_ID}/public/data/shared_formations`, formationId));
+        return snap.exists() ? snap.data() : null;
+      },
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      appId: APP_ID,
+    })
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data.isPublic === false) setError('Esta formación ya no se comparte.');
+        else setFormationData(data);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        if (err instanceof FormationNotFoundError) {
+          setError('Esta formación no existe o fue borrada. Pedile a su dueño que la vuelva a compartir.');
+        } else {
+          console.error('Error fetching formation:', err);
+          setError('No se pudo conectar con la liga. Revisá la conexión (o desactivá el bloqueador del navegador para este sitio) y reintentá.');
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [formationId, attempt]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className=" text-ink-3 text-xs font-medium">Cargando alineación...</p>
+        <div className="text-center" role="status">
+          <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" aria-hidden="true"></div>
+          <p className="text-ink-3 text-xs font-medium">Cargando alineación…</p>
         </div>
       </div>
     );
@@ -64,16 +74,18 @@ export default function FormationViewScreen() {
   if (error) {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
-        <div className="text-center max-w-md bg-surface p-8 rounded-2xl border border-line/20 shadow-xl">
-          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-ink mb-2">Formación no disponible</h2>
-          <p className=" text-ink-3 text-xs mb-6">{error}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent text-ink text-xs font-bold rounded-xl transition"
-          >
-            <ArrowLeft className="w-4 h-4" /> Volver al inicio
-          </button>
+        <div className="text-center max-w-md bg-surface p-8 rounded-2xl border border-line/20 shadow-lg" role="alert">
+          <AlertCircle className="w-12 h-12 text-danger-soft mx-auto mb-3" aria-hidden="true" />
+          <h1 className="font-display text-xl font-bold text-ink mb-2">Formación no disponible</h1>
+          <p className="text-ink-3 text-sm mb-6">{error}</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={() => setAttempt(n => n + 1)} className="btn btn-primary">
+              <RotateCw className="w-4 h-4" aria-hidden="true" />Reintentar
+            </button>
+            <button type="button" onClick={() => navigate('/')} className="btn btn-secondary">
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />Volver al inicio
+            </button>
+          </div>
         </div>
       </div>
     );
