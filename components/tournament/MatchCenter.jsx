@@ -6,11 +6,14 @@ import { TeamSelect } from './TournamentTeamsContext.jsx';
 import { hasScore } from '../../utils/bracketModel.js';
 import { leagueMatchOutcome } from '../../utils/competitionRules.js';
 import { formatFixtureDate } from '../../utils/leagueFixtures.js';
+import { Disclosure } from '../pes/PesUi.jsx';
+import { FromGameLock, FromGameNote, isFromGame } from './FromGame.jsx';
 
 // El motor (tournamentEngine.js) lee "Nombre" o "Nombre x2" separados por coma; un minuto ("23'") quedaría
 // como parte del nombre y partiría al goleador en dos filas.
 const SCORERS_HINT = 'Separá con comas; "x2" para dobletes. Ej.: Haaland x2, Foden';
 
+const MANUAL_FIELDS = ['mvp', 'homeGoals', 'awayGoals', 'homeAssists', 'awayAssists'];
 const EDIT_FIELDS = [
   { field: 'homeGoals', label: 'Goles local', placeholder: 'Haaland x2, Foden' },
   { field: 'awayGoals', label: 'Goles visitante', placeholder: 'Mbappé, Vini Jr.' },
@@ -23,12 +26,18 @@ export const MatchCenter = memo(function MatchCenter({
   isEditing,
   onUpdate,
   onAdd,
-  onSuggestRound,
   onRemove,
   getTeamLogo,
   isObsMode = false,
+  isAdmin = false,
+  redoRound = null,
+  onDrawRoundOne = null,
+  importPanel = null,
 }) {
   const [selectedRound, setSelectedRound] = useState('all');
+  // Partidos del juego que el admin desbloqueó para corregir a mano en esta edición.
+  const [unlockedIds, setUnlockedIds] = useState(() => new Set());
+  const unlock = id => setUnlockedIds(prev => new Set(prev).add(id));
 
   const orderedMatches = useMemo(() => {
     return [...(matches || [])].sort((a, b) => {
@@ -98,27 +107,36 @@ export const MatchCenter = memo(function MatchCenter({
 
         {isEditing && (
           <div className="flex flex-wrap gap-2">
-            {onSuggestRound && (
-              <TournamentActionButton tone="blue" onClick={onSuggestRound}>
-                Sugerir próxima fecha
+            {/* Las fechas 2 a 4 se arman solas al guardar; esto aparece solo si una fecha generada se borró. */}
+            {redoRound && (
+              <TournamentActionButton tone="blue" onClick={redoRound.onClick}>
+                Rehacer {redoRound.round}
               </TournamentActionButton>
             )}
-            <TournamentActionButton tone="green" onClick={onAdd}>
-              + Agregar partido
+            <TournamentActionButton tone="slate" onClick={onAdd}
+              title="Para cargar un partido a mano, por ejemplo si el sistema suizo no pudo armar una fecha">
+              Agregar partido a mano
             </TournamentActionButton>
           </div>
         )}
       </div>
       )}
 
+      {!isObsMode && importPanel}
+
       {orderedMatches.length === 0 ? (
         <TournamentPanel title="Próximos partidos" icon={CalendarDays} compact>
           <div className="py-16 text-center text-ink-3 flex flex-col items-center justify-center">
             <CalendarDays className="w-10 h-10 text-ink-3 mb-3" />
-            <p className="font-bold text-ink text-base">Sin partidos programados</p>
+            <p className="font-bold text-ink text-base">Todavía no hay partidos</p>
             <p className="text-xs text-ink-3 mt-1 max-w-sm">
-              El administrador puede cargar las fechas, cruces y resultados desde el botón Editar.
+              {isAdmin && onDrawRoundOne
+                ? 'La Fecha 1 sale de un sorteo entre los clubes de la tabla. Ves los cruces antes de aceptarlos y se publican al guardar.'
+                : 'Los cruces aparecen acá cuando se sortee la Fecha 1.'}
             </p>
+            {isAdmin && onDrawRoundOne && (
+              <button type="button" className="btn btn-primary btn-sm min-h-11 mt-4" onClick={onDrawRoundOne}>Sortear Fecha 1</button>
+            )}
           </div>
         </TournamentPanel>
       ) : (
@@ -146,6 +164,11 @@ export const MatchCenter = memo(function MatchCenter({
                   const awayWon = isCompleted && outcome.ok && outcome.winner === 'away';
                   const isDraw = hasScore(match.homeScore) && hasScore(match.awayScore) && Number(match.homeScore) === Number(match.awayScore);
                   const isMissingShootout = isCompleted && isDraw && !outcome.ok;
+                  const fromGame = isFromGame(match);
+                  const isLocked = isEditing && fromGame && !unlockedIds.has(match.id);
+                  // Marcador, equipos, tanda y goleadores: editables salvo en un partido del juego bloqueado.
+                  const canEditResult = isEditing && !isLocked;
+                  const hasManualStats = MANUAL_FIELDS.some(field => match[field]);
 
                   return (
                     <article
@@ -154,8 +177,9 @@ export const MatchCenter = memo(function MatchCenter({
                     >
                       {/* Top status */}
                       <div className="mb-2.5 flex items-center justify-between gap-2 text-xs border-b border-line/[0.08] pb-2">
-                        <span className="text-ink-3 font-medium text-[11px]">
-                          {formatFixtureDate(match) || 'Fecha a confirmar'}
+                        <span className="flex items-center gap-2 min-w-0 text-ink-3 font-medium text-[11px]">
+                          <span className="truncate">{formatFixtureDate(match) || 'Fecha a confirmar'}</span>
+                          {fromGame && <FromGameNote />}
                         </span>
                         <div className="flex items-center gap-2">
                           <span
@@ -195,7 +219,7 @@ export const MatchCenter = memo(function MatchCenter({
                               className="w-6 h-6 object-contain shrink-0"
                               onError={e => { e.currentTarget.src = DEFAULT_LOGO; }}
                             />
-                            {isEditing ? (
+                            {canEditResult ? (
                               <TeamSelect
                                 value={match.homeTeam || ''}
                                 onChange={val => onUpdate(match.id, 'homeTeam', val)}
@@ -211,9 +235,12 @@ export const MatchCenter = memo(function MatchCenter({
                               </span>
                             )}
                           </div>
-                          {isEditing ? (
+                          {canEditResult ? (
                             <input
                               type="number"
+                              min="0"
+                              inputMode="numeric"
+                              aria-label={`Goles de ${match.homeTeam || 'local'}`}
                               value={match.homeScore ?? ''}
                               onChange={e => onUpdate(match.id, 'homeScore', e.target.value)}
                               className="w-10 h-7 rounded-lg border border-white/20 bg-black/50 px-1 text-center text-sm font-bold text-ink outline-none"
@@ -242,7 +269,7 @@ export const MatchCenter = memo(function MatchCenter({
                               className="w-6 h-6 object-contain shrink-0"
                               onError={e => { e.currentTarget.src = DEFAULT_LOGO; }}
                             />
-                            {isEditing ? (
+                            {canEditResult ? (
                               <TeamSelect
                                 value={match.awayTeam || ''}
                                 onChange={val => onUpdate(match.id, 'awayTeam', val)}
@@ -258,9 +285,12 @@ export const MatchCenter = memo(function MatchCenter({
                               </span>
                             )}
                           </div>
-                          {isEditing ? (
+                          {canEditResult ? (
                             <input
                               type="number"
+                              min="0"
+                              inputMode="numeric"
+                              aria-label={`Goles de ${match.awayTeam || 'visitante'}`}
                               value={match.awayScore ?? ''}
                               onChange={e => onUpdate(match.id, 'awayScore', e.target.value)}
                               className="w-10 h-7 rounded-lg border border-white/20 bg-black/50 px-1 text-center text-sm font-bold text-ink outline-none"
@@ -279,12 +309,12 @@ export const MatchCenter = memo(function MatchCenter({
                         </div>
                       </div>
 
-                      {!isEditing && isCompleted && outcome.ok && outcome.decidedBy === 'shootout' && (
+                      {!canEditResult && isCompleted && outcome.ok && outcome.decidedBy === 'shootout' && (
                         <p className="text-right text-[11px] font-semibold text-ink-3 tabular-nums">
                           Penales {match.homePenalties}-{match.awayPenalties}
                         </p>
                       )}
-                      {isEditing && isDraw && (
+                      {canEditResult && isDraw && (
                         <div className="mt-1 flex items-center justify-between gap-2 rounded-lg bg-raised px-2.5 py-1.5 text-xs text-ink-3">
                           <span>Empate: penales</span>
                           <span className="flex items-center gap-1.5">
@@ -330,13 +360,15 @@ export const MatchCenter = memo(function MatchCenter({
                         </div>
                       </div>
 
-                      {/* Formulario de Edición */}
-                      {isEditing && isMissingShootout && (
+                      {isLocked && <FromGameLock onUnlock={() => unlock(match.id)} />}
+
+                      {/* Formulario de edición: agenda siempre; goleadores y MVP a mano, plegados (los trae el colector). */}
+                      {canEditResult && isMissingShootout && (
                         <p role="alert" className="mt-2 text-[11px] text-warning-soft">
                           Empate sin la tanda: suma el partido y los goles, pero no los puntos, hasta cargar los penales.
                         </p>
                       )}
-                      {isEditing && isMissingScore && (
+                      {canEditResult && isMissingScore && (
                         <p role="alert" className="mt-2 text-[11px] text-warning-soft">
                           Marcado como finalizado sin marcador completo: no suma a la tabla hasta cargar los dos resultados.
                         </p>
@@ -375,6 +407,7 @@ export const MatchCenter = memo(function MatchCenter({
                             <label className="text-[11px] text-ink-3 font-bold block mb-1">Estado</label>
                             <select
                               value={match.status || 'scheduled'}
+                              disabled={isLocked}
                               onChange={event => onUpdate(match.id, 'status', event.target.value)}
                               className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
                             >
@@ -383,27 +416,38 @@ export const MatchCenter = memo(function MatchCenter({
                               <option value="completed">Finalizado</option>
                             </select>
                           </div>
-                          <div>
-                            <label className="text-[11px] text-ink-3 font-bold block mb-1">MVP</label>
-                            <input
-                              value={match.mvp || ''}
-                              onChange={event => onUpdate(match.id, 'mvp', event.target.value)}
-                              placeholder="Jugador MVP"
-                              className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
-                            />
-                          </div>
-                          {EDIT_FIELDS.map(({ field, label, placeholder }) => (
-                            <label key={field} className="block">
-                              <span className="text-[11px] text-ink-3 font-bold uppercase block mb-1">{label}</span>
-                              <input
-                                value={match[field] || ''}
-                                onChange={event => onUpdate(match.id, field, event.target.value)}
-                                placeholder={placeholder}
-                                className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
-                              />
-                            </label>
-                          ))}
-                          <p className="col-span-2 text-[11px] text-ink-3">{SCORERS_HINT}</p>
+                          {canEditResult && (
+                            <Disclosure
+                              className="col-span-2"
+                              summaryClassName="text-[11px] font-bold text-ink-3"
+                              summary="Goleadores, asistencias y MVP a mano"
+                              defaultOpen={hasManualStats && !fromGame}
+                            >
+                              <div className="grid grid-cols-2 gap-2 pb-1">
+                                <div>
+                                  <label className="text-[11px] text-ink-3 font-bold block mb-1">MVP</label>
+                                  <input
+                                    value={match.mvp || ''}
+                                    onChange={event => onUpdate(match.id, 'mvp', event.target.value)}
+                                    placeholder="Jugador MVP"
+                                    className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
+                                  />
+                                </div>
+                                {EDIT_FIELDS.map(({ field, label, placeholder }) => (
+                                  <label key={field} className="block">
+                                    <span className="text-[11px] text-ink-3 font-bold block mb-1">{label}</span>
+                                    <input
+                                      value={match[field] || ''}
+                                      onChange={event => onUpdate(match.id, field, event.target.value)}
+                                      placeholder={placeholder}
+                                      className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1 text-ink outline-none"
+                                    />
+                                  </label>
+                                ))}
+                                <p className="col-span-2 text-[11px] text-ink-3">{SCORERS_HINT}</p>
+                              </div>
+                            </Disclosure>
+                          )}
                         </div>
                       )}
                     </article>

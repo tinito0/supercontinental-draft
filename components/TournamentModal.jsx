@@ -33,6 +33,7 @@ import {
 import { Alert } from './ui/Alert.jsx';
 import { confirmAction } from './ui/ConfirmDialog.jsx';
 import { draftUrl } from '../utils/siteRoutes.js';
+import { CollectorImportAdmin } from './admin/CollectorImportAdmin.jsx';
 
 export {
   TournamentTeamsContext,
@@ -311,7 +312,7 @@ export const TournamentModal = memo(function TournamentModal({
     const draw = drawFirstRound(localData);
     if (!draw.ok) {
       setSaveWarnings([draw.reason]);
-      return;
+      return false;
     }
     const isConfirmed = await confirmAction({
       title: '¿Usar este sorteo de la Fecha 1?',
@@ -320,12 +321,30 @@ export const TournamentModal = memo(function TournamentModal({
       confirmLabel: 'Usar sorteo',
       tone: 'primary',
     });
-    if (!isConfirmed) return;
+    if (!isConfirmed) return false;
     setSaveWarnings([]);
     setLocalData(prev => ({ ...prev, matches: [...(prev.matches || []), ...draw.matches] }));
+    return true;
   }, [localData]);
   // Antes del `if (!localData)` de abajo: el torneo todavía puede no haber cargado.
   const needsRoundOneDraw = !(localData?.matches || []).some(match => roundNumber(match.round) === 1);
+
+  // Desde el estado vacío del Centro de partidos: entra a editar, sortea y, si el admin no acepta el sorteo, sale.
+  const beginRoundOneDraw = async () => {
+    const wasEditing = isEditing;
+    if (!wasEditing) startEditing();
+    const isAccepted = await drawRoundOne();
+    if (!isAccepted && !wasEditing) setIsEditing(false);
+  };
+
+  // «Rehacer Fecha N» solo cuando el suizo ya la había armado y el admin la borró: guardar no la vuelve a generar
+  // (applyAutomaticSwiss), así que es la única forma de recuperarla sin cargarla a mano.
+  const redoRound = useMemo(() => {
+    if (!isEditing || !localData) return null;
+    const suggestion = suggestSwissRound(localData);
+    const generated = localData.swissStatus?.generatedRounds || [];
+    return suggestion.ok && generated.includes(suggestion.roundNumber) ? { round: suggestion.round, onClick: suggestNextRound } : null;
+  }, [isEditing, localData, suggestNextRound]);
 
   const removeTournamentMatch = useCallback(async (matchId) => {
     const isConfirmed = await confirmAction({
@@ -383,10 +402,20 @@ export const TournamentModal = memo(function TournamentModal({
           isEditing={isEditing}
           onUpdate={updateTournamentMatch}
           onAdd={addTournamentMatch}
-          onSuggestRound={suggestNextRound}
           onRemove={removeTournamentMatch}
           getTeamLogo={getTeamLogo}
           isObsMode={isObsMode}
+          isAdmin={isAdmin}
+          redoRound={redoRound}
+          onDrawRoundOne={needsRoundOneDraw ? beginRoundOneDraw : null}
+          importPanel={isAdmin ? (
+            <CollectorImportAdmin
+              variant="inline"
+              tournamentData={tournamentData}
+              onUpdateTournament={onUpdateTournament}
+              lockedReason={isEditing ? 'Estás editando el torneo: guardá o cancelá para importar.' : ''}
+            />
+          ) : null}
         />
       )}
 
@@ -494,7 +523,7 @@ export const TournamentModal = memo(function TournamentModal({
                   {localData.swissStatus.blocked.reason} Cargá esa fecha a mano con «Agregar partido».
                 </Alert>
               )}
-              {isAdmin && isEditing && needsRoundOneDraw && (
+              {isAdmin && isEditing && needsRoundOneDraw && !(activeTab === 'matches' && !(localData.matches || []).length) && (
                 <Alert tone="info" title="La Fecha 1 se sortea">
                   <span className="mr-2">El día que arranca la copa, sorteá los cruces de la Fecha 1 entre los clubes de la tabla. Las fechas siguientes se arman solas al terminar cada una.</span>
                   <button type="button" className="btn btn-primary btn-sm min-h-11 mt-2" onClick={drawRoundOne}>Sortear Fecha 1</button>

@@ -1,8 +1,9 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { TeamSelect } from './TournamentTeamsContext.jsx';
 import { getMatchWinner, isMatchCompleted, isTiedScore, shootoutLabel } from '../../utils/bracketModel.js';
+import { FromGameLock, FromGameNote, isFromGame } from './FromGame.jsx';
 
 export const BracketFork = memo(function BracketFork({ height = 180, tone = 'slate' }) {
   const strokeColor = tone === 'gold' ? 'rgba(147,176,242,0.5)' : 'rgba(255,255,255,0.18)';
@@ -36,6 +37,7 @@ export const MatchCard = memo(function MatchCard({
 }) {
   // `path` (ruta dentro de bracket) tiene prioridad sobre `stage` para guardar: lo usa el bracket compartido.
   const updateTarget = path || stage;
+  const [isUnlocked, setIsUnlocked] = useState(false);
   if (!match) {
     return (
       <div className="w-full max-w-[260px] h-24 bg-surface/80 border border-dashed border-line/[0.12] flex flex-col items-center justify-center text-ink-3 font-medium text-xs rounded-xl p-3 shadow-sm">
@@ -62,6 +64,9 @@ export const MatchCard = memo(function MatchCard({
   const teamBWon = winner === 'B';
   const isTied = isTiedScore(match);
   const penalties = shootoutLabel(match);
+  const fromGame = isFromGame(match);
+  // Cruce importado del juego: en edición se ve como quedó, salvo que el admin elija corregirlo a mano.
+  const canEdit = isEditing && (!fromGame || isUnlocked);
 
   return (
     <div
@@ -84,7 +89,9 @@ export const MatchCard = memo(function MatchCard({
           <span className="truncate">{cardTitle}</span>
         </div>
         <div>
-          {isCompleted ? (
+          {fromGame && !isEditing ? (
+            <FromGameNote />
+          ) : isCompleted ? (
             <span className="text-xs font-bold text-ink-2">Final</span>
           ) : (
             <span className="text-xs font-semibold text-ink-3">Por jugar</span>
@@ -126,7 +133,7 @@ export const MatchCard = memo(function MatchCard({
                   className="w-5 h-5 object-contain shrink-0"
                   onError={(e) => { e.currentTarget.src = DEFAULT_LOGO; }}
                 />
-                {isEditing ? (
+                {canEdit ? (
                   <TeamSelect
                     value={name}
                     onChange={(value) => updateMatch(updateTarget, index, key, value)}
@@ -149,7 +156,7 @@ export const MatchCard = memo(function MatchCard({
                 )}
               </div>
 
-              {isEditing ? (
+              {canEdit ? (
                 <input
                   type="number"
                   min="0"
@@ -178,7 +185,8 @@ export const MatchCard = memo(function MatchCard({
       </div>
 
       {/* Empate: la tanda decide quién pasa (competitionRules.knockoutWinner). */}
-      {isEditing && isTied && (
+      {isEditing && fromGame && !isUnlocked && <FromGameLock compact onUnlock={() => setIsUnlocked(true)} />}
+      {canEdit && isTied && (
         <div className="flex items-center justify-between gap-2 border-t border-line/[0.08] bg-raised px-3 py-1.5 text-[11px] text-ink-3">
           <span>Penales</span>
           <span className="flex items-center gap-1">
@@ -197,10 +205,10 @@ export const MatchCard = memo(function MatchCard({
           </span>
         </div>
       )}
-      {!isEditing && penalties && (
+      {!canEdit && penalties && (
         <div className="border-t border-line/[0.08] px-3 py-1 text-right text-xs font-semibold text-ink-3 tabular-nums">{penalties}</div>
       )}
-      {!isEditing && isTied && !penalties && (
+      {!canEdit && isTied && !penalties && (
         <div className="border-t border-line/[0.08] px-3 py-1 text-right text-xs font-semibold text-warning-soft">Falta la tanda</div>
       )}
     </div>

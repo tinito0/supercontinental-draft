@@ -100,9 +100,9 @@ export function ConfirmAction({
 }
 
 /** <details> with a chevron that flips when it opens. Content appears without animating its height. */
-export function Disclosure({ summary, children, className = '', summaryClassName = '' }) {
+export function Disclosure({ summary, children, className = '', summaryClassName = '', defaultOpen = false }) {
   return (
-    <details className={`disclosure ${className}`}>
+    <details className={`disclosure ${className}`} open={defaultOpen || undefined}>
       <summary className={`flex items-center gap-1.5 min-h-11 cursor-pointer select-none rounded-md hover:text-ink transition-colors ${summaryClassName}`}>
         <ChevronDown className="disclosure-chevron w-4 h-4 shrink-0" aria-hidden="true" />
         <span className="min-w-0">{summary}</span>

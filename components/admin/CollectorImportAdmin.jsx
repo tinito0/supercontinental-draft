@@ -65,8 +65,14 @@ function Preview({ plan }) {
   );
 }
 
-/** @param {{ tournamentData: object, onUpdateTournament: (edited: object, options: { base: object }) => Promise<{ ok: boolean }>, showStatusMessage?: Function }} props */
-export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournamentData, onUpdateTournament, showStatusMessage }) {
+/**
+ * @param {{ tournamentData: object, onUpdateTournament: (edited: object, options: { base: object }) => Promise<{ ok: boolean }>,
+ *   showStatusMessage?: Function, variant?: 'admin'|'inline', lockedReason?: string }} props
+ * variant 'inline' (Centro de partidos): only the matches the admin can act on (importable or with unmapped teams),
+ * nothing at all when there are none. lockedReason disables importing (the tournament is being edited by hand).
+ */
+export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournamentData, onUpdateTournament, showStatusMessage, variant = 'admin', lockedReason = '' }) {
+  const isInline = variant === 'inline';
   const { matches, loading, error } = useLiveMatches();
   const { data: teamMapDoc } = usePesTeamMap();
   const teamMap = teamMapDoc?.teams || {};
@@ -74,7 +80,14 @@ export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournam
   const [busyKey, setBusyKey] = useState('');
   const [warnings, setWarnings] = useState([]);
   const leagueNames = useMemo(() => (tournamentData?.league || []).map(team => team?.name).filter(name => name && name !== 'Club...').sort((a, b) => a.localeCompare(b)), [tournamentData]);
-  const finished = useMemo(() => matches.filter(match => match.status.kind === 'finished'), [matches]);
+  const finished = useMemo(() => {
+    const done = matches.filter(match => match.status.kind === 'finished');
+    if (!isInline) return done;
+    return done.filter(match => {
+      const plan = planCollectorImport({ match, tournamentData, teamMap });
+      return plan.ok || Boolean(plan.missingTeams);
+    });
+  }, [matches, isInline, tournamentData, teamMap]);
 
   const saveTeams = async (entries) => {
     try {
@@ -113,14 +126,22 @@ export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournam
     }
   };
 
+  if (isInline && !error && !warnings.length && (loading || finished.length === 0)) return null;
+
   return (
-    <section className="panel p-5 space-y-4" aria-labelledby="collector-import-title">
+    <section className={isInline ? 'panel p-4 space-y-3 mb-5' : 'panel p-5 space-y-4'} aria-labelledby="collector-import-title">
       <div className="flex flex-col gap-1">
         <h2 id="collector-import-title" className="section-title flex items-center gap-2.5">
-          <Gamepad2 className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Partidos del juego
+          <Gamepad2 className="h-5 w-5 text-accent-soft" aria-hidden="true" />
+          {isInline ? <>Partidos del juego sin importar <span className="num text-ink-3">({finished.length})</span></> : 'Partidos del juego'}
         </h2>
-        <p className="text-xs text-ink-3">Los partidos que registró el colector. Importalos al fixture o a la copa: se revisa antes de guardar y nunca pisa un resultado cargado.</p>
+        <p className="text-xs text-ink-3">
+          {isInline
+            ? 'Terminaron en el juego y todavía no están en el torneo. Revisá adónde va cada uno e importalo: nunca pisa un resultado cargado.'
+            : 'Los partidos que registró el colector. Importalos al fixture o a la copa: se revisa antes de guardar y nunca pisa un resultado cargado.'}
+        </p>
       </div>
+      {lockedReason && finished.length > 0 && <p className="text-xs text-warning-soft">{lockedReason}</p>}
       {error && <Alert tone="danger">{error}</Alert>}
       {warnings.length > 0 && (
         <Alert tone="warning" title="Revisá la tabla"><ul className="list-disc space-y-0.5 pl-4">{warnings.map(item => <li key={item}>{item}</li>)}</ul></Alert>
@@ -146,7 +167,7 @@ export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournam
                 {plan.ok ? (
                   <>
                     <Preview plan={plan} />
-                    <button type="button" className="btn btn-primary min-h-11" disabled={Boolean(busyKey)} onClick={() => importMatch(match, plan)}>
+                    <button type="button" className="btn btn-primary min-h-11" disabled={Boolean(busyKey) || Boolean(lockedReason)} onClick={() => importMatch(match, plan)}>
                       <Download className="h-4 w-4" aria-hidden="true" /> {busyKey === match.key ? 'Importando…' : 'Importar'}
                     </button>
                   </>
