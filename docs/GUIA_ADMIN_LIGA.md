@@ -1,7 +1,7 @@
-# Guía de administración: mercado y equipos
+# Guía de administración: mercado, equipos y torneo
 
 Para Santino y para las sesiones de código. Cómo actualizar el mercado de jugadores, sumar un equipo, cambiar el
-manager de un club, editar o eliminar un club. Cada paso sale del código actual (revisado el 2026-10-30); si algo
+manager de un club, editar o eliminar un club, cargar los partidos del torneo. Cada paso sale del código actual (revisado el 2026-10-30); si algo
 cambia, actualizá esta guía en el mismo commit.
 
 Antes de cualquier cosa: **un push a `master` publica la web** (Vercel). Probá en una rama, mergeá cuando esté listo.
@@ -203,6 +203,34 @@ semifinal → final, sin semis de Plata), además de `utils/bracketModel.js` hay
 `supabase/functions/_shared/communityVote.js` (las rondas que se pueden votar) y después publicar
 **deploy-community-vote**.
 
+## 8. Cargar los partidos del torneo
+
+Torneo → **Centro de partidos**. Los resultados salen del juego: el colector sube cada partido terminado y vos lo
+pasás al torneo. La carga a mano queda para cuando el colector no corrió.
+
+**Arrancar la liga.** Con el torneo vacío, el Centro de partidos muestra **Sortear Fecha 1**. Ves los cruces antes
+de aceptarlos; si cancelás, no queda nada y podés volver a sortear. Aceptado, se publica al tocar **Guardar** (hasta
+ahí, **Cancelar** lo tira). Las fechas 2 a 4 se arman solas cuando termina la anterior.
+
+**Importar un partido del juego.** Arriba de la lista aparece **Partidos del juego sin importar (N)** cuando hay
+alguno pendiente (solo lo ve el admin):
+
+1. Revisá adónde va («Va a: Fecha 2, Club A vs Club B» o un cruce de copa) y el resultado.
+2. **Importar** → confirmar. Se guarda solo: tabla, fecha suiza y copas se recalculan como al guardar a mano.
+3. La primera vez que aparece un equipo del juego te pregunta a qué club del torneo corresponde. Queda guardado.
+
+No importa si estás en modo **Editar**: guardá o cancelá primero. Nunca pisa un resultado que ya esté cargado. El
+historial completo de partidos del juego está en Administración → Torneo y transmisión.
+
+**Partidos «Del juego».** Llevan esa marca al lado de la fecha (también en las llaves de Copa de Oro y Copa de
+Plata). En **Editar** su marcador, equipos, penales, goleadores y estado quedan bloqueados; fecha, hora y jornada sí
+se cambian. Si el juego registró algo mal, **Corregir a mano** (pide confirmación) lo desbloquea en esa edición.
+
+**Cargar a mano** (el colector no corrió): en **Editar**, marcador y penales en la tarjeta; goleadores, asistencias
+y MVP en el desplegable **Goleadores, asistencias y MVP a mano**. Estado **Finalizado** y **Guardar**.
+**Agregar partido a mano** es para cuando el suizo no pudo armar una fecha (aparece un aviso amarillo). Si borraste
+una fecha que el suizo ya había armado, al guardar no se vuelve a generar sola: usá **Rehacer Fecha N**.
+
 ---
 
 ## Para las sesiones de código
@@ -219,6 +247,7 @@ semifinal → final, sin semis de Plata), además de `utils/bracketModel.js` hay
 | Reglas del plantel (banco ≥ 73, mínimo 21, 7 locales) | `utils/squadRules.js`; pizarra `components/formation/BenchRule.jsx`, Mi Equipo `components/SquadRulesStats.jsx`, Administración → Reglas `components/admin/SquadRulesAdminSection.jsx` |
 | Comisión de traspasos (15 % sobre la prima) | `supabase/functions/_shared/transferFee.js` (app y función); después **deploy-market** |
 | Draft → PES | `pes/draftTransfer.js`, `components/pes/PesDraftPanel.jsx`, `docs/PES_ENGINE.md` §4b |
+| Centro de partidos e importación del colector | `components/tournament/MatchCenter.jsx`, `MatchCard.jsx` (copas), `FromGame.jsx` (bloqueo «Del juego»), `components/admin/CollectorImportAdmin.jsx` (`variant="inline"` en el torneo), `utils/collectorImport.js`; sorteo y «Rehacer Fecha N» en `components/TournamentModal.jsx` |
 | Reglas de Firestore | `firestore.rules` (`npm run test:rules` + `firebase deploy --only firestore:rules`) |
 
 Tests de «Cambiar manager»: `tests/clubTransfer.test.js` (Firestore en memoria, corre con `npm test`) y el bloque
