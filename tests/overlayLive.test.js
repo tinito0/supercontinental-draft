@@ -20,7 +20,14 @@ const match = parseMatchDoc({ matchKey: '20261022T200000Z_101-1230', status: 'fi
 
 describe('buildOverlayLive', () => {
   it('returns nothing to show without a live match or votes', () => {
-    expect(buildOverlayLive({})).toEqual({ score: null, scorers: { home: [], away: [] }, prediction: null, mvp: null, mvpTop: [], cup: null });
+    expect(buildOverlayLive({})).toEqual({ score: null, scorers: { home: [], away: [] }, prediction: null, mvp: null, mvpTop: [], cup: null, topRated: null });
+  });
+
+  it('names the best rated player of the game, every one of them on a tie', () => {
+    const rated = extra => parseMatchDoc({ matchKey: 'k', status: 'finished', summaryJson: JSON.stringify({ ...summary, ...extra }) });
+    expect(buildOverlayLive({ match: rated({ ratings: { 7: 8.5, 9: 6 } }) }).topRated).toEqual({ names: ['Saka'], rating: 8.5 });
+    expect(buildOverlayLive({ match: rated({ ratings: { 7: 7, 9: 7 } }) }).topRated).toEqual({ names: ['Saka', 'Nine'], rating: 7 });
+    expect(buildOverlayLive({ match }).topRated).toBeNull();
   });
 
   it('takes the score and the scorers from the match the bridge uploaded', () => {

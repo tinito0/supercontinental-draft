@@ -1,7 +1,8 @@
 // Datos en vivo para las escenas del overlay de OBS (components/BroadcastOverlay.jsx): el partido que sube el bridge
 // (overlay.liveMatchKey, lo escribe match-feed), la predicción del partido al aire y el MVP de la comunidad.
 // Puro; tests/overlayLive.test.js. Lo que no llegó queda en null y la escena usa lo que cargó el admin.
-import { buildTimeline } from './matchCenter.js';
+import { buildTimeline, playerName } from './matchCenter.js';
+import { bestRated, playerRating } from './matchStats.js';
 import { mvpRanking, pollResults, predictionShares } from './communityView.js';
 
 const MVP_CARD_ROWS = 3;
@@ -11,6 +12,13 @@ const CUP_CARD_ROWS = 4;
 function featuredPoll(polls) {
   const withOptions = (polls || []).filter(poll => poll?.options?.length);
   return withOptions.find(poll => poll.open) || withOptions[0] || null;
+}
+
+/** Mejor valoración del juego en el partido: todos los que empatan arriba; null sin valoraciones. */
+function topRatedOf(summary) {
+  const ids = bestRated(summary);
+  if (!ids.length) return null;
+  return { names: ids.map(id => playerName(summary, id)), rating: playerRating(summary, ids[0]) };
 }
 
 function goalTag(event) {
@@ -39,6 +47,7 @@ export function buildOverlayLive({ match, prediction, mvpVotes, polls } = {}) {
     prediction: shares.total ? shares : null,
     mvp: mvpTop[0] || null,
     mvpTop,
+    topRated: topRatedOf(match?.summary),
     cup: results ? { title: poll.title || '¿Quién gana la copa?', open: Boolean(poll.open), total: results.total, options: results.options.slice(0, CUP_CARD_ROWS) } : null,
   };
 }

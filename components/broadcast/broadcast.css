@@ -404,6 +404,12 @@
 .broadcast-h2h { display: grid; justify-items: center; color: var(--scl-ink); }
 .broadcast-h2h strong { font-size: 44px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
 .broadcast-h2h small { font-size: 22px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--scl-muted); }
+/* MVP de la comunidad y mejor valoración del juego en la Final: una columna por premio. */
+.broadcast-final-awards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 16px; }
+.broadcast-final-awards .broadcast-mvp strong,
+.broadcast-final-awards .broadcast-mvp strong span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Empate en la valoración: un nombre por línea, más chicos, para que entren los dos sin cortar el segundo. */
+.broadcast-final-awards .is-tie strong { font-size: 28px; line-height: 1.1; }
 .broadcast-mvp {
   padding: 14px 22px;
   background: var(--scl-row);

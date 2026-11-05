@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDecimal } from '../../utils/matchStats.js';
 
 // Piezas de las escenas Previa, Entretiempo y Final con datos en vivo (utils/overlayLive.js). Estilos en broadcast.css.
 
@@ -49,6 +50,29 @@ export function BroadcastMvp({ mvp }) {
     <div className="broadcast-community broadcast-mvp">
       <span className="broadcast-community-label"><span>MVP de la comunidad</span><span>{mvp.pct}%</span></span>
       <strong>{mvp.name}</strong>
+    </div>
+  );
+}
+
+/** Mejor valoración del juego; si empatan, todos. */
+export function BroadcastTopRated({ topRated }) {
+  return (
+    <div className={`broadcast-community broadcast-mvp${topRated.names.length > 1 ? ' is-tie' : ''}`}>
+      <span className="broadcast-community-label"><span>Mejor valoración</span><span>{formatDecimal(topRated.rating, 1)}</span></span>
+      <strong aria-label={topRated.names.join(' y ')}>
+        {topRated.names.map(name => <span key={name}>{name}</span>)}
+      </strong>
+    </div>
+  );
+}
+
+/** Final: el MVP que votó la comunidad y la mejor valoración del juego, lado a lado cuando están los dos. */
+export function BroadcastFinalAwards({ mvp, topRated }) {
+  if (!mvp && !topRated) return null;
+  return (
+    <div className="broadcast-final-awards">
+      {mvp && <BroadcastMvp mvp={mvp} />}
+      {topRated && <BroadcastTopRated topRated={topRated} />}
     </div>
   );
 }

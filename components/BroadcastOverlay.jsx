@@ -10,7 +10,7 @@ import { BroadcastFixtures } from './broadcast/BroadcastFixtures.jsx';
 import { BroadcastLeagueTable } from './broadcast/BroadcastLeagueTable.jsx';
 import { OverlayPopup } from './broadcast/OverlayPopup.jsx';
 import { CommunityCard } from './broadcast/CommunityCard.jsx';
-import { BroadcastMvp, BroadcastPrediction, BroadcastScorers, BroadcastSeasonFacts } from './broadcast/BroadcastMatchExtras.jsx';
+import { BroadcastFinalAwards, BroadcastPrediction, BroadcastScorers, BroadcastSeasonFacts } from './broadcast/BroadcastMatchExtras.jsx';
 import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
 import { OverlayErrorBoundary } from './broadcast/OverlayErrorBoundary.jsx';
 
@@ -118,7 +118,7 @@ function MatchPanel({ scene, data, home, away, live, fixture, season }) {
       )}
       {scene === 'previa' && season && <BroadcastSeasonFacts facts={season} />}
       {scene === 'previa' && live?.prediction && <BroadcastPrediction shares={live.prediction} />}
-      {scene === 'final' && live?.mvp && <BroadcastMvp mvp={live.mvp} />}
+      {scene === 'final' && <BroadcastFinalAwards mvp={live?.mvp} topRated={live?.topRated} />}
     </BroadcastFrame>
   );
 }
