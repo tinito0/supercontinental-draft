@@ -62,6 +62,8 @@ export function RoundXi({ docs, rounds, catalog }) {
   );
 }
 
+const MAX_COMEBACKS = 3;
+
 function matchLabel(record) {
   return `${record.home.name || 'Local'} ${record.home.score}-${record.away.score} ${record.away.name || 'Visitante'}`;
 }
@@ -71,6 +73,16 @@ export function SeasonRecords({ records, catalog }) {
   const rows = [
     records.biggestWin && { label: 'Goleada más amplia', value: matchLabel(records.biggestWin), to: `/partidos/${records.biggestWin.matchKey}` },
     records.mostGoals && { label: 'Partido con más goles', value: matchLabel(records.mostGoals), to: `/partidos/${records.mostGoals.matchKey}` },
+    records.fastestGoal && {
+      label: `Gol más rápido · ${records.fastestGoal.minute}'`,
+      value: playerDisplayName({ id: records.fastestGoal.playerId, name: records.fastestGoal.name }, catalog),
+      to: `/partidos/${records.fastestGoal.matchKey}`,
+    },
+    ...(records.comebacks || []).slice(0, MAX_COMEBACKS).map(back => ({
+      label: back.deficit > 1 ? `Remontada de ${back.deficit} goles` : 'Remontada',
+      value: matchLabel(back),
+      to: `/partidos/${back.matchKey}`,
+    })),
     ...records.hatTricks.map(hat => ({
       label: hat.goals > 3 ? `${hat.goals} goles en un partido` : 'Hat-trick',
       value: playerDisplayName({ id: hat.playerId, name: hat.name }, catalog),

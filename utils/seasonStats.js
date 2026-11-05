@@ -136,7 +136,41 @@ function seasonRecords(matches) {
   const hatTricks = matches.flatMap(doc => doc.players
     .filter(line => line.goals >= HAT_TRICK)
     .map(line => ({ matchKey: doc.matchKey, playerId: line.id, name: line.name, goals: line.goals })));
-  return { biggestWin, mostGoals, hatTricks };
+  return { biggestWin, mostGoals, hatTricks, fastestGoal: fastestGoal(matches), comebacks: comebacks(matches) };
+}
+
+/** The goal list, only when it adds up to the final score (older documents have none; a missed goal breaks it). */
+function trustedGoals(doc) {
+  if (!Array.isArray(doc.goals)) return null;
+  const count = side => doc.goals.filter(goal => goal.side === side).length;
+  return count('home') === doc.home.score && count('away') === doc.away.score ? doc.goals : null;
+}
+
+const goalSeconds = goal => goal.minute * 60 + goal.second;
+
+function fastestGoal(matches) {
+  return matches.reduce((best, doc) => {
+    const first = (trustedGoals(doc) || []).find(goal => !goal.ownGoal && goal.playerId != null);
+    if (!first || (best && goalSeconds(best) <= goalSeconds(first))) return best;
+    const name = doc.players.find(line => line.id === first.playerId)?.name ?? null;
+    return { matchKey: doc.matchKey, ...first, name, home: doc.home, away: doc.away };
+  }, null);
+}
+
+/** Matches the winner won after being behind; `deficit` = the most goals it trailed by. Biggest first. */
+function comebacks(matches) {
+  return matches.flatMap(doc => {
+    const goals = trustedGoals(doc);
+    if (!goals || doc.home.score === doc.away.score) return [];
+    const winner = doc.home.score > doc.away.score ? 'home' : 'away';
+    let lead = 0;
+    let deficit = 0;
+    for (const goal of goals) {
+      lead += goal.side === winner ? 1 : -1;
+      deficit = Math.max(deficit, -lead);
+    }
+    return deficit > 0 ? [{ matchKey: doc.matchKey, deficit, winner, home: doc.home, away: doc.away }] : [];
+  }).sort((a, b) => b.deficit - a.deficit);
 }
 
 // Equipo de la fecha: un 4-3-3 por línea de la posición registrada (código del juego → sigla → línea).

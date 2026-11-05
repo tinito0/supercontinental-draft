@@ -37,6 +37,35 @@ const stats = buildSeasonStats([m1, m2, testMatch, live], { officialKeys: OFFICI
 const byId = id => stats.players.find(p => p.id === id);
 const club = id => stats.clubs.find(c => c.key === id);
 
+const goal = (side, minute, playerId, extra = {}) => ({ side, minute, second: 0, playerId, ownGoal: false, ...extra });
+const comeback = lines('20261124T200000Z_1-2', team('A', 'Los Pibes', 3), team('B', 'La Banda', 2), [
+  player(9, 'home', { goals: 2 }), player(10, 'home', { goals: 1 }), player(300, 'away', { goals: 2 }),
+], { goals: [goal('away', 3, 300), goal('away', 30, 300), goal('home', 50, 9), goal('home', 70, 10), goal('home', 88, 9)] });
+const quick = lines('20261201T200000Z_2-1', team('B', 'La Banda', 2), team('A', 'Los Pibes', 0), [player(300, 'home', { goals: 1 })], {
+  goals: [goal('home', 1, 999, { ownGoal: true, second: 10 }), goal('home', 2, 300, { second: 40 })],
+});
+const brokenGoals = lines('20261202T200000Z_2-1', team('B', 'La Banda', 2), team('A', 'Los Pibes', 1), [], {
+  // The list misses a goal: no comeback can be worked out from it.
+  goals: [goal('away', 5, 9), goal('home', 60, 300)],
+});
+
+describe('season records from the goal list', () => {
+  const records = buildSeasonStats([m1, comeback, quick, brokenGoals]).records;
+
+  it('finds the fastest goal, leaving own goals out, with the scorer name from the lines', () => {
+    expect(records.fastestGoal).toMatchObject({ matchKey: quick.matchKey, minute: 2, second: 40, playerId: 300, name: 'J300', side: 'home' });
+  });
+
+  it('finds comebacks: the winner was behind, by how many goals', () => {
+    expect(records.comebacks).toEqual([expect.objectContaining({ matchKey: comeback.matchKey, deficit: 2, winner: 'home' })]);
+  });
+
+  it('skips matches whose goal list does not add up to the score, and documents without goals (older uploads)', () => {
+    expect(records.comebacks.map(c => c.matchKey)).not.toContain(brokenGoals.matchKey);
+    expect(buildSeasonStats([m1]).records).toMatchObject({ fastestGoal: null, comebacks: [] });
+  });
+});
+
 describe('buildSeasonStats', () => {
   it('counts only finished official matches: test games and the live match stay out', () => {
     expect(stats.matches).toBe(2);
@@ -84,7 +113,7 @@ describe('buildSeasonStats', () => {
   });
 
   it('returns empty totals for no matches', () => {
-    expect(buildSeasonStats([])).toMatchObject({ matches: 0, players: [], clubs: [], records: { biggestWin: null, mostGoals: null, hatTricks: [] } });
+    expect(buildSeasonStats([])).toMatchObject({ matches: 0, players: [], clubs: [], records: { biggestWin: null, mostGoals: null, hatTricks: [], fastestGoal: null, comebacks: [] } });
   });
 });
 

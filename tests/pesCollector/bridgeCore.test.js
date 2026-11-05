@@ -1,5 +1,33 @@
 // Synthetic summaries only: these prove the bridge's selection and naming rules.
-import { parseTeamMap, buildTeamsFile, selectMatch, matchFileName, matchKeyOf, hashText, hashSummary, pendingUploads, backoffMs, classifyFailure, describeStatus } from '../../pes-collector/bridge/bridgeCore.js';
+import { parseTeamMap, buildTeamsFile, selectMatch, matchFileName, matchKeyOf, hashText, hashSummary, pendingUploads, backoffMs, classifyFailure, describeStatus, retryWhileLocked, LOCK_RETRIES } from '../../pes-collector/bridge/bridgeCore.js';
+
+const lockError = code => Object.assign(new Error(code), { code });
+
+describe('retryWhileLocked', () => {
+  it('retries a rename while another process holds the file', () => {
+    const waits = [];
+    let calls = 0;
+    const result = retryWhileLocked(() => {
+      calls += 1;
+      if (calls < 3) throw lockError('EPERM');
+      return 'ok';
+    }, { sleep: ms => waits.push(ms), waitMs: 10 });
+    expect(result).toBe('ok');
+    expect(waits).toEqual([10, 20]);
+  });
+
+  it('gives up after the last attempt and throws the lock error', () => {
+    let calls = 0;
+    expect(() => retryWhileLocked(() => { calls += 1; throw lockError('EBUSY'); }, { sleep: () => {} })).toThrow('EBUSY');
+    expect(calls).toBe(LOCK_RETRIES);
+  });
+
+  it('throws other errors at once', () => {
+    let calls = 0;
+    expect(() => retryWhileLocked(() => { calls += 1; throw lockError('ENOENT'); }, { sleep: () => {} })).toThrow('ENOENT');
+    expect(calls).toBe(1);
+  });
+});
 
 const summary = (home, away, extra = {}) => ({
   schema: 'scl.match/1', status: 'finished', source: { startedAt: '2026-10-21T21:06:52Z' },

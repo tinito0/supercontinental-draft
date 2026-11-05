@@ -34,7 +34,9 @@ docs/PES_MATCH_DATA_RESEARCH.md, S9). Nada de esto toca el torneo:
 vincular un partido a un cruce y cargar el resultado es un paso aparte, con revisión del admin.
 
 Con cada subida la función también escribe `match_lines/{misma clave}`: una línea por jugador que jugó (minutos,
-goles, asistencias, tarjetas, tiros, xG, valoración, atajadas, entradas…), más el marcador y los dos equipos. Pesa
+goles, asistencias, tarjetas, tiros, xG, valoración, atajadas, entradas…), más el marcador, los dos equipos y la
+lista de goles con minuto (`goals`, para el gol más rápido y las remontadas; si no cuadra con el marcador, esos
+récords ignoran el partido). Pesa
 unos pocos KB, contra 13–35 KB del resumen, y es lo que suman las estadísticas de temporada (`utils/seasonStats.js`).
 Para la temporada cuentan solo los partidos terminados e importados al torneo (`importedFrom`). Los partidos subidos
 antes de este cambio no tienen líneas: se generan si el puente los vuelve a subir.

@@ -101,6 +101,18 @@ describe('buildMatchLinesDoc', () => {
     expect(doc.players).toHaveLength(23);
   });
 
+  it('keeps the goals in match order with minute, scorer and the side they count for', () => {
+    expect(linesOf().goals).toEqual([
+      { side: 'home', minute: 20, second: 0, playerId: 9, ownGoal: false },
+      { side: 'home', minute: 80, second: 0, playerId: 105, ownGoal: true },
+    ]);
+  });
+
+  it('drops goals without a clock from the goal list (the score stays as the game reported it)', () => {
+    const doc = linesOf(summary({ goals: [{ side: 'away', playerId: 101, ownGoal: false }, 'junk'] }));
+    expect(doc.goals).toEqual([]);
+  });
+
   it('keeps the shootout when there was one', () => {
     expect(linesOf(summary({ shootout: { home: 4, away: 3 } })).shootout).toEqual({ home: 4, away: 3 });
   });

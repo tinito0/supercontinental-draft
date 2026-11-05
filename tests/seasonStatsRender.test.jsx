@@ -89,6 +89,21 @@ describe('RoundXi and SeasonRecords', () => {
     expect(html).toContain('Hat-trick');
     expect(html).toContain('href="/partidos/20261110T200000Z_1-2"');
   });
+
+  it('shows the fastest goal with its minute and comebacks by deficit', () => {
+    const home = { name: 'Los Pibes', score: 2 };
+    const away = { name: 'La Banda', score: 1 };
+    const records = {
+      biggestWin: null, mostGoals: null, hatTricks: [],
+      fastestGoal: { matchKey: 'k1', minute: 2, second: 40, playerId: 9, name: 'Rápido', side: 'home', home, away },
+      comebacks: [{ matchKey: 'k2', deficit: 2, winner: 'home', home, away }],
+    };
+    const html = render(<SeasonRecords records={records} catalog={null} />);
+    expect(html).toContain('Gol más rápido · 2&#x27;');
+    expect(html).toContain('Rápido');
+    expect(html).toContain('Remontada de 2 goles');
+    expect(html).toContain('href="/partidos/k2"');
+  });
 });
 
 describe('LiveNowPanel', () => {

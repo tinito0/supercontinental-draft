@@ -128,3 +128,25 @@ export function classifyFailure({ status, error } = {}) {
   if (status === 400 || status === 413) return { kind: 'error', message: `El servidor rechazó el resumen (${status}). Revisá bridge.log.` };
   return { kind: 'offline', message: `El servidor respondió ${status}. Se reintenta solo.` };
 }
+
+// Windows: a reader holding the file (the tray reads status.json every 2 s) makes a rename fail for a moment.
+const LOCK_CODES = new Set(['EPERM', 'EBUSY', 'EACCES']);
+export const LOCK_RETRIES = 5;
+export const LOCK_WAIT_MS = 40;
+
+/**
+ * Runs `action`, retrying while the file is locked by another process. Other errors, and the last lock error,
+ * are thrown.
+ * @param {() => void} action
+ * @param {{ attempts?: number, waitMs?: number, sleep: (ms: number) => void }} options
+ */
+export function retryWhileLocked(action, { attempts = LOCK_RETRIES, waitMs = LOCK_WAIT_MS, sleep }) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return action();
+    } catch (error) {
+      if (!LOCK_CODES.has(error?.code) || attempt >= attempts) throw error;
+      sleep(waitMs * attempt);
+    }
+  }
+}

@@ -29,7 +29,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renam
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseEventLines, splitMatches, summarizeMatch } from '../collector/matchSummary.js';
-import { describeStatus, matchFileName, parseTeamMap, pendingUploads, selectMatch } from './bridgeCore.js';
+import { describeStatus, matchFileName, parseTeamMap, pendingUploads, retryWhileLocked, selectMatch } from './bridgeCore.js';
 import { createUploader } from './uploader.js';
 import { attachNames, buildNameIndex } from './nameIndex.js';
 import { attachTeamPlans, readTeamPlan } from './teamPlans.js';
@@ -67,11 +67,13 @@ function newestSession(probeDir) {
   return sessions.length ? join(probeDir, sessions[sessions.length - 1]) : null;
 }
 
-// Write to a temporary file and rename, so a reader never sees half a file.
+const sleepSync = ms => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+// Write to a temporary file and rename, so a reader never sees half a file. The rename waits out a reader's lock.
 function writeJson(file, data) {
   const tmp = `${file}.tmp`;
   writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`);
-  renameSync(tmp, file);
+  retryWhileLocked(() => renameSync(tmp, file), { sleep: sleepSync });
 }
 
 function readJson(file, fallback) {

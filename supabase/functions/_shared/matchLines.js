@@ -109,6 +109,23 @@ function teamHeader(liveDoc, summary, side) {
  * @param {object} liveDoc the validated live_matches fields (buildLiveMatchDoc in matchFeed.js)
  * @param {object} summary the summary that produced it
  */
+/**
+ * The goals in match order, for records that need the minute (fastest goal, comebacks). `side` is the team the goal
+ * counts for, also for an own goal. Goals without a clock are left out.
+ */
+function goalList(summary) {
+  return list(summary.goals)
+    .filter(goal => SIDES.includes(goal?.side) && Number.isInteger(goal.clock?.minute))
+    .map(goal => ({
+      side: goal.side,
+      minute: goal.clock.minute,
+      second: Number.isInteger(goal.clock.second) ? goal.clock.second : 0,
+      playerId: goal.playerId ?? null,
+      ownGoal: Boolean(goal.ownGoal),
+    }))
+    .sort((a, b) => a.minute - b.minute || a.second - b.second);
+}
+
 export function buildMatchLinesDoc(liveDoc, summary) {
   const shootout = summary.shootout && Number.isInteger(summary.shootout.home) && Number.isInteger(summary.shootout.away)
     ? { home: summary.shootout.home, away: summary.shootout.away }
@@ -122,6 +139,7 @@ export function buildMatchLinesDoc(liveDoc, summary) {
     home: teamHeader(liveDoc, summary, 'home'),
     away: teamHeader(liveDoc, summary, 'away'),
     shootout,
+    goals: goalList(summary),
     players: SIDES.flatMap(side => playedIds(summary, side).map(id => playerLine(summary, side, id))),
   };
 }
