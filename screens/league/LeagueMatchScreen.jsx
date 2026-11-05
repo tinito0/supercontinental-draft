@@ -14,6 +14,7 @@ import { PlayerAnalysis } from '../../components/league/match/PlayerAnalysis.jsx
 import { MatchTacticsView } from '../../components/league/match/MatchTacticsView.jsx';
 import { MatchAnalysisView } from '../../components/league/match/MatchAnalysisView.jsx';
 import { MatchCoaches } from '../../components/league/match/MatchCoaches.jsx';
+import { HeadToHead } from '../../components/league/season/HeadToHead.jsx';
 import { useClubProfiles, useLeagueTeams, useLiveMatch } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { buildLineups, buildTimeline, playerStatRows } from '../../utils/matchCenter.js';
@@ -44,6 +45,7 @@ function SummaryTab({ match, views }) {
       <div className="space-y-4">
         <Card title="Dominio"><MomentumChart data={views.momentum} match={match} compact /></Card>
         <Card title="Tiros"><ShotsPanel shots={views.shots} match={match} /></Card>
+        <HeadToHead match={match} />
       </div>
       <div className="space-y-4">
         <TopStats sections={views.sections} match={match} />

@@ -212,9 +212,26 @@ export function useClubProfiles() {
   return state;
 }
 
+/**
+ * Líneas por jugador de cada partido (match_lines, las escribe match-feed): lo que suman las estadísticas de temporada.
+ * @returns {{ docs: Array<object>, loading: boolean, error: string }}
+ */
+export function useMatchLines() {
+  const [state, setState] = useState({ docs: [], loading: true, error: '' });
+  useEffect(() => onSnapshot(
+    query(collection(db, `${PUBLIC_DATA}/match_lines`), orderBy('startedAt', 'desc'), limit(SEASON_MATCH_LIMIT)),
+    (snap) => setState({ docs: snap.docs.map(d => d.data()), loading: false, error: '' }),
+    (err) => {
+      console.error('[useMatchLines]', err);
+      setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar las estadísticas.' }));
+    },
+  ), []);
+  return state;
+}
+
 let marketCatalogPromise = null;
 /** Fetched once per page load and shared; a failed fetch is retried on the next call. */
-function loadMarketCatalog() {
+export function loadMarketCatalog() {
   if (!marketCatalogPromise) {
     marketCatalogPromise = fetch(marketCatalogUrl)
       .then(response => {

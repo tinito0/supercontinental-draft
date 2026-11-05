@@ -10,7 +10,7 @@ import { BroadcastFixtures } from './broadcast/BroadcastFixtures.jsx';
 import { BroadcastLeagueTable } from './broadcast/BroadcastLeagueTable.jsx';
 import { OverlayPopup } from './broadcast/OverlayPopup.jsx';
 import { CommunityCard } from './broadcast/CommunityCard.jsx';
-import { BroadcastMvp, BroadcastPrediction, BroadcastScorers } from './broadcast/BroadcastMatchExtras.jsx';
+import { BroadcastMvp, BroadcastPrediction, BroadcastScorers, BroadcastSeasonFacts } from './broadcast/BroadcastMatchExtras.jsx';
 import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
 import { OverlayErrorBoundary } from './broadcast/OverlayErrorBoundary.jsx';
 
@@ -84,7 +84,7 @@ function RankingRows({ rows, unit, getTeamLogo }) {
 }
 
 /** Previa, entretiempo y final del partido al aire. */
-function MatchPanel({ scene, data, home, away, live, fixture }) {
+function MatchPanel({ scene, data, home, away, live, fixture, season }) {
   const showsResult = scene === 'final' || scene === 'descanso';
   // El marcador del juego (bridge) manda; si no hay, el resultado cargado en el torneo; si no, el del admin.
   const score = live?.score
@@ -116,6 +116,7 @@ function MatchPanel({ scene, data, home, away, live, fixture }) {
           <BroadcastScorers scorers={live?.scorers} />
         </>
       )}
+      {scene === 'previa' && season && <BroadcastSeasonFacts facts={season} />}
       {scene === 'previa' && live?.prediction && <BroadcastPrediction shares={live.prediction} />}
       {scene === 'final' && live?.mvp && <BroadcastMvp mvp={live.mvp} />}
     </BroadcastFrame>
@@ -130,7 +131,7 @@ function MatchPanel({ scene, data, home, away, live, fixture }) {
  *   live?: object, liveMatch?: object|null, overlayLoaded?: boolean }} props
  *   overlayLoaded: false mientras la fuente de OBS espera el doc del overlay (el popup que ya estaba no vuelve a salir).
  */
-export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, allTeams, tournamentData, forcedScene, live, liveMatch, overlayLoaded = true }) {
+export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, allTeams, tournamentData, forcedScene, live, liveMatch, season = null, overlayLoaded = true }) {
   const data = { ...DEFAULT_BROADCAST_OVERLAY, ...(overlayData || {}) };
   const scene = forcedScene || data.scene || 'live';
 
@@ -157,7 +158,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
   const cardSide = data.popup?.visible && data.popup?.position === 'left' ? 'right' : 'left';
 
   let content = null;
-  if (MATCH_SCENES.has(scene)) content = <MatchPanel scene={scene} data={data} home={home} away={away} live={live} fixture={onAirFixture} />;
+  if (MATCH_SCENES.has(scene)) content = <MatchPanel scene={scene} data={data} home={home} away={away} live={live} fixture={onAirFixture} season={season} />;
   else if (scene === 'tabla') content = <BroadcastLeagueTable league={tournamentData?.league} getTeamLogo={getTeamLogo} />;
   else if (scene === 'bracket' || scene === 'repechaje') {
     content = <BroadcastBracket cupId={scene === 'bracket' ? CUP_IDS.ORO : CUP_IDS.PLATA} bracket={tournamentData?.bracket} getTeamLogo={getTeamLogo} />;

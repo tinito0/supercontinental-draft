@@ -2,6 +2,9 @@
 // por id del juego, clubes por equipo del draft y récords. Solo cuentan partidos terminados y, si hay lista oficial,
 // los importados al torneo (utils/collectorImport.js importedMatchKeys). Puro; tests/seasonStats.test.js.
 
+import { roleLabel } from './matchAnalysis.js';
+import { getPosCategory } from './helpers.js';
+
 export const MIN_RATED_MATCHES = 2;
 const FULL_MATCH_MINUTES = 90;
 const HAT_TRICK = 3;
@@ -126,10 +129,35 @@ function seasonRecords(matches) {
     const margin = Math.abs(doc.home.score - doc.away.score);
     return margin > 0 && (!best || margin > best.margin) ? { matchKey: doc.matchKey, margin, home: doc.home, away: doc.away } : best;
   }, null);
+  const mostGoals = matches.reduce((best, doc) => {
+    const goals = doc.home.score + doc.away.score;
+    return goals > 0 && (!best || goals > best.goals) ? { matchKey: doc.matchKey, goals, home: doc.home, away: doc.away } : best;
+  }, null);
   const hatTricks = matches.flatMap(doc => doc.players
     .filter(line => line.goals >= HAT_TRICK)
     .map(line => ({ matchKey: doc.matchKey, playerId: line.id, name: line.name, goals: line.goals })));
-  return { biggestWin, hatTricks };
+  return { biggestWin, mostGoals, hatTricks };
+}
+
+// Equipo de la fecha: un 4-3-3 por línea de la posición registrada (código del juego → sigla → línea).
+const ROUND_XI = { keeper: 1, defense: 4, midfield: 3, forward: 3 };
+
+/**
+ * Los mejores de una fecha por valoración del juego, en un 4-3-3. Sin valoración o sin posición registrada no entran.
+ * @param {object[]} docs documentos match_lines
+ * @param {string[]} matchKeys los partidos de la fecha
+ * @returns {{ keeper, defense, midfield, forward }|null} null si la fecha no tiene partidos terminados
+ */
+export function teamOfTheRound(docs, matchKeys) {
+  const matches = withKnownClubs(countedMatches(docs, new Set(matchKeys)));
+  if (!matches.length) return null;
+  const candidates = matches.flatMap(doc => doc.players
+    .filter(line => typeof line.rating === 'number' && line.position != null)
+    .map(line => ({ ...line, clubName: doc[line.side].name, matchKey: doc.matchKey, line: getPosCategory(roleLabel(line.position)) })));
+  const best = (a, b) => b.rating - a.rating || b.goals - a.goals || b.assists - a.assists;
+  return Object.fromEntries(Object.entries(ROUND_XI).map(([line, size]) => [
+    line, candidates.filter(c => c.line === line).sort(best).slice(0, size),
+  ]));
 }
 
 /**
@@ -144,6 +172,68 @@ export function buildSeasonStats(docs, { officialKeys } = {}) {
     clubs: seasonClubs(matches),
     records: seasonRecords(matches),
   };
+}
+
+/**
+ * Partidos oficiales de un jugador, el más nuevo primero: su equipo, el rival, el resultado (W/D/L) y su línea.
+ * @param {object[]} docs documentos match_lines
+ * @param {number} playerId id del juego
+ */
+export function playerMatchLog(docs, playerId, { officialKeys } = {}) {
+  return withKnownClubs(countedMatches(docs, officialKeys))
+    .map(doc => ({ doc, line: doc.players.find(p => p.id === playerId) }))
+    .filter(({ line }) => line)
+    .map(({ doc, line }) => {
+      const own = doc[line.side];
+      const rival = doc[line.side === 'home' ? 'away' : 'home'];
+      return { matchKey: doc.matchKey, startedAt: doc.startedAt, own, rival, shootout: doc.shootout, result: resultFor(own.score, rival.score), line };
+    })
+    .reverse();
+}
+
+/** Un partido visto desde un club: su lado, el rival y el resultado. */
+function fromClubSide(doc, clubKey) {
+  const side = clubKeyOf(doc.home) === clubKey ? 'home' : 'away';
+  const own = doc[side];
+  const rival = doc[side === 'home' ? 'away' : 'home'];
+  return { matchKey: doc.matchKey, startedAt: doc.startedAt, side, own, rival, shootout: doc.shootout, result: resultFor(own.score, rival.score) };
+}
+
+/** Partidos oficiales de un club, el más nuevo primero. `clubKey` = id del equipo del draft. */
+export function clubMatchLog(docs, clubKey, { officialKeys } = {}) {
+  return withKnownClubs(countedMatches(docs, officialKeys))
+    .filter(doc => clubKeyOf(doc.home) === clubKey || clubKeyOf(doc.away) === clubKey)
+    .map(doc => fromClubSide(doc, clubKey))
+    .reverse();
+}
+
+/** Cara a cara entre dos clubes, contado desde el primero: partidos, resultados, goles y la lista (nuevo primero). */
+export function headToHead(docs, clubKey, rivalKey, { officialKeys } = {}) {
+  const matches = clubMatchLog(docs, clubKey, { officialKeys }).filter(entry => clubKeyOf(entry.rival) === rivalKey);
+  const count = result => matches.filter(entry => entry.result === result).length;
+  return {
+    played: matches.length,
+    won: count('W'),
+    drawn: count('D'),
+    lost: count('L'),
+    goalsFor: matches.reduce((sum, entry) => sum + entry.own.score, 0),
+    goalsAgainst: matches.reduce((sum, entry) => sum + entry.rival.score, 0),
+    matches,
+  };
+}
+
+/**
+ * Lo que la previa del overlay muestra de un cruce: la forma de cada club (últimos cinco, nuevo primero) y el cara a
+ * cara contado desde el local. null si falta un club o ninguno jugó todavía un partido oficial.
+ */
+export function matchupFacts(docs, homeKey, awayKey, { officialKeys } = {}) {
+  if (!homeKey || !awayKey) return null;
+  const form = key => clubMatchLog(docs, key, { officialKeys }).slice(0, 5).map(entry => entry.result);
+  const homeForm = form(homeKey);
+  const awayForm = form(awayKey);
+  if (!homeForm.length && !awayForm.length) return null;
+  const { played, won, drawn, lost } = headToHead(docs, homeKey, awayKey, { officialKeys });
+  return { homeForm, awayForm, h2h: { played, won, drawn, lost } };
 }
 
 /**

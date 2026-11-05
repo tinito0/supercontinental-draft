@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { BookOpen, Shield, Trophy, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Shield, Trophy, Users } from 'lucide-react';
+import { ClubSeasonStats } from '../../components/league/season/ClubSeasonStats.jsx';
 import TeamScreen from '../TeamScreen.jsx';
 import { Tabs } from '../../components/ui/Tabs.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
@@ -15,12 +16,14 @@ import { useFranchisePlayers, useLeagueContent, useLeagueTeams, useTournament } 
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { clubChapters, clubStoryDocId, hasClubProfile } from '../../utils/leagueContent.js';
 
-/* Un club en la web de la liga: cabecera con su estadio, la ficha (estadio, DT, presidente, mánager) y tres pestañas:
-   el club (historia), palmarés (títulos y campañas anteriores) y plantel (el plantel y la campaña del draft).
+/* Un club en la web de la liga: cabecera con su estadio, la ficha (estadio, DT, presidente, mánager) y cuatro pestañas:
+   el club (historia), temporada (resultados y goleadores con datos del juego), palmarés (títulos y campañas
+   anteriores) y plantel (el plantel y la campaña del draft).
    La pestaña vive en la URL (?tab=), así se puede compartir. */
 
 const TABS = [
   { id: 'club', label: 'El club', icon: BookOpen },
+  { id: 'temporada', label: 'Temporada', icon: BarChart3 },
   { id: 'palmares', label: 'Palmarés', icon: Trophy },
   { id: 'plantel', label: 'Plantel', icon: Users },
 ];
@@ -80,6 +83,11 @@ export default function LeagueClubScreen() {
               <ClubFranchise player={franchiseByTeam[userId] || null} loading={franchiseLoading} />
               <ClubSeasonCard standing={standing} />
             </div>
+          </div>
+        )}
+        {tab === 'temporada' && (
+          <div role="tabpanel" aria-label="Temporada">
+            <ClubSeasonStats clubId={userId} teamsById={teamsById} />
           </div>
         )}
         {tab === 'palmares' && (

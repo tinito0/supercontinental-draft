@@ -82,6 +82,9 @@ describe('buildMatchLinesDoc', () => {
   it('works on summaries recorded before ratings, shots and names existed', () => {
     const doc = linesOf(summary({ ratings: undefined, shots: undefined, xg: undefined, names: undefined }));
     expect(line(doc, 9)).toMatchObject({ goals: 1, rating: null, xg: null, name: null, position: null });
+    // Without registered positions the first starter is still the keeper: PES always puts him in slot 0.
+    expect(line(doc, 1).position).toBe(0);
+    expect(line(doc, 101).position).toBe(0);
     expect(doc.home.xg).toBeNull();
   });
 

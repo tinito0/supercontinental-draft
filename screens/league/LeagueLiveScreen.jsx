@@ -5,6 +5,7 @@ import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { MatchStatus, TeamMark } from '../../components/league/match/MatchParts.jsx';
+import { LiveNowPanel } from '../../components/league/match/LiveNowPanel.jsx';
 import { useAllMvpVotes, useBroadcastOverlay, useLeagueTeams, useLiveMatches, useMvpVotes, SEASON_MATCH_LIMIT, usePoll, usePrediction, useTournament } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { rankPlayerOfTournament } from '../../utils/playerOfTournament.js';
@@ -312,11 +313,12 @@ export default function LeagueLiveScreen() {
     <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 md:py-16">
       <Reveal>
         <SectionHeading as="h1" title="En vivo">
-          Predecí el resultado, votá al mejor jugador del partido y elegí quién gana la copa. Sin cuenta: un voto por navegador.
+          Seguí el partido en juego, predecí el resultado, votá al mejor jugador del partido y elegí quién gana la copa. Sin cuenta: un voto por navegador.
         </SectionHeading>
       </Reveal>
       {error && <Alert tone="danger" title={error} className="mb-4">Recargá la página para intentar de nuevo.</Alert>}
       <div className="space-y-5">
+        <LiveNowPanel matches={matches} teamsById={teamsById} />
         <PredictionPanel matchId={predictionMatchId} overlay={overlay} teamsById={teamsById} matches={matches} />
         <MvpPanel matches={matches} />
         {CUP_POLLS.map(poll => <CupPollPanel key={poll.id} pollId={poll.id} label={poll.label} />)}

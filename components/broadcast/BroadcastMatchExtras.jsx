@@ -52,3 +52,32 @@ export function BroadcastMvp({ mvp }) {
     </div>
   );
 }
+
+const FORM_LETTER = { W: 'G', D: 'E', L: 'P' };
+const FORM_LABEL = { W: 'ganó', D: 'empató', L: 'perdió' };
+
+function FormRow({ form, side }) {
+  return (
+    <ol className={`broadcast-form ${side}`}
+      aria-label={`Últimos resultados, el más nuevo ${side === 'home' ? 'al final' : 'primero'}: ${form.map(r => FORM_LABEL[r]).join(', ') || 'sin partidos'}`}>
+      {form.map((result, index) => <li key={index} className={`broadcast-form-${result}`} aria-hidden="true">{FORM_LETTER[result]}</li>)}
+    </ol>
+  );
+}
+
+/** Previa: forma de cada club (últimos cinco, el más nuevo junto al centro) y el cara a cara (utils/seasonStats.js matchupFacts). */
+export function BroadcastSeasonFacts({ facts }) {
+  const { h2h } = facts;
+  return (
+    <div className="broadcast-community">
+      <div className="broadcast-community-label"><span>Forma</span><span>Últimos 5</span></div>
+      <div className="broadcast-season-facts">
+        <FormRow form={[...facts.homeForm].reverse()} side="home" />
+        <div className="broadcast-h2h">
+          {h2h.played ? <><strong>{h2h.won}G {h2h.drawn}E {h2h.lost}P</strong><small>cara a cara</small></> : <small>primer cruce</small>}
+        </div>
+        <FormRow form={facts.awayForm} side="away" />
+      </div>
+    </div>
+  );
+}

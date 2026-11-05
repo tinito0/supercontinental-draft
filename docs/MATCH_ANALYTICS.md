@@ -53,6 +53,9 @@ duelos, despejes, gambetas, toques y penales en juego.
 - **Posesión:** el último par de contadores antes de la tanda de penales (durante la tanda siguen corriendo). Con
   probe v4 cada evento trae también el tiempo de juego (`+0x7B518`), y el par se descarta si no suma ese tiempo.
 - **Duelos ganados:** entradas ganadas (50) / duelos disputados (49), la fila «Duelos X (Y)» del juego.
+- **Por tiempo (jugador):** `players[].halves.first` = bloques de 15 minutos 0-2, `second` = 3-5
+  (`pes-collector/collector/matchSummary.js`). El alargue (bloques 6-7) solo cuenta en el total del partido. Los
+  partidos subidos antes de noviembre de 2026 no lo traen y el perfil no muestra la tabla.
 - **Tiempos de las acciones:** sin alargue, el tiempo 3 que aparece cerca del 90' es descuento del segundo; un
   penal en juego informa el tiempo 5 y se ubica por el minuto. Si el probe encontró las estadísticas tarde, lo
   acumulado hasta ese momento no tiene minuto: la serie empieza ahí y esos tiros muestran «—».

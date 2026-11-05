@@ -204,10 +204,29 @@ function namedStats(kinds) {
   return stats;
 }
 
+// Each kind holds six 15-minute blocks of regular time, then the two extra-time halves (docs S8).
+const HALF_BLOCKS = { first: [0, 3], second: [3, 6] };
+
+/** Named stats of one half, only the ones that moved: extra time stays in the match total only. */
+function halfStats(kinds, [from, to]) {
+  const stats = {};
+  for (const [kind, values] of Object.entries(kinds)) {
+    const name = KIND_NAME[kind];
+    const sum = name ? values.slice(from, to).reduce((total, v) => total + (Number(v) || 0), 0) : 0;
+    if (sum) stats[name] = sum;
+  }
+  return stats;
+}
+
 function buildPlayers(players) {
   const bySide = { home: [], away: [] };
   for (const player of players) {
-    bySide[sideName(player.side)].push({ id: player.id, squadIndex: player.squadIndex, stats: namedStats(player.kinds) });
+    bySide[sideName(player.side)].push({
+      id: player.id,
+      squadIndex: player.squadIndex,
+      stats: namedStats(player.kinds),
+      halves: { first: halfStats(player.kinds, HALF_BLOCKS.first), second: halfStats(player.kinds, HALF_BLOCKS.second) },
+    });
   }
   for (const side of SIDES) bySide[side].sort((a, b) => a.squadIndex - b.squadIndex);
   return bySide;

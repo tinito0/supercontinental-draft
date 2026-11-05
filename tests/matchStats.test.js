@@ -111,6 +111,17 @@ describe('shots and players', () => {
     expect(playerProfile(summary, 'home', 12)).toMatchObject({ hasStats: false, groups: [] });
   });
 
+  it('splits the profile by half when the summary has halves, keeping only rows with something in them', () => {
+    const halves = { first: { touches: 12, passes: 8, passesCompleted: 6 }, second: { touches: 9, shots: 2 } };
+    const withHalves = { ...summary, players: { ...summary.players, home: summary.players.home.map(p => (p.id === 10 ? { ...p, halves } : p)) } };
+    expect(playerProfile(withHalves, 'home', 10).halves).toEqual([
+      { label: 'Toques', first: 12, second: 9 },
+      { label: 'Pases precisos', first: '6/8', second: '0/0' },
+      { label: 'Tiros', first: 0, second: 2 },
+    ]);
+    expect(playerProfile(summary, 'home', 10).halves).toBeNull();
+  });
+
   it('ranks leaders across both teams and skips stats nobody recorded', () => {
     const leaders = playerLeaders(summary);
     expect(leaders.find(l => l.key === 'touches').players.map(p => p.id)).toEqual([10, 11]);

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CalendarDays, ChevronRight, ListOrdered, Medal, Trophy } from 'lucide-react';
+import { BarChart3, CalendarDays, ChevronRight, ListOrdered, Medal, Trophy } from 'lucide-react';
+import { SeasonStatsPanel } from '../../components/league/season/SeasonStatsView.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { Tabs } from '../../components/ui/Tabs.jsx';
@@ -10,7 +11,9 @@ import { makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
 import { StandingsTable } from '../../components/league/tournament/StandingsTable.jsx';
 import { CupBracketView } from '../../components/tournament/CupBracketView.jsx';
 import { StatsView } from '../../components/tournament/StatsView.jsx';
-import { useLeagueTeams, useTournament } from '../../hooks/useLeagueData.js';
+import { useLeagueTeams } from '../../hooks/useLeagueData.js';
+import { useLeagueFixtures } from '../../hooks/useLeagueFixtures.js';
+import { projectLiveTable } from '../../utils/liveTable.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { fetchRawPlayers } from '../../utils/playerCatalog.js';
 import { processPlayersData } from '../../utils/helpers.js';
@@ -26,6 +29,7 @@ const TABS = [
   { id: 'oro', label: 'Copa de Oro', icon: Trophy },
   { id: 'plata', label: 'Copa de Plata', icon: Medal },
   { id: 'goleadores', label: 'Goleadores', icon: Medal },
+  { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3 },
 ];
 // Enlaces viejos (?tab=groups|bracket|repechaje|stats, los de TournamentModal) siguen abriendo la pestaña correcta.
 const LEGACY_TABS = { groups: 'tabla', matches: 'tabla', bracket: 'oro', repechaje: 'plata', stats: 'goleadores' };
@@ -54,11 +58,13 @@ export default function LeagueTournamentScreen() {
   const [params, setParams] = useSearchParams();
   const requested = LEGACY_TABS[params.get('tab')] || params.get('tab');
   const tab = TABS.some(item => item.id === requested) ? requested : 'tabla';
-  const { tournament, loading, error } = useTournament();
   const { teams, teamsById } = useLeagueTeams();
+  const { tournament, fixtures, loading, error } = useLeagueFixtures(teamsById);
   const players = usePlayerCatalog(tab === 'goleadores');
   const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
   const rows = useMemo(() => (tournament?.league || []).filter(row => row?.name && row.name !== 'Club...'), [tournament]);
+  // Con partidos de liga en juego, la tabla suma el marcador de ahora (utils/liveTable.js); si no, la oficial.
+  const liveRows = useMemo(() => projectLiveTable(rows, fixtures), [rows, fixtures]);
   const stage = useMemo(() => (tournament ? leagueStage(tournament) : null), [tournament]);
 
   const getTeamLogo = useCallback(name => clubOf(name)?.logoUrl || DEFAULT_LOGO, [clubOf]);
@@ -71,12 +77,14 @@ export default function LeagueTournamentScreen() {
   const setTab = next => setParams(next === 'tabla' ? {} : { tab: next }, { replace: true });
 
   let content;
-  if (error) content = <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
+  // Estadísticas no depende del documento del torneo para mostrarse: trae sus propios datos y estados.
+  if (tab === 'estadisticas') content = <SeasonStatsPanel />;
+  else if (error) content = <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
   else if (loading) content = <TableSkeleton />;
   else if (!tournament) content = <EmptyState icon={Trophy} title="El torneo todavía no empezó" description="Acá vas a ver la tabla, las copas y los goleadores apenas arranque." />;
   else if (tab === 'tabla') {
     content = rows.length
-      ? <StandingsTable rows={rows} clubOf={clubOf} />
+      ? <StandingsTable rows={liveRows || rows} clubOf={clubOf} isLive={Boolean(liveRows)} />
       : <EmptyState icon={ListOrdered} title="La tabla todavía está vacía" description="Se completa sola con cada resultado cargado." />;
   } else if (tab === 'oro' || tab === 'plata') {
     content = (
@@ -92,7 +100,7 @@ export default function LeagueTournamentScreen() {
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 md:py-16">
       <Reveal>
         <SectionHeading as="h1" title="Torneo">
-          {stage?.label ? `${[stage.label, stage.detail].filter(Boolean).join(' · ')}. ` : ''}La tabla oficial, las copas y los goleadores, actualizados con cada resultado.
+          {stage?.label ? `${[stage.label, stage.detail].filter(Boolean).join(' · ')}. ` : ''}La tabla oficial, las copas, los goleadores y las estadísticas del juego, actualizados con cada resultado.
         </SectionHeading>
       </Reveal>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

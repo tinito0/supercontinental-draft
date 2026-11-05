@@ -1,5 +1,5 @@
 // Importar partidos del colector al torneo (utils/collectorImport.js). Datos sintéticos con la forma de live_matches.
-import { findImported, importedMatchKeys, planCollectorImport, resolveTeams } from '../utils/collectorImport.js';
+import { findImported, importedMatchKeys, importedRounds, planCollectorImport, resolveTeams } from '../utils/collectorImport.js';
 import { parseMatchDoc } from '../utils/matchCenter.js';
 
 const KEY = '20261022T200000Z_101-1230';
@@ -90,6 +90,17 @@ describe('importedMatchKeys', () => {
     };
     expect([...importedMatchKeys(tournamentData)].sort()).toEqual(['k1', 'k2']);
     expect(importedMatchKeys(null).size).toBe(0);
+  });
+});
+
+describe('importedRounds', () => {
+  it('groups the imported league matches by round, in fixture order, skipping rounds with none', () => {
+    const tournamentData = { matches: [
+      { round: 'Fecha 1', importedFrom: 'k1' }, { round: 'Fecha 1', importedFrom: 'k2' },
+      { round: 'Fecha 2', importedFrom: null }, { round: 'Fecha 3', importedFrom: 'k3' },
+    ] };
+    expect(importedRounds(tournamentData)).toEqual([{ round: 'Fecha 1', keys: ['k1', 'k2'] }, { round: 'Fecha 3', keys: ['k3'] }]);
+    expect(importedRounds(null)).toEqual([]);
   });
 });
 

@@ -159,6 +159,16 @@ describe('summarizeMatch', () => {
     expect(summary.possession).toBeNull();
   });
 
+  it('splits each player stats by half from the 15-minute blocks: 0-2 first half, 3-5 second', () => {
+    const [m] = splitMatches(match([
+      { t: 'pstats', ms: 3000, side: 0, p: { 0: { id: 1001, k: { 22: [3, 2, 1, 4, 0, 0, 5, 0, 0], 6: k(1, 4) } } } },
+    ]));
+    const player = summarizeMatch(m).players.home.find(p => p.id === 1001);
+    expect(player.halves).toEqual({ first: { passes: 6 }, second: { passes: 4, shots: 1 } });
+    // Extra time (blocks 6-7) only counts in the match total.
+    expect(player.stats.passes).toBe(15);
+  });
+
   it('reads possession from the probe counters of this match only', () => {
     const [m] = splitMatches(match([{ t: 'possession', ms: 3000, c: [2, 76, 53], home: 6536, away: 7553 }]));
     expect(summarizeMatch(m).possession).toMatchObject({ home: 46, away: 54 });

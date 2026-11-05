@@ -48,6 +48,17 @@ export function importedMatchKeys(tournamentData) {
   return new Set(keys.filter(key => typeof key === 'string' && key));
 }
 
+/** Fechas de liga con partidos importados del colector, en el orden del fixture: [{ round, keys }]. */
+export function importedRounds(tournamentData) {
+  const rounds = new Map();
+  for (const match of tournamentData?.matches || []) {
+    if (!match?.importedFrom) continue;
+    const round = match.round || 'Liga';
+    rounds.set(round, [...(rounds.get(round) || []), match.importedFrom]);
+  }
+  return [...rounds].map(([round, keys]) => ({ round, keys }));
+}
+
 function leagueTarget(tournamentData, home, away) {
   return (tournamentData?.matches || []).filter(match => match.status !== 'completed'
     && ((sameName(match.homeTeam, home) && sameName(match.awayTeam, away)) || (sameName(match.homeTeam, away) && sameName(match.awayTeam, home))));

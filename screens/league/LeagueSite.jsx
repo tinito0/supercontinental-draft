@@ -15,6 +15,7 @@ const LeagueMatchesScreen = lazy(() => import('./LeagueMatchesScreen.jsx'));
 const LeagueMatchScreen = lazy(() => import('./LeagueMatchScreen.jsx'));
 const LeagueLiveScreen = lazy(() => import('./LeagueLiveScreen.jsx'));
 const LeagueRulesScreen = lazy(() => import('./LeagueRulesScreen.jsx'));
+const LeaguePlayerScreen = lazy(() => import('./LeaguePlayerScreen.jsx'));
 const LeagueNotFoundScreen = lazy(() => import('./LeagueNotFoundScreen.jsx'));
 
 export default function LeagueSite() {
@@ -29,6 +30,7 @@ export default function LeagueSite() {
         <Route path="partidos" element={<LeagueMatchesScreen />} />
         <Route path="partidos/:matchKey" element={<LeagueMatchScreen />} />
         <Route path="en-vivo" element={<LeagueLiveScreen />} />
+        <Route path="jugadores/:playerId" element={<LeaguePlayerScreen />} />
         <Route path="reglamento" element={<LeagueRulesScreen />} />
         <Route path="*" element={<LeagueNotFoundScreen />} />
       </Route>

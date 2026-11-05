@@ -87,6 +87,29 @@ function Profile({ profile, match, heatmaps, onBack }) {
           </section>
         ))}
       </div>
+      {profile.halves?.length > 0 && (
+        <section aria-labelledby={`halves-${profile.id}`}>
+          <h4 id={`halves-${profile.id}`} className="eyebrow mb-1">Por tiempo</h4>
+          <table className="w-full text-base">
+            <thead>
+              <tr className="text-sm text-ink-3">
+                <th scope="col" className="py-1 text-left font-normal"><span className="sr-only">Estadística</span></th>
+                <th scope="col" className="w-20 py-1 text-right font-semibold">1.er tiempo</th>
+                <th scope="col" className="w-20 py-1 text-right font-semibold">2.º tiempo</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line/10">
+              {profile.halves.map(row => (
+                <tr key={row.label}>
+                  <th scope="row" className="py-2 text-left font-normal text-ink-2">{row.label}</th>
+                  <td className="num py-2 text-right font-semibold text-ink">{row.first}</td>
+                  <td className="num py-2 text-right font-semibold text-ink">{row.second}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
       {profile.shots.length > 0 && (
         <section aria-label="Tiros">
           <h4 className="eyebrow mb-1">Tiros</h4>

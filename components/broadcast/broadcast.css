@@ -379,6 +379,31 @@
 .broadcast-prediction-bar .home { background: var(--scl-bar); }
 .broadcast-prediction-bar .draw { justify-content: center; background: var(--scl-slate); }
 .broadcast-prediction-bar .away { justify-content: flex-end; background: var(--scl-periwinkle); }
+/* Previa: forma y cara a cara. G/E/P en cuadros con el color de su significado; el centro, el historial entre los dos. */
+.broadcast-season-facts {
+  display: grid;
+  grid-template-columns: 1fr 220px 1fr;
+  align-items: center;
+  gap: 28px;
+}
+.broadcast-form { margin: 0; padding: 0; list-style: none; display: flex; gap: 10px; }
+.broadcast-form.home { justify-content: flex-end; }
+.broadcast-form li {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #ffffff;
+}
+.broadcast-form-W { background: #1f8a4c; }
+.broadcast-form-D { background: var(--scl-slate); }
+.broadcast-form-L { background: #b3261e; }
+.broadcast-h2h { display: grid; justify-items: center; color: var(--scl-ink); }
+.broadcast-h2h strong { font-size: 44px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
+.broadcast-h2h small { font-size: 22px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--scl-muted); }
 .broadcast-mvp {
   padding: 14px 22px;
   background: var(--scl-row);

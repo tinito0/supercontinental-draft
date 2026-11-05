@@ -54,7 +54,8 @@ There is no linter or type checker; plain JS/JSX, ES modules. Env vars: copy `.e
 
 **Two sites, one page** (`main.jsx`, `utils/siteRoutes.js`): the root is the public **league site**
 (`screens/league/`, `components/league/`, data from `hooks/useLeagueData.js`: `/`, `/historia`, `/equipos`,
-`/equipos/:userId` = club history + `screens/TeamScreen.jsx`, `/reglamento` (season rules), `/torneo`, `/partidos` = PES match centre from `live_matches`, docs/MATCH_FEED.md). Its texts
+`/equipos/:userId` = club history + `screens/TeamScreen.jsx`, `/reglamento` (season rules), `/torneo` (`?tab=estadisticas` = season stats from `match_lines`), `/jugadores/:playerId`
+(a player's season, game id), `/partidos` = PES match centre from `live_matches`, docs/MATCH_FEED.md). Its texts
 (league history, club histories, season rules) are plain text written in Administración → Web pública
 (`components/admin/LeagueContentAdminSection.jsx`, `utils/leagueContent.js`). The **draft** lives under `/draft`, mounted with
 `<BrowserRouter basename="/draft">`; nothing on the league site links to it (managers type `/draft`, `/DRAFT` is

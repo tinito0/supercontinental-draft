@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { LeagueCrest } from '../match/FixtureRow.jsx';
 import { LEAGUE_POINTS } from '../../../utils/competitionRules.js';
 
@@ -56,13 +57,33 @@ function Entrants({ rows, clubOf }) {
   );
 }
 
+/** En la tabla en vivo, debajo del puesto: punto rojo si el club está jugando y una flecha si sube o baja. */
+function LiveMarks({ row }) {
+  if (!row.isLive && !row.move) return null;
+  return (
+    <span className="flex items-center justify-center gap-0.5">
+      {row.isLive && <span className="h-2 w-2 rounded-full bg-danger animate-pulse" title={row.pendingShootout ? 'Jugando: empate, define por penales' : 'Jugando ahora'} aria-hidden="true" />}
+      {row.isLive && <span className="sr-only">{row.pendingShootout ? 'jugando, empata y define por penales' : 'jugando ahora'}</span>}
+      {row.move > 0 && <><ArrowUp className="h-3.5 w-3.5 text-success-soft" aria-hidden="true" /><span className="sr-only">sube {row.move}</span></>}
+      {row.move < 0 && <><ArrowDown className="h-3.5 w-3.5 text-danger-soft" aria-hidden="true" /><span className="sr-only">baja {-row.move}</span></>}
+    </span>
+  );
+}
+
 /**
- * @param {{ rows: Array<object>, clubOf: (name: string) => object | null }} props rows: tournament.league
+ * @param {{ rows: Array<object>, clubOf: (name: string) => object | null, isLive?: boolean }} props
+ *   rows: tournament.league, o la proyección de utils/liveTable.js con isLive
  */
-export function StandingsTable({ rows, clubOf }) {
+export function StandingsTable({ rows, clubOf, isLive = false }) {
   if (!rows.some(row => Number(row.pj) > 0)) return <Entrants rows={rows} clubOf={clubOf} />;
   return (
     <div className="space-y-3">
+      {isLive && (
+        <p className="flex items-center gap-2 text-sm font-semibold text-danger-soft" role="status">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-danger animate-pulse" aria-hidden="true" />
+          Tabla en vivo: suma los partidos que se están jugando con el marcador de ahora. Un empate no suma puntos hasta los penales.
+        </p>
+      )}
       <div className="panel overflow-hidden">
         <table className="w-full text-left">
           <caption className="sr-only">Tabla de posiciones de la Supercontinental League</caption>
@@ -96,6 +117,7 @@ export function StandingsTable({ rows, clubOf }) {
                   <td className="relative py-3 pl-4 pr-2 text-center">
                     {zone && <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${ZONE_BAR[zone]}`} aria-hidden="true" />}
                     <span className="num font-display text-lg font-bold text-ink">{index + 1}</span>
+                    <LiveMarks row={row} />
                     {zone && <span className="sr-only">{zone === 'oro' ? ', zona Copa de Oro' : ', zona Copa de Plata'}</span>}
                   </td>
                   <td className="max-w-0 py-2 pr-2">

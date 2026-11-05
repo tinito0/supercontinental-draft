@@ -6,6 +6,7 @@
 
 export const MATCH_LINES_SCHEMA = 'scl.lines/1';
 const SIDES = ['home', 'away'];
+const GOALKEEPER = 0;
 // Summary stat name → line field. Missing stats count as 0: the probe only reports kinds that moved.
 const STAT_FIELDS = {
   shots: 'shots', shotsOnTarget: 'shotsOnTarget', passes: 'passes', passesCompleted: 'passesCompleted',
@@ -77,7 +78,8 @@ function playerLine(summary, side, id) {
     id,
     side,
     name: summary.names?.players?.[id] ?? null,
-    position: summary.names?.positions?.[id] ?? null,
+    // Registered position from the bridge's names; without them, the first starter is the keeper (PES slot 0).
+    position: summary.names?.positions?.[id] ?? (list(summary.lineups?.[side]?.starting)[0] === id ? GOALKEEPER : null),
     started: list(summary.lineups?.[side]?.starting).includes(id),
     minutes: minutesPlayed(summary, side, id),
     // From the goal list, not the stat kinds: an own goal is in the list under the team that benefits.

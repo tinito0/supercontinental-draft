@@ -2,7 +2,7 @@
 // recorded sessions (skipped when E:\ is missing) prove it runs on real probe output.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { buildSeasonStats, seasonLeaders, MIN_RATED_MATCHES } from '../utils/seasonStats.js';
+import { buildSeasonStats, clubMatchLog, headToHead, matchupFacts, playerMatchLog, seasonLeaders, teamOfTheRound, MIN_RATED_MATCHES } from '../utils/seasonStats.js';
 import { buildLiveMatchDoc } from '../supabase/functions/_shared/matchFeed.js';
 import { buildMatchLinesDoc } from '../supabase/functions/_shared/matchLines.js';
 import { parseEventLines, splitMatches, summarizeMatch } from '../pes-collector/collector/matchSummary.js';
@@ -70,6 +70,7 @@ describe('buildSeasonStats', () => {
 
   it('finds the records: biggest win and hat-tricks', () => {
     expect(stats.records.biggestWin).toMatchObject({ matchKey: m1.matchKey, margin: 3 });
+    expect(stats.records.mostGoals).toMatchObject({ matchKey: m1.matchKey, goals: 3 });
     expect(stats.records.hatTricks).toEqual([{ matchKey: m1.matchKey, playerId: 9, name: 'J9', goals: 3 }]);
   });
 
@@ -83,7 +84,79 @@ describe('buildSeasonStats', () => {
   });
 
   it('returns empty totals for no matches', () => {
-    expect(buildSeasonStats([])).toMatchObject({ matches: 0, players: [], clubs: [], records: { biggestWin: null, hatTricks: [] } });
+    expect(buildSeasonStats([])).toMatchObject({ matches: 0, players: [], clubs: [], records: { biggestWin: null, mostGoals: null, hatTricks: [] } });
+  });
+});
+
+describe('playerMatchLog', () => {
+  it('lists the official matches a player played, newest first, with rival, result and his line', () => {
+    const log = playerMatchLog([m1, m2, testMatch, live], 9, { officialKeys: OFFICIAL });
+    expect(log.map(entry => entry.matchKey)).toEqual([m2.matchKey, m1.matchKey]);
+    expect(log[0]).toMatchObject({ own: { name: 'Los Pibes', score: 1 }, rival: { name: 'La Banda', score: 1 }, result: 'D', line: { goals: 1 } });
+    expect(log[1]).toMatchObject({ result: 'W', line: { goals: 3, rating: 9 } });
+  });
+
+  it('is empty for a player with no official match', () => {
+    expect(playerMatchLog([m1], 999, { officialKeys: OFFICIAL })).toEqual([]);
+  });
+});
+
+describe('teamOfTheRound', () => {
+  // PES codes: 0 PT, 1 DFC, 5 MC, 12 DC.
+  const round = lines('20261124T200000Z_1-2', team('A', 'Los Pibes', 2), team('B', 'La Banda', 1), [
+    player(1, 'home', { position: 0, rating: 7 }), player(201, 'away', { position: 0, rating: 8 }),
+    ...[2, 3, 4, 5, 6].map(id => player(id, 'home', { position: 1, rating: 5 + id / 10 })),
+    ...[20, 21, 22, 23].map(id => player(id, 'away', { position: 5, rating: 6 + id / 100 })),
+    ...[30, 31, 32].map(id => player(id, 'home', { position: 12, rating: 7.5, goals: id === 31 ? 2 : 0 })),
+    player(40, 'home', { position: null, rating: 9.5 }), player(41, 'home', { position: 12, rating: null }),
+  ]);
+  const xi = teamOfTheRound([round, m1], [round.matchKey]);
+
+  it('picks a 4-3-3 from the best ratings of the round, by registered position', () => {
+    expect(xi.keeper.map(p => p.id)).toEqual([201]);
+    expect(xi.defense.map(p => p.id)).toEqual([6, 5, 4, 3]);
+    expect(xi.midfield.map(p => p.id)).toEqual([23, 22, 21]);
+    expect(xi.forward[0]).toMatchObject({ id: 31, clubName: 'Los Pibes', matchKey: round.matchKey });
+  });
+
+  it('leaves out players without rating or position and matches outside the round', () => {
+    const ids = [...xi.keeper, ...xi.defense, ...xi.midfield, ...xi.forward].map(p => p.id);
+    expect(ids).not.toContain(40);
+    expect(ids).not.toContain(41);
+    expect(ids).not.toContain(9);
+    expect(teamOfTheRound([round], [])).toBeNull();
+  });
+});
+
+describe('clubMatchLog', () => {
+  it('lists a club official results newest first, from its side', () => {
+    const log = clubMatchLog([m1, m2, testMatch, live], 'B', { officialKeys: OFFICIAL });
+    expect(log.map(entry => [entry.matchKey, entry.result, entry.own.score, entry.rival.score])).toEqual([
+      [m2.matchKey, 'D', 1, 1], [m1.matchKey, 'L', 0, 3],
+    ]);
+    expect(log[0].shootout).toEqual({ home: 4, away: 2 });
+  });
+});
+
+describe('headToHead', () => {
+  it('counts the meetings between two clubs from the first club side', () => {
+    const h2h = headToHead([m1, m2, testMatch], 'A', 'B', { officialKeys: OFFICIAL });
+    expect(h2h).toMatchObject({ played: 2, won: 1, drawn: 1, lost: 0, goalsFor: 4, goalsAgainst: 1 });
+    expect(h2h.matches.map(entry => entry.matchKey)).toEqual([m2.matchKey, m1.matchKey]);
+    expect(headToHead([m1], 'A', 'Z').played).toBe(0);
+  });
+});
+
+describe('matchupFacts', () => {
+  it('gives each club form and their head to head, for the OBS preview', () => {
+    expect(matchupFacts([m1, m2], 'A', 'B', { officialKeys: OFFICIAL })).toEqual({
+      homeForm: ['D', 'W'], awayForm: ['D', 'L'], h2h: { played: 2, won: 1, drawn: 1, lost: 0 },
+    });
+  });
+
+  it('is null when neither club has an official match yet, or a club id is missing', () => {
+    expect(matchupFacts([m1], 'X', 'Y')).toBeNull();
+    expect(matchupFacts([m1], 'A', null)).toBeNull();
   });
 });
 

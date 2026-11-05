@@ -219,6 +219,23 @@ const PLAYER_GROUPS = [
 ];
 
 /** Ficha de un jugador que jugó: grupos de estadísticas (solo las medidas) y sus tiros. */
+// Por tiempo (summary.players[].halves, desde el collector de noviembre 2026): las filas que más cambian de un tiempo
+// al otro. Pases precisos como «hechos/intentados».
+const HALF_ROWS = [
+  ['Toques', s => s.touches || 0],
+  ['Pases precisos', s => `${s.passesCompleted || 0}/${s.passes || 0}`, s => s.passes || 0],
+  ['Tiros', s => s.shots || 0],
+  ['Duelos ganados', s => s.tacklesWon || 0],
+  ['Intercepciones', s => s.interceptions || 0],
+];
+
+function halvesRows(halves) {
+  if (!halves?.first || !halves?.second) return null;
+  return HALF_ROWS
+    .filter(([, value, amount = value]) => amount(halves.first) || amount(halves.second))
+    .map(([label, value]) => ({ label, first: value(halves.first), second: value(halves.second) }));
+}
+
 export function playerProfile(summary, side, id) {
   const entry = (summary?.players?.[side] || []).find(player => player.id === id);
   const stats = entry?.stats || {};
@@ -238,6 +255,7 @@ export function playerProfile(summary, side, id) {
     heat: summary?.heatmaps?.players?.[id] || null,
     hasStats: Boolean(entry),
     groups,
+    halves: halvesRows(entry?.halves),
     shots: shotRows(summary).filter(shot => shot.playerId === id && shot.side === side),
   };
 }
