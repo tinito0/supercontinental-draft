@@ -79,7 +79,9 @@ export function useAuth({
         const isUserAdmin = (
           uid === ADMIN_USER_ID ||
           adminUidList.includes(uid) ||
-          idTokenResult.claims?.admin === true
+          idTokenResult.claims?.admin === true ||
+          // PES super_admin is a general admin too (firestore.rules isAdmin(), market.js isMarketAdmin()).
+          idTokenResult.claims?.pes_role === 'super_admin'
         );
         setIsAdmin(isUserAdmin);
 

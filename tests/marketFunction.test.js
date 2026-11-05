@@ -65,6 +65,9 @@ describe('market rules shared with the app', () => {
     expect(isMarketAdmin(constants.ADMIN_USER_ID)).toBe(true);
     expect(isMarketAdmin('someone', { admin: true })).toBe(true);
     expect(isMarketAdmin('someone', { admin: 'true' })).toBe(false);
+    expect(isMarketAdmin('someone', { pes_role: 'super_admin' })).toBe(true);
+    expect(isMarketAdmin('someone', { pes_role: 'kit_manager' })).toBe(false);
+    expect(isMarketAdmin('someone', { pes_role: 'draft_admin' })).toBe(false);
   });
 });
 

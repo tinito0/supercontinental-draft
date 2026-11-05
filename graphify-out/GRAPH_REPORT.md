@@ -1,17 +1,17 @@
-# Graph Report - PROGRAMA SUPER2  (2026-10-29)
+# Graph Report - PROGRAMA SUPER2  (2026-11-04)
 
 ## Corpus Check
-- 679 files · ~24,363,999 words
+- 703 files · ~24,339,969 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 20 file(s) not represented in the graph (top: .css 6, (none) 5, .csv 2)
 
 ## Summary
-- 4812 nodes · 12160 edges · 294 communities (251 shown, 43 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 236 edges (avg confidence: 0.91)
+- 4967 nodes · 12544 edges · 289 communities (246 shown, 43 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 240 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3d040d3e`
+- Built from commit: `5fbcba4e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,36 +21,36 @@
 - app.jsx
 - leagueContent.js
 - contrast-mcp.py
-- Tabs
+- EmptyState
 - gen_layout.cjs
-- LeagueContentAdminSection.jsx
-- getStatAndOvrColorClass
+- FixtureRow.jsx
+- helpers.js
 - matchSummary.js
-- PollEditor
+- FormationModal.jsx
 - positionRules.js
 - Accessibility Code Patterns
 - **SuperContinental League™ — Brand Voice Guidelines**
-- vitest
+- draftTransfer.js
 - ScoutAssignmentsPanel.jsx
 - matchAnalysis.js
 - matchAnalysisRender.test.jsx
-- stubs/useLeagueData.js
+- qa-overhaul/main.jsx
 - PesPlayersPanel.jsx
 - BroadcastOverlay.jsx
 - pitch_scan.py
-- AdminModal.jsx
+- TeamsAdminSection.jsx
 - Animation Recipes
-- ftex.js
+- PesFormatError
 - README.md
 - communityVote.js
-- FormationModal.jsx
+- autoLineup.test.js
 - dependencies
-- parse_value
+- captures.py
 - Changelog
-- helpers.js
+- constants.js
 - RESUMEN REUNION.md
-- EditDatabase
-- match-feed/index.ts
+- editDatabase.js
+- market/index.ts
 - Supabase
 - LeagueSite.jsx
 - squadSync.test.js
@@ -59,13 +59,13 @@
 - kitDecals.js
 - matchCenter.js
 - PesKit3DViewer.jsx
-- PesValidationError
+- pes/index.js
 - PES 2021 database & kit engine
 - bridgeCore.js
 - devDependencies
 - PWA Manifest
 - Animation Standards Reference
-- landingSampleData.test.js
+- PlatformDemo.jsx
 - scripts
 - PES Claims Sync
 - pesExport.js
@@ -73,14 +73,14 @@
 - Write Swift
 - Section Definitions
 - Apple Design
-- json
+- PesTeamWorkspace.jsx
 - formation_scan.py
-- LeagueTournamentScreen.jsx
-- TopHeader.jsx
+- LeagueMatchesScreen.jsx
+- Guía de administración: mercado, equipos y torneo
 - MCP Config
 - sw.js
 - Auditoría integral — Supercontinental Draft (14/10/2026)
-- pes/index.js
+- binDatabase.js
 - Third-party notices — PES engine
 - Supabase Postgres Best Practices
 - Caveman Mode — Antigravity Adaptation
@@ -118,21 +118,21 @@
 - _template.md
 - team_budgets.md
 - LandingPage.jsx
-- constants.js
+- FiltrosModal.jsx
 - Función del mercado (Supabase Edge Function `market`)
-- CartModal.jsx
+- missedEvents.js
 - OverlayPopupAdmin.jsx
 - simulate_t3.py
 - build-players-compact.mjs
 - scl_probe.lua
-- editDatabase.js
+- permissions.js
 - glyphs.py
 - main.py
 - bracketModel.js
 - contrast-check.py
-- build-share-pages.mjs
+- sharePages.js
 - bridge.mjs
-- transferService.js
+- CartModal.jsx
 - Prototyping Variants
 - draftExportReport.test.js
 - Simulación T3
@@ -140,16 +140,16 @@
 - market.js
 - ComparisonModal.jsx
 - usePesWorkspace.js
-- usePresence.js
+- ToastStack.jsx
 - competitionRules.js
-- teamCrestUrl
+- LeagueHomeScreen.jsx
 - package.json
 - Glossary
 - tournamentModel.js
 - Animation Performance
 - Worst-Case Catalog
-- summarize.mjs
-- TournamentModal.jsx
+- formationPlan.mjs
+- MatchCenter.jsx
 - Finding Animation Opportunities
 - StrategyPanels.jsx
 - overlayControl.js
@@ -157,17 +157,17 @@
 - budgetCalculations.test.js
 - Group 1: Hard Gate (absolute, no exceptions)
 - ObsSceneStudio.jsx
-- matchFeed.js
-- kitAssetResolver.test.js
+- match-feed/index.ts
+- loadKitTextures.js
 - main.jsx
 - react
-- advancedInstructions.js
-- Animaciones y microinteracciones — auditoría (16/10/2026)
+- formationStates.test.js
+- BaseModal
 - pesTextureStorage.js
-- workflow.test.js
+- SquadRulesAdminSection.jsx
 - Improving Animations
-- KitViewerPanels.jsx
-- RecordTable
+- marketConstants.js
+- MatchAnalysisView.jsx
 - useKitAssets.js
 - Análisis de partidos (`/partidos/:matchKey`)
 - Animation Audit Playbook
@@ -176,13 +176,13 @@
 - Expo Animation Recipes
 - LeagueClubScreen.jsx
 - Comments That Add Nothing
-- editCrypto.js
+- exportService.js
 - Pitch.jsx
-- tournamentEngine.js
+- TournamentModal.jsx
 - LeagueLiveScreen.jsx
-- rules/communityVote.test.js
+- vercel.json
 - The list
-- Building Animations in Expo
+- The Build Sequence
 - Design Engineering
 - Component Building Principles
 - broadcastMatches.js
@@ -193,35 +193,35 @@
 - Performance Rules
 - Gesture and Drag Interactions
 - PES 2021 live match data: research log
-- Auditoría integral — Supercontinental Draft (15/10/2026)
+- TeamScreen
 - firestore.js
 - CSS Transform Mastery
 - The Sonner Principles (Building Loved Components)
 - Spring Animations
-- OverlaySceneControl.jsx
+- hooks/useLeagueData.js
 - Core Philosophy
 - Debugging Animations
-- collectorImport.js
+- CollectorImportAdmin.jsx
 - antislop-ui
 - leagueFixtures.js
-- tournamentService.js
+- The Fixes
 - TutorialModal.jsx
 - pitchData.js
 - OverlayPopup.jsx
 - Core Web Vitals (LCP, INP, CLS)
 - Group 2: Purpose-Gate (technique allowed, purpose required)
-- Partidos de PES en vivo (puente local + función `match-feed`)
-- PesFormatError
-- VirtualPlayerResults.jsx
-- os
-- lineupReducer.test.js
-- fixtures.js
-- firebase
-- LinkGoogleScreen.jsx
-- mockData.js
-- marketRules.test.js
-- Transitions.dev
 - LeagueMatchScreen.jsx
+- session.js
+- MarketplaceView.jsx
+- json
+- lineupReducer.test.js
+- vitest
+- Feeling Native On Mobile
+- parseOpenTime
+- Building Animations in Expo
+- 2. Corregido en esta sesión (C1 + C3 + C2)
+- Transitions.dev
+- react-dom
 - tournamentRename.test.js
 - Decorative Elements
 - KitsSection.jsx
@@ -242,13 +242,13 @@
 - Plus to menu morph
 - Accordion expand
 - rules/marketFunction.test.js
-- playerOfTournament.js
+- clubLedger.js
 - Part 1: AI Slop Patterns (Warning Signs)
 - App & Dashboard
 - Success check
 - Input clear with dissolve
-- tests/marketFunction.test.js
-- fabricPreview.js
+- firestoreRest.js
+- KitWorkspace
 - Card resize
 - Number pop-in
 - Notification badge
@@ -276,112 +276,107 @@
 - Text morph
 - Text swap soft
 - Donut chart
-- antislop audit 002 · 2026-10-29 · Partidos en vivo y estadísticas
+- PlayerAnalysis.jsx
 - The Craftsmanship Standard
 - 2026-10-29T07-39-54Z__app-jsx.md
 - CommunityAdminSection.jsx
-- qa-overhaul/main.jsx
+- ci-test-summary.mjs
 - Delivery Gate (Mandatory)
 - Part 3: Liveliness Toolkit
 - AGENTS.md
-- PlayerAnalysis.jsx
+- LineupPitch.jsx
 - localStore.js
 - CLAUDE.md
-- LeagueHomeScreen.jsx
-- PlatformDemo.jsx
+- LeagueTournamentScreen.jsx
+- generador.py
 - setup.mjs
 - 2026-10-29T06-54-52Z__screens-league.md
-- loadKitTextures.js
-- TeamList.jsx
+- antislop report 004 · 2026-10-30 · Fixes for audit 004
+- franchisePlayers.test.js
 - ErrorBoundary
-- ObsConnection.jsx
 - antislop audit 001 · 2026-10-28
 - LCP: Largest Contentful Paint
-- ToastStack.jsx
-- obs.mjs
-- animation
-- probe_stats.py
+- setState
 - Architecture map
 - Auditoría de seguridad antes de abrir la web al público
 - antislop audit 003 · 2026-10-29 · Valoraciones, mapas de calor, mapa de tiros y xG
-- possession.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `react` - 232 edges
-2. `lucide-react` - 124 edges
-3. `vitest` - 90 edges
-4. `Alert()` - 80 edges
-5. `App()` - 72 edges
-6. `PesValidationError` - 57 edges
-7. `EmptyState()` - 56 edges
+1. `react` - 241 edges
+2. `lucide-react` - 127 edges
+3. `vitest` - 93 edges
+4. `Alert()` - 84 edges
+5. `App()` - 73 edges
+6. `EmptyState()` - 58 edges
+7. `PesValidationError` - 57 edges
 8. `Tabs()` - 53 edges
 9. `getStatAndOvrColorClass()` - 52 edges
-10. `getPosColorClass()` - 48 edges
+10. `getPosColorClass()` - 50 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Pattern: squad list (PES game plan, `components/formation/SquadList.jsx`)` --references--> `TeamStrength()`  [INFERRED]
   docs/DESIGN_SYSTEM.md → components/formation/TeamStrength.jsx
-- `MEDIUM (Purpose-Gate)` --references--> `PlayerAnalysis()`  [INFERRED]
-  anti-slop/audit-002-2026-10-29.md → components/league/match/PlayerAnalysis.jsx
 - `7. Cambios del 2026-10-23` --references--> `rankLeague()`  [INFERRED]
   docs/TOURNAMENT_DATA_FLOW_AUDIT.md → components/tournament/tournamentEngine.js
-- `Decisions worth a look in the browser` --references--> `BaseModal()`  [INFERRED]
-  anti-slop/report-001-2026-10-28.md → components/ui/BaseModal.jsx
-- `A. Lo que hay hoy` --references--> `BaseModal()`  [INFERRED]
-  docs/ANIMACIONES-2026-10-16.md → components/ui/BaseModal.jsx
+- `B. Animaciones recomendadas (por prioridad)` --references--> `Spinner()`  [INFERRED]
+  docs/ANIMACIONES-2026-10-16.md → components/ui/Spinner.jsx
+- `Pattern: entity editor (reference: `components/pes/team/`)` --references--> `Tabs()`  [INFERRED]
+  docs/DESIGN_SYSTEM.md → components/ui/Tabs.jsx
+- `Compatibilidad` --references--> `savedMatches()`  [INFERRED]
+  docs/MATCH_ANALYTICS.md → pes-collector/bridge/bridge.mjs
 
 ## Import Cycles
 - None detected.
 
-## Communities (294 total, 43 thin omitted)
+## Communities (289 total, 43 thin omitted)
 
 ### Community 0 - "PesUi.jsx"
-Cohesion: 0.15
-Nodes (34): describe(), fmt(), OpRow(), PesChangesPanel(), TYPE_LABEL, ValidationView(), CoachInput(), gameTeams() (+26 more)
+Cohesion: 0.10
+Nodes (48): modifiedKeys(), PesAddKit(), describe(), fmt(), OpRow(), PesChangesPanel(), TYPE_LABEL, ValidationView() (+40 more)
 
 ### Community 1 - "teamView.js"
 Cohesion: 0.11
-Nodes (46): Group(), ColourField(), CommitText(), enc, ColourGroup(), EXTRA_NAME_FIELDS, IdentitySection(), LanguageNames() (+38 more)
+Nodes (44): Group(), ColourField(), CommitText(), enc, ColourGroup(), EXTRA_NAME_FIELDS, IdentitySection(), LanguageNames() (+36 more)
 
 ### Community 2 - "app.jsx"
 Cohesion: 0.03
-Nodes (89): AdminModal, ALL_DETAILED_STAT_KEYS, App(), CartModal, CommandPalette, ComparisonModal, FiltrosModal, FirebaseError() (+81 more)
+Nodes (81): AdminModal, ALL_DETAILED_STAT_KEYS, App(), CartModal, CommandPalette, ComparisonModal, FiltrosModal, FirebaseError() (+73 more)
 
 ### Community 3 - "leagueContent.js"
-Cohesion: 0.12
-Nodes (41): ClubProfileEditor(), emptyProfile(), fromSaved(), PhotoPreview(), RemoveButton(), RowList(), ARROWS, FrameView() (+33 more)
+Cohesion: 0.06
+Nodes (74): ClubProfileEditor(), emptyProfile(), fromSaved(), PhotoPreview(), RemoveButton(), RowList(), ClubStories(), LeagueContentAdminSection (+66 more)
 
 ### Community 4 - "contrast-mcp.py"
 Cohesion: 0.29
 Nodes (9): _channel(), check_contrast(), contrast_ratio(), _error(), main(), relative_luminance(), _reply(), _send() (+1 more)
 
-### Community 5 - "Tabs"
-Cohesion: 0.07
-Nodes (47): LOW (Quality Locks), Findings, PesWorkspaceScreen, 13. Logging and debugging, getTypeConfig(), NOTIFICATION_FILTERS, NotificationItem, NotificationsPanel (+39 more)
+### Community 5 - "EmptyState"
+Cohesion: 0.09
+Nodes (41): SuggestionsAdminSection, ADMIN_TABS, AdminModal, CommunityAdminSection, LeagueContentAdminSection, SquadRulesAdminSection, getTypeConfig(), NOTIFICATION_FILTERS (+33 more)
 
 ### Community 6 - "gen_layout.cjs"
 Cohesion: 0.07
 Nodes (24): fs, out, src, A, C, camel(), camel0(), fs (+16 more)
 
-### Community 7 - "LeagueContentAdminSection.jsx"
-Cohesion: 0.22
-Nodes (19): ClubStories(), LeagueContentAdminSection, runSave(), SaveBar(), SeasonRulesEditor(), SECTIONS, StoryEditor(), Field() (+11 more)
+### Community 7 - "FixtureRow.jsx"
+Cohesion: 0.13
+Nodes (21): actionFor(), List(), MatchCentre(), VoteLink(), ClubName(), EntrantsList(), StandingsCard(), FixtureRow() (+13 more)
 
-### Community 8 - "getStatAndOvrColorClass"
+### Community 8 - "helpers.js"
 Cohesion: 0.08
-Nodes (54): MiniPlayerCard, Conventions, CommandPalette(), PlayerHeader(), PlayerMarquee(), PlayerTile, SHOWCASE_PLAYERS, FranchisePlayerCard() (+46 more)
+Nodes (61): MiniPlayerCard, TeamScreen, Conventions, CartMiniPlayerCard, CommandPalette(), PlayerHeader(), priceOf(), rowMeta() (+53 more)
 
 ### Community 9 - "matchSummary.js"
-Cohesion: 0.16
-Nodes (27): assistFor(), buildCards(), buildGoals(), buildLineups(), buildPlayers(), buildTeamStats(), clockKey(), clockOf() (+19 more)
+Cohesion: 0.10
+Nodes (34): Collector (match summary), assistFor(), buildCards(), buildGoals(), buildLineups(), buildPlayers(), buildTeamStats(), clockKey() (+26 more)
 
-### Community 10 - "PollEditor"
-Cohesion: 0.33
-Nodes (10): PollEditor(), pollPath(), buildPoll(), cleanNames(), cupPollTeams(), isDrawn(), POLL_LIMITS, pollMatchesTeams() (+2 more)
+### Community 10 - "FormationModal.jsx"
+Cohesion: 0.17
+Nodes (17): BenchRule(), TacticalStateBar, RULE_GROUPS, firstEleven, TACTICAL_STATES, averageOvr(), BENCH_MIN_AVG_OVR, benchBlockMessage() (+9 more)
 
 ### Community 11 - "positionRules.js"
-Cohesion: 0.24
-Nodes (15): PositionPicker, DEPTH_LINES, FALLBACK, gameDepth(), isOutfieldRole(), isRoleAllowedAt(), KNOWN_ROLES, OUTFIELD_ROLES (+7 more)
+Cohesion: 0.26
+Nodes (13): PositionPicker, DEPTH_LINES, FALLBACK, gameDepth(), isRoleAllowedAt(), KNOWN_ROLES, OUTFIELD_ROLES, rolesAt() (+5 more)
 
 ### Community 12 - "Accessibility Code Patterns"
 Cohesion: 0.04
@@ -391,97 +386,97 @@ Nodes (45): Accessibility Code Patterns, ARIA tabs, Dragging movements, Error ha
 Cohesion: 0.09
 Nodes (22): **1\. Rigurosos**, **2\. Auténticos entre amigos**, **3\. Prolijos en la forma, no en el fondo**, **4\. Transparentes**, **5\. Ambiciosos con la producción**, **Así no**, **Así sí**, **Brand Personality** (+14 more)
 
-### Community 14 - "vitest"
+### Community 14 - "draftTransfer.js"
 Cohesion: 0.10
-Nodes (47): abbreviationOf(), binSquadSize(), binStrategyFromTactics(), buildSquadSpec(), clamp(), clubRowsOf(), coachNameOfTeam(), coachOfTeam() (+39 more)
+Nodes (36): readField(), abbreviationOf(), binSquadSize(), binStrategyFromTactics(), buildSquadSpec(), clamp(), clubRowsOf(), coachOfTeam() (+28 more)
 
 ### Community 15 - "ScoutAssignmentsPanel.jsx"
 Cohesion: 0.16
 Nodes (20): ScoutAssignmentsPanel, attentionOptions, DEFAULT_SCOUTS, getMonthKey(), getTimeLeft(), initialCriteria, makeCriteriaFingerprint(), SCOUT_TUTORIAL_STEPS (+12 more)
 
 ### Community 16 - "matchAnalysis.js"
-Cohesion: 0.09
-Nodes (38): dash(), MatchAnalysisView(), pct(), PeriodTable(), WEIGHT_NAMES, FormationChanges(), MatchTacticsView(), MIX (+30 more)
+Cohesion: 0.10
+Nodes (30): FormationChanges(), MatchTacticsView(), MIX, PassMixBar(), PlanPanel(), PES_POSITION_MAP, ATTACK_KEYS, BUCKET_LABELS (+22 more)
 
 ### Community 17 - "matchAnalysisRender.test.jsx"
 Cohesion: 0.12
 Nodes (20): BallIcon(), PATCHES, VERTICES, describe(), layout(), MomentumChart(), PERIOD_NAME, HalfPitch() (+12 more)
 
-### Community 18 - "stubs/useLeagueData.js"
-Cohesion: 0.11
-Nodes (5): live, params, sampleProfile, SEASON_MATCH_LIMIT, state
+### Community 18 - "qa-overhaul/main.jsx"
+Cohesion: 0.08
+Nodes (20): ObsView(), params, SiteView(), views, CLUBS, liveDoc(), names, parseLive() (+12 more)
 
 ### Community 19 - "PesPlayersPanel.jsx"
-Cohesion: 0.16
-Nodes (30): BinPlayer(), EditPlayer(), PesPlayersPanel(), ConfidenceBadge(), FieldInput(), ModifiedDot(), SearchInput(), PesPlayerList() (+22 more)
+Cohesion: 0.17
+Nodes (29): opKey(), BinPlayer(), EditPlayer(), PesPlayersPanel(), ConfidenceBadge(), FieldInput(), ModifiedDot(), SearchInput() (+21 more)
 
 ### Community 20 - "BroadcastOverlay.jsx"
-Cohesion: 0.16
-Nodes (26): BroadcastCrest(), initialsOf(), isLongName(), BroadcastFixtures, Middle(), STATUS_TEXT, BroadcastBadge(), BroadcastFrame() (+18 more)
+Cohesion: 0.20
+Nodes (21): BroadcastCrest(), initialsOf(), isLongName(), BroadcastFixtures, Middle(), STATUS_TEXT, BroadcastBadge(), BroadcastFrame() (+13 more)
 
 ### Community 21 - "pitch_scan.py"
 Cohesion: 0.22
-Nodes (15): cmd_anchors(), cmd_check(), cmd_mark(), cmd_ratings(), cmd_snaps(), cmd_watch(), fits(), main() (+7 more)
+Nodes (16): open_process(), cmd_anchors(), cmd_check(), cmd_mark(), cmd_ratings(), cmd_snaps(), cmd_watch(), fits() (+8 more)
 
-### Community 22 - "AdminModal.jsx"
-Cohesion: 0.11
-Nodes (30): commitBatchOperations(), FIRESTORE_BATCH_LIMIT, GeneralAdminSection, SuggestionsAdminSection, ACCESS_FILTERS, TeamsAdminSection, TemplateAdminSection, ADMIN_TABS (+22 more)
+### Community 22 - "TeamsAdminSection.jsx"
+Cohesion: 0.14
+Nodes (24): commitBatchOperations(), FIRESTORE_BATCH_LIMIT, GeneralAdminSection, ACCESS_FILTERS, TeamsAdminSection, confirmAction(), ConfirmHost(), getSnapshot() (+16 more)
 
 ### Community 23 - "Animation Recipes"
 Cohesion: 0.06
 Nodes (31): Accordion / collapse, Animation Recipes, Button press, Drag to dismiss, Drawer / sheet, Dropdown, popover, menu, select, Hold to confirm, Masking a crossfade that won't settle (+23 more)
 
-### Community 24 - "ftex.js"
-Cohesion: 0.10
-Nodes (30): alphaBlock(), c565(), colorBlock(), encodeDxt(), encodeFtex(), FTEX_FORMATS, ftexHeader(), isPow2() (+22 more)
+### Community 24 - "PesFormatError"
+Cohesion: 0.09
+Nodes (30): PesFormatError, alphaBlock(), c565(), colorBlock(), encodeDxt(), FTEX_FORMATS, ftexHeader(), isPow2() (+22 more)
 
 ### Community 25 - "README.md"
 Cohesion: 0.06
 Nodes (31): 1. Clonar el repositorio, 2. Instalar dependencias, 3. Configurar variables de entorno, 4. Iniciar servidor de desarrollo, 5. Build para producción, 6. Deploy a Firebase, 🏗️ Arquitectura del proyecto, 🔐 Autenticación (+23 more)
 
 ### Community 26 - "communityVote.js"
-Cohesion: 0.11
-Nodes (32): allowedOrigins, firestore, serviceAccount, addVote(), castVote(), clientIp(), CommunityVoteError, CUP_PATHS (+24 more)
+Cohesion: 0.09
+Nodes (38): C3 y extras (2026-10-22): programado y probado, sin desplegar, allowedOrigins, firestore, serviceAccount, addVote(), castVote(), clientIp(), CommunityVoteError (+30 more)
 
-### Community 27 - "FormationModal.jsx"
-Cohesion: 0.25
-Nodes (14): TacticalStateBar, FormationModal, autoLineup(), LINES, ovrOf(), applyFormationToState(), effectiveState(), formationKeyForState() (+6 more)
+### Community 27 - "autoLineup.test.js"
+Cohesion: 0.47
+Nodes (3): autoLineup(), LINES, ovrOf()
 
 ### Community 28 - "dependencies"
 Cohesion: 0.11
 Nodes (18): dependencies, chart.js, fflate, firebase, @fontsource/barlow, @fontsource/barlow-condensed, html2canvas, jspdf (+10 more)
 
-### Community 29 - "parse_value"
-Cohesion: 0.20
-Nodes (4): classify(), parse_value(), Classify, ParseValue
+### Community 29 - "captures.py"
+Cohesion: 0.12
+Nodes (10): classify(), _line_at(), main(), parse_value(), read_capture(), roster(), selected_row(), windows_ocr() (+2 more)
 
 ### Community 30 - "Changelog"
 Cohesion: 0.10
 Nodes (20): [0.1.3](https://github.com/supabase/agent-skills/compare/v0.1.2...v0.1.3) (2026-06-02), [0.1.4](https://github.com/supabase/agent-skills/compare/v0.1.3...v0.1.4) (2026-06-05), [0.1.5](https://github.com/supabase/agent-skills/compare/v0.1.4...v0.1.5) (2026-07-10), [0.1.6](https://github.com/supabase/agent-skills/compare/v0.1.5...supabase-v0.1.6) (2026-07-30), [0.1.7](https://github.com/supabase/agent-skills/compare/v0.1.6...supabase-v0.1.7) (2026-08-12), [0.1.8](https://github.com/supabase/agent-skills/compare/v0.1.7...supabase-v0.1.8) (2026-09-24), [0.1.9](https://github.com/supabase/agent-skills/compare/v0.1.8...supabase-v0.1.9) (2026-09-28), Bug Fixes (+12 more)
 
-### Community 31 - "helpers.js"
-Cohesion: 0.07
-Nodes (47): antislop follow-up report 001 · 2026-10-28, Decisions worth a look in the browser, Found beyond the audit, Not changed, TeamScreen, priceOf(), rowMeta(), SquadRow (+39 more)
+### Community 31 - "constants.js"
+Cohesion: 0.06
+Nodes (54): formatMessageTime(), ProposalChat, BudgetMeter(), TopHeader, OnlineIndicator, FIVE_MINUTES_MS, getTimestampMillis(), HEARTBEAT_INTERVAL_MS (+46 more)
 
 ### Community 32 - "RESUMEN REUNION.md"
 Cohesion: 0.20
 Nodes (9): 1\. Formato de Competencia y Estructura del Torneo, 2\. Mercado de Pases, Presupuestos y Regulación de Planteles, 3\. Dinámica del Draft (Jugadores Especiales / Promesas), 4\. Logística, Sede y Fechas, 5\. Puntos Pendientes / Acciones Inmediatas, A. Opción 1: Formato en 2 Zonas (Estilo Copa de la Liga), B. Opción 2: Mantener el Formato Anterior (Liga / Sistema Suizo), C. Copa de Plata (+1 more)
 
-### Community 33 - "EditDatabase"
-Cohesion: 0.14
-Nodes (9): readField(), EditDatabase, u16(), u32(), w16(), w32(), assignmentsOf(), clubOf() (+1 more)
+### Community 33 - "editDatabase.js"
+Cohesion: 0.08
+Nodes (24): COACH_BY_NAME, COACH_FLAG, EditDatabase, FORMAT_ID, isSlot(), PLAYER_BY_NAME, TEAM_BY_NAME, u16() (+16 more)
 
-### Community 34 - "match-feed/index.ts"
-Cohesion: 0.09
-Nodes (23): FACTS, allowedOrigins, corsHeaders(), firestore, keySet, reply(), serviceAccount, firestore (+15 more)
+### Community 34 - "market/index.ts"
+Cohesion: 0.16
+Nodes (12): jose, allowedOrigins, corsHeaders(), firestore, keySet, reply(), serviceAccount, createServiceAccountTokenProvider() (+4 more)
 
 ### Community 35 - "Supabase"
 Cohesion: 0.11
 Nodes (15): Fix suggestion, Source, What happened, Skill Feedback, Steps, Core Principles, Debugging, Making and Committing Schema Changes (+7 more)
 
 ### Community 36 - "LeagueSite.jsx"
-Cohesion: 0.29
-Nodes (12): LeagueLayout(), LeagueClubScreen, LeagueHistoryScreen, LeagueHomeScreen, LeagueLiveScreen, LeagueMatchesScreen, LeagueMatchScreen, LeagueNotFoundScreen (+4 more)
+Cohesion: 0.18
+Nodes (20): StoryText(), useDocumentTitle(), useLeagueContent(), LeagueHistoryScreen(), LeagueNotFoundScreen(), chapterAnchor(), LeagueRulesScreen(), RulesSkeleton() (+12 more)
 
 ### Community 37 - "squadSync.test.js"
 Cohesion: 0.36
@@ -500,20 +495,20 @@ Cohesion: 0.14
 Nodes (28): composeKitTexture(), drawCell(), drawDigits(), drawName(), fallbackKitTexture(), FONT_LABEL, fontNote(), KitFont (+20 more)
 
 ### Community 41 - "matchCenter.js"
-Cohesion: 0.18
-Nodes (17): doc, summary, match, summary, buildLineups(), buildTimeline(), clockValue(), competitionLabel() (+9 more)
+Cohesion: 0.20
+Nodes (18): LeagueMatchScreen(), doc, summary, pitchLayout(), buildLineups(), buildTimeline(), clockValue(), competitionLabel() (+10 more)
 
 ### Community 42 - "PesKit3DViewer.jsx"
-Cohesion: 0.12
-Nodes (27): draw(), CollarPicker(), kitPixels(), KitEnv, KitGL, LIGHT_PRESETS, lightState(), sharedThumbRenderer() (+19 more)
-
-### Community 43 - "PesValidationError"
 Cohesion: 0.11
-Nodes (36): EXTS, FontGenerator(), PesKitTextures(), SlotRow(), slotStatus(), STATUS, PesValidationError, inspectFtex() (+28 more)
+Nodes (34): CollarPicker(), kitPixels(), KitEnv, KitGL, LIGHT_PRESETS, lightState(), sharedThumbRenderer(), AssetRow() (+26 more)
+
+### Community 43 - "pes/index.js"
+Cohesion: 0.15
+Nodes (38): EXTS, FontGenerator(), FontLibrary(), PesKitTextures(), SlotRow(), slotStatus(), STATUS, PesValidationError (+30 more)
 
 ### Community 44 - "PES 2021 database & kit engine"
-Cohesion: 0.17
-Nodes (11): 1. Supported input (explicit), 2. Investigation summary, 3. Field evidence (`pes/formats/pes2021/binLayout.js`), 4. Architecture, 4c. Shared sources, 5. Authorization, 6. Setup, 7. Export (+3 more)
+Cohesion: 0.14
+Nodes (13): 1. Supported input (explicit), 2. Investigation summary, 3. Field evidence (`pes/formats/pes2021/binLayout.js`), 4. Architecture, 4b. Draft → PES (`pes/draftTransfer.js`, tab "Draft → PES"), 4c. Shared sources, 4d. Kits: 3D preview, fabric maps, new kits, 6. Setup (+5 more)
 
 ### Community 45 - "bridgeCore.js"
 Cohesion: 0.22
@@ -531,9 +526,9 @@ Nodes (9): background_color, description, display, icons, name, orientation, sho
 Cohesion: 0.07
 Nodes (26): Aggressive Escalation Triggers, Guidelines, Initial Response, Operating Posture, Part 1 — Findings table (REQUIRED), Part 2 — Verdict (REQUIRED), Remedial Preference Hierarchy, Required Output Format (+18 more)
 
-### Community 49 - "landingSampleData.test.js"
-Cohesion: 0.17
-Nodes (11): DEMO_LINEUPS, DEMO_SIGNED_AT_START, DEMO_TOTAL_BUDGET, EXPORT_FILES, MARKET_FILTERS, MARKET_PLAYER_COUNT_LABEL, MARKET_SAMPLE, SAMPLE_PLAYERS (+3 more)
+### Community 49 - "PlatformDemo.jsx"
+Cohesion: 0.12
+Nodes (20): formatPrice(), MarketPanel(), PANELS, pitchName(), PitchPanel(), TAB_INTRO, TABS, TacticList() (+12 more)
 
 ### Community 50 - "scripts"
 Cohesion: 0.18
@@ -544,16 +539,16 @@ Cohesion: 0.29
 Nodes (6): firebase-admin, APPLY, auth, changes, db, roles
 
 ### Community 52 - "pesExport.js"
-Cohesion: 0.47
-Nodes (9): alignStarters(), csvText(), exportTeamToPesZip(), generateAppearancesCsv(), generateCoachCsv(), generatePlayersCsv(), generateRosterCsv(), generateTeamCsv() (+1 more)
+Cohesion: 0.33
+Nodes (13): FORMATIONS, exportVariants(), toGameCoords(), alignStarters(), csvText(), exportTeamToPesZip(), generateAppearancesCsv(), generateCoachCsv() (+5 more)
 
 ### Community 53 - "antislop-layoutmobile"
 Cohesion: 0.06
 Nodes (30): 100vh Sections, antislop-layoutmobile, Bottom Nav That Eats Content, Breakpoint Driven by Device List, Breakpoints, Columns That Don't Collapse, Desktop-Only Layout, Desktop-Sized Everything (+22 more)
 
 ### Community 54 - "Write Swift"
-Cohesion: 0.10
-Nodes (19): 10. ARC and object lifetime, 11. Testing — Swift Testing by default, 12. Macros, 14. Unsafe code and interop, 15. Modern syntax you should be using, 16. Migrating an existing codebase to Swift 6, 1. Model data with value types, 2. Errors and optionals — make the failure paths visible (+11 more)
+Cohesion: 0.11
+Nodes (18): 10. ARC and object lifetime, 11. Testing — Swift Testing by default, 12. Macros, 14. Unsafe code and interop, 15. Modern syntax you should be using, 16. Migrating an existing codebase to Swift 6, 1. Model data with value types, 2. Errors and optionals — make the failure paths visible (+10 more)
 
 ### Community 55 - "Section Definitions"
 Cohesion: 0.20
@@ -563,29 +558,29 @@ Nodes (9): 1. Query Performance (query), 2. Connection Management (conn), 3. Sec
 Cohesion: 0.09
 Nodes (21): 10. Gesture design details (the "feel" checklist), 11. Frame-level smoothness, 12. Materials & depth — translucency conveys hierarchy, 13. Multimodal feedback — motion + sound + haptics, 14. Reduced motion & accessibility, 15. Typography — optical sizing, tracking, leading, 16. Design foundations — the eight principles, 17. Process (+13 more)
 
-### Community 57 - "json"
-Cohesion: 0.20
-Nodes (9): _line_at(), main(), read_capture(), roster(), selected_row(), windows_ocr(), calculate_budgets(), get_avg_price_for_ovr() (+1 more)
+### Community 57 - "PesTeamWorkspace.jsx"
+Cohesion: 0.15
+Nodes (17): accessNote(), headerMeta(), PesTeamWorkspace(), TEAM_SECTIONS, TeamDetail(), AdvancedSection(), ELSEWHERE, DorsalInput() (+9 more)
 
 ### Community 58 - "formation_scan.py"
 Cohesion: 0.12
-Nodes (22): chunks(), cmd_anchors(), cmd_find(), cmd_ptr(), cmd_reread(), cmd_watch(), decode(), diff() (+14 more)
+Nodes (21): chunks(), cmd_anchors(), cmd_find(), cmd_ptr(), cmd_reread(), cmd_watch(), decode(), diff() (+13 more)
 
-### Community 59 - "LeagueTournamentScreen.jsx"
-Cohesion: 0.08
-Nodes (39): FeaturedMatch(), KIND_LABEL, pickFeatured(), Side(), FixtureRow(), LeagueCrest(), makeClubLookup(), RoundCell() (+31 more)
+### Community 59 - "LeagueMatchesScreen.jsx"
+Cohesion: 0.18
+Nodes (17): LeaderList(), leaders(), LeagueLeaders(), useLiveMatches(), useTournament(), useLeagueFixtures(), useNow(), COMPETITIONS (+9 more)
 
-### Community 60 - "TopHeader.jsx"
-Cohesion: 0.28
-Nodes (10): BudgetMeter(), TopHeader, OnlineIndicator, FIVE_MINUTES_MS, getTimestampMillis(), HEARTBEAT_INTERVAL_MS, isPresenceActive(), isPresenceStale() (+2 more)
+### Community 60 - "Guía de administración: mercado, equipos y torneo"
+Cohesion: 0.10
+Nodes (20): 1. Actualizar el mercado de jugadores, 2. Sumar un equipo, 3. Cambiar el manager de un club, 4. Editar un club, 5. Eliminar un club, 6. Nueva temporada, 7. Publicar las funciones del servidor (sin Claude y sin computadora), 8. Cargar los partidos del torneo (+12 more)
 
 ### Community 64 - "Auditoría integral — Supercontinental Draft (14/10/2026)"
-Cohesion: 0.17
-Nodes (11): 1. Qué se ejecutó, 2. Corregido en esta auditoría, 3. Pendiente — requiere decisión o trabajo mayor, 4. Dependencias, 5. No verificado, Alta, Auditoría integral — Supercontinental Draft (14/10/2026), Baja (+3 more)
+Cohesion: 0.18
+Nodes (10): 1. Qué se ejecutó, 2. Corregido en esta auditoría, 3. Pendiente — requiere decisión o trabajo mayor, 4. Dependencias, 5. No verificado, Alta, Auditoría integral — Supercontinental Draft (14/10/2026), Baja (+2 more)
 
-### Community 65 - "pes/index.js"
-Cohesion: 0.06
-Nodes (48): PesPermissionError, decoder, encoder, fieldByteSpan(), fieldRange(), validateFieldValue(), writeField(), adler32() (+40 more)
+### Community 65 - "binDatabase.js"
+Cohesion: 0.05
+Nodes (45): decoder, encoder, fieldByteSpan(), fieldRange(), validateFieldValue(), writeField(), adler32(), decodeWesys() (+37 more)
 
 ### Community 66 - "Third-party notices — PES engine"
 Cohesion: 0.29
@@ -600,24 +595,24 @@ Cohesion: 0.40
 Nodes (4): Caveman Mode — Antigravity Adaptation, Levels, Persistence, Rules
 
 ### Community 102 - "LandingPage.jsx"
-Cohesion: 0.15
-Nodes (22): external, FollowLeague(), SocialLinks(), FEATURED_VIDEO, LEAGUE_NAME, LINKTREE_URL, SOCIAL_LINKS, STREAM_CHANNEL (+14 more)
+Cohesion: 0.14
+Nodes (24): LandingPage, external, FollowLeague(), SocialLinks(), FEATURED_VIDEO, LEAGUE_NAME, LINKTREE_URL, SOCIAL_LINKS (+16 more)
 
-### Community 103 - "constants.js"
-Cohesion: 0.08
-Nodes (37): filterColors, FilterSection(), FiltrosModal, RangeInputs(), RANGES, ToggleButton, RULE_GROUPS, ActiveFilterChips() (+29 more)
+### Community 103 - "FiltrosModal.jsx"
+Cohesion: 0.07
+Nodes (46): antislop audit 004 · 2026-10-30 · Glosario «¿Qué es?» y filtro «Juega bien de», Delivery Gate, HIGH (Hard Gate), LOW (Quality Locks, copy, code), What already holds, filterColors, FilterSection(), FiltrosModal (+38 more)
 
 ### Community 104 - "Función del mercado (Supabase Edge Function `market`)"
 Cohesion: 0.40
 Nodes (4): Función del mercado (Supabase Edge Function `market`), Mantenimiento, Probar localmente, Puesta en marcha (una vez)
 
-### Community 105 - "CartModal.jsx"
-Cohesion: 0.10
-Nodes (30): CartMiniPlayerCard, CartModal, CLOSED_STATUSES, getOfferSenderName(), getOfferStatusLabel(), getOfferTargetName(), NegotiationCard, OfferTimeline (+22 more)
+### Community 105 - "missedEvents.js"
+Cohesion: 0.43
+Nodes (5): offer, SINCE, describe(), missedOfferNotifications(), price()
 
 ### Community 106 - "OverlayPopupAdmin.jsx"
-Cohesion: 0.19
-Nodes (18): initialForm(), OverlayPopupAdmin, POPUP_FORM_FIELDS, POSITIONS, siteUrl(), useOnAirSeconds(), qrcode-generator, rebaseOverlayForm() (+10 more)
+Cohesion: 0.16
+Nodes (23): initialForm(), OverlayPopupAdmin, POPUP_FORM_FIELDS, POSITIONS, siteUrl(), useOnAirSeconds(), QrCode, qrcode-generator (+15 more)
 
 ### Community 107 - "simulate_t3.py"
 Cohesion: 0.23
@@ -631,13 +626,13 @@ Nodes (9): compact, players, root, source, sourceHash, sourceStat, sourceText, s
 Cohesion: 0.15
 Nodes (38): diff_record(), emit(), find_pos_region(), find_stats_region(), flush_events(), guarded(), has_header(), has_stats_header() (+30 more)
 
-### Community 110 - "editDatabase.js"
-Cohesion: 0.08
-Nodes (30): bySlot, edit, hex(), roster, sessionSquad(), tactics, { tacticsBase }, teamId (+22 more)
+### Community 110 - "permissions.js"
+Cohesion: 0.15
+Nodes (16): 5. Authorization, KIT_EDITABLE_KEYS, TEXTURE_SLOT_IDS, authorize(), can(), EDIT_TEAM_KIT_FIELDS, OP_TYPES, ROLES (+8 more)
 
 ### Community 111 - "glyphs.py"
-Cohesion: 0.10
-Nodes (13): _bounds(), Cell, _features(), GlyphReader, ink_mask(), _main_cluster(), normalize(), _remove_long_runs() (+5 more)
+Cohesion: 0.09
+Nodes (14): 6. Concurrency in SwiftUI, _bounds(), Cell, _features(), GlyphReader, ink_mask(), _main_cluster(), normalize() (+6 more)
 
 ### Community 112 - "main.py"
 Cohesion: 0.10
@@ -645,91 +640,91 @@ Nodes (17): calcular_modificador_edad(), calcular_modificador_edad_t2(), calcula
 
 ### Community 113 - "bracketModel.js"
 Cohesion: 0.12
-Nodes (30): CupsCard(), cupSummary(), Tie(), BracketBoard, BracketView, boardWidth(), CupBracketView, TONE_STYLES (+22 more)
+Nodes (35): CupsCard(), cupSummary(), Tie(), BracketBoard, BroadcastBracket, BroadcastMatchCard, TONE_STROKES, boardWidth() (+27 more)
 
 ### Community 114 - "contrast-check.py"
 Cohesion: 0.27
 Nodes (9): contrast_ratio(), linearize(), luminance(), main(), parse_hex(), parse_pairing(), parse_reference_rows(), reference_doc_path() (+1 more)
 
-### Community 115 - "build-share-pages.mjs"
-Cohesion: 0.06
-Nodes (44): 10. Status bar color doesn't match, 11. Right in Chrome, wrong on phone, 1. Hover state stuck after tap, 2. Gray/blue flash on tap, 3. Layout has the wrong height, 4. Page zooms into the input, 5. Tap feels laggy, 6. Pull-to-refresh hijacks scroll (+36 more)
+### Community 115 - "sharePages.js"
+Cohesion: 0.18
+Nodes (21): appId(), clubPages(), DIST, envValue(), fieldsToObject(), fromFirestore(), html, listCollection() (+13 more)
 
 ### Community 116 - "bridge.mjs"
-Cohesion: 0.16
-Nodes (25): createLogger(), createUploadSide(), describe(), loadNames(), main(), newestSession(), parseArgs(), readJson() (+17 more)
+Cohesion: 0.23
+Nodes (18): createLogger(), createUploadSide(), describe(), loadNames(), main(), newestSession(), parseArgs(), readJson() (+10 more)
 
-### Community 117 - "transferService.js"
-Cohesion: 0.28
-Nodes (13): appendHistory(), applyOfferAction(), buildOfferUpdate(), counterTransferOffer(), getOfferAmount(), OFFER_ACTIONS, rejectTransferOffer(), withdrawTransferOffer() (+5 more)
+### Community 117 - "CartModal.jsx"
+Cohesion: 0.16
+Nodes (24): CartModal, CLOSED_STATUSES, getOfferSenderName(), getOfferStatusLabel(), getOfferTargetName(), NegotiationCard, OfferTimeline, STATUS_TONE (+16 more)
 
 ### Community 118 - "Prototyping Variants"
 Cohesion: 0.10
 Nodes (19): Behavior contract, Markup, Reference wiring, Rules, Styles, The Picker, Hard Rules, Initial Response (+11 more)
 
 ### Community 119 - "draftExportReport.test.js"
-Cohesion: 0.36
-Nodes (5): 4b. Draft → PES (`pes/draftTransfer.js`, tab "Draft → PES"), dorsals(), fullLineup, draftExportReport(), draftTeamReport()
+Cohesion: 0.53
+Nodes (3): fullLineup, draftExportReport(), draftTeamReport()
 
 ### Community 120 - "Simulación T3"
 Cohesion: 0.29
 Nodes (6): Pool de Jugador Franquicia, Pool del Draft de promesas, Presupuesto por POV, Simulación T3, XI máximo con piso de banco 73, XI máximo con piso de banco 74
 
 ### Community 121 - "matchStats.js"
-Cohesion: 0.15
-Nodes (20): summary, playerName(), buildRow(), count(), endMinute(), isCount(), LEADER_STATS, minutesPlayed() (+12 more)
+Cohesion: 0.16
+Nodes (18): summary, buildRow(), count(), endMinute(), isCount(), LEADER_STATS, minutesPlayed(), numeric() (+10 more)
 
 ### Community 122 - "market.js"
-Cohesion: 0.26
-Nodes (16): isFranchiseEligible(), acceptOffer(), appendHistory(), getCatalogPlayer(), getCommittedFunds(), handleMarketAction(), isMarketOpen(), MarketError (+8 more)
+Cohesion: 0.19
+Nodes (20): toUnits(), acceptOffer(), appendHistory(), CLUB_USER_COLLECTIONS, getCatalogPlayer(), getCommittedFunds(), handleMarketAction(), isMarketOpen() (+12 more)
 
 ### Community 123 - "ComparisonModal.jsx"
 Cohesion: 0.17
-Nodes (23): Bars(), clampPercent(), compareStats(), ComparisonContent(), ComparisonModal, lastName(), Legend(), PROFILE_ROWS (+15 more)
+Nodes (22): Bars(), clampPercent(), compareStats(), ComparisonContent(), ComparisonModal, lastName(), Legend(), PROFILE_ROWS (+14 more)
 
 ### Community 124 - "usePesWorkspace.js"
-Cohesion: 0.13
-Nodes (35): PesRolesPanel(), PRESETS, SkeletonRows(), usePesAccess(), readActive(), usePesWorkspace(), writeActive(), resetLocalStore() (+27 more)
+Cohesion: 0.16
+Nodes (30): usePesAccess(), readActive(), usePesWorkspace(), writeActive(), capabilitiesOf(), restoreWorkingCopy(), resetLocalStore(), clean() (+22 more)
 
-### Community 125 - "usePresence.js"
-Cohesion: 0.33
-Nodes (7): Estado (16/10/2026), usePresenceList(), EXIT_TIMEOUT_MS, findRemoved(), isFinite(), mergeWithLeaving(), waitForExit()
+### Community 125 - "ToastStack.jsx"
+Cohesion: 0.20
+Nodes (14): StatusAlert, TONES, SigningToast(), ToastFrame, ToastStack, Estado (16/10/2026), Motion, useExitAnimation() (+6 more)
 
 ### Community 126 - "competitionRules.js"
 Cohesion: 0.14
-Nodes (25): 1. Cómo funciona hoy, 2. Hallazgos, 3. Qué ya está hecho (sin conectar), 4. Propuesta de integración (para aprobar), 5. Copa de Plata: cuentas, 6. Preguntas abiertas, 7. Cambios del 2026-10-23, Torneo: cómo funciona hoy y qué falta para el colector de PES (+17 more)
+Nodes (25): 2. Hallazgos, 3. Qué ya está hecho (sin conectar), 4. Propuesta de integración (para aprobar), 5. Copa de Plata: cuentas, 6. Preguntas abiertas, 7. Cambios del 2026-10-23, Torneo: cómo funciona hoy y qué falta para el colector de PES, done() (+17 more)
 
-### Community 127 - "teamCrestUrl"
-Cohesion: 0.32
-Nodes (7): ClubHero(), placeLine(), CrestRing(), CrestStrip(), CoachCard(), MatchCoaches(), teamCrestUrl()
+### Community 127 - "LeagueHomeScreen.jsx"
+Cohesion: 0.16
+Nodes (18): ClubGrid(), ClubGridSkeleton(), CrestRing(), CrestStrip(), FeaturedMatch(), KIND_LABEL, pickFeatured(), Side() (+10 more)
 
 ### Community 128 - "package.json"
 Cohesion: 0.10
-Nodes (19): name, private, type, version, here, repo, resolveId(), stub() (+11 more)
+Nodes (20): name, private, type, version, here, repo, resolveId(), stub() (+12 more)
 
 ### Community 129 - "Glossary"
 Cohesion: 0.11
 Nodes (18): Animation Vocabulary, Easing — how speed changes over an animation, Entrances & Exits — how elements appear and disappear, Examples, Feedback & Interaction — responding to the user's actions, Glossary, Initial Response, Instructions (+10 more)
 
 ### Community 130 - "tournamentModel.js"
-Cohesion: 0.18
-Nodes (19): doc(), EMPTY_BRACKET_MATCH, CUP_SLOTS, EMPTY_LEAGUE_SLOT, emptyMatch(), emptyRow(), fill(), leagueManualPart() (+11 more)
+Cohesion: 0.09
+Nodes (29): getRevertedResults(), clean(), newsFor(), newsRef(), saveTournamentEdit(), scoreOrNull(), tournamentRef(), doc() (+21 more)
 
 ### Community 131 - "Animation Performance"
 Cohesion: 0.12
 Nodes (16): Animation Performance, Hard Rules, Initial Response, Operating Posture, Phase 1: Find what animates, Phase 2: Diagnose, Phase 3: Report, Should You Avoid JS Animation? (+8 more)
 
 ### Community 132 - "Worst-Case Catalog"
-Cohesion: 0.06
-Nodes (31): Collections, Emails, URLs, identifiers, Environment, Images and media, Labels, titles, and copy from data, Numbers and money, People and names, States (+23 more)
+Cohesion: 0.04
+Nodes (41): Collections, Emails, URLs, identifiers, Environment, Images and media, Labels, titles, and copy from data, Numbers and money, People and names, States (+33 more)
 
-### Community 133 - "summarize.mjs"
+### Community 133 - "formationPlan.mjs"
+Cohesion: 0.12
+Nodes (21): parseEventLines(), splitMatches(), bySlot, edit, hex(), roster, sessionSquad(), tactics (+13 more)
+
+### Community 134 - "MatchCenter.jsx"
 Cohesion: 0.14
-Nodes (17): Collector (match summary), formatNames(), parseEventLines(), splitMatches(), toTournamentFields(), loadNames(), main(), minute() (+9 more)
-
-### Community 134 - "TournamentModal.jsx"
-Cohesion: 0.15
-Nodes (22): FORM_STYLES, LeagueTableView, BracketFork, MatchCard, EDIT_FIELDS, MatchCenter, RepechajeView, TieBreakEditor (+14 more)
+Nodes (23): FromGameLock(), FromGameNote(), isFromGame(), FORM_STYLES, LeagueTableView, MatchCard, EDIT_FIELDS, MANUAL_FIELDS (+15 more)
 
 ### Community 135 - "Finding Animation Opportunities"
 Cohesion: 0.12
@@ -740,68 +735,72 @@ Cohesion: 0.29
 Nodes (9): ATTACK_FIELDS, DEFENSE_FIELDS, formatRolePlayerOption(), isTrue(), ROLE_CONFIGS, RolesPanel, StrategyField(), StrategyGroup() (+1 more)
 
 ### Community 137 - "overlayControl.js"
-Cohesion: 0.14
-Nodes (21): C3 y extras (2026-10-22): programado y probado, sin desplegar, AUTO_CARD_SECONDS, AUTO_POPUP_SECONDS, autoCardStage(), autoPopupStage(), buildOverlayCommand(), CARD_DEFAULT_SECONDS, fail() (+13 more)
+Cohesion: 0.10
+Nodes (28): loadConfig(), log(), main(), OBS_USAGE, parseObsArgs(), AUTO_CARD_SECONDS, AUTO_POPUP_SECONDS, autoCardStage() (+20 more)
 
 ### Community 138 - "probe-diff.mjs"
 Cohesion: 0.35
 Nodes (9): hex(), loadSnapshots(), main(), regionBuffer(), diffSnapshots(), findCounter(), parseEvents(), readUnsigned() (+1 more)
 
 ### Community 139 - "budgetCalculations.test.js"
-Cohesion: 0.20
-Nodes (13): calculateBudget(), nextOfferExpiry(), useBudget(), committedInOffers(), heldAmount(), isFranchiseLock(), spentOnLocks(), toUnits() (+5 more)
+Cohesion: 0.30
+Nodes (9): Contexto, calculateBudget(), nextOfferExpiry(), useBudget(), committedInOffers(), heldAmount(), isFranchiseLock(), spentOnLocks() (+1 more)
 
 ### Community 140 - "Group 1: Hard Gate (absolute, no exceptions)"
 Cohesion: 0.10
 Nodes (20): Group 1: Hard Gate (absolute, no exceptions), R-02 — Copywriting, R-03 — Mobile Responsiveness, R-17 — Data & Numbers, R-18 — Testimonials, R-23 — Clarification & Visual Assets, R-24 — Navigation, R-25 — Color Contrast (+12 more)
 
 ### Community 141 - "ObsSceneStudio.jsx"
-Cohesion: 0.18
-Nodes (19): sourceShortLabel(), formatTime(), GROUPS, ObsSceneStudio, SceneList(), whereShown(), TournamentDataNote(), DEFAULT_BROADCAST_OVERLAY (+11 more)
+Cohesion: 0.09
+Nodes (38): byId(), ObsConnection, OTHER_SOURCES, SOURCE_TEXT, SourceRow(), SOURCES, sourceShortLabel(), sourceTitle() (+30 more)
 
-### Community 142 - "matchFeed.js"
-Cohesion: 0.20
-Nodes (12): buildLiveMatchDoc(), cleanId(), cleanName(), isBridgeToken(), isClockPart(), isScore(), MATCH_SCHEMA, MatchFeedError (+4 more)
-
-### Community 143 - "kitAssetResolver.test.js"
+### Community 142 - "match-feed/index.ts"
 Cohesion: 0.12
-Nodes (18): ASSET_SLOTS, AssetCache, assetCandidates(), describeAsset(), KIT_FOLDER_EXTS, kitAssetRefs(), kitDirOf(), manifestEntry() (+10 more)
+Nodes (18): firestore, serviceAccount, firestore, serviceAccount, APP_ID, buildLiveMatchDoc(), cleanId(), cleanName() (+10 more)
+
+### Community 143 - "loadKitTextures.js"
+Cohesion: 0.12
+Nodes (19): glossFromAlpha(), assetCache, decode(), decoded, loadKitTextures(), MAX_WIDTH, ASSET_SLOTS, AssetCache (+11 more)
 
 ### Community 144 - "main.jsx"
-Cohesion: 0.22
-Nodes (12): Architecture, App, LeagueSite, legacyTarget, ObsScreen, rootElement, DRAFT_BASE, draftUrl() (+4 more)
+Cohesion: 0.20
+Nodes (14): Architecture, App, LeagueSite, legacyTarget, ObsScreen, rootElement, @fontsource/barlow, @fontsource/barlow-condensed (+6 more)
 
 ### Community 145 - "react"
-Cohesion: 0.07
-Nodes (45): Chapter(), ChapterBody(), ClosingChapter(), ClubStory(), FranchiseShowcase(), ShowcaseSkeleton(), actionFor(), List() (+37 more)
+Cohesion: 0.10
+Nodes (35): ClubTransferDialog(), PollEditor(), pollPath(), MatchSettings, TextInput(), TextSettings, AuthLayout(), Brand() (+27 more)
 
-### Community 146 - "advancedInstructions.js"
-Cohesion: 0.20
-Nodes (12): AdvancedInstructionsPanel, SIDE_META, ADVANCED_INSTRUCTIONS, CODES, EMPTY_INSTRUCTIONS, instructionByCode(), instructionSlots(), MAX_PER_SIDE (+4 more)
+### Community 146 - "formationStates.test.js"
+Cohesion: 0.15
+Nodes (15): AdvancedInstructionsPanel, SIDE_META, EDIT_ADVANCED_CODES, findElement(), fresh(), ADVANCED_INSTRUCTIONS, CODES, EMPTY_INSTRUCTIONS (+7 more)
 
-### Community 147 - "Animaciones y microinteracciones — auditoría (16/10/2026)"
-Cohesion: 0.17
-Nodes (11): A. Lo que hay hoy, Animaciones y microinteracciones — auditoría (16/10/2026), Archivos a tocar (fase 1), B. Animaciones recomendadas (por prioridad), C. Por componente, Contexto, D. Sistema de movimiento (chico y justificado), E. Rendimiento y accesibilidad (+3 more)
+### Community 147 - "BaseModal"
+Cohesion: 0.04
+Nodes (58): LOW (Quality Locks), antislop follow-up report 001 · 2026-10-28, Decisions worth a look in the browser, Findings, Found beyond the audit, Not changed, SuggestionsModal, 13. Logging and debugging (+50 more)
 
 ### Community 148 - "pesTextureStorage.js"
-Cohesion: 0.27
-Nodes (15): refreshFirebaseClaims(), supabase, supabaseConfigured, TEXTURE_BUCKET, @supabase/supabase-js, deleteWorkspaceFiles(), download(), downloadTexture() (+7 more)
+Cohesion: 0.17
+Nodes (24): refreshFirebaseClaims(), supabase, supabaseConfigured, TEXTURE_BUCKET, sha256Hex(), packSource(), sourceSha(), unpackSource() (+16 more)
 
-### Community 149 - "workflow.test.js"
-Cohesion: 0.15
-Nodes (19): PesError, buildExport(), EDIT_PATH, PESDB_DIR, same(), verifyGenerated(), BIN_TABLES, parseKitOrder() (+11 more)
+### Community 149 - "SquadRulesAdminSection.jsx"
+Cohesion: 0.21
+Nodes (12): ClubName(), COLUMNS, failingRules(), RuleFigure(), SquadRulesAdminSection(), FIX, ruleTarget(), SquadRulesStats() (+4 more)
 
 ### Community 150 - "Improving Animations"
 Cohesion: 0.18
 Nodes (11): Hard Rules, Improving Animations, Initial Response, Invocation Variants, Operating Posture, Phase 1 — Recon (always first), Phase 2 — Audit (parallel), Phase 3 — Vet, prioritize, confirm (+3 more)
 
-### Community 152 - "KitViewerPanels.jsx"
-Cohesion: 0.26
-Nodes (14): AssetRow(), DiagnosticsPanel(), FabricPanel(), FolderControls(), FONT_SLOTS, LetteringPanel(), LEVEL, NoteList() (+6 more)
+### Community 152 - "marketConstants.js"
+Cohesion: 0.19
+Nodes (11): FACTS, FranchiseExplainer(), FRANCHISE_RULE_TEXT, ADMIN_USER_IDS, FRANCHISE_MAX_OVR, FRANCHISE_MIN_AGE, FRANCHISE_MIN_OVR, MAX_TRANSFER_MULTIPLIER (+3 more)
+
+### Community 153 - "MatchAnalysisView.jsx"
+Cohesion: 0.22
+Nodes (13): draw(), Heatmap(), STOPS, PitchLines(), dash(), MatchAnalysisView(), pct(), PeriodTable() (+5 more)
 
 ### Community 154 - "useKitAssets.js"
-Cohesion: 0.24
-Nodes (17): canPickFolder(), filesReader(), handleReader(), idb(), kitServerReader(), pickGameFolder(), readerFromFiles(), rememberedGameFolder() (+9 more)
+Cohesion: 0.25
+Nodes (16): canPickFolder(), filesReader(), handleReader(), idb(), kitServerReader(), pickGameFolder(), readerFromFiles(), rememberedGameFolder() (+8 more)
 
 ### Community 155 - "Análisis de partidos (`/partidos/:matchKey`)"
 Cohesion: 0.15
@@ -813,51 +812,51 @@ Nodes (11): 1. Purpose & frequency, 2. Easing & duration, 3. Physicality & origi
 
 ### Community 157 - "kitConfig.js"
 Cohesion: 0.08
-Nodes (38): FontLibrary(), COLOR_KEYS, getKitValue(), kitPreviewModel(), parseKitConfig(), parseKitMap(), parseRangeComment(), serializeKitConfig() (+30 more)
+Nodes (39): COLOR_KEYS, parseKitConfig(), parseKitMap(), parseRangeComment(), setKitValue(), TEXTURE_KEYS, validateKitValue(), BADGE_KEYS (+31 more)
 
 ### Community 158 - "Working With Sonner"
 Cohesion: 0.15
 Nodes (11): Functions, Sonner API Reference, `toast()` options, `<Toaster />`, Initial Response, Picking the right call, Recipes, Setup (+3 more)
 
 ### Community 159 - "Expo Animation Recipes"
-Cohesion: 0.15
+Cohesion: 0.18
 Nodes (11): Bottom sheet you can drag to dismiss, Collapsing header on scroll, Expo Animation Recipes, Firing something once at a threshold, Keyboard-synced UI, List entrances, Setup the recipes assume, Swipe to delete a row (+3 more)
 
 ### Community 160 - "LeagueClubScreen.jsx"
-Cohesion: 0.20
-Nodes (13): ClubFacts, FACTS, ClubFranchise(), CampaignTable(), ClubHonours(), TrophyCabinet(), ClubSeasonCard(), clubStanding() (+5 more)
+Cohesion: 0.22
+Nodes (11): ClubFacts, FACTS, ClubFranchise(), ClubHero(), placeLine(), ClubSeasonCard(), clubStanding(), ShareClubButton() (+3 more)
 
 ### Community 161 - "Comments That Add Nothing"
 Cohesion: 0.11
 Nodes (17): antislop-code, Code Comment Checklist, Comments That Add Nothing, Decorative Emoji, Decorative Separators, Empty Labels, End Markers, How It Should Read (+9 more)
 
-### Community 162 - "editCrypto.js"
-Cohesion: 0.31
-Nodes (11): cryptHeader(), cryptStream(), cstr(), decryptEdit(), decryptWith(), encryptEdit(), MASTER_KEYS, mersenne() (+3 more)
+### Community 162 - "exportService.js"
+Cohesion: 0.14
+Nodes (19): PesError, PesPermissionError, buildExport(), EDIT_PATH, PESDB_DIR, same(), verifyGenerated(), cryptHeader() (+11 more)
 
 ### Community 164 - "Pitch.jsx"
-Cohesion: 0.31
-Nodes (8): getLastName(), KEY_STEP, Pitch, PitchSlot, clamp(), clampPosition(), clientToPitch(), round1()
+Cohesion: 0.23
+Nodes (12): FIELD, getLastName(), KEY_STEP, Pitch, PitchMarkings(), PitchSlot, sx(), sy() (+4 more)
 
-### Community 165 - "tournamentEngine.js"
-Cohesion: 0.14
-Nodes (28): applyAutomaticSwiss(), buildAutomaticTournamentData(), buildAutomaticTournamentReport(), drawFirstRound(), finalizeTournament(), lastRound(), LEAGUE_ROUNDS, leagueTeamNames() (+20 more)
+### Community 165 - "TournamentModal.jsx"
+Cohesion: 0.11
+Nodes (39): BracketView, BracketFork, RepechajeView, StatsView, TieBreakEditor, applyAutomaticSwiss(), buildAutomaticTournamentData(), buildAutomaticTournamentReport() (+31 more)
 
 ### Community 167 - "LeagueLiveScreen.jsx"
-Cohesion: 0.22
-Nodes (18): MatchStatus(), TeamMark(), SEASON_MATCH_LIMIT, useAllMvpVotes(), CupPollPanel(), LeagueLiveScreen(), MvpPanel(), PlayerOfTournamentPanel() (+10 more)
+Cohesion: 0.16
+Nodes (20): SEASON_MATCH_LIMIT, useAllMvpVotes(), CupPollPanel(), LeagueLiveScreen(), MvpPanel(), PlayerOfTournamentPanel(), PredictionPanel(), ShareBar() (+12 more)
 
-### Community 168 - "rules/communityVote.test.js"
-Cohesion: 0.24
-Nodes (11): MAX_VOTES_PER_IP, parseVote(), device(), firestore, mvp(), predict(), read(), seed() (+3 more)
+### Community 168 - "vercel.json"
+Cohesion: 0.15
+Nodes (12): buildCommand, cleanUrls, master, framework, git, deploymentEnabled, headers, installCommand (+4 more)
 
 ### Community 169 - "The list"
 Cohesion: 0.18
 Nodes (10): Charts, Common mismatches to catch, How to use this, Initial Response, Interaction & performance, Motion & visuals, Picking The Right Library, State & styling (+2 more)
 
-### Community 170 - "Building Animations in Expo"
-Cohesion: 0.10
-Nodes (22): Press feedback, 120fps, 1. Should this animate at all?, 2. What is the purpose?, 3. Pick the tool — cheapest that works, 4. Pick the properties, 5. Timing or spring, 6. Keep it off the JS thread (+14 more)
+### Community 170 - "The Build Sequence"
+Cohesion: 0.22
+Nodes (9): 1. Should this animate at all?, 2. What is the purpose?, 3. Pick the tool — cheapest that works, 4. Pick the properties, 5. Timing or spring, 7. Press, not hover, 8. Haptics, 9. Reduced motion and accessibility (+1 more)
 
 ### Community 171 - "Design Engineering"
 Cohesion: 0.22
@@ -868,16 +867,16 @@ Cohesion: 0.25
 Nodes (8): Animate enter states with @starting-style, Buttons must feel responsive, Component Building Principles, Make popovers origin-aware, Never animate from scale(0), Tooltips: skip delay on subsequent hovers, Use blur to mask imperfect transitions, Use CSS transitions over keyframes for interruptible UI
 
 ### Community 173 - "broadcastMatches.js"
-Cohesion: 0.18
-Nodes (23): BroadcastMatchPicker, MatchRow, STATUS_FILTERS, TeamCell(), teamLogoFor(), MatchSettings, TextInput(), TextSettings (+15 more)
+Cohesion: 0.19
+Nodes (21): BroadcastMatchPicker, MatchRow, STATUS_FILTERS, TeamCell(), teamLogoFor(), allTeams, tournamentData, listCupMatches() (+13 more)
 
 ### Community 174 - "matchActions.js"
 Cohesion: 0.18
 Nodes (15): buildBuckets(), buildSeries(), buildShots(), clockSeconds(), lateFirstSample(), PLAY_PERIODS, sideName(), SIDES (+7 more)
 
 ### Community 175 - "formationStates.js"
-Cohesion: 0.15
-Nodes (22): findElement(), fresh(), fluidStates(), fresh(), copyBaseTo(), emptyByState(), emptyStates(), exportVariants() (+14 more)
+Cohesion: 0.14
+Nodes (31): TemplateAdminSection, FormationModal, FormationViewScreen(), buildDraftSquad(), loadDraftTeams(), fluidStates(), fresh(), applyFormationToState() (+23 more)
 
 ### Community 176 - "The Animation Decision Framework"
 Cohesion: 0.33
@@ -899,9 +898,9 @@ Nodes (6): Damping at boundaries, Friction instead of hard stops, Gesture and Dr
 Cohesion: 0.18
 Nodes (13): Capability matrix (current), External read-only scan of the running game (post-match screen of session 162012, pid 14308), Findings, Formation in the probe (probe v4: implemented in the repo, not yet run in a match), Konami Cup and friendlies (2026-10-21, static only), Live sessions 2026-10-21 16:11 and 16:20 (Arsenal 101 vs Liverpool 103, 5 min; second with ET + PKs), Live validation procedure (scl_probe), Local bridge (+5 more)
 
-### Community 181 - "Auditoría integral — Supercontinental Draft (15/10/2026)"
-Cohesion: 0.22
-Nodes (7): 1. Qué se ejecutó, 3. Pendiente — Alta, 4. Pendiente — Media y baja (resumen), 5. Funcionalidades nuevas propuestas (por valor y esfuerzo), 6. Hoja de ruta, Auditoría integral — Supercontinental Draft (15/10/2026), FormationViewScreen()
+### Community 181 - "TeamScreen"
+Cohesion: 0.23
+Nodes (12): SquadSection(), show(), TeamStrength(), 4. Pendiente — Media y baja (resumen), getPosRank(), TeamScreen(), TeamScreenSkeleton(), player (+4 more)
 
 ### Community 182 - "firestore.js"
 Cohesion: 0.15
@@ -919,9 +918,9 @@ Nodes (5): Asymmetric enter/exit timing, Cohesion matters, Review your work the 
 Cohesion: 0.40
 Nodes (5): Interruptibility advantage, Spring Animations, Spring-based mouse interactions, Spring configuration, When to use springs
 
-### Community 186 - "OverlaySceneControl.jsx"
-Cohesion: 0.16
-Nodes (23): COMMUNITY_CARDS, CommunityLayerControl, MACRO_DECK_COMMANDS, OVERLAY_CONTROL_URL, useCardStatus(), BroadcastOverlayLive(), useLiveMatch(), useLiveMatches() (+15 more)
+### Community 186 - "hooks/useLeagueData.js"
+Cohesion: 0.18
+Nodes (20): COMMUNITY_CARDS, MACRO_DECK_COMMANDS, OVERLAY_CONTROL_URL, useCardStatus(), BroadcastOverlayLive(), loadMarketCatalog(), sortByName(), useLiveMatch() (+12 more)
 
 ### Community 187 - "Core Philosophy"
 Cohesion: 0.50
@@ -931,21 +930,21 @@ Nodes (4): Beauty is leverage, Core Philosophy, Taste is trained, not innate, Un
 Cohesion: 0.50
 Nodes (4): Debugging Animations, Frame-by-frame inspection, Slow motion testing, Test on real devices
 
-### Community 189 - "collectorImport.js"
-Cohesion: 0.31
-Nodes (11): liveMatch(), teamMap, applyCollectorImport(), cupRounds(), findImported(), gameTeamIds(), leagueTarget(), planCollectorImport() (+3 more)
+### Community 189 - "CollectorImportAdmin.jsx"
+Cohesion: 0.18
+Nodes (20): CollectorImportAdmin, formatDate(), Preview(), TeamMapper(), readView(), TournamentBroadcastAdminSection, TournamentSummary(), VIEWS (+12 more)
 
 ### Community 190 - "antislop-ui"
 Cohesion: 0.12
 Nodes (16): antislop-ui, Dead Navigation, Endless Pulses and Loops, Hero Image Loaded Like Any Other Image, How to use this skill, Motion, Non-Functional Controls, Page Basics (+8 more)
 
 ### Community 191 - "leagueFixtures.js"
-Cohesion: 0.19
-Nodes (18): NOW, teamsById, buildCupRounds(), hasScore(), isMatchCompleted(), readPath(), buildFixtures(), clean() (+10 more)
+Cohesion: 0.18
+Nodes (18): NOW, teamsById, groupsOf(), hasScore(), buildFixtures(), clean(), COMPETITION_LABELS, cupFixtures() (+10 more)
 
-### Community 192 - "tournamentService.js"
-Cohesion: 0.16
-Nodes (11): getMatchesWithNewResults(), getRevertedResults(), clean(), newsFor(), newsRef(), saveTournamentEdit(), scoreOrNull(), tournamentRef() (+3 more)
+### Community 192 - "The Fixes"
+Cohesion: 0.17
+Nodes (12): 10. Status bar color doesn't match, 11. Right in Chrome, wrong on phone, 1. Hover state stuck after tap, 2. Gray/blue flash on tap, 3. Layout has the wrong height, 4. Page zooms into the input, 5. Tap feels laggy, 6. Pull-to-refresh hijacks scroll (+4 more)
 
 ### Community 193 - "TutorialModal.jsx"
 Cohesion: 0.24
@@ -953,11 +952,11 @@ Nodes (10): TutorialModal, CHAPTER_TABS, findTarget(), getPopoverStyle(), getSpo
 
 ### Community 194 - "pitchData.js"
 Cohesion: 0.13
-Nodes (22): asFloat(), attackDirections(), buildHeatmaps(), buildRatings(), cellOf(), f32, HEAT_GRID, idsAt() (+14 more)
+Nodes (23): asFloat(), attackDirections(), buildHeatmaps(), buildRatings(), cellOf(), f32, HEAT_GRID, idsAt() (+15 more)
 
 ### Community 195 - "OverlayPopup.jsx"
-Cohesion: 0.26
-Nodes (14): cardContent(), CommunityCard, PREDICTION_LABEL, ShareRow(), verdict(), CommunityFrame(), displayUrl(), LEAVE_MS (+6 more)
+Cohesion: 0.28
+Nodes (13): cardContent(), CommunityCard, PREDICTION_LABEL, ShareRow(), verdict(), CommunityFrame(), displayUrl(), LEAVE_MS (+5 more)
 
 ### Community 196 - "Core Web Vitals (LCP, INP, CLS)"
 Cohesion: 0.14
@@ -967,53 +966,53 @@ Nodes (11): CLS: Cumulative Layout Shift, Core Web Vitals (LCP, INP, CLS), INP: 
 Cohesion: 0.15
 Nodes (13): Group 2: Purpose-Gate (technique allowed, purpose required), R-01 — Color & Gradients, R-04 — Icons, R-06 — Typography, R-07 — Background, R-08 — Button Arrows, R-09 — Badges, R-10 — Glassmorphism (+5 more)
 
-### Community 198 - "Partidos de PES en vivo (puente local + función `match-feed`)"
-Cohesion: 0.17
-Nodes (10): Fuentes de navegador en OBS, Macro Deck: botones para el overlay de OBS, Partidos de PES en vivo (puente local + función `match-feed`), Puesta en marcha (una vez), Que Supabase no se pause, Registro de partidos (`/partidos`), Seguridad, Si algo falla (+2 more)
+### Community 198 - "LeagueMatchScreen.jsx"
+Cohesion: 0.33
+Nodes (9): LOW (Quality Locks) · motion (transitions-dev), SectionPanel(), StatCompareRow(), StatSections(), StatValue(), TopStats(), Card(), SummaryTab() (+1 more)
 
-### Community 199 - "PesFormatError"
-Cohesion: 0.23
-Nodes (14): PesFormatError, sha256Hex(), norm(), toKitServerRelative(), replayOperations(), classifyFiles(), KNOWN_BIN, pathOf() (+6 more)
+### Community 199 - "session.js"
+Cohesion: 0.22
+Nodes (14): buildNameIndex(), clean(), editNames(), editPositions(), idsInSummary(), tableNames(), tablePositions(), PASSTHROUGH_FILES (+6 more)
 
-### Community 200 - "VirtualPlayerResults.jsx"
-Cohesion: 0.25
-Nodes (11): CARD_INFO_ESTIMATE, lockInfo(), useScrollMargin(), VirtualPlayerResults(), @tanstack/react-virtual, chunkRows(), getGridMetrics(), MIN_CARD_WIDTH (+3 more)
+### Community 200 - "MarketplaceView.jsx"
+Cohesion: 0.13
+Nodes (20): FranchiseMarketNotice(), MarketplaceView(), ResultsSkeleton(), CARD_INFO_ESTIMATE, lockInfo(), useScrollMargin(), VirtualPlayerResults(), PlayerPreview() (+12 more)
 
-### Community 201 - "os"
-Cohesion: 0.20
-Nodes (4): generar_contrasena_segura(), main(), limpiar_fotos_huerfanas(), update_playlist()
+### Community 201 - "json"
+Cohesion: 0.16
+Nodes (8): main(), replay(), total(), calculate_budgets(), get_avg_price_for_ovr(), load_players(), limpiar_fotos_huerfanas(), update_playlist()
 
 ### Community 202 - "lineupReducer.test.js"
 Cohesion: 0.48
 Nodes (5): cart, withLineup(), dedupeLineup(), formationReducer(), initialFormationState
 
-### Community 203 - "fixtures.js"
-Cohesion: 0.11
-Nodes (14): @firebase/rules-unit-testing, EDIT_FILE, hasKitServer, KIT_SERVER_DIR, PESDB_DIR, readKitServer(), ROOT, index (+6 more)
+### Community 203 - "vitest"
+Cohesion: 0.08
+Nodes (29): readTeamTactics(), tacticsIdsOfTeam(), validateTeamTactics(), writeTeamTactics(), formationRowKey(), @firebase/rules-unit-testing, vitest, superAdmin (+21 more)
 
-### Community 204 - "firebase"
-Cohesion: 0.11
-Nodes (27): FormationViewScreen, CollectorImportAdmin, formatDate(), Preview(), TeamMapper(), LeagueEditorsPanel, readView(), TournamentBroadcastAdminSection (+19 more)
-
-### Community 206 - "LinkGoogleScreen.jsx"
-Cohesion: 0.14
-Nodes (21): LoginScreen, AuthLayout(), Brand(), GoogleButton(), Button, IconButton, SIZES, VARIANTS (+13 more)
-
-### Community 207 - "mockData.js"
-Cohesion: 0.24
-Nodes (11): AdminView(), CLUBS, liveDoc(), names, play(), quarter(), sampleSummary(), scenario() (+3 more)
-
-### Community 208 - "marketRules.test.js"
+### Community 204 - "Feeling Native On Mobile"
 Cohesion: 0.18
-Nodes (12): 2. Corregido en esta sesión (C1 + C3 + C2), C1: los traspasos no llegaban al plantel del comprador (CRÍTICO, CONFIRMADO), C2: ofertas con monto negativo saltaban el presupuesto (CRÍTICO, CONFIRMADO), C3: las exportaciones confiaban en el carrito (CRÍTICO, CONFIRMADO), Deploy (en este orden), Una sola cuenta de presupuesto para la app y el servidor (parte de H6), acceptBatch(), cart() (+4 more)
+Nodes (10): Baseline, Feeling Native On Mobile, Hard Rules, Initial Response, Never Ship, Operating Posture, Output, The Symptom Table (+2 more)
+
+### Community 206 - "parseOpenTime"
+Cohesion: 0.33
+Nodes (6): MarketClosedBanner, LEAGUE_UTC_OFFSET, parseOpenTime(), formatCountdown(), formatTimeLeft(), pad()
+
+### Community 207 - "Building Animations in Expo"
+Cohesion: 0.20
+Nodes (8): 120fps, Building Animations in Expo, Hard Rules, Initial Response, Output, Recipes, Setup that silently breaks motion, Tone
+
+### Community 208 - "2. Corregido en esta sesión (C1 + C3 + C2)"
+Cohesion: 0.33
+Nodes (6): 2. Corregido en esta sesión (C1 + C3 + C2), C1: los traspasos no llegaban al plantel del comprador (CRÍTICO, CONFIRMADO), C2: ofertas con monto negativo saltaban el presupuesto (CRÍTICO, CONFIRMADO), C3: las exportaciones confiaban en el carrito (CRÍTICO, CONFIRMADO), Deploy (en este orden), Una sola cuenta de presupuesto para la app y el servidor (parte de H6)
 
 ### Community 209 - "Transitions.dev"
 Cohesion: 0.15
 Nodes (13): Commands, Common mistakes to avoid, Decision rules, Motion tokens, Output format, Quick reference, Reference files, transitions apply — install the best-fit transition (+5 more)
 
-### Community 210 - "LeagueMatchScreen.jsx"
-Cohesion: 0.13
-Nodes (27): LineupColumn(), MatchLineups(), PLAYER_COLUMNS, PlayerMarks(), PlayerPhoto(), PlayerStatsTable(), CardMark(), ratingTone() (+19 more)
+### Community 210 - "react-dom"
+Cohesion: 0.15
+Nodes (20): LineupColumn(), MatchLineups(), PLAYER_COLUMNS, PlayerMarks(), PlayerPhoto(), PlayerStatsTable(), CardMark(), MatchStatus() (+12 more)
 
 ### Community 211 - "tournamentRename.test.js"
 Cohesion: 0.27
@@ -1024,8 +1023,8 @@ Cohesion: 0.17
 Nodes (12): AI Capsule Badges, Colored Left Stripe, Decorative Elements, Decorative Status Dot, Emoji as Decoration, Eyebrow Badge Above the Headline, Fake Terminal Window, Generic AI Icons (+4 more)
 
 ### Community 213 - "KitsSection.jsx"
-Cohesion: 0.21
-Nodes (14): opKey(), PesAddKit(), firstKit(), kitLabel(), KitSchematic(), KitsSection(), KitValueInput(), PLAYER_LABELS (+6 more)
+Cohesion: 0.13
+Nodes (24): Pill(), firstKit(), kitLabel(), KitSchematic(), KitsSection(), KitValueInput(), PLAYER_LABELS, sections() (+16 more)
 
 ### Community 214 - "formations.js"
 Cohesion: 0.33
@@ -1068,8 +1067,8 @@ Cohesion: 0.20
 Nodes (6): CSS, HTML usage, JavaScript orchestration, Toggle, Tunable variables, When to use
 
 ### Community 224 - "ObsScreen.jsx"
-Cohesion: 0.21
-Nodes (5): OVERLAY_RETRY_MS, OverlayErrorBoundary, useBroadcastOverlay(), ObsScreen(), sceneForSource()
+Cohesion: 0.16
+Nodes (7): BroadcastStage(), STAGE, OVERLAY_RETRY_MS, OverlayErrorBoundary, useBroadcastOverlay(), ObsScreen(), sceneForSource()
 
 ### Community 225 - "antislop"
 Cohesion: 0.22
@@ -1095,9 +1094,9 @@ Nodes (8): Accordion expand, CSS, HTML usage, JavaScript orchestration, Tunable 
 Cohesion: 0.27
 Nodes (10): accept(), call(), catalog, firestore, read(), readAll(), seed(), setMarket() (+2 more)
 
-### Community 231 - "playerOfTournament.js"
-Cohesion: 0.48
-Nodes (3): mvpWinner(), rankPlayerOfTournament(), sideOf()
+### Community 231 - "clubLedger.js"
+Cohesion: 0.42
+Nodes (5): transferSplit(), offerHistory, squad, acceptedAmount(), buildClubLedger()
 
 ### Community 232 - "Part 1: AI Slop Patterns (Warning Signs)"
 Cohesion: 0.25
@@ -1115,13 +1114,13 @@ Nodes (7): Calibrating `stroke-dasharray` for your path, CSS, HTML usage, JavaSc
 Cohesion: 0.25
 Nodes (7): CSS, Dark mode, HTML usage, Input clear with dissolve, JavaScript orchestration, Tunable variables, When to use
 
-### Community 236 - "tests/marketFunction.test.js"
-Cohesion: 0.14
-Nodes (17): jose, buildMarketCatalog(), root, source, target, createFirestore(), createTransaction(), request() (+9 more)
+### Community 236 - "firestoreRest.js"
+Cohesion: 0.17
+Nodes (15): FormationNotFoundError, loadSharedFormation(), sharedFormationUrl(), withTimeout(), createFirestore(), createTransaction(), request(), runTransaction() (+7 more)
 
-### Community 237 - "fabricPreview.js"
-Cohesion: 0.44
-Nodes (8): fabricPreview(), fabricTextures(), fabricOf(), FABRICS, fabricTile(), luminance(), normalMapPixels(), srmPixels()
+### Community 237 - "KitWorkspace"
+Cohesion: 0.13
+Nodes (16): fabricPreview(), fabricTextures(), pixelsToCanvas(), fabricOf(), FABRICS, fabricTile(), luminance(), normalMapPixels() (+8 more)
 
 ### Community 238 - "Card resize"
 Cohesion: 0.29
@@ -1231,9 +1230,9 @@ Nodes (6): CSS, HTML usage, JavaScript orchestration, Text swap soft, Tunable va
 Cohesion: 0.29
 Nodes (6): CSS, Donut chart, HTML usage, JavaScript orchestration, Tunable variables, When to use
 
-### Community 265 - "antislop audit 002 · 2026-10-29 · Partidos en vivo y estadísticas"
-Cohesion: 0.29
-Nodes (6): antislop audit 002 · 2026-10-29 · Partidos en vivo y estadísticas, HIGH (Hard Gate), LOW (Quality Locks) · motion (transitions-dev), MEDIUM (Purpose-Gate), Not findings, What already holds
+### Community 265 - "PlayerAnalysis.jsx"
+Cohesion: 0.21
+Nodes (14): antislop audit 002 · 2026-10-29 · Partidos en vivo y estadísticas, HIGH (Hard Gate), MEDIUM (Purpose-Gate), Not findings, What already holds, RatingChip(), Leaders(), PlayerAnalysis() (+6 more)
 
 ### Community 266 - "The Craftsmanship Standard"
 Cohesion: 0.33
@@ -1244,12 +1243,12 @@ Cohesion: 0.29
 Nodes (6): Design Health Score, Design Specificity, Minor Observations, Persona Red Flags, Priority Issues, Questions
 
 ### Community 268 - "CommunityAdminSection.jsx"
-Cohesion: 0.42
-Nodes (9): CommunityAdminSection, MvpStatus(), PREDICTION_LABELS, PredictionStatus(), StatusBadge(), useClock(), CupPollAdmin, ResetVotesButton() (+1 more)
+Cohesion: 0.25
+Nodes (15): CommunityAdminSection, MvpStatus(), PREDICTION_LABELS, PredictionStatus(), StatusBadge(), useClock(), CupPollAdmin, ResetVotesButton() (+7 more)
 
-### Community 269 - "qa-overhaul/main.jsx"
-Cohesion: 0.18
-Nodes (10): BroadcastStage(), STAGE, useElementSize(), ObsView(), params, SiteView(), views, parseLive() (+2 more)
+### Community 269 - "ci-test-summary.mjs"
+Cohesion: 0.29
+Nodes (5): failed, [file, label = 'tests', filter], passed, report, tests
 
 ### Community 270 - "Delivery Gate (Mandatory)"
 Cohesion: 0.40
@@ -1259,9 +1258,9 @@ Nodes (5): Block 1: Hard Gate (absolute), Block 2: Purpose-Gate (technique allow
 Cohesion: 0.50
 Nodes (4): Design Read (how the dials are set), Levers (how the dials become visual decisions), Part 3: Liveliness Toolkit, Three Dials (required)
 
-### Community 273 - "PlayerAnalysis.jsx"
-Cohesion: 0.15
-Nodes (24): Heatmap(), STOPS, inset(), lastName(), LineupPitch(), Marker(), Miniface(), Pitch() (+16 more)
+### Community 273 - "LineupPitch.jsx"
+Cohesion: 0.29
+Nodes (12): inset(), lastName(), LineupPitch(), Marker(), Miniface(), Pitch(), SideNotice(), sourceNote() (+4 more)
 
 ### Community 274 - "localStore.js"
 Cohesion: 0.17
@@ -1271,13 +1270,9 @@ Nodes (17): clearDraft(), connect(), del(), deleteSource(), get(), getAsset(), g
 Cohesion: 0.40
 Nodes (3): antislop, Commands, Gotchas
 
-### Community 276 - "LeagueHomeScreen.jsx"
-Cohesion: 0.17
-Nodes (25): SectionHeading(), ClubGrid(), ClubGridSkeleton(), FranchiseExplainer(), StoryText(), useDocumentTitle(), loadMarketCatalog(), sortByName() (+17 more)
-
-### Community 277 - "PlatformDemo.jsx"
-Cohesion: 0.27
-Nodes (8): formatPrice(), MarketPanel(), PANELS, pitchName(), PitchPanel(), TAB_INTRO, TABS, TacticList()
+### Community 276 - "LeagueTournamentScreen.jsx"
+Cohesion: 0.23
+Nodes (16): Reveal(), showAtOnce(), SectionHeading(), makeClubLookup(), useClubProfiles(), useFranchisePlayers(), useLeagueTeams(), LeagueAbout() (+8 more)
 
 ### Community 278 - "setup.mjs"
 Cohesion: 0.22
@@ -1287,17 +1282,13 @@ Nodes (4): argv, config, configDir, configFile
 Cohesion: 0.29
 Nodes (6): Design Health Score, Design Specificity, Minor, Persona Red Flags, Priority Issues, Questions
 
-### Community 280 - "loadKitTextures.js"
-Cohesion: 0.33
-Nodes (8): glossFromAlpha(), pixelsToCanvas(), assetCache, decode(), decoded, loadKitTextures(), MAX_WIDTH, decodeTexture()
+### Community 280 - "antislop report 004 · 2026-10-30 · Fixes for audit 004"
+Cohesion: 0.40
+Nodes (4): antislop report 004 · 2026-10-30 · Fixes for audit 004, Click-through (each line PASS at 360 and 1280 px), Delivery Gate, Fixes
 
-### Community 281 - "TeamList.jsx"
-Cohesion: 0.33
-Nodes (8): FILTERS, RowState(), SkeletonRows(), TeamList(), useDebounced(), filterTeams(), fold(), TEAM_SORTS
-
-### Community 283 - "ObsConnection.jsx"
-Cohesion: 0.13
-Nodes (22): byId(), ObsConnection, OTHER_SOURCES, SOURCE_TEXT, SourceRow(), SOURCES, sourceTitle(), TOURNAMENT_SOURCES (+14 more)
+### Community 281 - "franchisePlayers.test.js"
+Cohesion: 0.60
+Nodes (3): catalog, franchiseByTeam(), franchiseIdsOf()
 
 ### Community 284 - "antislop audit 001 · 2026-10-28"
 Cohesion: 0.29
@@ -1307,57 +1298,41 @@ Nodes (6): antislop audit 001 · 2026-10-28, Decision for you, not a finding, HI
 Cohesion: 0.29
 Nodes (7): Common LCP issues, LCP element identification, LCP: Largest Contentful Paint, LCP optimization checklist, 7. Protocols and generics, `some` vs `any`, where()
 
-### Community 286 - "ToastStack.jsx"
-Cohesion: 0.48
-Nodes (5): StatusAlert, TONES, SigningToast(), ToastFrame, ToastStack
-
-### Community 287 - "obs.mjs"
-Cohesion: 0.48
-Nodes (5): loadConfig(), log(), main(), OBS_USAGE, parseObsArgs()
-
-### Community 288 - "animation"
-Cohesion: 0.33
-Nodes (6): Screen transitions (Expo Router), Never Ship, Commands, transitions polish — apply motion-token refinements, transitions review — audit motion against the tokens, animation()
-
-### Community 289 - "probe_stats.py"
-Cohesion: 0.43
-Nodes (3): main(), replay(), total()
+### Community 288 - "setState"
+Cohesion: 0.18
+Nodes (11): Press feedback, Screen transitions (Expo Router), 6. Keep it off the JS thread, Never Ship, Operating Posture, React: Don't Animate Through State, Commands, transitions polish — apply motion-token refinements (+3 more)
 
 ### Community 290 - "Architecture map"
 Cohesion: 0.25
 Nodes (7): Architecture map, Formation editor: states, positions, instructions, Kit viewer: from `config.txt` to pixels, Known structural risks, Layers, The dependency graph, Two sites
 
 ### Community 291 - "Auditoría de seguridad antes de abrir la web al público"
-Cohesion: 0.33
-Nodes (5): Alcance, Auditoría de seguridad antes de abrir la web al público, Hallazgos, Qué falta antes de abrir votaciones y predicciones al público, Revisado y sin problema
+Cohesion: 0.40
+Nodes (4): Alcance, Auditoría de seguridad antes de abrir la web al público, Qué falta antes de abrir votaciones y predicciones al público, Revisado y sin problema
 
 ### Community 292 - "antislop audit 003 · 2026-10-29 · Valoraciones, mapas de calor, mapa de tiros y xG"
 Cohesion: 0.33
 Nodes (5): antislop audit 003 · 2026-10-29 · Valoraciones, mapas de calor, mapa de tiros y xG, HIGH (Hard Gate), LOW (Quality Locks) · motion (transitions-dev), MEDIUM (Purpose-Gate), What already holds
 
-### Community 293 - "possession.js"
-Cohesion: 0.47
-Nodes (3): buildPossession(), isShootout(), SHOOTOUT_MINUTES
-
 ## Knowledge Gaps
 - **4 isolated node(s):** `html2canvas`, `@opentelemetry/api`, `postcss`, `./Foo.jsx`
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1819 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1886 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **43 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `react` to `PesUi.jsx`, `teamView.js`, `app.jsx`, `leagueContent.js`, `package.json`, `Tabs`, `TournamentModal.jsx`, `LeagueContentAdminSection.jsx`, `getStatAndOvrColorClass`, `StrategyPanels.jsx`, `positionRules.js`, `CommunityAdminSection.jsx`, `ObsSceneStudio.jsx`, `qa-overhaul/main.jsx`, `ScoutAssignmentsPanel.jsx`, `main.jsx`, `matchAnalysisRender.test.jsx`, `advancedInstructions.js`, `PlayerAnalysis.jsx`, `BroadcastOverlay.jsx`, `PlatformDemo.jsx`, `AdminModal.jsx`, `matchAnalysis.js`, `KitViewerPanels.jsx`, `PesPlayersPanel.jsx`, `useKitAssets.js`, `ObsConnection.jsx`, `FormationModal.jsx`, `TeamList.jsx`, `ToastStack.jsx`, `helpers.js`, `LeagueClubScreen.jsx`, `match-feed/index.ts`, `Pitch.jsx`, `squadSync.test.js`, `LeagueSite.jsx`, `LeagueLiveScreen.jsx`, `PesKit3DViewer.jsx`, `PesValidationError`, `broadcastMatches.js`, `formationStates.js`, `OverlaySceneControl.jsx`, `LeagueTournamentScreen.jsx`, `TopHeader.jsx`, `budgetCalculations.test.js`, `TutorialModal.jsx`, `OverlayPopup.jsx`, `VirtualPlayerResults.jsx`, `firebase`, `LinkGoogleScreen.jsx`, `LeagueMatchScreen.jsx`, `KitsSection.jsx`, `ObsScreen.jsx`, `LandingPage.jsx`, `constants.js`, `CartModal.jsx`, `OverlayPopupAdmin.jsx`, `LeagueHomeScreen.jsx`, `bracketModel.js`, `ComparisonModal.jsx`, `usePesWorkspace.js`, `usePresence.js`, `teamCrestUrl`?**
-  _High betweenness centrality (0.172) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `PesUi.jsx`, `teamView.js`, `app.jsx`, `leagueContent.js`, `package.json`, `EmptyState`, `MatchCenter.jsx`, `FixtureRow.jsx`, `helpers.js`, `StrategyPanels.jsx`, `FormationModal.jsx`, `positionRules.js`, `CommunityAdminSection.jsx`, `ObsSceneStudio.jsx`, `PlayerAnalysis.jsx`, `ScoutAssignmentsPanel.jsx`, `main.jsx`, `matchAnalysisRender.test.jsx`, `formationStates.test.js`, `LineupPitch.jsx`, `BroadcastOverlay.jsx`, `SquadRulesAdminSection.jsx`, `TeamsAdminSection.jsx`, `LeagueTournamentScreen.jsx`, `marketConstants.js`, `MatchAnalysisView.jsx`, `BaseModal`, `useKitAssets.js`, `PesPlayersPanel.jsx`, `constants.js`, `LeagueClubScreen.jsx`, `Pitch.jsx`, `TournamentModal.jsx`, `LeagueSite.jsx`, `squadSync.test.js`, `LeagueLiveScreen.jsx`, `PesKit3DViewer.jsx`, `pes/index.js`, `broadcastMatches.js`, `formationStates.js`, `PlatformDemo.jsx`, `TeamScreen`, `PesTeamWorkspace.jsx`, `hooks/useLeagueData.js`, `LeagueMatchesScreen.jsx`, `budgetCalculations.test.js`, `CollectorImportAdmin.jsx`, `TutorialModal.jsx`, `OverlayPopup.jsx`, `LeagueMatchScreen.jsx`, `MarketplaceView.jsx`, `parseOpenTime`, `matchAnalysis.js`, `react-dom`, `KitsSection.jsx`, `qa-overhaul/main.jsx`, `ObsScreen.jsx`, `LandingPage.jsx`, `FiltrosModal.jsx`, `OverlayPopupAdmin.jsx`, `bracketModel.js`, `CartModal.jsx`, `ComparisonModal.jsx`, `usePesWorkspace.js`, `ToastStack.jsx`, `LeagueHomeScreen.jsx`?**
+  _High betweenness centrality (0.191) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `Alert()` (e.g. with `Conventions` and `Building blocks`) actually correct?**
   _`Alert()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `html2canvas`, `@opentelemetry/api`, `postcss` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `PesUi.jsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.09994155464640561 - nodes in this community are weakly interconnected._
+- **Why does `vitest` connect `vitest` to `package.json`, `teamView.js`, `app.jsx`, `leagueContent.js`, `tournamentModel.js`, `EmptyState`, `FixtureRow.jsx`, `helpers.js`, `overlayControl.js`, `budgetCalculations.test.js`, `ObsSceneStudio.jsx`, `match-feed/index.ts`, `draftTransfer.js`, `loadKitTextures.js`, `ScoutAssignmentsPanel.jsx`, `formationStates.test.js`, `BaseModal`, `localStore.js`, `pesTextureStorage.js`, `TeamsAdminSection.jsx`, `main.jsx`, `marketConstants.js`, `franchisePlayers.test.js`, `communityVote.js`, `autoLineup.test.js`, `SquadRulesAdminSection.jsx`, `kitConfig.js`, `constants.js`, `market/index.ts`, `squadSync.test.js`, `TournamentModal.jsx`, `kitDecals.js`, `PesKit3DViewer.jsx`, `pes/index.js`, `broadcastMatches.js`, `formationStates.js`, `PlatformDemo.jsx`, `pesExport.js`, `TeamScreen`, `leagueFixtures.js`, `binDatabase.js`, `MarketplaceView.jsx`, `lineupReducer.test.js`, `parseOpenTime`, `tournamentRename.test.js`, `KitsSection.jsx`, `rules/marketFunction.test.js`, `clubLedger.js`, `FiltrosModal.jsx`, `missedEvents.js`, `KitWorkspace`, `permissions.js`, `bracketModel.js`, `sharePages.js`, `CartModal.jsx`, `draftExportReport.test.js`, `market.js`, `ToastStack.jsx`, `LeagueHomeScreen.jsx`?**
+  _High betweenness centrality (0.176) - this node is a cross-community bridge._
 - **Should `teamView.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.10667634252539913 - nodes in this community are weakly interconnected._
-- **Why does `vitest` connect `vitest` to `package.json`, `teamView.js`, `app.jsx`, `leagueContent.js`, `tournamentModel.js`, `TournamentModal.jsx`, `getStatAndOvrColorClass`, `budgetCalculations.test.js`, `ObsSceneStudio.jsx`, `matchFeed.js`, `kitAssetResolver.test.js`, `ScoutAssignmentsPanel.jsx`, `react`, `localStore.js`, `main.jsx`, `BroadcastOverlay.jsx`, `workflow.test.js`, `AdminModal.jsx`, `FormationModal.jsx`, `ObsConnection.jsx`, `kitConfig.js`, `helpers.js`, `squadSync.test.js`, `tournamentEngine.js`, `kitDecals.js`, `rules/communityVote.test.js`, `PesKit3DViewer.jsx`, `broadcastMatches.js`, `formationStates.js`, `landingSampleData.test.js`, `pesExport.js`, `TopHeader.jsx`, `leagueFixtures.js`, `tournamentService.js`, `pes/index.js`, `PesFormatError`, `VirtualPlayerResults.jsx`, `lineupReducer.test.js`, `fixtures.js`, `firebase`, `marketRules.test.js`, `tournamentRename.test.js`, `rules/marketFunction.test.js`, `constants.js`, `CartModal.jsx`, `tests/marketFunction.test.js`, `bracketModel.js`, `build-share-pages.mjs`, `transferService.js`, `draftExportReport.test.js`, `market.js`, `usePresence.js`, `teamCrestUrl`?**
-  _High betweenness centrality (0.160) - this node is a cross-community bridge._
-- **Should `app.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.0331739823265247 - nodes in this community are weakly interconnected._
-- **Why does `Write Swift` connect `Write Swift` to `LCP: Largest Contentful Paint`, `Tabs`?**
-  _High betweenness centrality (0.115) - this node is a cross-community bridge._
+  _Cohesion score 0.11294117647058824 - nodes in this community are weakly interconnected._
+- **Why does `13. Logging and debugging` connect `BaseModal` to `Write Swift`?**
+  _High betweenness centrality (0.123) - this node is a cross-community bridge._

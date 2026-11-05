@@ -299,6 +299,21 @@ describe('transfer feed (written by the market Edge Function)', () => {
     await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), `${base}/public/data/transfers/t1`), { teamId: 'buyer', fromTeamId: 'seller', type: 'transfer' }));
     await assertFails(deleteDoc(doc(as('buyer'), `${base}/public/data/transfers/t1`)));
   });
+
+  it('a PES super_admin claim is a general admin; other PES roles and a pes_roles doc alone are not', async () => {
+    const withClaims = (uid, claims) => env.authenticatedContext(uid, claims).firestore();
+    await env.withSecurityRulesDisabled(async ctx => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, `${base}/public/data/transfers/t1`), { teamId: 'buyer', fromTeamId: 'seller', type: 'transfer' });
+      await setDoc(doc(db, `${base}/pes_roles/docOnly`), { role: 'super_admin' });
+    });
+    const t1 = db => doc(db, `${base}/public/data/transfers/t1`);
+    await assertFails(deleteDoc(t1(withClaims('km', { pes_role: 'kit_manager' }))));
+    await assertFails(deleteDoc(t1(withClaims('da', { pes_role: 'draft_admin' }))));
+    await assertFails(deleteDoc(t1(as('docOnly'))));
+    await assertSucceeds(updateDoc(team(withClaims('super', { pes_role: 'super_admin' }), 'seller'), { budget: BUDGET + 1 }));
+    await assertSucceeds(deleteDoc(t1(withClaims('super', { pes_role: 'super_admin' }))));
+  });
 });
 
 // docs/SECURITY_AUDIT.md S1: any new Google account gets a pending team, so "signed in" is not "manager".

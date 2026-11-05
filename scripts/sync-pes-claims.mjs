@@ -3,6 +3,8 @@
 // (Third-Party Auth → Firebase) can authorize texture uploads:
 //   role: 'authenticated'   required by Supabase for any Firebase token
 //   pes_role: <role>        checked by supabase/storage-policies.sql
+// pes_role: 'super_admin' also makes the user a general app admin (firestore.rules isAdmin(),
+// hooks/useAuth.js, the market function), so only run --apply for super_admins you trust with the whole site.
 // Only users with a PES role get the claims; everyone else is left without them (Supabase
 // treats them as anonymous). Existing claims such as `admin` are preserved.
 //

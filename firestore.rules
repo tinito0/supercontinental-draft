@@ -10,10 +10,14 @@ service cloud.firestore {
       return value is string && value.size() <= max;
     }
 
+    // App admin: the hardcoded UID, the `admin` claim, or the PES super_admin role. The role counts through
+    // its `pes_role` claim (scripts/sync-pes-claims.mjs), not the pes_roles doc, so granting it takes a
+    // claims sync with the service account and costs no get() here.
     function isAdmin() {
       return isAuth() && (
         request.auth.uid == "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3" ||
-        (request.auth.token.keys().hasAny(['admin']) && request.auth.token.admin == true)
+        request.auth.token.get('admin', false) == true ||
+        request.auth.token.get('pes_role', '') == 'super_admin'
       );
     }
 

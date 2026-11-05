@@ -38,8 +38,9 @@ export function marketPaths(appId) {
   };
 }
 
+// Same as firestore.rules isAdmin(): the PES super_admin role counts through its pes_role claim.
 export function isMarketAdmin(uid, claims = {}) {
-  return ADMIN_USER_IDS.includes(uid) || claims.admin === true;
+  return ADMIN_USER_IDS.includes(uid) || claims.admin === true || claims.pes_role === 'super_admin';
 }
 
 /** Catalog row → player, or null when the id is unknown (or filtered out as glitched). */
