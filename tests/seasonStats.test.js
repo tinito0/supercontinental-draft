@@ -2,7 +2,7 @@
 // recorded sessions (skipped when E:\ is missing) prove it runs on real probe output.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { buildSeasonStats, clubMatchLog, headToHead, matchupFacts, playerMatchLog, seasonLeaders, teamOfTheRound, MIN_RATED_MATCHES } from '../utils/seasonStats.js';
+import { buildSeasonStats, seasonHeat, clubMatchLog, headToHead, matchupFacts, playerMatchLog, seasonLeaders, teamOfTheRound, MIN_RATED_MATCHES } from '../utils/seasonStats.js';
 import { buildLiveMatchDoc } from '../supabase/functions/_shared/matchFeed.js';
 import { buildMatchLinesDoc } from '../supabase/functions/_shared/matchLines.js';
 import { parseEventLines, splitMatches, summarizeMatch } from '../pes-collector/collector/matchSummary.js';
@@ -216,5 +216,29 @@ describe.skipIf(!existsSync(PROBE))('buildSeasonStats on the recorded sessions (
     expect(season.matches).toBe(finished.length);
     const goals = season.players.reduce((n, p) => n + p.goals + p.ownGoals, 0);
     expect(goals).toBe(finished.reduce((n, d) => n + d.home.score + d.away.score, 0));
+  });
+});
+
+describe('seasonHeat', () => {
+  const grid = { cols: 2, rows: 1 };
+  const withHeat = (key, heat, minutes) => lines(key, team('A', 'Los Pibes', 1), team('B', 'La Banda', 0),
+    [player(9, 'home', { heat, minutes })], { heatGrid: grid });
+
+  it('adds the matches up, each weighted by the minutes he played, scaled so the busiest cell is 1', () => {
+    const docs = [withHeat('20261110T200000Z_1-2', '9a', 90), withHeat('20261117T200000Z_1-2', 'a9', 30)];
+    const heat = seasonHeat(docs, 9);
+    expect(heat).toMatchObject({ cols: 2, rows: 1, matches: 2 });
+    expect(heat.cells).toEqual([1, 1 / 3]);
+  });
+
+  it('only counts official matches when there is a list, and skips grids that differ', () => {
+    const other = { ...withHeat('20261117T200000Z_1-2', 'a9a', 90), heatGrid: { cols: 3, rows: 1 } };
+    const heat = seasonHeat([withHeat('20261110T200000Z_1-2', '9a', 90), other], 9);
+    expect(heat.matches).toBe(1);
+    expect(seasonHeat([withHeat('20261110T200000Z_1-2', '9a', 90)], 9, { officialKeys: new Set() })).toBeNull();
+  });
+
+  it('is null for a player without heat maps', () => {
+    expect(seasonHeat([m1], 9)).toBeNull();
   });
 });

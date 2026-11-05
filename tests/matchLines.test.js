@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { buildLiveMatchDoc } from '../supabase/functions/_shared/matchFeed.js';
-import { buildMatchLinesDoc, minutesPlayed, MATCH_LINES_SCHEMA } from '../supabase/functions/_shared/matchLines.js';
+import { buildMatchLinesDoc, decodeHeat, encodeHeat, minutesPlayed, MATCH_LINES_SCHEMA } from '../supabase/functions/_shared/matchLines.js';
 import { parseEventLines, splitMatches, summarizeMatch } from '../pes-collector/collector/matchSummary.js';
 
 const KEY = '20261104T162412Z_50-45';
@@ -111,6 +111,32 @@ describe('buildMatchLinesDoc', () => {
   it('drops goals without a clock from the goal list (the score stays as the game reported it)', () => {
     const doc = linesOf(summary({ goals: [{ side: 'away', playerId: 101, ownGoal: false }, 'junk'] }));
     expect(doc.goals).toEqual([]);
+  });
+
+  it('keeps each player heat map as one digit per cell, 9 = his busiest cell, with the grid on the document', () => {
+    const cells = new Array(6).fill(0);
+    cells[1] = 2; cells[4] = 4;
+    const doc = linesOf(summary({ heatmaps: { cols: 3, rows: 2, players: { 9: cells, 10: [0, 0, 0, 0, 0, 0] } } }));
+    expect(doc.heatGrid).toEqual({ cols: 3, rows: 2 });
+    expect(line(doc, 9).heat).toBe('a5b9a');
+    expect(decodeHeat(line(doc, 9).heat, 6)).toEqual([0, 5, 0, 0, 9, 0]);
+    expect(line(doc, 10).heat).toBeNull();
+    expect(line(doc, 1).heat).toBeNull();
+  });
+
+  it('leaves heat maps out when the summary has none or the grid does not match', () => {
+    expect(linesOf().heatGrid).toBeNull();
+    const doc = linesOf(summary({ heatmaps: { cols: 3, rows: 2, players: { 9: [1, 2] } } }));
+    expect(line(doc, 9).heat).toBeNull();
+    expect(encodeHeat(['x', 1, 2], 3)).toBe('a59');
+  });
+
+  it('packs long empty stretches as letters, a run never over 26 cells, and decodes back', () => {
+    const cells = [...new Array(30).fill(0), 3];
+    expect(encodeHeat(cells, 31)).toBe('zd9');
+    expect(decodeHeat('zd9', 31)).toEqual([...new Array(30).fill(0), 9]);
+    expect(decodeHeat('zd9', 30)).toBeNull();
+    expect(decodeHeat('A9', 2)).toBeNull();
   });
 
   it('keeps the shootout when there was one', () => {

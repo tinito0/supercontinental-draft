@@ -11,7 +11,8 @@ import { useLeagueTeams } from '../../hooks/useLeagueData.js';
 import { catalogEntry, useMarketCatalog, useSeasonStats } from '../../hooks/useSeasonStats.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { getPosColorClass, getStatAndOvrColorClass } from '../../utils/helpers.js';
-import { playerMatchLog } from '../../utils/seasonStats.js';
+import { playerMatchLog, seasonHeat } from '../../utils/seasonStats.js';
+import { Heatmap } from '../../components/league/match/Heatmap.jsx';
 
 /* /jugadores/:playerId: la temporada de un jugador con los datos del juego (match_lines de partidos oficiales).
    Cabecera con foto, posición y OVR del catálogo; totales; detalle según sea arquero o de campo; sus partidos. */
@@ -81,6 +82,19 @@ function SeasonTotals({ player, isKeeper }) {
   );
 }
 
+/** Mapa de calor de la temporada: los partidos sumados por minutos jugados (utils/seasonStats.js seasonHeat). */
+function SeasonHeat({ heat, name }) {
+  return (
+    <section className="panel p-5 sm:p-6" aria-labelledby="player-heat">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="player-heat" className="section-title">Dónde juega</h2>
+        <p className="text-sm text-ink-2">{heat.matches} {heat.matches === 1 ? 'partido' : 'partidos'}</p>
+      </div>
+      <Heatmap cells={heat.cells} cols={heat.cols} rows={heat.rows} label={`Mapa de calor de la temporada de ${name}`} className="mt-4 max-w-2xl" />
+    </section>
+  );
+}
+
 function PlayerSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true">
@@ -100,6 +114,7 @@ export default function LeaguePlayerScreen() {
   const player = stats.players.find(p => p.id === playerId) || null;
   const entry = catalogEntry(catalog, playerId);
   const log = useMemo(() => (playerId == null ? [] : playerMatchLog(docs, playerId, { officialKeys })), [docs, playerId, officialKeys]);
+  const heat = useMemo(() => (playerId == null ? null : seasonHeat(docs, playerId, { officialKeys })), [docs, playerId, officialKeys]);
   useDocumentTitle(player || entry ? playerDisplayName(player || { id: playerId, name: entry?.name }, catalog) : 'Jugador');
   const isKeeper = player?.position === GOALKEEPER_POSITION || entry?.position === 'PT';
 
@@ -115,6 +130,7 @@ export default function LeaguePlayerScreen() {
         {player
           ? <SeasonTotals player={player} isKeeper={isKeeper} />
           : <p className="text-sm text-ink-2">Todavía no tiene partidos oficiales con datos del juego esta temporada.</p>}
+        {heat && <SeasonHeat heat={heat} name={playerDisplayName(player || { id: playerId, name: entry?.name }, catalog)} />}
         {player && <PlayerMatchLog log={log} teamsById={teamsById} />}
       </div>
     );

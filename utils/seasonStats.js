@@ -4,6 +4,7 @@
 
 import { roleLabel } from './matchAnalysis.js';
 import { getPosCategory } from './helpers.js';
+import { decodeHeat } from '../supabase/functions/_shared/matchLines.js';
 
 export const MIN_RATED_MATCHES = 2;
 const FULL_MATCH_MINUTES = 90;
@@ -223,6 +224,33 @@ export function playerMatchLog(docs, playerId, { officialKeys } = {}) {
       return { matchKey: doc.matchKey, startedAt: doc.startedAt, own, rival, shootout: doc.shootout, result: resultFor(own.score, rival.score), line };
     })
     .reverse();
+}
+
+/**
+ * Mapa de calor de la temporada de un jugador: los mapas de cada partido (línea `heat`, 0–9 por celda comprimido,
+ * supabase/functions/_shared/matchLines.js encodeHeat/decodeHeat) sumados con el peso de los minutos que jugó, escalados a 0–1.
+ * Solo partidos con la misma grilla que el más nuevo. null si no tiene ninguno.
+ * @returns {{ cols: number, rows: number, cells: number[], matches: number }|null}
+ */
+export function seasonHeat(docs, playerId, { officialKeys } = {}) {
+  const maps = countedMatches(docs, officialKeys)
+    .map(doc => {
+      const line = doc.players.find(p => p.id === playerId);
+      const grid = doc.heatGrid;
+      return { grid, line, levels: grid && line ? decodeHeat(line.heat, grid.cols * grid.rows) : null };
+    })
+    .filter(({ levels }) => levels);
+  if (!maps.length) return null;
+  const { cols, rows } = maps[maps.length - 1].grid;
+  const same = maps.filter(({ grid }) => grid.cols === cols && grid.rows === rows);
+  const sums = new Array(cols * rows).fill(0);
+  for (const { line, levels } of same) {
+    const weight = line.minutes ?? FULL_MATCH_MINUTES;
+    levels.forEach((level, i) => { sums[i] += level * weight; });
+  }
+  const max = Math.max(...sums);
+  if (!(max > 0)) return null;
+  return { cols, rows, cells: sums.map(value => value / max), matches: same.length };
 }
 
 /** Un partido visto desde un club: su lado, el rival y el resultado. */

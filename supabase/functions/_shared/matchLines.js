@@ -69,11 +69,47 @@ function countWhere(items, test) {
   return items.filter(test).length;
 }
 
+const HEAT_LEVELS = 9;
+// A run of 1–26 empty cells is one letter, a–z: a player covers a small part of the pitch, so most cells are 0.
+// On the recorded sessions a map averages 54 characters instead of 294.
+const MAX_ZERO_RUN = 26;
+const RUN_BASE = 'a'.charCodeAt(0) - 1;
+
+/**
+ * A heat map as one digit per cell, 0–9 relative to the player's busiest cell, with zero runs as letters.
+ * null when the cells do not fit the grid or are all empty. decodeHeat reverses it.
+ */
+export function encodeHeat(cells, size) {
+  if (!Array.isArray(cells) || cells.length !== size) return null;
+  const values = cells.map(value => (Number.isFinite(value) && value > 0 ? value : 0));
+  const max = Math.max(...values);
+  if (!(max > 0)) return null;
+  return values.map(value => Math.round((value / max) * HEAT_LEVELS)).join('')
+    .replace(new RegExp(`0{1,${MAX_ZERO_RUN}}`, 'g'), run => String.fromCharCode(RUN_BASE + run.length));
+}
+
+/** encodeHeat back to one level 0–9 per cell; null when the text is not a heat map of `size` cells. */
+export function decodeHeat(text, size) {
+  if (typeof text !== 'string' || !/^[0-9a-z]*$/.test(text)) return null;
+  const cells = [];
+  for (const char of text) {
+    if (char >= '0' && char <= '9') cells.push(Number(char));
+    else for (let i = 0; i < char.charCodeAt(0) - RUN_BASE; i += 1) cells.push(0);
+  }
+  return cells.length === size ? cells : null;
+}
+
+function heatGridOf(summary) {
+  const { cols, rows } = summary.heatmaps || {};
+  return Number.isInteger(cols) && Number.isInteger(rows) && cols > 0 && rows > 0 ? { cols, rows } : null;
+}
+
 function playerLine(summary, side, id) {
   const stats = list(summary.players?.[side]).find(player => player.id === id)?.stats || {};
   const fromStats = Object.fromEntries(Object.entries(STAT_FIELDS).map(([stat, field]) => [field, Number(stats[stat]) || 0]));
   const goals = list(summary.goals);
   const cards = list(summary.cards);
+  const grid = heatGridOf(summary);
   return {
     id,
     side,
@@ -91,6 +127,7 @@ function playerLine(summary, side, id) {
     ...fromStats,
     xg: playerXg(summary, id),
     rating: typeof summary.ratings?.[id] === 'number' ? summary.ratings[id] : null,
+    heat: grid ? encodeHeat(summary.heatmaps.players?.[id], grid.cols * grid.rows) : null,
   };
 }
 
@@ -140,6 +177,7 @@ export function buildMatchLinesDoc(liveDoc, summary) {
     away: teamHeader(liveDoc, summary, 'away'),
     shootout,
     goals: goalList(summary),
+    heatGrid: heatGridOf(summary),
     players: SIDES.flatMap(side => playedIds(summary, side).map(id => playerLine(summary, side, id))),
   };
 }
