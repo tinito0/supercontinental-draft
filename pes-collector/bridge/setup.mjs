@@ -2,8 +2,10 @@
 // One-time setup of the bridge's upload: writes %APPDATA%/scl-bridge/config.json and, with --set-secret, stores the
 // same token as the MATCH_FEED_TOKEN secret of the match-feed function. The token is never printed.
 //
-//   node pes-collector/bridge/setup.mjs [--project-ref REF] [--probe-dir DIR] [--set-secret] [--new-token]
+//   node pes-collector/bridge/setup.mjs [--project-ref REF] [--probe-dir DIR] [--teams-file FILE] [--set-secret] [--new-token]
 //
+//   --teams-file   the league's teams (Draft → PES, "Equipos para el bridge"); with it only matches between two
+//                  league teams are uploaded, whatever the in-game competition
 //   --project-ref  Supabase project (default pcmhsucbtonnaikiatuy, the one in docs/MARKET_FUNCTION.md)
 //   --set-secret   runs `npx supabase secrets set` (needs `npx supabase login` first)
 //   --new-token    replaces an existing token (the old one stops working once the secret is updated)
@@ -29,6 +31,7 @@ const config = {
   endpoint: `https://${projectRef}.supabase.co/functions/v1/match-feed`,
   token,
   probeDir: value('--probe-dir') || current.probeDir || 'E:/eFootball PES 2021/scl_probe',
+  ...(value('--teams-file') || current.teamsFile ? { teamsFile: value('--teams-file') || current.teamsFile } : {}),
 };
 mkdirSync(configDir, { recursive: true });
 writeFileSync(configFile, `${JSON.stringify(config, null, 2)}\n`);

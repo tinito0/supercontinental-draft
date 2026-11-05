@@ -1,5 +1,5 @@
 // Importar partidos del colector al torneo (utils/collectorImport.js). Datos sintéticos con la forma de live_matches.
-import { findImported, planCollectorImport, resolveTeams } from '../utils/collectorImport.js';
+import { findImported, importedMatchKeys, planCollectorImport, resolveTeams } from '../utils/collectorImport.js';
 import { parseMatchDoc } from '../utils/matchCenter.js';
 
 const KEY = '20261022T200000Z_101-1230';
@@ -79,6 +79,17 @@ describe('planCollectorImport', () => {
     expect(planCollectorImport({ match: liveMatch(), tournamentData, teamMap }).reason).toMatch(/Ya está importado/);
     const live = { ...liveMatch(), status: { kind: 'live', label: "50'" } };
     expect(planCollectorImport({ match: live, tournamentData: {}, teamMap }).reason).toMatch(/terminados/);
+  });
+});
+
+describe('importedMatchKeys', () => {
+  it('lists every collector match imported into the league or a cup: the official matches of the season', () => {
+    const tournamentData = {
+      matches: [{ importedFrom: 'k1' }, { importedFrom: null }, { homeTeam: 'x' }],
+      bracket: { quarters: [{ teamA: 'Los Pibes', teamB: 'La Banda', scoreA: 1, scoreB: 0, importedFrom: 'k2' }] },
+    };
+    expect([...importedMatchKeys(tournamentData)].sort()).toEqual(['k1', 'k2']);
+    expect(importedMatchKeys(null).size).toBe(0);
   });
 });
 

@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calculator, Play, Save, RefreshCw } from 'lucide-react';
-import { Card, Button, Pill, ErrorText, Issue, Disclosure, plural } from './PesUi.jsx';
+import { Calculator, Play, Save, RefreshCw, Download } from 'lucide-react';
+import { Card, Button, Pill, ErrorText, Issue, Disclosure, plural, downloadBytes } from './PesUi.jsx';
 import { Alert } from '../ui/Alert.jsx';
 import { useCountries } from './useCountries.js';
 import { loadDraftTeams } from '../../services/draftTeamsService.js';
 import { planDraftTransfer, coachNameOfTeam } from '../../pes/draftTransfer.js';
 import { FORMATIONS, DEFAULT_TACTICS } from '../../utils/constants.js';
+import { buildTeamsFile } from '../../pes-collector/bridge/bridgeCore.js';
+
+const BRIDGE_TEAMS_FILE = 'scl-bridge-equipos.json';
 
 // Suggestions read "377 · Club name"; the id before the separator is what gets stored.
 const SEPARATOR = ' · ';
@@ -127,6 +130,14 @@ export function PesDraftPanel({ pes }) {
     try { await pes.setDraftMap(map, named); setNotice('Asignación guardada.'); } catch (e) { setError(e); }
   };
 
+  // The saved assignment, not the one being edited: the bridge must filter by what the league actually uses.
+  const savedCount = Object.keys(buildTeamsFile(wsDoc?.draftMap, null).draftMap).length;
+  const downloadBridgeTeams = () => {
+    const file = buildTeamsFile(wsDoc?.draftMap, teams);
+    downloadBytes(new TextEncoder().encode(`${JSON.stringify(file, null, 2)}\n`), BRIDGE_TEAMS_FILE, 'application/json');
+    setNotice(`Descargado ${BRIDGE_TEAMS_FILE} con ${savedCount} ${plural(savedCount, 'equipo', 'equipos')}. En la PC del juego: node pes-collector/bridge/setup.mjs --teams-file <ruta del archivo>, y reiniciá el bridge. Desde ahí solo sube partidos entre equipos de la liga.`);
+  };
+
   const calculate = () => {
     setError(null);
     setNotice(null);
@@ -153,6 +164,10 @@ export function PesDraftPanel({ pes }) {
         actions={<>
           <Button onClick={load} disabled={busy}><RefreshCw className={`w-4 h-4 ${busy && !teams ? 'animate-spin' : ''}`} aria-hidden="true" />Recargar equipos</Button>
           <Button onClick={saveMap}><Save className="w-4 h-4" aria-hidden="true" />Guardar asignación</Button>
+          <Button onClick={downloadBridgeTeams} disabled={!savedCount}
+            title={savedCount ? 'Archivo para que el bridge suba solo partidos entre equipos de la liga' : 'Guardá la asignación primero'}>
+            <Download className="w-4 h-4" aria-hidden="true" />Equipos para el bridge
+          </Button>
           <Button variant="primary" disabled={!teams || !mapped} title={!mapped ? 'Elegí al menos un equipo del juego' : undefined} onClick={calculate}>
             <Calculator className="w-4 h-4" aria-hidden="true" />Calcular
           </Button>

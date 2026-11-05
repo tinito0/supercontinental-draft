@@ -3,6 +3,7 @@
 // tests/matchStats.test.js. Reglas: un valor que el colector no midió es null y su fila no aparece (nunca 0); un
 // porcentaje sin denominador es null; cada fila dice cómo se calcula (docs/MATCH_ANALYTICS.md).
 import { minuteLabel, playerName } from './matchCenter.js';
+import { minutesPlayed } from '../supabase/functions/_shared/matchLines.js';
 
 const SIDES = ['home', 'away'];
 const isCount = value => Number.isFinite(value);
@@ -192,28 +193,8 @@ export function bestRated(summary) {
   return entries.filter(([, value]) => value === top).map(([id]) => Number(id));
 }
 
-/** Minuto final de lo jugado: el reloj del resumen (90 o 120 al terminar). */
-function endMinute(summary) {
-  return summary?.clock?.minute ?? null;
-}
-
-/**
- * Minutos jugados: desde el inicio o el minuto en que entró hasta el final, el cambio o la roja.
- * Calculado (no lo da el juego); null si no se sabe el minuto final.
- */
-export function minutesPlayed(summary, side, id) {
-  const end = endMinute(summary);
-  if (end == null) return null;
-  const subs = (summary.substitutions || []).filter(sub => sub.side === side);
-  const cameOn = subs.find(sub => sub.onId === id);
-  const started = (summary.lineups?.[side]?.starting || []).includes(id);
-  if (!started && !cameOn) return null;
-  const from = started ? 0 : cameOn.clock?.minute ?? null;
-  const wentOff = subs.find(sub => sub.offId === id)?.clock?.minute;
-  const sentOff = (summary.cards || []).find(card => card.playerId === id && card.type === 'red')?.clock?.minute;
-  const until = Math.min(end, wentOff ?? end, sentOff ?? end);
-  return from == null ? null : Math.max(0, until - from);
-}
+// Minutos jugados: la misma cuenta que usan las líneas de temporada (match_lines), por eso vive en _shared.
+export { minutesPlayed };
 
 const PLAYER_GROUPS = [
   { title: 'Ataque', rows: [

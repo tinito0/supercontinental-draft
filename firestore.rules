@@ -313,6 +313,13 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
 
+      // Líneas por jugador de cada partido (supabase/functions/_shared/matchLines.js): las escribe match-feed con la
+      // cuenta de servicio; la web de la liga las suma para las estadísticas de temporada.
+      match /public/data/match_lines/{matchKey} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
       // Votos del público sin cuenta (docs/COMMUNITY_PLATFORM.md): totales públicos que escribe solo la función
       // community-vote (cuenta de servicio). Las boletas y los contadores por IP viven fuera de artifacts
       // (community_ballots, community_ip) y caen en el catch-all: solo admin.

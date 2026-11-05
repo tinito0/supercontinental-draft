@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Vote } from 'lucide-react';
 import { LeagueCrest } from '../match/FixtureRow.jsx';
@@ -29,6 +29,19 @@ function Side({ team, club, isWinner }) {
   );
 }
 
+/** Marcador grande. Un gol en vivo lo hace destellar (.value-flash); va con key={fixture.id}, así cambiar de
+    partido destacado no cuenta como gol. */
+function FeaturedScore({ score }) {
+  const text = `${score.home}-${score.away}`;
+  const firstText = useRef(text);
+  return (
+    <p key={text} className={`num font-display text-5xl font-bold leading-none text-ink sm:text-6xl ${text !== firstText.current ? 'value-flash' : ''}`}
+      aria-label={`${score.home} a ${score.away}`}>
+      {score.home}<span className="mx-1.5 text-ink-3">-</span>{score.away}
+    </p>
+  );
+}
+
 export function FeaturedMatch({ featured, clubOf, prediction }) {
   const { fixture, kind } = featured;
   const score = fixture.score || fixture.liveScore;
@@ -55,9 +68,7 @@ export function FeaturedMatch({ featured, clubOf, prediction }) {
         <Side team={fixture.home} club={clubOf(fixture.home.name)} isWinner={fixture.winner === 'home'} />
         <div className="text-center">
           {hasScore ? (
-            <p className="num font-display text-5xl font-bold leading-none text-ink sm:text-6xl" aria-label={`${score.home} a ${score.away}`}>
-              {score.home}<span className="mx-1.5 text-ink-3">-</span>{score.away}
-            </p>
+            <FeaturedScore key={fixture.id} score={score} />
           ) : (
             <p className="font-display text-2xl font-bold uppercase leading-none text-ink">vs</p>
           )}

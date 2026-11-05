@@ -76,3 +76,13 @@ describe('StandingsCard', () => {
     expect(html).not.toContain('<table');
   });
 });
+
+describe('score flash on goals', () => {
+  it('does not flash the scores on first render, live or finished', () => {
+    const live = { key: 'k1', status: { kind: 'live', label: "12'" }, updatedAtMs: NOW - 1000, home: { name: 'x', score: 1, draftTeamId: null }, away: { name: 'y', score: 0, draftTeamId: null } };
+    const groups = groupsOf([match('1', { importedFrom: 'k1' }), match('2', { status: 'completed', homeScore: 2, awayScore: 1 })], { liveMatches: [live] });
+    const html = render(<MatchCentre groups={groups} clubOf={clubOf} />);
+    expect(html).toContain('>1</span>');
+    expect(html).not.toContain('value-flash');
+  });
+});

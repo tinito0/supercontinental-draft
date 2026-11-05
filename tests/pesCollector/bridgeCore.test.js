@@ -1,5 +1,5 @@
 // Synthetic summaries only: these prove the bridge's selection and naming rules.
-import { parseTeamMap, selectMatch, matchFileName, matchKeyOf, hashText, hashSummary, pendingUploads, backoffMs, classifyFailure, describeStatus } from '../../pes-collector/bridge/bridgeCore.js';
+import { parseTeamMap, buildTeamsFile, selectMatch, matchFileName, matchKeyOf, hashText, hashSummary, pendingUploads, backoffMs, classifyFailure, describeStatus } from '../../pes-collector/bridge/bridgeCore.js';
 
 const summary = (home, away, extra = {}) => ({
   schema: 'scl.match/1', status: 'finished', source: { startedAt: '2026-10-21T21:06:52Z' },
@@ -19,6 +19,23 @@ describe('parseTeamMap', () => {
 
   it('rejects ids that are not game team ids', () => {
     expect(() => parseTeamMap({ draftMap: { a: 'Arsenal' } })).toThrow(/a/);
+  });
+});
+
+describe('buildTeamsFile', () => {
+  it('writes the saved assignment with team names in the format parseTeamMap reads', () => {
+    const file = buildTeamsFile({ uidA: 101, uidB: '103' }, [{ id: 'uidA', name: 'Los Pibes' }, { id: 'uidB', name: 'La Banda' }]);
+    expect(file).toEqual({ draftMap: { uidA: 101, uidB: 103 }, names: { uidA: 'Los Pibes', uidB: 'La Banda' } });
+    expect(parseTeamMap(file).get(103)).toEqual({ draftTeamId: 'uidB', name: 'La Banda' });
+  });
+
+  it('leaves out entries without a valid game team id and teams without a name', () => {
+    const file = buildTeamsFile({ uidA: 101, uidB: '', uidC: 'x' }, [{ id: 'uidB', name: 'Sin equipo' }]);
+    expect(file).toEqual({ draftMap: { uidA: 101 }, names: {} });
+  });
+
+  it('returns an empty assignment when nothing is saved', () => {
+    expect(buildTeamsFile(undefined, null)).toEqual({ draftMap: {}, names: {} });
   });
 });
 

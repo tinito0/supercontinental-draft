@@ -33,6 +33,12 @@ jugador y por equipo, y la posesión cuando el juego llenó su contador; si no, 
 docs/PES_MATCH_DATA_RESEARCH.md, S9). Nada de esto toca el torneo:
 vincular un partido a un cruce y cargar el resultado es un paso aparte, con revisión del admin.
 
+Con cada subida la función también escribe `match_lines/{misma clave}`: una línea por jugador que jugó (minutos,
+goles, asistencias, tarjetas, tiros, xG, valoración, atajadas, entradas…), más el marcador y los dos equipos. Pesa
+unos pocos KB, contra 13–35 KB del resumen, y es lo que suman las estadísticas de temporada (`utils/seasonStats.js`).
+Para la temporada cuentan solo los partidos terminados e importados al torneo (`importedFrom`). Los partidos subidos
+antes de este cambio no tienen líneas: se generan si el puente los vuelve a subir.
+
 ## Seguridad
 
 - El token solo permite escribir `live_matches` a través de la función; no da acceso a Firestore ni a Supabase.
@@ -50,6 +56,10 @@ vincular un partido a un cruce y cargar el resultado es un paso aparte, con revi
    `npx supabase functions deploy match-feed --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy`.
    Usa el secret `FIREBASE_SERVICE_ACCOUNT` que ya tiene `market`.
 4. Reglas: `npm run test:rules`, después `firebase deploy --only firestore:rules`.
+5. Equipos de la liga: con la asignación guardada en Draft → PES, tocar "Equipos para el bridge" (baja
+   `scl-bridge-equipos.json`), después `node pes-collector/bridge/setup.mjs --teams-file <ruta del archivo>` y
+   reiniciar el puente. Desde ahí sube solo partidos entre dos equipos de la liga, sea cual sea la competición del
+   juego (amistoso, Copa Konami, Liga Master…). Sin este archivo sube todo partido. Repetir si cambia la asignación.
 
 ## Uso
 

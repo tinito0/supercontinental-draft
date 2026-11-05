@@ -71,7 +71,9 @@ Modals are routes too (`/modal/<name>`, returning to `location.state.from`). Pub
 Screens and heavy modals are `React.lazy`; a `vite:preloadError` reloads the page after a deploy.
 
 **Firestore layout** (paths are built as strings, so the graph does not link readers of the same data):
-- `artifacts/${APP_ID}/public/data/{player_locks,teams,transfers,offers,manager_chat,shared_formations,suggestions,news,tournament,broadcast,config,locks,league_content}`
+- `artifacts/${APP_ID}/public/data/{player_locks,teams,transfers,offers,manager_chat,shared_formations,suggestions,news,tournament,broadcast,config,locks,league_content,live_matches,match_lines}`
+- `match_lines/{matchKey}` = compact per-player lines written by `match-feed` (`supabase/functions/_shared/matchLines.js`);
+  season totals (`utils/seasonStats.js`) read these, never the full `summaryJson`.
 - `artifacts/${APP_ID}/presence/{uid}`, `artifacts/${APP_ID}/users/{uid}/{cart,profile/data,…}`
 - `pes_roles/{uid}`, `pes_workspaces/{wsId}/{ops,exports,meta}`
 - `APP_ID` comes from `utils/constants.js`, not from the Firebase config.

@@ -23,6 +23,24 @@ export function parseTeamMap({ draftMap, names = {} }) {
   return byGameTeam;
 }
 
+/**
+ * The bridge's --teams file from the saved Draft → PES assignment (downloaded in PesDraftPanel). Entries without a
+ * game team id are left out, so the file always parses.
+ * @param {Record<string, string|number>|undefined} draftMap saved assignment: draft team id → game team id
+ * @param {Array<{ id: string, name?: string }>|null} teams draft teams, for the names
+ * @returns {{ draftMap: Record<string, number>, names: Record<string, string> }}
+ */
+export function buildTeamsFile(draftMap, teams) {
+  const assigned = Object.entries(draftMap || {})
+    .map(([draftTeamId, value]) => [draftTeamId, String(value).trim() === '' ? NaN : Number(value)])
+    .filter(([, gameTeamId]) => Number.isInteger(gameTeamId) && gameTeamId > 0);
+  const nameOf = new Map((teams || []).map(team => [team.id, team.name]));
+  const names = assigned
+    .filter(([draftTeamId]) => nameOf.get(draftTeamId))
+    .map(([draftTeamId]) => [draftTeamId, nameOf.get(draftTeamId)]);
+  return { draftMap: Object.fromEntries(assigned), names: Object.fromEntries(names) };
+}
+
 function teamEntry(gameTeamId, teamMap) {
   const assigned = teamMap?.get(gameTeamId);
   return { gameTeamId, draftTeamId: assigned?.draftTeamId ?? null, name: assigned?.name ?? null };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { formatFixtureDate } from '../../../utils/leagueFixtures.js';
@@ -55,13 +55,17 @@ function StatusCell({ fixture }) {
 function TeamLine({ team, club, score, pens, outcome }) {
   // El que perdió no se apaga en gris: se lee igual de claro, solo el ganador va en negrita.
   const tone = outcome === 'win' ? 'font-bold text-ink' : 'font-medium text-ink';
+  // Un gol en vivo hace destellar el número de ese equipo (.value-flash); al cargar la lista no destella.
+  const firstScore = useRef(score);
+  // Sin marcador al principio (partido próximo que empieza): el 0 inicial no es un gol.
+  const scoreChanged = firstScore.current != null && score !== firstScore.current;
   return (
     <div className="flex min-w-0 items-center gap-3">
       <LeagueCrest name={team.name} club={club} size="sm" />
       <span className={`min-w-0 flex-1 truncate ${tone}`} title={team.name}>{team.name}</span>
       {/* Penales al lado del marcador, como en los centros de partidos: «1 (5)». */}
       {pens != null && <span className={`num text-sm ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink-2'}`} aria-label={`${pens} en los penales`}>({pens})</span>}
-      {score != null && <span className={`num w-6 text-right font-display text-lg ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink'}`}>{score}</span>}
+      {score != null && <span key={score} className={`num w-6 text-right font-display text-lg ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink'} ${scoreChanged ? 'value-flash' : ''}`}>{score}</span>}
     </div>
   );
 }

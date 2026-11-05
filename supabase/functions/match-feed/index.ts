@@ -10,6 +10,7 @@ import { SignJWT, importPKCS8 } from 'npm:jose@6.2.12';
 import { createFirestore } from '../_shared/firestoreRest.js';
 import { createServiceAccountTokenProvider } from '../_shared/googleAuth.js';
 import { buildLiveMatchDoc, isBridgeToken, MatchFeedError } from '../_shared/matchFeed.js';
+import { buildMatchLinesDoc } from '../_shared/matchLines.js';
 import { finishedAtFor, predictionClosure } from '../_shared/communityVote.js';
 import { DEFAULT_SITE_URL, liveOverlayUpdate } from '../_shared/overlayControl.js';
 import { APP_ID } from '../_shared/marketConstants.js';
@@ -38,7 +39,16 @@ Deno.serve(async (req: Request) => {
   if (!isBridgeToken(token, bridgeToken)) return reply(401, { ok: false, error: 'No autorizado.' });
 
   try {
-    const doc = buildLiveMatchDoc(await req.json());
+    const body = await req.json();
+    const doc = buildLiveMatchDoc(body);
+    // Líneas por jugador para las páginas de temporada (utils/seasonStats.js); se reescriben con cada subida.
+    // Son secundarias: si no se pueden armar, el partido en vivo se guarda igual.
+    let lines = null;
+    try {
+      lines = buildMatchLinesDoc(doc, body.summary);
+    } catch (error) {
+      console.error('match-feed: match_lines skipped', doc.matchKey, error);
+    }
     const base = `artifacts/${APP_ID}/public/data`;
     await firestore.runTransaction(async tx => {
       const overlayPath = `${base}/broadcast/overlay`;
@@ -57,6 +67,7 @@ Deno.serve(async (req: Request) => {
       // Escenas con datos en vivo y popup «Votá el MVP» en el entretiempo y al final (solo los campos que cambian).
       const overlayUpdate = liveOverlayUpdate({ doc, overlay, siteUrl, now: Date.now() });
       tx.set(livePath, doc, { serverTimestamps: finished.stamp ? ['updatedAt', 'finishedAt'] : ['updatedAt'] });
+      if (lines) tx.set(`${base}/match_lines/${doc.matchKey}`, lines, { serverTimestamps: ['updatedAt'] });
       if (closure) tx.set(`${base}/predictions/${closure.matchId}`, closure.data, { serverTimestamps: ['closedAt', 'updatedAt'] });
       if (overlayUpdate) tx.set(overlayPath, overlayUpdate.data, { mask: overlayUpdate.mask });
     });

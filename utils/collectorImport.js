@@ -37,6 +37,17 @@ export function findImported(tournamentData, matchKey) {
   return null;
 }
 
+/** Claves de todos los partidos del colector importados al torneo (liga y copas): los partidos oficiales. */
+export function importedMatchKeys(tournamentData) {
+  const keys = (tournamentData?.matches || []).map(match => match?.importedFrom);
+  for (const cupId of [CUP_IDS.ORO, CUP_IDS.PLATA]) {
+    for (const round of buildCupRounds(cupId, tournamentData?.bracket)) {
+      keys.push(...round.matches.map(entry => entry.match?.importedFrom));
+    }
+  }
+  return new Set(keys.filter(key => typeof key === 'string' && key));
+}
+
 function leagueTarget(tournamentData, home, away) {
   return (tournamentData?.matches || []).filter(match => match.status !== 'completed'
     && ((sameName(match.homeTeam, home) && sameName(match.awayTeam, away)) || (sameName(match.homeTeam, away) && sameName(match.awayTeam, home))));

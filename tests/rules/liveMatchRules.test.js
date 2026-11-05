@@ -48,3 +48,21 @@ describe('live_matches', () => {
     await assertSucceeds(updateDoc(live(env.authenticatedContext(HARDCODED_ADMIN).firestore()), { status: 'abandoned' }));
   });
 });
+
+describe('match_lines', () => {
+  const lines = db => doc(db, `artifacts/${APP}/public/data/match_lines/${KEY}`);
+  const data = { schema: 'scl.lines/1', matchKey: KEY, players: [{ id: 9, goals: 1 }] };
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async ctx => { await setDoc(lines(ctx.firestore()), data); });
+  });
+
+  it('anyone can read the player lines of a match', async () => {
+    await assertSucceeds(getDoc(lines(env.unauthenticatedContext().firestore())));
+  });
+
+  it('nobody but the admin can write them: a manager cannot add goals to a player', async () => {
+    await assertFails(updateDoc(lines(env.authenticatedContext('mallory').firestore()), { players: [{ id: 9, goals: 5 }] }));
+    await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), `artifacts/${APP}/public/data/match_lines/fake`), data));
+    await assertSucceeds(updateDoc(lines(env.authenticatedContext(HARDCODED_ADMIN).firestore()), { status: 'abandoned' }));
+  });
+});
