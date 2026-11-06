@@ -8,13 +8,15 @@ import {
   normalizeFormationStates, layoutForState, moveSlot, setFluid, setSlotRole, applyFormationToState, formationKeyForState,
   serializeFormationStates, copyBaseTo, resetState, exportVariants, toGameCoords, isGoalkeeperSlot,
 } from '../utils/formationStates.js';
+import { yAtDepth, xAtLateral } from '../utils/pitchGeometry.js';
 
 const F433 = FORMATIONS['4-3-3'];
 const fresh = (key = '4-3-3') => normalizeFormationStates(null, key, FORMATIONS[key]);
 const LD = 1, MCD = 5, MC = 6, DC = 9; // 4-3-3 slots
 
-// A pitch y for a game depth (inverse of toGameCoords' depth, centre of the unit).
-const yForDepth = d => 90 - (d - 3) / 0.46;
+// A pitch y for a game depth and an x for a lateral (the export's inverse, centre of the unit).
+const yForDepth = yAtDepth;
+const xForLateral = xAtLateral;
 
 describe('zones (game depth bands and sides)', () => {
   it('splits the pitch at the band edges of the game data', () => {
@@ -22,11 +24,10 @@ describe('zones (game depth bands and sides)', () => {
     expect([15, 16, 25, 26, 34, 35, 39, 40].map(line)).toEqual(['defense', 'midLow', 'midLow', 'midHigh', 'midHigh', 'attackLow', 'attackLow', 'attackHigh']);
   });
 
-  it('treats a slot as wide 32 units from the centre, the same on both sides', () => {
-    expect(zoneAt({ x: 18, y: 74 }).side).toBe('left');
-    expect(zoneAt({ x: 19, y: 74 }).side).toBe('center');
-    expect(zoneAt({ x: 81, y: 74 }).side).toBe('center');
-    expect(zoneAt({ x: 82, y: 74 }).side).toBe('right');
+  it('splits the sides at the game edges (lateral 20/21 and 83/84), symmetric around the centre 52', () => {
+    const side = l => zoneAt({ x: xForLateral(l), y: yForDepth(11) }).side;
+    expect([20, 21, 52, 83, 84].map(side)).toEqual(['left', 'center', 'center', 'center', 'right']);
+    expect(zoneAt({ x: 50, y: 50 }).side).toBe('center'); // the drawn centre is the game's 52
   });
 
   it('allows the overlaps the game uses and nothing else', () => {
@@ -102,7 +103,7 @@ describe('roles in the tactical states', () => {
   });
 
   it('reassigns the role when a move leaves the zone, and gives back the chosen one when it returns', () => {
-    let s = setSlotRole(fresh(), 'base', MC, 'MO', F433); // MC at y 42 (depth 25) cannot be MO...
+    let s = setSlotRole(fresh(), 'base', MC, 'MO', F433); // MC at depth 25 cannot be MO...
     expect(layoutForState(F433, s, 'base')[MC].pos).toBe('MC');
     s = moveSlot(fresh(), 'base', MC, { x: 68, y: yForDepth(30) }, F433);
     s = setSlotRole(s, 'base', MC, 'MO', F433); // ...higher up it can

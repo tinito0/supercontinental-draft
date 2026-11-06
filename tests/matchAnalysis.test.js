@@ -4,6 +4,7 @@ import {
   MOMENTUM_DECAY, ROLE_LABELS, bucketRows, dataSources, formationChanges, halfTotals, momentum, passMix, pitchLayout, playPeriod,
   rolesSummary, teamPlanView,
 } from '../utils/matchAnalysis.js';
+import { xAtLateral } from '../utils/pitchGeometry.js';
 
 const clock = (period, minute, second = 0) => ({ period, minute, second });
 const n = SERIES_STATS.length;
@@ -89,7 +90,7 @@ describe('pitchLayout', () => {
 
   it('puts the home team attacking right in game coordinates and never places a side without a confirmed plan', () => {
     const layout = pitchLayout(summary);
-    expect(layout.home.players[0]).toMatchObject({ name: 'Arquero', number: 1, role: 'PT', x: 3, y: 10 });
+    expect(layout.home.players[0]).toMatchObject({ name: 'Arquero', number: 1, role: 'PT', x: 3, y: xAtLateral(10) });
     expect(layout.home.players[10]).toMatchObject({ role: 'DC', x: 43, subbedOff: "71'" });
     expect(layout.away).toEqual({ status: 'differs', players: [] });
   });
@@ -107,7 +108,7 @@ describe('pitchLayout', () => {
 
   it('mirrors the away team: depth from the right, its left side at the bottom', () => {
     const away = pitchLayout({ ...summary, teamPlans: { away: plan } }).away.players[3];
-    expect(away).toMatchObject({ role: 'LD', x: 100 - 15, y: 100 - 34 });
+    expect(away).toMatchObject({ role: 'LD', x: 100 - 15, y: 100 - xAtLateral(34) });
   });
 
   it('prefers the formation read from the game, even when the saved plan does not match the XI', () => {

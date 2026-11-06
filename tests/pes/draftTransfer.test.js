@@ -21,10 +21,10 @@ describe('draft → PES mappings (pure)', () => {
     expect(strategyFromTactics({ pressuring: 0 }).pressuring).toBe(1);
   });
 
-  it('places the app pitch like pesExport.js and the EDIT (GK depth 3, right side high)', () => {
-    expect(toPitch({ x: 50, y: 90 })).toEqual([3, 50]);
-    expect(toPitch({ x: 82, y: 74 })).toEqual([10, 82]); // LD of the app 4-3-3
-    expect(toPitch({ x: 50, y: 10 })).toEqual([40, 50]);
+  it('places the app pitch like pesExport.js and the EDIT (GK at 3/52, right side high)', () => {
+    expect(toPitch({ pos: 'PT', x: 50, y: 88.5 })).toEqual([3, 52]);
+    expect(toPitch({ pos: 'LD', x: 82, y: 75.9 })).toEqual([10, 88]); // LD of the app 4-3-3
+    expect(toPitch({ pos: 'DC', x: 50, y: 25.4 })).toEqual([40, 52]);
   });
 
   it('abbreviates like generateTeamCsv', () => {

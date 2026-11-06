@@ -18,10 +18,12 @@ const AVATAR_SIZE = 'clamp(28px, 10cqw, 54px)';
 // Chip and name text follow the pitch too, with a floor that stays legible on a 360px phone.
 const CHIP_FONT = 'clamp(9px, 2.6cqw, 11px)';
 const NAME_FONT = 'clamp(10px, 2.9cqw, 12px)';
+// The game anchors a slot at the centre of its role chip: photo, 4px gap, then a chip of font size + 6px padding.
+const MARKER_TRANSLATE = `-50% calc(-1 * (${AVATAR_SIZE} + 7px + ${CHIP_FONT} / 2))`;
 
 // Field markings in a 75 × 100 box, the pitch's own 3:4 shape, so circles stay round. Real proportions
-// (105 × 68 m) are scaled to a 69 × 94 field inside a 3-unit margin: the boxes and circle sit where the markers'
-// percentages put the players, at any pitch size. Before, the lines were fixed pixels and drifted off-centre.
+// (105 × 68 m) are scaled to a 69 × 94 field inside a 3-unit margin; utils/pitchGeometry.js maps game depth onto
+// these lines as the game draws them (within about 1 m), so a slot sits next to the same line as in PES.
 const FIELD = { x: 3, y: 3, w: 69, h: 94 };
 const sx = m => (m / 68) * FIELD.w; // metres across the pitch
 const sy = m => (m / 105) * FIELD.h; // metres along it
@@ -137,13 +139,13 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
       aria-label={!isReadOnly ? `${player ? player.Name : 'Puesto vacío'} (${pos})${canMove ? '. Arrastrá o usá las flechas para moverlo.' : ''}` : undefined}
       aria-pressed={isRoleTarget || undefined}
       className={`absolute flex flex-col items-center justify-center z-20 group rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent
-        ${isDragging ? 'z-30 opacity-90 cursor-grabbing' : isNudging ? '' : 'transition-[left,top,transform,opacity] duration-move ease-in-out'}
+        ${isDragging ? 'z-30 scale-105 cursor-grabbing drop-shadow-lg' : isNudging ? '' : 'transition-[left,top,transform,opacity] duration-move ease-out'}
         ${isHoldingThis ? 'opacity-30 scale-90' : ''}
         ${holdingPlayer && !isHoldingThis ? 'hover:scale-110' : ''}
         ${isReadOnly ? 'cursor-default' : canMove && !isDragging ? 'cursor-grab select-none' : 'cursor-pointer'}
         ${isRoleTarget ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#2f6a33]' : ''}
       `}
-      style={{ left: `${x}%`, top: `${y}%`, translate: '-50% -50%', width: MARKER_WIDTH, touchAction: canMove ? 'none' : undefined }}
+      style={{ left: `${x}%`, top: `${y}%`, translate: MARKER_TRANSLATE, width: MARKER_WIDTH, touchAction: canMove ? 'none' : undefined }}
       title={player ? `${player.Name} · ${pos}${player.POS_NOMBRE && player.POS_NOMBRE !== pos ? ` (posición natural ${player.POS_NOMBRE})` : ''}` : readOnlySlot?.name || pos}
     >
       {hasPlayer ? (
@@ -214,8 +216,9 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
 /**
  * onSlotMove(index, { x, y }): when given, outfield markers can be dragged (mouse, touch, pen) or moved with the
  * arrow keys; positions are percentages of the pitch (utils/formationStates.js) and are committed on drop only.
+ * previewRole(index, { x, y }): the role the slot would play there, shown on the marker while it is dragged.
  */
-export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlayer, dorsals, isReadOnly, onSlotClick, onSlotMove, pitchRef, readOnlySlots, isCapturing, roleSlot = null }) {
+export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlayer, dorsals, isReadOnly, onSlotClick, onSlotMove, previewRole, pitchRef, readOnlySlots, isCapturing, roleSlot = null }) {
   // Se arma una sola vez por cambio de cart, en vez de un cart.find() O(n) dentro de cada uno de los 11 slots
   const cartById = useMemo(() => {
     const map = new Map();
@@ -230,9 +233,17 @@ export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlaye
   const setBox = useCallback(el => { boxRef.current = el; if (pitchRef) pitchRef.current = el; }, [pitchRef]);
   const canMove = Boolean(onSlotMove) && !isReadOnly;
 
+  const layoutRef = useRef(formation?.layout);
+  layoutRef.current = formation?.layout;
+
   const startDrag = useCallback((e, index) => {
     if (e.button > 0) return;
-    dragRef.current = { index, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, last: null };
+    // Keep the grab point under the pointer: the marker follows by its anchor plus this offset, so it never jumps.
+    const rect = boxRef.current?.getBoundingClientRect();
+    const slot = layoutRef.current?.[index];
+    const dx = rect && slot ? e.clientX - (rect.left + (slot.x / 100) * rect.width) : 0;
+    const dy = rect && slot ? e.clientY - (rect.top + (slot.y / 100) * rect.height) : 0;
+    dragRef.current = { index, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, dx, dy, moved: false, last: null };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   }, []);
   const moveDrag = useCallback(e => {
@@ -240,7 +251,7 @@ export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlaye
     if (!d || d.pointerId !== e.pointerId) return;
     if (!d.moved && Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) < DRAG_THRESHOLD_PX) return;
     d.moved = true;
-    const p = clientToPitch(e.clientX, e.clientY, boxRef.current?.getBoundingClientRect());
+    const p = clientToPitch(e.clientX - d.dx, e.clientY - d.dy, boxRef.current?.getBoundingClientRect());
     if (p) { d.last = p; setDrag({ index: d.index, ...p }); }
   }, []);
   const endDrag = useCallback(e => {
@@ -286,6 +297,7 @@ export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlaye
           <PitchSlot
             key={idx}
             {...slot}
+            pos={dragging && previewRole ? previewRole(idx, drag) || slot.pos : slot.pos}
             x={dragging ? drag.x : slot.x}
             y={dragging ? drag.y : slot.y}
             index={idx}

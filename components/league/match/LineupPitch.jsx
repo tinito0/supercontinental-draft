@@ -27,7 +27,7 @@ function sourceNote(layout) {
 }
 
 const lastName = name => String(name || '').split(' ').filter(Boolean).at(-1) || '?';
-// The arquero (profundidad 3) and the wide players (lateral 8 / 92) would be cut off at the edge: the drawing
+// The arquero (profundidad 3) and the wide players (lateral 5 / 99) would be cut off at the edge: the drawing
 // keeps a margin. Only the drawing, the data stay as the game gives them.
 const EDGE = 6;
 const inset = value => EDGE + (value * (100 - 2 * EDGE)) / 100;

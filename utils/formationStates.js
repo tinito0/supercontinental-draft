@@ -7,10 +7,10 @@
 // formation in the three variants. Here `fluid` is stored explicitly so switching it off never deletes the
 // positions of the other two states: they are simply not exported while it is off.
 //
-// Coordinates: the app's pitch (components/Pitch.jsx): x 0..100 left → right, y 0..100 top (attack) → bottom
-// (own goal), percentages of the pitch box, so they do not depend on the screen size. Positions and roles are
-// stored per formation slot (the lineup is keyed by slot too): moving a slot or changing its role never changes
-// which player is in it.
+// Coordinates: percentages of the app's pitch box (utils/pitchGeometry.js), calibrated so a slot stands where the
+// game draws it. Saved values keep the older y encoding; normalizeFormationStates and serializeFormationStates
+// convert at that boundary. Positions and roles are stored per formation slot (the lineup is keyed by slot too):
+// moving a slot or changing its role never changes which player is in it.
 //
 // Roles: each variant has its own role per slot, as in the EDIT (Rebuilt writes roles per variant). A slot's role
 // is its formation's `pos` unless the user picked another one, and it always has to be allowed where the slot
@@ -18,6 +18,9 @@
 // data and the exports never disagree.
 
 import { resolveRole, isRoleAllowedAt, isOutfieldRole } from './positionRules.js';
+import { PITCH_BOUNDS, toGameCoords, boardYFromStored, toStoredY } from './pitchGeometry.js';
+
+export { PITCH_BOUNDS, toGameCoords };
 
 export const TACTICAL_STATES = [
   { id: 'base', label: 'Inicio de partido', short: 'Inicio', variant: 0 },
@@ -26,13 +29,6 @@ export const TACTICAL_STATES = [
 ];
 const STATE_IDS = TACTICAL_STATES.map(s => s.id);
 const OTHER_STATE_IDS = ['withBall', 'withoutBall'];
-
-/**
- * Where an outfield marker may go (percent of the pitch). x matches the game's lateral range (8..92, see
- * toGameCoords) so a marker never sits where the export would move it; y keeps markers inside the drawn pitch.
- * The goalkeeper keeps the formation's spot, as in the EDIT.
- */
-export const PITCH_BOUNDS = Object.freeze({ minX: 8, maxX: 92, minY: 6, maxY: 86 });
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const round1 = v => Math.round(v * 10) / 10;
@@ -55,14 +51,6 @@ export function clientToPitch(clientX, clientY, rect) {
 /** App position code → PES role (EDIT formation roles, TacticsFormation.bin `role`, Formation.csv Position). */
 export const PES_POSITION_MAP = Object.freeze({ PT: 0, DFC: 1, LI: 2, LD: 3, MCD: 4, MC: 5, MI: 6, MD: 7, MO: 8, EI: 9, ED: 10, SD: 11, DC: 12 });
 
-/**
- * App pitch → game coordinates [depth, lateral] (EDIT / TacticsFormation.bin / Formation.csv LocationX/Y).
- * Formula of utils/pesExport.js, shared with pes/draftTransfer.js: depth 3 = own goal line … 48 = rival area.
- */
-export function toGameCoords({ x, y }) {
-  return [clamp(Math.round((90 - y) * 0.46 + 3), 3, 48), clamp(Math.round(x), 8, 92)];
-}
-
 const emptyStates = (formationKey, fluid) => ({ formation: formationKey, fluid, positions: emptyByState(), roles: emptyByState(), presets: {} });
 
 /**
@@ -82,7 +70,7 @@ export function normalizeFormationStates(raw, formationKey, formationDef) {
     for (const [k, p] of Object.entries(raw.positions?.[id] || {})) {
       const i = Number(k);
       if (!isOutfieldSlot(i) || !p || !Number.isFinite(Number(p.x)) || !Number.isFinite(Number(p.y))) continue;
-      states.positions[id][i] = clampPosition(p);
+      states.positions[id][i] = clampPosition({ x: p.x, y: boardYFromStored(p.y) });
     }
     for (const [k, role] of Object.entries(raw.roles?.[id] || {})) {
       const i = Number(k);
@@ -262,7 +250,7 @@ export function formationSignature(profile) {
 export function serializeFormationStates(states) {
   const positions = {}, roles = {};
   for (const id of STATE_IDS) {
-    positions[id] = Object.fromEntries(Object.entries(states.positions?.[id] || {}).map(([k, p]) => [String(k), { x: p.x, y: p.y }]));
+    positions[id] = Object.fromEntries(Object.entries(states.positions?.[id] || {}).map(([k, p]) => [String(k), { x: p.x, y: toStoredY(p.y) }]));
     roles[id] = Object.fromEntries(Object.entries(states.roles?.[id] || {}).map(([k, r]) => [String(k), r]));
   }
   return { formation: states.formation, fluid: Boolean(states.fluid), positions, roles, presets: { ...(states.presets || {}) } };

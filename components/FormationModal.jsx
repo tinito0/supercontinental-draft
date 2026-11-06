@@ -185,6 +185,11 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     setFormationStates(prev => moveSlot(prev, activeState, index, position, FORMATIONS[selectedFormation] || FORMATIONS['4-3-3']));
   }, [activeState, selectedFormation]);
 
+  const previewSlotRole = useCallback((index, position) => {
+    const formationDef = FORMATIONS[selectedFormation] || FORMATIONS['4-3-3'];
+    return layoutForState(formationDef, moveSlot(formationStates, activeState, index, position, formationDef), activeState)[index]?.pos;
+  }, [formationStates, activeState, selectedFormation]);
+
   const handleFluidChange = useCallback(on => {
     dispatchFormation({ type: 'CANCEL_HOLD' });
     pendingAutoSaveRef.current = true;
@@ -848,6 +853,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
             dorsals={dorsals}
             onSlotClick={roleMode ? handleRoleSlotClick : onSlotClick}
             onSlotMove={handleSlotMove}
+            previewRole={previewSlotRole}
             roleSlot={roleMode ? roleSlot : null}
           />
         </div>

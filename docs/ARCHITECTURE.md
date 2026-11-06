@@ -15,7 +15,7 @@ dependency graph current. The binary formats and the PES engine are described in
   - **Data passed by string paths, not imports.** Two loaders reading the same Firestore documents look
     unrelated; this hid the duplicated team loader of `TemplateAdminSection` and `draftTeamsService`.
   - **Formulas written inline.** The pitch → game coordinate formula existed in `utils/pesExport.js` (inline)
-    and `pes/draftTransfer.js` (`toPitch`) with no edge between them.
+    and `pes/draftTransfer.js` (`toPitch`) with no edge between them. It now lives only in `utils/pitchGeometry.js`.
   - **Some `INFERRED` edges are name collisions**, e.g. `KitGL → upload()` (`services/pesTextureStorage.js`):
     `kitRenderer.js` has no imports at all.
   - **Missing file types.** `.sql` files (tree-sitter SQL not installed), `firestore.rules`, CSS and
@@ -85,8 +85,10 @@ team/sections/KitsSection ──(kits workspace, cfg, workspaceId, uid, canShare
 ```
 FormationModal (state + autosave) ── Pitch (drag, keyboard) ── TacticalStateBar, PositionPicker, AdvancedInstructionsPanel
   utils/formationStates.js      Inicio / Con pelota / Sin pelota, fluid switch, positions and roles per slot
-                                and state, formation preset per state, pointer → pitch %, pitch % → game
-                                coordinates, PES role table
+                                and state, formation preset per state, pointer → pitch %, PES role table;
+                                converts saved y (older encoding) at load and save
+  utils/pitchGeometry.js        pitch % ↔ game [depth, lateral], calibrated against the game's lineup screen and
+                                its position tables (docs/FORMATION_DEPTH_CALIBRATION.md)
   utils/positionRules.js        which roles a slot may play where it stands (zone table from the game's EDIT data)
   utils/advancedInstructions.js catalog (codes from editLayout EDIT_ADVANCED_CODES), 2 + 2 rules
 Persisted in the profile and public team docs: formation, lineup, formationStates, advancedInstructions, …
@@ -98,7 +100,7 @@ Read back by:
 ```
 
 Legacy profiles without `formationStates` or `advancedInstructions` normalise to the plain layout, fluid
-off and no instructions, and export exactly as before.
+off and no instructions, and export the same depths as before (laterals use the game's centre 52 since 2026-11-06).
 
 `formationStates.formation` is the team's formation; FormationModal derives the selector from it (no second
 copy). Choosing a formation applies to the state being edited: Inicio changes the team formation (with fluid on,
