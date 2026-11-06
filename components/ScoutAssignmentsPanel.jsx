@@ -8,6 +8,7 @@ import { PageHeader, SectionHeader } from './ui/PageHeader.jsx';
 import { Alert } from './ui/Alert.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
 import { buildResultsAsync, positionGroups, RESULT_COUNT_MIN, RESULT_COUNT_MAX } from '../utils/scoutEngine.js';
+import { PLAYING_STYLE_GROUPS, PLAYING_STYLE_POSITIONS } from '../utils/playerGlossary.js';
 
 const MONTHLY_SEARCH_LIMIT = 5;
 
@@ -99,7 +100,16 @@ const initialCriteria = {
   statKey2: '',
   statMin2: '',
   traitKey: '',
+  playingStyle: '',
 };
+
+const STYLE_GROUPS = PLAYING_STYLE_GROUPS.filter(group => !group.styles.includes('Ninguno'));
+
+/** Zone of the field a playing style belongs to, from its first position (Lateral Ofensivo → Defensor). */
+function zoneForStyle(style) {
+  const firstPosition = PLAYING_STYLE_POSITIONS[style]?.[0];
+  return Object.keys(positionGroups).find(group => positionGroups[group].includes(firstPosition)) || '';
+}
 
 function getMonthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -422,6 +432,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       budgetMax,
       stats,
       traits,
+      playingStyle: criteria.playingStyle,
     };
     const dedupeKey = makeCriteriaFingerprint(scout.id, normalizedCriteria);
 
@@ -663,7 +674,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
           </label>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <label>
             <span className={fieldLabel}>Atributo 2 (opcional)</span>
             <select value={criteria.statKey2} onChange={e => setCriteria(prev => ({ ...prev, statKey2: e.target.value, statMin2: e.target.value ? prev.statMin2 : '' }))} className="select">
@@ -682,6 +693,28 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
               <option value="">Sin habilidad puntual</option>
               {Object.entries(PLAYER_SKILLS_MAP).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
+          </label>
+          <label>
+            <span className={fieldLabel}>Estilo de juego</span>
+            {/* Si la zona está vacía, el estilo la completa; si ya hay una elegida, se respeta. */}
+            <select value={criteria.playingStyle}
+              onChange={e => {
+                const playingStyle = e.target.value;
+                setCriteria(prev => ({
+                  ...prev,
+                  playingStyle,
+                  positionGroup: prev.positionGroup || zoneForStyle(playingStyle),
+                }));
+              }}
+              className="select">
+              <option value="">Cualquier estilo</option>
+              {STYLE_GROUPS.map(group => (
+                <optgroup key={group.title} label={group.title}>
+                  {group.styles.map(style => <option key={style} value={style}>{style}</option>)}
+                </optgroup>
+              ))}
+            </select>
+            <span className="block mt-1 text-[11px] text-ink-3">Prioriza ese estilo; si hay pocos, completa con otros.</span>
           </label>
         </div>
 
@@ -739,6 +772,9 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                             <img src={getFlagUrl(player.Country1)} alt="" className="w-4 h-3 rounded-[2px]" onError={e => { e.currentTarget.style.display = 'none'; }} />
                             {player.Age} años
                           </p>
+                          {player.PlayingStyle && player.PlayingStyle !== 'Ninguno' && (
+                            <p className="mt-0.5 text-[11px] text-ink-3 truncate">{player.PlayingStyle}</p>
+                          )}
                         </div>
                         <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
                       </div>

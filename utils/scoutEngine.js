@@ -45,6 +45,11 @@ export function buildResults({ allPlayers, criteria, scout, playerLocks }) {
     return true;
   };
 
+  // Playing style is a preference: the scout keeps only that style when enough players match the other filters,
+  // otherwise it widens to every style and ranks that style first.
+  const wantedStyle = criteria.playingStyle || '';
+  const hasStyle = player => Boolean(wantedStyle) && player.PlayingStyle === wantedStyle;
+
   const strict = allPlayers.filter(player => {
     if (lockedIds.has(String(player.Id))) return false;
     if (!matchesPosition(player)) return false;
@@ -58,9 +63,12 @@ export function buildResults({ allPlayers, criteria, scout, playerLocks }) {
     return true;
   });
 
-  const pool = strict.length >= RESULT_COUNT_MIN
-    ? strict
-    : allPlayers.filter(player => !lockedIds.has(String(player.Id)));
+  const strictStyled = wantedStyle ? strict.filter(hasStyle) : strict;
+  const pool = strictStyled.length >= RESULT_COUNT_MIN
+    ? strictStyled
+    : strict.length >= RESULT_COUNT_MIN
+      ? strict
+      : allPlayers.filter(player => !lockedIds.has(String(player.Id)));
 
   const scored = pool.map(player => {
     let score = 0;
@@ -79,6 +87,7 @@ export function buildResults({ allPlayers, criteria, scout, playerLocks }) {
     wantedTraits.forEach(key => {
       if (player[key]) score += 8;
     });
+    if (hasStyle(player)) score += 60;
     if (criteria.attention === 'overall') score += Number(player.OVR_CALCULADO || 0) * 0.35;
     if (criteria.attention === 'skill') score += wantedStats.reduce((sum, item) => sum + Number(player[item.key] || 0), 0) * 0.08;
     if (criteria.attention === 'potential') score += Math.max(0, 30 - Number(player.Age || 99));
@@ -95,6 +104,7 @@ export function buildResults({ allPlayers, criteria, scout, playerLocks }) {
     OVR_CALCULADO: player.OVR_CALCULADO,
     Precio: player.Precio,
     Country1: player.Country1,
+    PlayingStyle: player.PlayingStyle,
     Speed: player.Speed,
     Finishing: player.Finishing,
     BallControl: player.BallControl,

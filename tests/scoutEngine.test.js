@@ -90,3 +90,27 @@ describe('utils/scoutEngine.js', () => {
     });
   });
 });
+
+describe('playing style', () => {
+  const player = (Id, PlayingStyle, OVR_CALCULADO = 80) => ({ Id, Name: `P${Id}`, POS_NOMBRE: 'LD', Precio: 5, Age: 25, OVR_CALCULADO, Country1: 1, PlayingStyle });
+
+  it('keeps only the chosen style when enough players match', () => {
+    const pool = [
+      ...['1', '2', '3', '4'].map(id => player(id, 'Lateral Ofensivo', 70)),
+      ...['5', '6', '7', '8'].map(id => player(id, 'Lateral Defensivo', 90)),
+    ];
+    for (let i = 0; i < 20; i += 1) {
+      const results = buildResults({ allPlayers: pool, criteria: { playingStyle: 'Lateral Ofensivo' }, scout: { quality: 65 } });
+      expect(results.every(r => r.PlayingStyle === 'Lateral Ofensivo')).toBe(true);
+    }
+  });
+
+  it('ranks the style first and fills with other styles when there are few', () => {
+    const pool = [player('1', 'Lateral Finalizador', 70), ...['2', '3', '4', '5', '6'].map(id => player(id, 'Lateral Ofensivo', 85))];
+    for (let i = 0; i < 20; i += 1) {
+      const results = buildResults({ allPlayers: pool, criteria: { playingStyle: 'Lateral Finalizador' }, scout: { quality: 65 } });
+      expect(results[0].PlayingStyle).toBe('Lateral Finalizador');
+      expect(results.length).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
