@@ -3,6 +3,7 @@
 // tests/matchAnalysis.test.js; métodos y límites en docs/MATCH_ANALYTICS.md.
 import { instructionByCode } from './advancedInstructions.js';
 import { PES_POSITION_MAP } from './formationStates.js';
+import { xAtLateral } from './pitchGeometry.js';
 import { minuteLabel, playerName } from './matchCenter.js';
 import { percent } from './matchStats.js';
 
@@ -147,8 +148,8 @@ function kickoffFormation(summary, side) {
 
 /**
  * Las dos formaciones en una cancha horizontal: el local ataca hacia la derecha. Coordenadas del juego
- * [profundidad 3–48 desde el arco propio, lateral 8 izquierda … 92 derecha] → % de la cancha:
- * local x = profundidad, y = lateral; visitante x = 100 − profundidad, y = 100 − lateral (su izquierda queda abajo).
+ * [profundidad 3–47 desde el arco propio, lateral 5 izquierda … 99 derecha, centro 52] → % de la cancha: cada
+ * equipo en su mitad (x = profundidad), y el lateral con la escala de utils/pitchGeometry.js; el visitante, espejado.
  * Un lado sin formación confiable no tiene jugadores: nunca se ubican a ojo. Los dorsales salen del archivo de
  * guardado y solo cuando su plan coincide con el XI.
  */
@@ -172,7 +173,7 @@ export function pitchLayout(summary) {
           slot, id, name: playerName(summary, id), number: plan.numbers?.[id] ?? null,
           role: roleLabel(plan.roles?.[slot]),
           x: side === 'home' ? depth : 100 - depth,
-          y: side === 'home' ? lateral : 100 - lateral,
+          y: side === 'home' ? xAtLateral(lateral) : 100 - xAtLateral(lateral),
           subbedOff: off ? minuteLabel(off.clock) : null,
           // Goles (sin contar en contra) y tarjetas del partido: la cancha los marca sobre la foto del jugador.
           goals: (summary.goals || []).filter(goal => goal.playerId === id && !goal.ownGoal).length,

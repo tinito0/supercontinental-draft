@@ -54,9 +54,9 @@
     "semantic_hash": ""
   },
   "components/FormationModal.jsx": {
-    "mtime": 1793843723.2024686,
-    "seen": 1793845429.798022,
-    "ast_hash": "c4dd1f369d653d45e3743ad9585a05bd",
+    "mtime": 1793990915.368159,
+    "seen": 1793991693.3191414,
+    "ast_hash": "a4a0743f48324dc6f5bc6e81c4a9a8ea",
     "semantic_hash": ""
   },
   "components/InstallPopup.jsx": {
@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "components/Pitch.jsx": {
-    "mtime": 1793843723.2024686,
-    "seen": 1793845429.7980385,
-    "ast_hash": "8285bf132633896ee6481a1e2ddf1862",
+    "mtime": 1793990916.1946216,
+    "seen": 1793991693.3210728,
+    "ast_hash": "0c316cac1c89cef7fffee6eaedabf0d2",
     "semantic_hash": ""
   },
   "components/PlayerCard.jsx": {
@@ -978,10 +978,10 @@
     "semantic_hash": "ac46f76822bceaab527a742dfb60aa74"
   },
   "tests/pes/draftTransfer.test.js": {
-    "mtime": 1791950585.3810358,
-    "seen": 1791982775.2362208,
-    "ast_hash": "ae287b2e6dc84cfa1ef821b4f61bb113",
-    "semantic_hash": "ae287b2e6dc84cfa1ef821b4f61bb113"
+    "mtime": 1793991133.693385,
+    "seen": 1793991693.440893,
+    "ast_hash": "b91d9e494fb1fb26e7d5d6598f3c475c",
+    "semantic_hash": ""
   },
   "tests/pes/editDatabase.test.js": {
     "mtime": 1791946197.8263092,
@@ -1080,9 +1080,9 @@
     "semantic_hash": "5cee87065d87088a47e204d457a4e1e4"
   },
   "utils/constants.js": {
-    "mtime": 1793843723.2579343,
-    "seen": 1793845429.81219,
-    "ast_hash": "6e2c70da882b80f244e93f73808f3568",
+    "mtime": 1793991353.744842,
+    "seen": 1793991693.4555945,
+    "ast_hash": "3084df3f404eb3e88865ebdcd316717a",
     "semantic_hash": ""
   },
   "utils/helpers.js": {
@@ -1176,9 +1176,9 @@
     "semantic_hash": ""
   },
   "tests/formationStates.test.js": {
-    "mtime": 1793308655.4904616,
-    "seen": 1793845429.8090165,
-    "ast_hash": "b7535962d554ff2c858c45d93e7743e0",
+    "mtime": 1793991082.9627688,
+    "seen": 1793991693.4280136,
+    "ast_hash": "77ada970ed32f5299be2833cc2b3b4a7",
     "semantic_hash": ""
   },
   "tests/pes/fluidFormation.test.js": {
@@ -1200,9 +1200,9 @@
     "semantic_hash": ""
   },
   "utils/formationStates.js": {
-    "mtime": 1793308655.6408567,
-    "seen": 1793845429.812198,
-    "ast_hash": "bf57fb76d3df5a5473321cbc0908ec8a",
+    "mtime": 1793991080.256593,
+    "seen": 1793991693.4560006,
+    "ast_hash": "472c6fedad694fdbfe11d411e9a0ecef",
     "semantic_hash": ""
   },
   ".agents/skills/caveman/SKILL.md": {
@@ -263880,15 +263880,15 @@
     "semantic_hash": ""
   },
   "docs/ARCHITECTURE.md": {
-    "mtime": 1793308653.8266556,
-    "seen": 1793845429.8215048,
-    "ast_hash": "a097bd36bdc00f18a424d5fcc12ef843",
+    "mtime": 1793991504.3431976,
+    "seen": 1793991693.4943006,
+    "ast_hash": "a986b5601bf60715ea4ab63ab3660121",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1793912917.9630022,
-    "seen": 1793915103.4579277,
-    "ast_hash": "923a2f0306f285fe17642e4b17c99d04",
+    "mtime": 1793991501.6334722,
+    "seen": 1793991693.492152,
+    "ast_hash": "c24270455f2afc2c07a33d8efc19cf8e",
     "semantic_hash": ""
   },
   "tests/rules/marketRules.test.js": {
@@ -264096,15 +264096,15 @@
     "semantic_hash": ""
   },
   "tests/positionRules.test.js": {
-    "mtime": 1793308655.5709786,
-    "seen": 1793845429.8117502,
-    "ast_hash": "0cf63f77ed59e24c189626611b0f9a0c",
+    "mtime": 1793991121.094226,
+    "seen": 1793991693.445269,
+    "ast_hash": "8da095a4a3ae3efdeada91abb4d0b877",
     "semantic_hash": ""
   },
   "utils/positionRules.js": {
-    "mtime": 1793308655.6695764,
-    "seen": 1793845429.8125894,
-    "ast_hash": "d328a60c1f0156a044a37ca48a041f5d",
+    "mtime": 1793990816.1805413,
+    "seen": 1793991693.4601398,
+    "ast_hash": "55f2a3369434199d1bf53793b18bfbe1",
     "semantic_hash": ""
   },
   "components/admin/BroadcastMatchPicker.jsx": {
@@ -265614,9 +265614,9 @@
     "semantic_hash": ""
   },
   "components/league/match/LineupPitch.jsx": {
-    "mtime": 1793308653.6537583,
-    "seen": 1793845429.7984705,
-    "ast_hash": "fc163fe21cc089fedd483e8ee4e93562",
+    "mtime": 1793990865.6880314,
+    "seen": 1793991693.3440151,
+    "ast_hash": "7244006c69335c23a595e176696bef76",
     "semantic_hash": ""
   },
   "components/league/match/MatchAnalysisView.jsx": {
@@ -265782,9 +265782,9 @@
     "semantic_hash": ""
   },
   "tests/matchAnalysis.test.js": {
-    "mtime": 1793308655.5150595,
-    "seen": 1793845429.8092391,
-    "ast_hash": "a30ba829ec3584b3ec7ed45a96fe3a9a",
+    "mtime": 1793991133.6918638,
+    "seen": 1793991693.4322076,
+    "ast_hash": "46b6c3578501e86da6392d918890987f",
     "semantic_hash": ""
   },
   "tests/matchAnalysisRender.test.jsx": {
@@ -265854,9 +265854,9 @@
     "semantic_hash": ""
   },
   "utils/matchAnalysis.js": {
-    "mtime": 1793308655.653455,
-    "seen": 1793845429.8125575,
-    "ast_hash": "aa5df2330ce296c17832d53e226f8350",
+    "mtime": 1793990864.8372102,
+    "seen": 1793991693.4580195,
+    "ast_hash": "153ab3aaa72e9ef427c679306e55a6fe",
     "semantic_hash": ""
   },
   "utils/matchStats.js": {
@@ -266907,6 +266907,48 @@
     "mtime": 1793912918.0961263,
     "seen": 1793915103.4273589,
     "ast_hash": "8f58b4a016bfb5dd25da01eeecac93a8",
+    "semantic_hash": ""
+  },
+  "utils/pitchGeometry.js": {
+    "mtime": 1793991078.608817,
+    "seen": 1793991693.4593453,
+    "ast_hash": "664a3afa12f6417d3be67d659b87873e",
+    "semantic_hash": ""
+  },
+  "docs/FORMATION_DEPTH_CALIBRATION.md": {
+    "mtime": 1793991517.049795,
+    "seen": 1793991693.4953063,
+    "ast_hash": "82edf15f42da366ec57c6dfd070ff8d4",
+    "semantic_hash": ""
+  },
+  "docs/calibration/app-before-after.png": {
+    "mtime": 1793991480.1057138,
+    "seen": 1793991693.5052729,
+    "ast_hash": "f10b4c9c3dbd1b7d2cb1f6c1625b1dc6",
+    "semantic_hash": ""
+  },
+  "docs/calibration/app-drag-cf-to-ss.png": {
+    "mtime": 1793991480.1598728,
+    "seen": 1793991693.505278,
+    "ast_hash": "ba968a98a85cd4ed55af03876c136454",
+    "semantic_hash": ""
+  },
+  "docs/calibration/depth-baseline-433.png": {
+    "mtime": 1793988378.0850255,
+    "seen": 1793991693.5052817,
+    "ast_hash": "cfacaafa55dcb6d115cd02f212a965ec",
+    "semantic_hash": ""
+  },
+  "docs/calibration/depth-drag-zone-shade.png": {
+    "mtime": 1793988378.9547415,
+    "seen": 1793991693.505285,
+    "ast_hash": "c2775fb78b04383e80d7520ffa3e04b0",
+    "semantic_hash": ""
+  },
+  "docs/calibration/depth-ss39-rmf34.png": {
+    "mtime": 1793988379.7746508,
+    "seen": 1793991693.5052881,
+    "ast_hash": "02b3701286662a35f76df0324a1e8a49",
     "semantic_hash": ""
   }
 }

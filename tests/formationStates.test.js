@@ -13,11 +13,13 @@ import {
 import { EDIT_ADVANCED_CODES } from '../pes/formats/pes2021/editLayout.js';
 import { generateFormationCsv } from '../utils/pesExport.js';
 import { buildSquadSpec, toPitch } from '../pes/draftTransfer.js';
+import { GAME_PITCH, yAtDepth, fromStoredY, toStoredY, boardYFromStored } from '../utils/pitchGeometry.js';
+import { zoneAt } from '../utils/positionRules.js';
 import { Pitch, PitchSlot } from '../components/Pitch.jsx';
 
 const F433 = FORMATIONS['4-3-3'];
 const fresh = () => normalizeFormationStates(null, '4-3-3', F433);
-const LD = 1; // F433.layout[1] = LD (x 82, y 74)
+const LD = 1; // F433.layout[1] = LD (x 82, y 75.9)
 
 describe('three independent tactical states', () => {
   it('maps to the game variants in order (base, with ball, without ball)', () => {
@@ -51,7 +53,7 @@ describe('three independent tactical states', () => {
     s = moveSlot(s, 'withBall', LD, { x: 90, y: 40 }, F433);
     s = setFluid(s, false);
     expect(effectiveState(s, 'withBall')).toBe('base');
-    expect(layoutForState(F433, s, 'withBall')[LD].y).toBe(74); // shows base, not the stored with-ball spot
+    expect(layoutForState(F433, s, 'withBall')[LD].y).toBe(F433.layout[LD].y); // shows base, not the stored with-ball spot
     s = moveSlot(s, 'withBall', LD, { x: 60, y: 60 }, F433); // an edit while off lands on base
     expect(s.positions.base[LD]).toEqual({ x: 60, y: 60 });
     expect(s.positions.withBall[LD]).toEqual({ x: 90, y: 40 }); // not destroyed
@@ -102,16 +104,47 @@ describe('coordinates', () => {
     expect(clampPosition({ x: 150, y: -20 })).toEqual({ x: PITCH_BOUNDS.maxX, y: PITCH_BOUNDS.minY });
   });
 
-  it('converts to game coordinates with the same formula as before (pesExport / draftTransfer)', () => {
-    expect(toGameCoords({ x: 50, y: 90 })).toEqual([3, 50]);
-    expect(toGameCoords({ x: 82, y: 74 })).toEqual([10, 82]);
-    expect(toPitch({ x: 50, y: 10 })).toEqual(toGameCoords({ x: 50, y: 10 }));
-    // Every position the editor allows is a valid game position.
-    for (const y of [PITCH_BOUNDS.minY, PITCH_BOUNDS.maxY]) for (const x of [PITCH_BOUNDS.minX, PITCH_BOUNDS.maxX]) {
-      const [d, l] = toGameCoords({ x, y });
-      expect(d).toBeGreaterThanOrEqual(3); expect(d).toBeLessThanOrEqual(48);
-      expect(l).toBeGreaterThanOrEqual(8); expect(l).toBeLessThanOrEqual(92);
+  it('converts to game coordinates (pesExport / draftTransfer share it)', () => {
+    expect(toGameCoords(F433.layout[0])).toEqual([3, 52]); // the keeper's fixed spot in every EDIT plan
+    expect(toGameCoords(F433.layout[LD])).toEqual([10, 88]);
+    expect(toGameCoords({ x: 50, y: 50 })[1]).toBe(GAME_PITCH.lateralCentre);
+    expect(toPitch(F433.layout[9])).toEqual(toGameCoords(F433.layout[9]));
+    // The corners of the editor are exactly the corners of the game's outfield area (PES2021.exe 0x1434A1560).
+    expect(toGameCoords({ x: PITCH_BOUNDS.minX, y: PITCH_BOUNDS.minY })).toEqual([47, 5]);
+    expect(toGameCoords({ x: PITCH_BOUNDS.maxX, y: PITCH_BOUNDS.maxY })).toEqual([4, 99]);
+  });
+});
+
+// docs/FORMATION_DEPTH_CALIBRATION.md: measured on the game's lineup screen, error about ±1 m.
+describe('calibration against the game pitch', () => {
+  const TOLERANCE_M = 1;
+  const metresFromOwnGoal = y => ((97 - y) / 94) * 105; // the app's field lines: y 97 own goal … 3 rival goal
+
+  it('puts the CF/SS edge (depth 39/40) 79.4 m from the own goal line, as the game draws it', () => {
+    expect(Math.abs(metresFromOwnGoal(yAtDepth(39.5)) - 79.4)).toBeLessThanOrEqual(TOLERANCE_M);
+    const cfLine = yAtDepth(39.5);
+    expect(zoneAt({ x: 50, y: cfLine - 0.3 }).line).toBe('attackHigh');
+    expect(zoneAt({ x: 50, y: cfLine + 0.3 }).line).toBe('attackLow');
+  });
+
+  it('matches the lines the game draws: halfway at depth 25.2, penalty-area edges at 7.1 and 43.9', () => {
+    expect(Math.abs(metresFromOwnGoal(yAtDepth(25.24)) - 52.5)).toBeLessThanOrEqual(TOLERANCE_M);
+    expect(Math.abs(metresFromOwnGoal(yAtDepth(7.09)) - 16.5)).toBeLessThanOrEqual(TOLERANCE_M);
+    expect(Math.abs(metresFromOwnGoal(yAtDepth(43.94)) - 88.5)).toBeLessThanOrEqual(TOLERANCE_M);
+  });
+
+  it('reads saved boards (older y encoding) without changing any exported depth', () => {
+    for (let stored = 6; stored <= 86; stored += 0.1) {
+      const before = Math.round((90 - stored) * 0.46 + 3);
+      const shown = clampPosition({ x: 50, y: boardYFromStored(stored) });
+      expect(toGameCoords(shown)[0]).toBe(before);
+      expect(Math.abs(fromStoredY(toStoredY(shown.y)) - shown.y)).toBeLessThan(0.01);
     }
+  });
+
+  it('keeps every default formation slot at the depth it exported before the calibration', () => {
+    // Old y of the 4-3-3 (90, 74 ×4, 57, 42 ×2, 20, 10, 20) through depth = (90 − y) × 0.46 + 3.
+    expect(F433.layout.map(slot => toGameCoords(slot)[0])).toEqual([3, 10, 10, 10, 10, 18, 25, 25, 35, 40, 35]);
   });
 });
 
@@ -135,7 +168,7 @@ describe('persistence and backward compatibility', () => {
   it('ignores stored data of another formation and malformed entries', () => {
     expect(normalizeFormationStates({ formation: '4-4-2', fluid: true, positions: { base: { 1: { x: 1, y: 1 } } } }, '4-3-3', F433).positions.base).toEqual({});
     const s = normalizeFormationStates({ formation: '4-3-3', positions: { base: { 0: { x: 5, y: 5 }, 1: { x: 'a', y: 3 }, 99: { x: 5, y: 5 }, 2: { x: 500, y: 50 } } } }, '4-3-3', F433);
-    expect(s.positions.base).toEqual({ 2: { x: PITCH_BOUNDS.maxX, y: 50 } });
+    expect(s.positions.base).toEqual({ 2: { x: PITCH_BOUNDS.maxX, y: boardYFromStored(50) } });
   });
 });
 
@@ -200,9 +233,9 @@ describe('export', () => {
     const csv = generateFormationCsv(103, '4-3-3', players.slice(0, 11), {}, players, {}, fluidStates);
     const [head, row] = csv.trim().split('\n').map(l => l.split(';'));
     const col = name => row[head.indexOf(name)];
-    expect([col('LocationX2F1S1'), col('LocationY2F1S1')]).toEqual(['10', '82']);
+    expect([col('LocationX2F1S1'), col('LocationY2F1S1')]).toEqual(['10', '88']);
     expect([col('LocationX2F2S1'), col('LocationY2F2S1')]).toEqual(toGameCoords({ x: 90, y: 40 }).map(String));
-    expect([col('LocationX2F3S1'), col('LocationY2F3S1')]).toEqual(['10', '82']);
+    expect([col('LocationX2F3S1'), col('LocationY2F3S1')]).toEqual(['10', '88']);
     expect(col('FluidS1')).toBe('1');
     expect(head.length).toBe(row.length);
     const legacy = generateFormationCsv(103, '4-3-3', players.slice(0, 11), {}, players, {});
@@ -265,7 +298,7 @@ describe('Pitch drag and drop', () => {
     let { root, slots } = tree();
     expect(slots[LD].props.canMove).toBe(true);
     expect(slots[0].props.canMove).toBe(false); // goalkeeper
-    slots[LD].props.onDragStart(ev(346, 346, { type: 'pointerdown' }), LD);
+    slots[LD].props.onDragStart(ev(346, 353.6, { type: 'pointerdown' }), LD); // on the marker's anchor
     root.props.onPointerMove(ev(370, 250));
     ({ root, slots } = tree());
     expect(slots[LD].props.isDragging).toBe(true);
@@ -324,7 +357,32 @@ describe('Pitch drag and drop', () => {
     expect(img.props.draggable).toBe(false);
   });
 
-  it('centres markers with the translate property, so the picked-up and drop-target scale classes apply', () => {
+  it('keeps the grab point under the pointer instead of jumping the marker to it', () => {
+    const { tree, ev, onSlotMove } = setup();
+    let { root, slots } = tree();
+    slots[LD].props.onDragStart(ev(346, 333.6, { type: 'pointerdown' }), LD); // grabbed 20px above the anchor
+    root.props.onPointerMove(ev(370, 230));
+    root.props.onPointerUp(ev(370, 230, { type: 'pointerup' }));
+    expect(onSlotMove).toHaveBeenCalledWith(LD, { x: 90, y: 50 });
+  });
+
+  it('shows the role the slot will play where it is being dragged', () => {
+    const { tree, ev } = setup();
+    let { root, slots } = tree();
+    const previewRole = vi.fn((index, p) => (p.y < 50 ? 'MD' : 'LD'));
+    const render = hookRuntime();
+    const props = { formation: F433, lineup: {}, cart: [], dorsals: {}, onSlotMove: vi.fn(), previewRole };
+    root = render(props);
+    root.ref({ getBoundingClientRect: () => RECT });
+    root.props.children.flat().find(c => c?.props?.index === LD).props.onDragStart(ev(346, 353.6, { type: 'pointerdown' }), LD);
+    root.props.onPointerMove(ev(370, 150));
+    root = render(props);
+    slots = root.props.children.flat().filter(c => c?.props?.index != null);
+    expect(slots[LD].props.pos).toBe('MD');
+    expect(slots[2].props.pos).toBe(F433.layout[2].pos);
+  });
+
+  it('anchors markers at the role chip with the translate property, so the scale classes still apply', () => {
     const { tree } = setup();
     const { slots } = tree();
     const cart = [{ Id: 1, Name: 'A B', POS_NOMBRE: 'LD', OVR_CALCULADO: 70 }];
@@ -336,7 +394,7 @@ describe('Pitch drag and drop', () => {
     });
     // An inline transform used to override Tailwind's scale-90 / hover:scale-110 on the same element.
     expect(el.props.style.transform).toBeUndefined();
-    expect(el.props.style.translate).toBe('-50% -50%');
+    expect(el.props.style.translate).toMatch(/^-50% calc\(-1 \* \(/);
     expect(el.props.className).toContain('scale-90');
   });
 

@@ -7,12 +7,15 @@
 //    GK's 52). The table below is that data: a role is allowed in a zone when Konami's own formations use it there.
 // 2. Community documentation (Rigged Wiki, PES 2021 Tactical): each position has a playing area and a player
 //    can be switched between positions where two areas overlap (e.g. CMF and AMF). That matches the overlaps here.
-// What is NOT verified: Konami's internal constants. This is the game's observed behaviour, not its source, and
-// the app→game coordinate mapping (utils/formationStates.js toGameCoords) is the app's own approximation.
+// 3. The game's own tables in PES2021.exe (0x1434A1570 zones, 0x1434A1630 area per role): the same edges and
+//    overlaps, CF only from depth 40 (docs/FORMATION_DEPTH_CALIBRATION.md).
+// Positions are converted with utils/pitchGeometry.js, calibrated against the game's lineup screen.
 //
 // The GK is not covered: it always keeps its spot and role, as in the EDIT.
 
-/** Game depth bands (toGameCoords depth: 3 own goal line … 48 rival area). `max` is inclusive. */
+import { GAME_PITCH, toOutfieldCoords } from './pitchGeometry.js';
+
+/** Game depth bands (outfield depth 4 … 47). `max` is inclusive. */
 export const DEPTH_LINES = Object.freeze([
   { id: 'defense', label: 'Defensa', max: 15 },
   { id: 'midLow', label: 'Mediocampo defensivo', max: 25 },
@@ -20,13 +23,6 @@ export const DEPTH_LINES = Object.freeze([
   { id: 'attackLow', label: 'Ataque', max: 39 },
   { id: 'attackHigh', label: 'Área rival', max: Infinity },
 ]);
-
-/**
- * Distance from the pitch centre at which a slot counts as wide. Game data: LB/LMF/LWF never pass lateral 20 and
- * RB/RMF/RWF never go below 84, 32 units from the centre (52). The app's pitch is centred on x = 50.
- */
-export const WIDE_OFFSET = 32;
-const APP_CENTRE_X = 50;
 
 export const SIDES = Object.freeze({ left: 'Banda izquierda', center: 'Centro', right: 'Banda derecha' });
 
@@ -79,15 +75,11 @@ const FALLBACK = Object.freeze({
   DC: ['SD'],
 });
 
-/** Game depth of a pitch position, with the rounding of the export (toGameCoords). */
-const gameDepth = y => Math.round((90 - Number(y)) * 0.46 + 3);
-
 /** Zone of a pitch position ({ x, y } percent of the app pitch): { line, side } plus a readable label. */
 export function zoneAt({ x, y }) {
-  const depth = gameDepth(y);
+  const [depth, lateral] = toOutfieldCoords({ x, y });
   const line = DEPTH_LINES.find(l => depth <= l.max);
-  const offset = Math.round(Number(x)) - APP_CENTRE_X;
-  const side = offset <= -WIDE_OFFSET ? 'left' : offset >= WIDE_OFFSET ? 'right' : 'center';
+  const side = lateral <= GAME_PITCH.leftWingMax ? 'left' : lateral >= GAME_PITCH.rightWingMin ? 'right' : 'center';
   return { line: line.id, side, label: `${line.label} · ${SIDES[side]}` };
 }
 
