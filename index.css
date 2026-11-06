@@ -151,6 +151,11 @@
     outline-offset: var(--app-focus-offset);
   }
 
+  /* Punto de partida del foco de un diálogo (useModalDialog): es un contenedor, no un control; sin aro. */
+  [data-modal-start]:focus-visible {
+    outline: none !important;
+  }
+
   ::selection {
     background: rgb(var(--c-accent) / 0.35);
     color: rgb(var(--c-ink));

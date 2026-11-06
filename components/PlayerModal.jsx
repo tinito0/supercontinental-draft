@@ -1,5 +1,5 @@
 import React, { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { X, Eye, MinusCircle, DollarSign, Lock, CheckCircle, ChevronRight, PieChart, Shield, Target, Zap, Activity, Trash2, AlertTriangle, Handshake, Crown } from 'lucide-react';
+import { X, Eye, MinusCircle, DollarSign, Lock, CheckCircle, ChevronRight, PieChart, Shield, Zap, Activity, Trash2, AlertTriangle, Handshake, Crown } from 'lucide-react';
 import { Radar, Bar, Doughnut } from 'react-chartjs-2';
 import '../utils/chartSetup.js';
 import { BaseModal } from './ui/BaseModal.jsx';
@@ -37,7 +37,7 @@ const PosicionHeatmap = memo(function PosicionHeatmap({ player }) {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-2.5">
-        <h3 className="text-xs font-semibold text-ink-2">Mapa de posiciones</h3>
+        <h3 className="text-sm font-semibold text-ink">Mapa de posiciones</h3>
         <span className="text-xs text-ink-3 font-medium">Aptitud en campo</span>
       </div>
       <div className="flex-grow bg-canvas rounded-xl p-3 flex items-center justify-center min-h-[220px] border border-line/15">
@@ -84,8 +84,8 @@ const RadarChart = memo(function RadarChart({ player, isGK }) {
 
   const { data, options } = useMemo(() => {
     const rawLabels = isGK
-      ? ['SHO', 'PAS', 'STR', 'GK', 'SPD', 'DRI']
-      : ['SHO', 'PAS', 'STR', 'DEF', 'SPD', 'DRI'];
+      ? ['TIR', 'PAS', 'FÍS', 'POR', 'RIT', 'REG']
+      : ['TIR', 'PAS', 'FÍS', 'DEF', 'RIT', 'REG'];
 
     const dataValues = isGK
       ? [
@@ -154,10 +154,7 @@ const RadarChart = memo(function RadarChart({ player, isGK }) {
 
   return (
     <div className="flex flex-col items-center justify-center w-full pt-1 pb-1">
-      <div className="w-full flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold text-ink-2">Perfil de atributos</h3>
-        <span className="text-xs text-ink-3 font-medium">Hexágono</span>
-      </div>
+      <h3 className="w-full mb-2 text-sm font-semibold text-ink">Perfil de atributos</h3>
       <div
         className="relative w-full h-[245px] flex items-center justify-center"
         role="img"
@@ -165,7 +162,7 @@ const RadarChart = memo(function RadarChart({ player, isGK }) {
       >
         <Radar data={data} options={options} />
         <span className="sr-only">
-          Atributos principales: Disparo {player.STAT_SHO ?? 0}, Pase {player.STAT_PAS ?? 0}, Físico {player.STAT_STR ?? 0}, {isGK ? `Portero ${player.STAT_GK ?? 0}` : `Defensa ${player.STAT_DEF ?? 0}`}, Velocidad {player.STAT_SPD ?? 0}, Regate {player.STAT_DRI ?? 0}.
+          Atributos principales: Disparo {player.STAT_SHO ?? 0}, Pase {player.STAT_PAS ?? 0}, Físico {player.STAT_STR ?? 0}, {isGK ? `Portero ${player.STAT_GK ?? 0}` : `Defensa ${player.STAT_DEF ?? 0}`}, Ritmo {player.STAT_SPD ?? 0}, Regate {player.STAT_DRI ?? 0}.
         </span>
       </div>
     </div>
@@ -320,8 +317,8 @@ const CelebrationPopup = memo(function CelebrationPopup({ player, onDismiss }) {
 
 const StatSection = memo(function StatSection({ title, statKeys, player }) {
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-raised border border-line/[0.12]">
-      <h4 className="text-sm font-bold text-ink tracking-wide uppercase mb-3 pb-2 border-b border-line/[0.12]">
+    <div className="p-4 sm:p-5 rounded-xl bg-raised border border-line/[0.12] break-inside-avoid mb-4">
+      <h4 className="text-sm font-semibold text-ink mb-3 pb-2 border-b border-line/[0.12]">
         {title}
       </h4>
       <div className="space-y-1">
@@ -362,12 +359,12 @@ export const SkillsSection = memo(function SkillsSection({ player }) {
     .map(([, displayName]) => displayName);
 
   return (
-    <div className="p-4 sm:p-5 rounded-xl bg-raised border border-line/20 shadow-sm">
-      <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-line/20">
-        <h4 className="text-xs sm:text-sm font-semibold text-ink">
+    <div className="p-4 sm:p-5 rounded-xl bg-raised border border-line/[0.12]">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-line/[0.12]">
+        <h4 className="text-sm font-semibold text-ink">
           Habilidades del jugador
         </h4>
-        <span className="text-xs text-ink-3 font-medium bg-raised px-2.5 py-0.5 rounded">
+        <span className="text-xs text-ink-3 font-medium num">
           {skills.length} activas
         </span>
       </div>
@@ -415,8 +412,12 @@ export const PlayerModal = memo(function PlayerModal({
   const [isReleasing, setIsReleasing] = useState(false);
   const [showProposalModal, setShowProposalModal] = useState(false);
 
+  // Al pasar a otro jugador (perfiles similares) la ficha arranca desde arriba, no desde donde estaba el scroll.
+  const scrollRef = useRef(null);
+
   // Reset states when player changes
   useEffect(() => {
+    scrollRef.current?.scrollTo?.(0, 0);
     setIsSigning(false);
     setShowCelebration(false);
     setIsReleasing(false);
@@ -634,28 +635,21 @@ export const PlayerModal = memo(function PlayerModal({
     // ─── Budget Impact Section ───
     const BudgetImpact = () => (
       <div className="w-full rounded-xl p-3 mb-2.5 bg-raised border border-line/20 shadow-sm">
-        <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-line/15">
+        <div className="flex items-center justify-between gap-4 mb-2 pb-1.5 border-b border-line/15">
           <span className="text-xs font-semibold text-ink-2">Impacto presupuestario</span>
-          <span className="text-xs font-semibold text-ink-3 tabular-nums">${currentBudgetM}M disp.</span>
+          <span className="text-xs font-semibold text-ink-3 tabular-nums">${currentBudgetM}M disponibles</span>
         </div>
         <div className="space-y-1.5 text-xs">
           <div className="flex justify-between items-center text-ink-3">
-            <span>Costo de fichaje:</span>
+            <span>Costo del fichaje</span>
             <span className="font-semibold text-danger-soft tabular-nums">- {formatPriceShort(priceMillions)}</span>
           </div>
           {canAfford ? (
             <div className="flex justify-between items-center pt-1.5 border-t border-line/15">
-              <span className="text-ink-3">Restante estimado:</span>
+              <span className="text-ink-3">Te quedan</span>
               <div className="flex items-center gap-1.5">
                 <span className={`font-semibold tabular-nums ${afterColor}`}>${budgetAfterM}M</span>
-                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
-                  budgetAfterPercent > 50 ? 'bg-success/15 text-success-soft' :
-                  budgetAfterPercent > 20 ? 'bg-warning/15 text-warning-soft' :
-                  'bg-danger/15 text-danger-soft'
-                }`}>
-                  {budgetAfterPercent.toFixed(0)}%
-                </span>
-                {budgetAfterPercent <= 20 && <AlertTriangle className="w-3 h-3 text-danger-soft" />}
+                {budgetAfterPercent <= 20 && <AlertTriangle className="w-3 h-3 text-danger-soft" aria-label="Queda poco presupuesto" />}
               </div>
             </div>
           ) : (
@@ -721,21 +715,25 @@ export const PlayerModal = memo(function PlayerModal({
       contentClassName="!p-0 !overflow-hidden flex flex-col"
     >
       <div className="flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] relative">
-        {/* Botón Cerrar */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50 min-w-11 min-h-11 flex items-center justify-center rounded-lg bg-raised/80 hover:bg-overlay text-ink-3 hover:text-ink border border-line/20 transition-colors"
-          aria-label="Cerrar ficha del jugador"
-        >
-          <X size={20} />
-        </button>
+        {/* La X vive en su propia barra, fuera del scroll: flotando encima tapaba el presupuesto y los valores. */}
+        <div className="shrink-0 flex justify-end px-2 pt-2 sm:px-3 sm:pt-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-w-11 min-h-11 flex items-center justify-center rounded-lg text-ink-3 hover:text-ink hover:bg-raised transition-colors"
+            aria-label="Cerrar ficha del jugador"
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
 
-        {/* Contenido Scrollable */}
-        <div className="flex-grow min-h-0 overflow-y-auto p-4 sm:p-7 custom-scrollbar relative z-10 pb-20 sm:pb-6">
+        {/* Al abrir, el foco va al contenido (data-modal-start) y no a la X: así no aparece el aro de foco sin teclado. */}
+        <div ref={scrollRef} data-modal-start tabIndex={-1}
+          className="flex-grow min-h-0 overflow-y-auto px-4 pb-20 sm:px-7 sm:pb-6 custom-scrollbar relative">
+          <div key={player.Id} className="animate-in fade-in">
 
           {/* 1. CABECERA DEL JUGADOR - SCOUTING BROADCAST */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-7 border-b border-line/20 pb-6 pt-2 sm:pt-0">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-7 border-b border-line/20 pb-6">
             <div className="flex items-center gap-5 sm:gap-6 w-full lg:w-auto">
               {/* FOTO y OVR */}
               <div className="relative shrink-0">
@@ -756,13 +754,10 @@ export const PlayerModal = memo(function PlayerModal({
               <div className="flex flex-col justify-center min-w-0">
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <span className="text-xs font-medium text-ink-3">{player.Grupo}</span>
-                  {player.PlayingStyle && (
+                  {player.PlayingStyle && player.PlayingStyle !== 'Ninguno' && (
                     <>
-                      <span className="text-ink-3 text-xs">•</span>
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-2 bg-raised px-2.5 py-0.5 rounded-md border border-line/20">
-                        <Target className="w-3 h-3 text-ink-3" />
-                        {player.PlayingStyle}
-                      </span>
+                      <span className="text-ink-3 text-xs" aria-hidden="true">·</span>
+                      <span className="text-xs font-medium text-ink-2">{player.PlayingStyle}</span>
                     </>
                   )}
                 </div>
@@ -807,22 +802,23 @@ export const PlayerModal = memo(function PlayerModal({
           {/* 2. INFO DETALLADA Y GRÁFICOS */}
           <div className="flex flex-col lg:flex-row gap-6 mb-8">
 
-            {/* LADO IZQUIERDO: RADAR Y HEATMAP */}
-            <div className="w-full lg:w-[280px] shrink-0 space-y-4 flex flex-col">
-              <div className="bg-raised rounded-xl p-4 border border-line/[0.12] shadow-sm flex items-center justify-center">
+            {/* Izquierda en computadora: radar y mapa. En celular el wrapper se disuelve (contents) y el orden queda
+                radar, stats, mapa: el mapa de posiciones es lo que menos se consulta. */}
+            <div className="contents lg:flex lg:flex-col lg:w-[280px] lg:shrink-0 lg:space-y-4">
+              <div className="order-1 lg:order-none bg-raised rounded-xl p-4 border border-line/[0.12] flex items-center justify-center">
                 <RadarChart player={player} isGK={isGK} />
               </div>
 
               {!isGK && (
-                <div className="bg-raised rounded-xl p-4 border border-line/[0.12] shadow-sm">
+                <div className="order-3 lg:order-none bg-raised rounded-xl p-4 border border-line/[0.12]">
                   <PosicionHeatmap player={player} />
                 </div>
               )}
             </div>
 
-            {/* LADO DERECHO: STATS EN GRILLA */}
-            <div className="flex-1 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Stats en dos columnas que se equilibran por alto (columns), sin huecos entre bloques de 2 y de 6 filas. */}
+            <div className="order-2 lg:order-none flex-1 min-w-0">
+              <div className="sm:columns-2 gap-4">
                 {(isGK ? Object.entries(STATS_PORTERO) : Object.entries(STATS_JUGADOR_CAMPO))
                   .filter(([, statKeys]) => statKeys.length > 0)
                   .map(([title, statKeys]) => (
@@ -863,6 +859,7 @@ export const PlayerModal = memo(function PlayerModal({
               ) : (
                 similarPlayers.map(simPlayer => {
                   const ovrDiff = (simPlayer.OVR_CALCULADO || 0) - (player.OVR_CALCULADO || 0);
+                  const priceDiff = (simPlayer.Precio || 0) - (player.Precio || 0);
 
                   return (
                     <button
@@ -901,23 +898,24 @@ export const PlayerModal = memo(function PlayerModal({
                       </div>
 
                       <div className="pt-2 border-t border-line/15 flex items-center justify-between text-xs">
-                        <div className="font-display num text-sm font-semibold text-ink">
-                          {formatPriceShort(simPlayer.Precio)}
+                        <div className="min-w-0">
+                          <div className="font-display num text-sm font-semibold text-ink">{formatPriceShort(simPlayer.Precio)}</div>
+                          {Math.abs(priceDiff) >= 0.05 && (
+                            <div className="num text-[11px] text-ink-3">
+                              {formatPriceShort(Math.abs(priceDiff))} {priceDiff < 0 ? 'menos' : 'más'}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-[11px] font-medium px-1 rounded ${ovrDiff > 0 ? 'text-success-soft bg-success/10' : ovrDiff < 0 ? 'text-ink-3 bg-white/[0.04]' : 'text-ink-3'}`}>
-                            {ovrDiff > 0 ? `+${ovrDiff}` : ovrDiff === 0 ? '=' : ovrDiff} OVR
-                          </span>
-                          <span className="text-xs text-ink-3 font-medium tabular-nums">
-                            {Math.round(simPlayer.similarityScore)}%
-                          </span>
-                        </div>
+                        <span className={`num text-[11px] font-medium ${ovrDiff > 0 ? 'text-success-soft' : 'text-ink-3'}`}>
+                          {ovrDiff === 0 ? 'Mismo OVR' : `${ovrDiff > 0 ? '+' : '−'}${Math.abs(ovrDiff)} OVR`}
+                        </span>
                       </div>
                     </button>
                   );
                 })
               )}
             </div>
+          </div>
           </div>
         </div>
       </div>

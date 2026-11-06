@@ -82,8 +82,11 @@ export function useModalDialog(dialogRef, isOpen, onClose) {
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keydown', handleStackedEscape, true);
+    // A dialog can name where focus starts with [data-modal-start] (PlayerModal: its content, so the close button
+    // does not open with a focus ring when the user did not use the keyboard).
+    const start = dialogRef.current?.querySelector?.('[data-modal-start]');
     const firstFocusable = getFocusableElements()[0];
-    (firstFocusable || dialogRef.current)?.focus();
+    (start || firstFocusable || dialogRef.current)?.focus({ preventScroll: true });
 
     return () => {
       const index = openDialogs.indexOf(dialogToken);
