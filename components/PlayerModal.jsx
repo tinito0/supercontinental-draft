@@ -83,27 +83,16 @@ const PosicionHeatmap = memo(function PosicionHeatmap({ player }) {
 const RadarChart = memo(function RadarChart({ player, isGK }) {
 
   const { data, options } = useMemo(() => {
-    const rawLabels = isGK
-      ? ['TIR', 'PAS', 'FÍS', 'POR', 'RIT', 'REG']
-      : ['TIR', 'PAS', 'FÍS', 'DEF', 'RIT', 'REG'];
-
-    const dataValues = isGK
-      ? [
-          player.STAT_SHO,
-          player.STAT_PAS,
-          player.STAT_STR,
-          player.STAT_GK,
-          player.STAT_SPD,
-          player.STAT_DRI,
-        ]
-      : [
-          player.STAT_SHO,
-          player.STAT_PAS,
-          player.STAT_STR,
-          player.STAT_DEF,
-          player.STAT_SPD,
-          player.STAT_DRI,
-        ];
+    // The game's hexagon (PES 2021 in Spanish), clockwise from the top: PAS, DIS, FIS, DEF, VEL, REG.
+    const rawLabels = ['PAS', 'DIS', 'FIS', isGK ? 'POR' : 'DEF', 'VEL', 'REG'];
+    const dataValues = [
+      player.STAT_PAS,
+      player.STAT_SHO,
+      player.STAT_STR,
+      isGK ? player.STAT_GK : player.STAT_DEF,
+      player.STAT_SPD,
+      player.STAT_DRI,
+    ];
 
     const labels = rawLabels.map((l, i) => `${l} ${dataValues[i] ?? 0}`);
 
@@ -162,7 +151,7 @@ const RadarChart = memo(function RadarChart({ player, isGK }) {
       >
         <Radar data={data} options={options} />
         <span className="sr-only">
-          Atributos principales: Disparo {player.STAT_SHO ?? 0}, Pase {player.STAT_PAS ?? 0}, Físico {player.STAT_STR ?? 0}, {isGK ? `Portero ${player.STAT_GK ?? 0}` : `Defensa ${player.STAT_DEF ?? 0}`}, Ritmo {player.STAT_SPD ?? 0}, Regate {player.STAT_DRI ?? 0}.
+          Atributos principales: Pase {player.STAT_PAS ?? 0}, Disparo {player.STAT_SHO ?? 0}, Físico {player.STAT_STR ?? 0}, {isGK ? `Portero ${player.STAT_GK ?? 0}` : `Defensa ${player.STAT_DEF ?? 0}`}, Velocidad {player.STAT_SPD ?? 0}, Regate {player.STAT_DRI ?? 0}.
         </span>
       </div>
     </div>

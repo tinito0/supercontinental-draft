@@ -1,8 +1,8 @@
 import React, { useMemo, memo } from 'react';
 import { Radar } from 'react-chartjs-2';
 import '../utils/chartSetup.js';
-import { X, Target, Check } from 'lucide-react';
-import { STAT_NAMES_MAP, STATS_JUGADOR_CAMPO, STATS_PORTERO, PLAYER_SKILLS_MAP } from '../utils/constants.js';
+import { X } from 'lucide-react';
+import { STAT_NAMES_MAP, STATS_JUGADOR_CAMPO, STATS_PORTERO, PLAYER_SKILLS_MAP, COM_STYLE_KEYS } from '../utils/constants.js';
 import { getPosColorClass, getStatAndOvrColorClass, formatPriceShort } from '../utils/helpers.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
@@ -14,10 +14,11 @@ const SIDE = {
   B: { line: 'rgb(245 158 11)', fill: 'rgba(245, 158, 11, 0.18)', dot: 'bg-warning', ring: 'ring-warning', text: 'text-warning-soft', chip: 'bg-warning/[0.12] text-warning-soft border-warning/30' },
 };
 
-// Summary attributes of the radar: [short label, full name, catalog key]. Spanish, as in the player list.
+// Summary attributes of the radar: [short label, full name, catalog key]. Same order and labels as the game's
+// hexagon (PES 2021 in Spanish, clockwise from the top: PAS, DIS, FIS, DEF, VEL, REG) and as PlayerModal.
 const RADAR_KEYS = {
-  field: [['TIR', 'Tiro', 'STAT_SHO'], ['PAS', 'Pase', 'STAT_PAS'], ['FÍS', 'Físico', 'STAT_STR'], ['DEF', 'Defensa', 'STAT_DEF'], ['VEL', 'Velocidad', 'STAT_SPD'], ['REG', 'Regate', 'STAT_DRI']],
-  gk: [['TIR', 'Tiro', 'STAT_SHO'], ['PAS', 'Pase', 'STAT_PAS'], ['FÍS', 'Físico', 'STAT_STR'], ['ARQ', 'Arquero', 'STAT_GK'], ['VEL', 'Velocidad', 'STAT_SPD'], ['REG', 'Regate', 'STAT_DRI']],
+  field: [['PAS', 'Pase', 'STAT_PAS'], ['DIS', 'Disparo', 'STAT_SHO'], ['FIS', 'Físico', 'STAT_STR'], ['DEF', 'Defensa', 'STAT_DEF'], ['VEL', 'Velocidad', 'STAT_SPD'], ['REG', 'Regate', 'STAT_DRI']],
+  gk: [['PAS', 'Pase', 'STAT_PAS'], ['DIS', 'Disparo', 'STAT_SHO'], ['FIS', 'Físico', 'STAT_STR'], ['POR', 'Portero', 'STAT_GK'], ['VEL', 'Velocidad', 'STAT_SPD'], ['REG', 'Regate', 'STAT_DRI']],
 };
 
 const RADAR_OPTIONS = {
@@ -42,7 +43,10 @@ const WEAK_FOOT_KEYS = new Set(['WeakFootAcc', 'WeakFootUsage']);
 const WEAK_FOOT_MAX = 4;
 
 const lastName = name => String(name || '').split(' ').pop();
-const skillsOf = player => Object.entries(PLAYER_SKILLS_MAP).filter(([key]) => player[key]).map(([, label]) => label);
+// Only skills: the seven COM playing styles share PLAYER_SKILLS_MAP (one of them is also called «Cañonero»).
+const skillsOf = player => [...new Set(Object.entries(PLAYER_SKILLS_MAP)
+  .filter(([key]) => player[key] && !COM_STYLE_KEYS.includes(key))
+  .map(([, label]) => label))];
 const toNumber = value => Number(value) || 0;
 const winnerOf = (a, b) => (a > b ? 'A' : b > a ? 'B' : null);
 const clampPercent = (value, floor) => Math.min(100, Math.max(floor, value));
@@ -55,7 +59,7 @@ function compareStats(statGroups, playerA, playerB) {
 function StatValue({ value, isWinner, side, tone }) {
   const colour = tone === 'quality' ? getStatAndOvrColorClass(value) : 'bg-overlay text-ink';
   return (
-    <span className={`min-w-9 px-1.5 py-0.5 rounded-md font-display num text-sm font-bold text-center ${colour} ${isWinner ? `ring-2 ring-offset-1 ring-offset-raised ${SIDE[side].ring}` : ''}`}>
+    <span className={`min-w-9 px-1.5 py-0.5 rounded-md font-display num text-sm font-bold text-center ${colour} ${isWinner ? '' : 'opacity-80'}`}>
       {value}
     </span>
   );
@@ -141,10 +145,8 @@ function PlayerHeader({ player, side, align }) {
         <div className={`flex items-center gap-x-2 gap-y-1 mt-1 flex-wrap ${isRight ? 'justify-end' : ''}`}>
           <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
           <span className="font-display num text-sm font-semibold text-ink">{formatPriceShort(player.Precio)}</span>
-          {player.PlayingStyle && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-xs text-ink-3">
-              <Target className="w-3 h-3" aria-hidden="true" />{player.PlayingStyle}
-            </span>
+          {player.PlayingStyle && player.PlayingStyle !== 'Ninguno' && (
+            <span className="hidden sm:inline text-xs text-ink-3">{player.PlayingStyle}</span>
           )}
         </div>
       </div>
@@ -152,23 +154,22 @@ function PlayerHeader({ player, side, align }) {
   );
 }
 
-/** "Mejor en N" per side, so the overall answer is readable before scrolling through every attribute. */
+/** "Kane mejor en 13", with the name and not only the colour, so the overall answer reads before scrolling. */
 function Tally({ winners, names }) {
   const count = side => winners.filter(w => w === side).length;
   const ties = winners.filter(w => w === null).length;
   const side = key => (
-    <span className="flex items-center gap-1.5">
-      <span className={`w-2 h-2 rounded-full ${SIDE[key].dot}`} aria-hidden="true" />
-      <span className="text-ink-3">Mejor en</span>
-      <span className={`font-display num text-sm font-bold ${SIDE[key].text}`}>{count(key)}</span>
-      <span className="sr-only">atributos: {names[key]}</span>
+    <span className="min-w-0 truncate">
+      <span className={`font-semibold ${SIDE[key].text}`}>{names[key]}</span>
+      <span className="text-ink-3"> mejor en </span>
+      <span className="font-display num text-sm font-bold text-ink">{count(key)}</span>
     </span>
   );
   return (
-    <div className="flex items-center justify-between gap-2 px-3 sm:px-4 pb-2.5 text-xs">
+    <div className="flex items-center justify-between gap-3 px-3 sm:px-4 pb-2.5 text-xs">
       {side('A')}
-      {ties > 0 && <span className="text-ink-3"><span className="num">{ties}</span> {ties === 1 ? 'igual' : 'iguales'}</span>}
-      <span className="flex flex-row-reverse">{side('B')}</span>
+      {ties > 0 && <span className="shrink-0 text-ink-3"><span className="num">{ties}</span> {ties === 1 ? 'igual' : 'iguales'}</span>}
+      <span className="min-w-0 text-right">{side('B')}</span>
     </div>
   );
 }
@@ -195,20 +196,15 @@ function RadarSummary({ keys, playerA, playerB, names }) {
   );
 }
 
-function SkillList({ player, skills, otherSkills, side }) {
+/** One group of skills: only one player's (in that player's colour) or the ones both have (neutral). */
+function SkillList({ title, skills, chipClass, emptyText }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-semibold text-ink-2">{player.Name} <span className="num text-ink-3">({skills.length})</span></p>
+      <p className="text-xs font-semibold text-ink-2">{title} <span className="num text-ink-3">({skills.length})</span></p>
       <ul className="flex flex-wrap gap-1.5">
-        {skills.length > 0 ? skills.map(skill => {
-          const isShared = otherSkills.includes(skill);
-          return (
-            <li key={skill} className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md border ${isShared ? 'bg-overlay text-ink-2 border-line/20' : SIDE[side].chip}`}>
-              {skill}
-              {isShared && <><Check className="w-3 h-3" aria-hidden="true" /><span className="sr-only">(en común)</span></>}
-            </li>
-          );
-        }) : <li className="text-xs text-ink-3">Sin habilidades especiales</li>}
+        {skills.length > 0 ? skills.map(skill => (
+          <li key={skill} className={`text-xs font-medium px-2.5 py-1 rounded-md border ${chipClass}`}>{skill}</li>
+        )) : <li className="text-xs text-ink-3">{emptyText}</li>}
       </ul>
     </div>
   );
@@ -249,6 +245,9 @@ function ComparisonContent({ onClose, playerA, playerB }) {
 
   const skillsA = useMemo(() => skillsOf(playerA), [playerA]);
   const skillsB = useMemo(() => skillsOf(playerB), [playerB]);
+  const sharedSkills = skillsA.filter(skill => skillsB.includes(skill));
+  const onlyA = skillsA.filter(skill => !skillsB.includes(skill));
+  const onlyB = skillsB.filter(skill => !skillsA.includes(skill));
   const winners = useMemo(() => compareStats(statGroups, playerA, playerB), [statGroups, playerA, playerB]);
   const ovrDiff = toNumber(playerA.OVR_CALCULADO) - toNumber(playerB.OVR_CALCULADO);
   const leader = winnerOf(ovrDiff, 0);
@@ -267,12 +266,17 @@ function ComparisonContent({ onClose, playerA, playerB }) {
         <div className="border-b border-line/[0.12] shrink-0">
           <div className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4 pb-2.5 sm:pb-3">
             <PlayerHeader player={playerA} side="A" align="left" />
-            <div className="shrink-0 text-center px-1">
-              <p className="text-[11px] font-semibold text-ink-3 uppercase tracking-wider">Media</p>
-              <p className={`font-display num text-lg font-bold leading-tight ${leader ? SIDE[leader].text : 'text-ink-2'}`}>
-                {leader ? `+${Math.abs(ovrDiff)}` : '='}
-              </p>
-              <p className="text-[11px] text-ink-3 max-w-[5.5rem] truncate">{leader ? names[leader] : 'Igual'}</p>
+            <div className="shrink-0 text-center px-1 max-w-[6.5rem]">
+              {leader ? (
+                <>
+                  <p className={`text-xs font-semibold truncate ${SIDE[leader].text}`}>{names[leader]}</p>
+                  <p className="text-[11px] text-ink-3 whitespace-nowrap">
+                    <span className="font-display num text-base font-bold text-ink">+{Math.abs(ovrDiff)}</span> de media
+                  </p>
+                </>
+              ) : (
+                <p className="text-[11px] text-ink-3">Misma media</p>
+              )}
             </div>
             <PlayerHeader player={playerB} side="B" align="right" />
             <button type="button" onClick={onClose} aria-label="Cerrar comparador" title="Cerrar"
@@ -283,9 +287,11 @@ function ComparisonContent({ onClose, playerA, playerB }) {
           <Tally winners={winners} names={names} />
         </div>
 
-        {/* Focusable so keyboard users can scroll it: the close button is the dialog's only control. */}
+        {/* Focusable so keyboard users can scroll it, and where focus starts (data-modal-start, useModalDialog): the
+            close button no longer opens with a focus ring. */}
         <div
-          className="flex-grow overflow-y-auto overscroll-contain p-4 sm:p-6 custom-scrollbar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+          data-modal-start
+          className="flex-grow overflow-y-auto overscroll-contain p-4 sm:p-6 custom-scrollbar"
           tabIndex={0}
           role="region"
           aria-label="Detalle de la comparación"
@@ -294,7 +300,7 @@ function ComparisonContent({ onClose, playerA, playerB }) {
             <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-0 lg:self-start">
               <section className="well p-4" aria-labelledby="compare-radar">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <h4 id="compare-radar" className="section-title text-sm">Resumen</h4>
+                  <h4 id="compare-radar" className="text-sm font-semibold text-ink">Resumen</h4>
                   <Legend names={names} />
                 </div>
                 <div className="relative w-full h-[230px] flex items-center justify-center" aria-hidden="true">
@@ -304,7 +310,7 @@ function ComparisonContent({ onClose, playerA, playerB }) {
               </section>
 
               <section className="well p-4" aria-labelledby="compare-profile">
-                <h4 id="compare-profile" className="section-title text-center text-sm mb-2">Perfil</h4>
+                <h4 id="compare-profile" className="text-sm font-semibold text-ink mb-2">Perfil</h4>
                 {PROFILE_ROWS.map(([label, key, unit, min, max]) => (
                   <ProfileRow key={key} label={label} valA={playerA[key]} valB={playerB[key]} unit={unit} min={min} max={max} names={names} />
                 ))}
@@ -315,7 +321,7 @@ function ComparisonContent({ onClose, playerA, playerB }) {
             <div className="lg:col-span-8 md:columns-2 md:gap-4">
               {Object.entries(statGroups).map(([groupName, statKeys]) => (
                 <section key={groupName} className="well p-4 mb-4 break-inside-avoid">
-                  <h4 className="section-title text-center text-sm mb-2">{groupName}</h4>
+                  <h4 className="text-sm font-semibold text-ink mb-2">{groupName}</h4>
                   {statKeys.map(key => (
                     <StatBarRow key={key} label={STAT_NAMES_MAP[key] || key} valA={playerA[key]} valB={playerB[key]}
                       names={names} isWeakFoot={WEAK_FOOT_KEYS.has(key)} />
@@ -327,14 +333,15 @@ function ComparisonContent({ onClose, playerA, playerB }) {
 
           <section className="well p-4 mt-0 lg:mt-1" aria-labelledby="compare-skills">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-line/[0.12]">
-              <h4 id="compare-skills" className="section-title text-sm">
-                Habilidades especiales <span className="num text-ink-3 font-sans font-normal normal-case tracking-normal">({skillsA.length} vs {skillsB.length})</span>
+              <h4 id="compare-skills" className="text-sm font-semibold text-ink">
+                Habilidades especiales <span className="num text-ink-3 font-normal">({skillsA.length} vs {skillsB.length})</span>
               </h4>
               <Legend names={names} />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SkillList player={playerA} skills={skillsA} otherSkills={skillsB} side="A" />
-              <SkillList player={playerB} skills={skillsB} otherSkills={skillsA} side="B" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <SkillList title={`Solo ${names.A}`} skills={onlyA} chipClass={SIDE.A.chip} emptyText="Ninguna propia" />
+              <SkillList title="Las tienen los dos" skills={sharedSkills} chipClass="bg-overlay text-ink-2 border-line/20" emptyText="Ninguna en común" />
+              <SkillList title={`Solo ${names.B}`} skills={onlyB} chipClass={SIDE.B.chip} emptyText="Ninguna propia" />
             </div>
           </section>
         </div>
