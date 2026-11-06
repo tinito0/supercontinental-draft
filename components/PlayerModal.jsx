@@ -1,5 +1,5 @@
 import React, { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { X, Eye, MinusCircle, DollarSign, Lock, CheckCircle, ChevronRight, PieChart, Shield, Zap, Activity, Trash2, AlertTriangle, Handshake, Crown } from 'lucide-react';
+import { X, Eye, MinusCircle, DollarSign, Lock, CheckCircle, ChevronRight, PieChart, Shield, Zap, Activity, Trash2, AlertTriangle, Handshake, Crown, Star } from 'lucide-react';
 import { Radar, Bar, Doughnut } from 'react-chartjs-2';
 import '../utils/chartSetup.js';
 import { BaseModal } from './ui/BaseModal.jsx';
@@ -391,7 +391,9 @@ export const PlayerModal = memo(function PlayerModal({
   isVisitor,
   marketStatus,
   isMarketOpen = true,
-  isFranchisePlayer
+  isFranchisePlayer,
+  isWishlisted = false,
+  onToggleWishlist,
 }) {
   const [isSigning, setIsSigning] = useState(false);
   // A second tap before the button re-renders as disabled must not send a second signing (the server answered 409
@@ -400,6 +402,8 @@ export const PlayerModal = memo(function PlayerModal({
   const [showCelebration, setShowCelebration] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
   const [showProposalModal, setShowProposalModal] = useState(false);
+  // Counts favourites added in this modal: the pop plays on the tap, not when it opens on an existing favourite.
+  const [favPops, setFavPops] = useState(0);
 
   // Al pasar a otro jugador (perfiles similares) la ficha arranca desde arriba, no desde donde estaba el scroll.
   const scrollRef = useRef(null);
@@ -411,6 +415,7 @@ export const PlayerModal = memo(function PlayerModal({
     setShowCelebration(false);
     setIsReleasing(false);
     setShowProposalModal(false);
+    setFavPops(0);
   }, [player?.Id]);
 
   const meetsFranchiseCriteria = isFranchiseEligible(player);
@@ -705,7 +710,28 @@ export const PlayerModal = memo(function PlayerModal({
     >
       <div className="flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] relative">
         {/* La X vive en su propia barra, fuera del scroll: flotando encima tapaba el presupuesto y los valores. */}
-        <div className="shrink-0 flex justify-end px-2 pt-2 sm:px-3 sm:pt-3">
+        <div className="shrink-0 flex justify-end gap-1 px-2 pt-2 sm:px-3 sm:pt-3">
+          {/* Favoritos en cualquier estado del jugador (libre, en tu plantel o fichado por otro): sirve para seguirlo
+              y proponerle un traspaso más adelante. */}
+          {onToggleWishlist && !isVisitor && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!isWishlisted) setFavPops(n => n + 1);
+                onToggleWishlist(player.Id);
+              }}
+              aria-pressed={isWishlisted}
+              aria-label="Favorito"
+              className={`min-h-11 px-3 inline-flex items-center gap-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-raised ${isWishlisted ? 'text-warning-soft' : 'text-ink-3 hover:text-ink'}`}
+            >
+              {/* transitions.dev «Like button» sin partículas: la estrella se llena y da un pop solo al agregar. El
+                  pop va en el span, no en el svg (Chromium rasteriza un svg transformado). */}
+              <span key={isWishlisted ? `on-${favPops}` : 'off'} className={`inline-flex ${isWishlisted && favPops > 0 ? 'fav-pop' : ''}`} aria-hidden="true">
+                <Star className="w-4 h-4" fill={isWishlisted ? 'currentColor' : 'none'} />
+              </span>
+              <span key={isWishlisted ? 'label-on' : 'label-off'} className="status-swap">{isWishlisted ? 'En favoritos' : 'Favorito'}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}

@@ -2074,6 +2074,8 @@ function App() {
         remainingBudget={remainingBudget}
         isInMyCart={selectedPlayer && ownedCart.some(p => p.Id === selectedPlayer.Id)}
         isFranchisePlayer={selectedPlayer && playerLocks[selectedPlayer.Id]?.isFranchise}
+        isWishlisted={Boolean(selectedPlayer && wishlistSet.has(selectedPlayer.Id))}
+        onToggleWishlist={toggleWishlist}
         onRemoveFromCart={handleRemoveFromCart}
         allPlayers={allPlayers}
         onPlayerSwitch={(p) => setSelectedPlayerId(p.Id)}
