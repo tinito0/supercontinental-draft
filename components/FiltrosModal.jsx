@@ -1,11 +1,12 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, HelpCircle, RotateCcw, Save, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, HelpCircle, RotateCcw, Save, Search, X } from 'lucide-react';
 import { addDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { DETAILED_STAT_KEYS, FILTER_SKILL_KEYS, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
 import { getActiveFilterChips, isInvertedRange, VERSATILE_LEVELS, VERSATILE_MAX, VERSATILE_POSITIONS } from '../utils/marketFilters.js';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { ActiveFilterChips } from './marketplace/ActiveFilterChips.jsx';
 import { PlayerGlossary } from './marketplace/PlayerGlossary.jsx';
+import { SoftValue } from './ui/SoftValue.jsx';
 
 // Label colours a manager can give a saved filter (stored by id in Firestore; ids must not change).
 const filterColors = [
@@ -17,11 +18,15 @@ const filterColors = [
   { id: 'yellow', dot: 'bg-yellow-400', label: 'Amarillo' },
 ];
 
+// [label, min key, max key, possible range shown in the label]. Placeholders are always «Mín» / «Máx»: «0» and «99» in
+// grey read as values already typed.
 const RANGES = [
-  ['Media (OVR)', 'ovrMin', 'ovrMax', '0', '99'],
-  ['Edad', 'ageMin', 'ageMax', '15', '45'],
-  ['Precio ($M)', 'priceMin', 'priceMax', 'Mín', 'Máx'],
+  ['Media', 'ovrMin', 'ovrMax', '0 a 99'],
+  ['Edad', 'ageMin', 'ageMax', '15 a 45'],
+  ['Precio', 'priceMin', 'priceMax', 'en millones'],
 ];
+
+const SECTION_TITLE = 'text-sm font-semibold text-ink';
 
 const ToggleButton = memo(function ToggleButton({ label, value, onToggle, isChecked, disabled = false, title, className = '' }) {
   return (
@@ -33,40 +38,81 @@ const ToggleButton = memo(function ToggleButton({ label, value, onToggle, isChec
   );
 });
 
-function RangeInputs({ label, minKey, maxKey, minPlaceholder, maxPlaceholder, filters, onChange }) {
+function RangeInputs({ label, hint, minKey, maxKey, filters, onChange }) {
   const isInverted = isInvertedRange(filters[minKey], filters[maxKey]);
   const errorId = `${minKey}-error`;
   const invalidProps = isInverted ? { 'aria-invalid': true, 'aria-describedby': errorId } : {};
   return (
     <fieldset>
-      <legend className="field-label">{label}</legend>
+      <legend className="field-label">{label}{hint && <span className="font-normal text-ink-3"> ({hint})</span>}</legend>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <input type="number" inputMode="numeric" min="0" aria-label={`${label} mínimo`} placeholder={minPlaceholder} value={filters[minKey]} onChange={e => onChange(minKey, e.target.value)} className="input num" {...invalidProps} />
+        <input type="number" inputMode="numeric" min="0" aria-label={`${label} mínimo`} placeholder="Mín" value={filters[minKey]} onChange={e => onChange(minKey, e.target.value)} className="input num" {...invalidProps} />
         <span className="text-ink-3" aria-hidden="true">–</span>
-        <input type="number" inputMode="numeric" min="0" aria-label={`${label} máximo`} placeholder={maxPlaceholder} value={filters[maxKey]} onChange={e => onChange(maxKey, e.target.value)} className="input num" {...invalidProps} />
+        <input type="number" inputMode="numeric" min="0" aria-label={`${label} máximo`} placeholder="Máx" value={filters[maxKey]} onChange={e => onChange(maxKey, e.target.value)} className="input num" {...invalidProps} />
       </div>
       {isInverted && <p id={errorId} className="field-error">El mínimo es mayor que el máximo: no va a haber resultados.</p>}
     </fieldset>
   );
 }
 
-/** Collapsible group: a heading button, no box around it (hairline between groups). */
-function FilterSection({ id, title, description, defaultOpen = true, open, onOpenChange, children }) {
-  const [innerOpen, setInnerOpen] = useState(defaultOpen);
-  const isControlled = open !== undefined;
-  const isOpen = isControlled ? open : innerOpen;
-  const toggle = () => (isControlled ? onOpenChange(!open) : setInnerOpen(prev => !prev));
+/** One attribute per row (name, min, max): stacked fieldsets made the open section about 5,500 px tall on a phone. */
+function StatRangeRow({ statKey, filters, onChange }) {
+  const label = STAT_NAMES_MAP[statKey] || statKey;
+  const minKey = `${statKey}Min`;
+  const maxKey = `${statKey}Max`;
+  const isInverted = isInvertedRange(filters[minKey], filters[maxKey]);
+  const errorId = `${minKey}-error`;
+  const invalidProps = isInverted ? { 'aria-invalid': true, 'aria-describedby': errorId } : {};
+  return (
+    <div>
+      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_auto_4.5rem] items-center gap-2">
+        <span className="text-sm text-ink-2 truncate" title={label}>{label}</span>
+        <input type="number" inputMode="numeric" min="0" max="99" aria-label={`${label} mínimo`} placeholder="Mín" value={filters[minKey]}
+          onChange={e => onChange(statKey, 'Min', e.target.value)} className="input num px-2 text-center" {...invalidProps} />
+        <span className="text-ink-3" aria-hidden="true">–</span>
+        <input type="number" inputMode="numeric" min="0" max="99" aria-label={`${label} máximo`} placeholder="Máx" value={filters[maxKey]}
+          onChange={e => onChange(statKey, 'Max', e.target.value)} className="input num px-2 text-center" {...invalidProps} />
+      </div>
+      {isInverted && <p id={errorId} className="field-error">El mínimo es mayor que el máximo.</p>}
+    </div>
+  );
+}
+
+/**
+ * Collapsible group: a heading button, no box around it (hairline between groups). Opens like transitions.dev
+ * «Accordion»: the row grows from 0fr to 1fr while the content fades, so what is below slides instead of jumping.
+ * The closed content is `inert` (out of the tab order and the accessibility tree).
+ */
+function FilterSection({ id, title, description, defaultOpen = true, children }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const panelId = id ? `${id}-panel` : undefined;
   return (
     <section id={id} className="border-t border-line/[0.08] pt-4 first:border-t-0 first:pt-0 scroll-mt-4">
-      <button type="button" id={id ? `${id}-toggle` : undefined} onClick={toggle} aria-expanded={isOpen} className="min-h-11 w-full flex items-center justify-between gap-3 text-left">
+      <button type="button" onClick={() => setIsOpen(prev => !prev)} aria-expanded={isOpen} aria-controls={panelId}
+        className="min-h-11 w-full flex items-center justify-between gap-3 text-left">
         <span>
-          <span className="section-title block">{title}</span>
+          <span className={`${SECTION_TITLE} block`}>{title}</span>
           {description && <span className="block text-xs text-ink-3 mt-0.5">{description}</span>}
         </span>
-        <ChevronDown className={`w-5 h-5 text-ink-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+        <ChevronDown className={`w-5 h-5 text-ink-3 transition-transform duration-move ease-out ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
-      {isOpen && <div className="pt-4 animate-in fade-in">{children}</div>}
+      <div id={panelId} inert={isOpen ? undefined : ''}
+        className={`grid transition-[grid-template-rows,opacity] duration-move ease-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="pt-4">{children}</div>
+        </div>
+      </div>
     </section>
+  );
+}
+
+/** «¿Qué es?» link that opens the glossary right below it (it used to jump to a separate section at the bottom). */
+function GlossaryLink({ label, isOpen, onToggle }) {
+  return (
+    <button type="button" onClick={onToggle} aria-expanded={isOpen}
+      className="inline-flex items-center gap-1 min-h-11 -my-2 px-1 text-xs font-semibold text-accent-soft hover:text-ink">
+      <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />{isOpen ? 'Ocultar' : label}
+    </button>
   );
 }
 
@@ -89,7 +135,9 @@ export const FiltrosModal = memo(function FiltrosModal({
   const [selectedColor, setSelectedColor] = useState('cyan');
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
-  const [glossaryOpen, setGlossaryOpen] = useState(false);
+  // Which «¿Qué es?» link has the glossary open: 'style', 'skills' or null.
+  const [glossaryAt, setGlossaryAt] = useState(null);
+  const toggleGlossary = where => setGlossaryAt(prev => (prev === where ? null : where));
   const savingFilterRef = useRef(false);
   const activeChips = useMemo(() => getActiveFilterChips(filters), [filters]);
 
@@ -152,28 +200,19 @@ export const FiltrosModal = memo(function FiltrosModal({
     return { ...prev, versatilePos: [...current, pos] };
   });
   const handleStatRangeChange = (key, type, val) => setFilters(prev => ({ ...prev, [`${key}${type}`]: val }));
-  const showGlossary = () => {
-    setGlossaryOpen(true);
-    // The section mounts its content on the same render; wait a frame so there is something to scroll to.
-    // Focus follows the view, so keyboard and screen-reader users land on the glossary too.
-    requestAnimationFrame(() => {
-      document.getElementById('filters-glossary')?.scrollIntoView({ block: 'start' });
-      document.getElementById('filters-glossary-toggle')?.focus({ preventScroll: true });
-    });
-  };
   // Enter in a field applies the filters; it never submits anything else or closes the dialog by itself.
   const onFieldKeyDown = e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); };
 
   // No early return while hidden: BaseModal needs isOpen to go false to play its exit.
   const footer = (
     <div className="w-full flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pb-[env(safe-area-inset-bottom)]">
-      <button type="button" onClick={resetFilters} className="btn btn-ghost text-danger-soft hover:text-danger-soft">
+      <button type="button" onClick={resetFilters} className="btn btn-ghost">
         <RotateCcw className="w-4 h-4" aria-hidden="true" />Limpiar filtros
       </button>
       <button type="button" onClick={onClose} className="btn btn-primary min-h-12 sm:px-8">
         <Search className="w-4 h-4" aria-hidden="true" />
         {typeof resultCount === 'number'
-          ? <>Ver <span className="num">{resultCount.toLocaleString('es-AR')}</span> {resultCount === 1 ? 'jugador' : 'jugadores'}</>
+          ? <>Ver <SoftValue value={resultCount.toLocaleString('es-AR')} className="num" /> {resultCount === 1 ? 'jugador' : 'jugadores'}</>
           : 'Ver resultados'}
       </button>
     </div>
@@ -186,24 +225,36 @@ export const FiltrosModal = memo(function FiltrosModal({
       size="2xl"
       title="Filtros"
       subtitle={activeChips.length ? `${activeChips.length} ${activeChips.length === 1 ? 'filtro activo' : 'filtros activos'}` : 'Sin filtros aplicados'}
-      icon={SlidersHorizontal}
       footer={footer}
       className="h-[94dvh] sm:h-[88dvh]"
       contentClassName="p-4 sm:p-6"
     >
-      <div className="space-y-6" onKeyDown={onFieldKeyDown}>
+      {/* Focus starts here (data-modal-start, useModalDialog), so the close button does not open with a focus ring. */}
+      <div className="space-y-6" onKeyDown={onFieldKeyDown} data-modal-start tabIndex={-1}>
         <ActiveFilterChips chips={activeChips} setFilters={setFilters} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <section className="lg:col-span-5 space-y-4" aria-labelledby="filters-ranges">
-            <h3 id="filters-ranges" className="eyebrow">Rangos</h3>
-            {RANGES.map(([label, minKey, maxKey, minPlaceholder, maxPlaceholder]) => (
-              <RangeInputs key={label} label={label} minKey={minKey} maxKey={maxKey} minPlaceholder={minPlaceholder} maxPlaceholder={maxPlaceholder} filters={filters} onChange={handleNumericChange} />
-            ))}
-          </section>
+          {/* Left column: ranges and the field lines, so it is about as tall as the profile column on the right. */}
+          <div className="lg:col-span-5 space-y-6">
+            <section className="space-y-4" aria-labelledby="filters-ranges">
+              <h3 id="filters-ranges" className={SECTION_TITLE}>Rangos</h3>
+              {RANGES.map(([label, minKey, maxKey, hint]) => (
+                <RangeInputs key={label} label={label} hint={hint} minKey={minKey} maxKey={maxKey} filters={filters} onChange={handleNumericChange} />
+              ))}
+            </section>
+
+            <section aria-labelledby="filters-lines">
+              <h3 id="filters-lines" className={`${SECTION_TITLE} mb-3`}>Líneas del campo</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {['Delanteros', 'Mediocampistas', 'Defensores', 'Arqueros'].map(g => (
+                  <ToggleButton key={g} label={g} value={g} onToggle={handleGroupToggle} isChecked={filters.grupos[g]} />
+                ))}
+              </div>
+            </section>
+          </div>
 
           <section className="lg:col-span-7 space-y-4" aria-labelledby="filters-identity">
-            <h3 id="filters-identity" className="eyebrow">Perfil del jugador</h3>
+            <h3 id="filters-identity" className={SECTION_TITLE}>Perfil del jugador</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label>
                 <span className="field-label">Posición</span>
@@ -248,14 +299,13 @@ export const FiltrosModal = memo(function FiltrosModal({
               <div className="sm:col-span-2">
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor="filter-playing-style" className="field-label">Estilo de juego</label>
-                  <button type="button" onClick={showGlossary} className="inline-flex items-center gap-1 min-h-11 -my-2 px-1 text-xs font-semibold text-accent-soft hover:text-ink">
-                    <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />¿Qué es?
-                  </button>
+                  <GlossaryLink label="¿Qué es?" isOpen={glossaryAt === 'style'} onToggle={() => toggleGlossary('style')} />
                 </div>
                 <select id="filter-playing-style" value={filters.playingStyle} onChange={e => setFilters(p => ({ ...p, playingStyle: e.target.value }))} className="select">
                   <option value="">Cualquiera</option>
                   {uniquePlayingStyles.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
+                {glossaryAt === 'style' && <div className="mt-3 well p-3 animate-in fade-in"><PlayerGlossary /></div>}
               </div>
               <fieldset className="sm:col-span-2">
                 <legend className="field-label">Juega de</legend>
@@ -283,25 +333,15 @@ export const FiltrosModal = memo(function FiltrosModal({
           </section>
         </div>
 
-        <section aria-labelledby="filters-lines">
-          <h3 id="filters-lines" className="eyebrow mb-3">Líneas del campo</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {['Delanteros', 'Mediocampistas', 'Defensores', 'Arqueros'].map(g => (
-              <ToggleButton key={g} label={g} value={g} onToggle={handleGroupToggle} isChecked={filters.grupos[g]} />
-            ))}
-          </div>
-        </section>
-
         <div className="space-y-4 border-t border-line/[0.08] pt-4">
           <FilterSection title="Atributos" description="Rangos finos por atributo." defaultOpen={false}>
             <div className="space-y-5">
               {Object.entries(DETAILED_STAT_KEYS).map(([groupName, stats]) => (
                 <div key={groupName}>
-                  <h4 className="eyebrow mb-2">{groupName}</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3">
+                  <h4 className="text-xs font-semibold text-ink-3 mb-2">{groupName}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
                     {stats.map(key => (
-                      <RangeInputs key={key} label={STAT_NAMES_MAP[key] || key} minKey={`${key}Min`} maxKey={`${key}Max`} minPlaceholder="Mín" maxPlaceholder="Máx"
-                        filters={filters} onChange={(k, v) => handleStatRangeChange(key, k.endsWith('Min') ? 'Min' : 'Max', v)} />
+                      <StatRangeRow key={key} statKey={key} filters={filters} onChange={handleStatRangeChange} />
                     ))}
                   </div>
                 </div>
@@ -310,21 +350,20 @@ export const FiltrosModal = memo(function FiltrosModal({
           </FilterSection>
 
           <FilterSection title="Habilidades" description="Skills puntuales del jugador." defaultOpen={false}>
-            <button type="button" onClick={showGlossary} className="inline-flex items-center gap-1 min-h-11 -mt-2 mb-1 text-xs font-semibold text-accent-soft hover:text-ink">
-              <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />¿Qué hace cada una?
-            </button>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="-mt-2 mb-2">
+              <GlossaryLink label="¿Qué hace cada una?" isOpen={glossaryAt === 'skills'} onToggle={() => toggleGlossary('skills')} />
+            </div>
+            {glossaryAt === 'skills' && <div className="mb-3 well p-3 animate-in fade-in"><PlayerGlossary /></div>}
+            {/* Chips that wrap: one full-width button per skill made a list of about 40 rows on a phone. */}
+            <div className="flex flex-wrap gap-2">
               {FILTER_SKILL_KEYS.map(key => (
                 <ToggleButton key={key} label={PLAYER_SKILLS_MAP[key]} value={key} onToggle={handleSkillToggle} isChecked={filters.skills[key]} />
               ))}
             </div>
           </FilterSection>
 
-          <FilterSection id="filters-glossary" title="¿Qué es?" description="Qué hace cada estilo de juego y cada habilidad." open={glossaryOpen} onOpenChange={setGlossaryOpen}>
-            <PlayerGlossary />
-          </FilterSection>
-
           <FilterSection title="Filtros guardados" description={userId ? 'Cargá un filtro guardado o guardá el armado actual.' : 'Iniciá sesión para guardar filtros.'}>
+            {userId && (<>
             <div className="flex flex-wrap gap-2 min-h-11">
               {isLoadingFilters ? (
                 [0, 1, 2].map(i => <div key={i} className="skeleton w-24 h-10" aria-hidden="true" />)
@@ -372,6 +411,7 @@ export const FiltrosModal = memo(function FiltrosModal({
                 <Save className="w-4 h-4" aria-hidden="true" />Guardar
               </button>
             </div>
+            </>)}
           </FilterSection>
         </div>
       </div>
