@@ -39,6 +39,17 @@ describe('clubPage', () => {
     expect(page).toMatchObject({ image: 'https://img.test/estadio.jpg', largeImage: true });
   });
 
+  it('prefers the club card over the stadium photo', () => {
+    const page = clubPage(team, { profile: { stadiumPhotoUrl: 'https://img.test/estadio.jpg' } }, SITE, { card: '/og/clubs/u01.png' });
+    expect(page).toMatchObject({ image: 'https://example.test/og/clubs/u01.png', largeImage: true });
+  });
+
+  it('falls back to the league image for a club with the placeholder crest and no card', () => {
+    const page = clubPage({ ...team, logoUrl: '/logo.webp' }, null, SITE);
+    expect(page.image).toBeNull();
+    expect(shareTags(page, SITE)).toContain('og/liga.png');
+  });
+
   it('uses the club card as a large image when there is no stadium photo', () => {
     const page = clubPage(team, null, SITE, { card: '/og/clubs/u01.png' });
     expect(page).toMatchObject({ image: 'https://example.test/og/clubs/u01.png', largeImage: true });

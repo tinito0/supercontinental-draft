@@ -1,6 +1,6 @@
 // Vistas previas de links (WhatsApp, Telegram, X…) por página de la web de la liga. Esas apps no ejecutan JavaScript:
 // leen las etiquetas del HTML que devuelve el hosting. scripts/build-share-pages.mjs escribe, después del build, un
-// HTML por página (dist/torneo.html, dist/equipos/{id}.html, …) con este bloque de etiquetas; firebase.json
+// HTML por página (dist/torneo.html, dist/equipos/{id}.html, …) con este bloque de etiquetas; vercel.json
 // `cleanUrls` los sirve en /torneo y /equipos/{id}. Puro; tests/sharePages.test.js.
 
 export const SITE_URL = 'https://supercontinental-draft.vercel.app';
@@ -55,10 +55,19 @@ export function pageFile(path) {
   return `${parts.join('/')}.html`;
 }
 
+// utils/constants.js DEFAULT_LOGO: the web's placeholder for a club without a crest.
+const DEFAULT_LOGO_PATH = '/logo.webp';
+const isDefaultLogo = value => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return false;
+  try { return new URL(raw, SITE_URL).pathname === DEFAULT_LOGO_PATH; } catch { return false; }
+};
+
 /**
  * Datos de la vista previa de un club: el apodo, el estadio y de dónde es; si no hay ficha, el comienzo de su historia.
- * Imagen: la foto del estadio; si no hay, la tarjeta del club (public/og/clubs/{id}.png, escudo y nombre); si
- * tampoco, el escudo en tarjeta chica.
+ * Imagen: la tarjeta del club (public/og/clubs/{id}.png, 1200x630, escudo y nombre), que WhatsApp muestra grande;
+ * si no hay, la foto del estadio; si tampoco, el escudo en tarjeta chica. Un club sin escudo propio (el logo genérico
+ * de la web, como uno recién sumado) no lleva imagen: queda la de la liga, grande.
  * @param {{ id: string, teamName: string, logoUrl?: string }} team
  * @param {{ body?: string, profile?: object } | null} content el doc league_content/club-{id}
  * @param {{ card?: string | null }} [options] card: ruta de la tarjeta del club, si existe
@@ -79,13 +88,13 @@ export function clubPage(team, content, siteUrl = SITE_URL, { card = null } = {}
     : clip(firstParagraph || `Historia, palmarés y plantel de ${name} en la ${SITE_NAME}.`);
   const photo = absoluteUrl(profile.stadiumPhotoUrl, siteUrl);
   const cardUrl = absoluteUrl(card, siteUrl);
-  const crest = absoluteUrl(team?.logoUrl, siteUrl);
+  const crest = isDefaultLogo(team?.logoUrl) ? null : absoluteUrl(team?.logoUrl, siteUrl);
   return {
     path: `/equipos/${team.id}`,
     title: `${name} · ${SITE_NAME}`,
     description,
-    image: photo || cardUrl || crest || null,
-    largeImage: Boolean(photo || cardUrl),
+    image: cardUrl || photo || crest || null,
+    largeImage: Boolean(cardUrl || photo),
   };
 }
 
