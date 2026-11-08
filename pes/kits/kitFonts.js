@@ -84,7 +84,9 @@ export function fontLibrary(kits) {
  * the sheet size. Returns straight RGBA pixels ready for encodeFtex.
  * @param {CanvasRenderingContext2D} ctx
  * @param {'name'|'back'|'chest'|'leg'} kind
- * @param {{ family: string, weight?: number, italic?: boolean, fill: string, outline?: number, outlineColor?: string, widthScale?: number }} o
+ * @param {{ family: string, weight?: number, italic?: boolean, fill: string, outline?: number, outlineColor?: string, widthScale?: number,
+ *   adjust?: Record<string, { x?: number, y?: number, size?: number }> }} o
+ *   adjust: hand correction per character, x/y as a fraction of its cell, size as a factor (1 = as drawn).
  */
 export function renderFontSheet(ctx, kind, o) {
   const W = ctx.canvas.width, H = ctx.canvas.height;
@@ -96,17 +98,25 @@ export function renderFontSheet(ctx, kind, o) {
   for (const ch of charsOf(kind)) {
     const [x, y, w, h] = glyphCell(kind, ch, W, H);
     const outline = Math.max(0, o.outline || 0) * (h / 256);
-    const target = h * (kind === 'name' ? 0.84 : 0.74) - outline * 2;
+    // Numbers fill the cell height like the patch's own sheets: the game maps the whole cell onto the number's
+    // region, so a glyph at 74 % of the cell (the old value) came out a quarter smaller than the original fonts.
+    const fix = o.adjust?.[ch] || {};
+    const target = (h * (kind === 'name' ? 0.84 : 0.92) - outline * 2) * (fix.size || 1);
     ctx.save();
     ctx.font = font;
     const m = ctx.measureText(ch);
-    const gw = (m.actualBoundingBoxRight + m.actualBoundingBoxLeft) || m.width;
+    const L = m.actualBoundingBoxLeft, R = m.actualBoundingBoxRight;
+    const gw = (R + L) || m.width;
     const s = target / capRef;
     const sx = Math.min(o.widthScale || 1, (w * 0.92 - outline * 2) / (gw * s));
-    ctx.translate(x + w / 2, y + h / 2);
+    ctx.translate(x + w / 2 + (fix.x || 0) * w, y + h / 2 + (fix.y || 0) * h);
     ctx.scale(s * sx, s);
     const by = (ref.actualBoundingBoxAscent - ref.actualBoundingBoxDescent) / 2;
-    const dx = -(m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2;
+    // Horizontal centre: the glyph's advance, as the font designer centred it (a «1» with a flag has its stem in
+    // the middle; centring the ink box pushed the stem to the right). Kept inside the cell with its margin.
+    const half = (w * 0.92 / 2 - outline) / (s * sx);
+    let dx = -m.width / 2;
+    dx = Math.min(Math.max(dx, L - half), half - R);
     if (outline > 0) {
       ctx.lineJoin = 'round';
       ctx.lineWidth = (outline * 2) / s;

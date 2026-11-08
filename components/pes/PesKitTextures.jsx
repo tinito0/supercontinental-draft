@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Upload, Type, Wand2 } from 'lucide-react';
+import { Upload, Type, Wand2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Minus, Plus } from 'lucide-react';
 import { Card, Button, Pill, ErrorText } from './PesUi.jsx';
 import { getKitValue } from '../../pes/kits/kitConfig.js';
 import { TEXTURE_SLOTS, textureFromFile, textureFromPixels, targetFileName } from '../../pes/kits/kitTextures.js';
-import { FONT_SLOTS, FONT_WIDTHS, fontLibrary, renderFontSheet, encodeFontSheet, fontFileName, sheetSize } from '../../pes/kits/kitFonts.js';
+import { FONT_SLOTS, FONT_WIDTHS, charsOf, fontLibrary, renderFontSheet, encodeFontSheet, fontFileName, sheetSize } from '../../pes/kits/kitFonts.js';
 import { decodeImageFile, loadFontFile } from '../../pes/kits/imageDecode.js';
 
 const EXTS = ['.ftex', '.dds', '.png'];
@@ -102,8 +102,11 @@ function FontLibrary({ kits, version, cfg, editable, onAssign }) {
 
 function FontGenerator({ editable, onImport }) {
   const [family, setFamily] = useState(null);
-  const [opts, setOpts] = useState({ fill: '#FFFFFF', outline: 0, outlineColor: '#000000', weight: 700, italic: false, widthScale: 1 });
+  const [opts, setOpts] = useState({ fill: '#FFFFFF', outline: 0, outlineColor: '#000000', weight: 700, italic: false, widthScale: 1, adjust: {} });
   const [kind, setKind] = useState('name');
+  const [adjustChar, setAdjustChar] = useState('1');
+  // Hand corrections belong to one sheet: a «1» moved on the back numbers must not move the name's «I».
+  useEffect(() => { setOpts(o => ({ ...o, adjust: {} })); setAdjustChar(kind === 'name' ? 'A' : '1'); }, [kind]);
   const [width, setWidth] = useState(2048);
   const [base, setBase] = useState('');
   const [error, setError] = useState(null);
@@ -140,6 +143,14 @@ function FontGenerator({ editable, onImport }) {
   };
 
   const set = (k, v) => setOpts(o => ({ ...o, [k]: v }));
+  const fix = opts.adjust[adjustChar] || {};
+  const nudge = (axis, delta) => setOpts(o => {
+    const cur = o.adjust[adjustChar] || {};
+    const base = axis === 'size' ? cur.size || 1 : cur[axis] || 0;
+    const next = Math.round((base + delta) * 100) / 100;
+    return { ...o, adjust: { ...o.adjust, [adjustChar]: { ...cur, [axis]: axis === 'size' ? Math.max(0.5, Math.min(1.3, next)) : Math.max(-0.4, Math.min(0.4, next)) } } };
+  });
+  const resetChar = () => setOpts(o => { const { [adjustChar]: _, ...rest } = o.adjust; return { ...o, adjust: rest }; });
   const input = 'input';
   return (
     <div className="space-y-3">
@@ -168,6 +179,24 @@ function FontGenerator({ editable, onImport }) {
           <canvas ref={preview} className="w-full h-auto" aria-label="Vista previa de la hoja de fuente" />
         </div>
       ) : <p className="text-xs text-ink-3">Cargá una fuente para ver la hoja que se va a generar (las casillas siguen las plantillas de Letters/Numbers Template).</p>}
+      {family && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-ink-2" role="group" aria-label="Ajustar un carácter">
+          <span>Ajustar un carácter</span>
+          <select value={adjustChar} onChange={e => setAdjustChar(e.target.value)} className="select w-16" aria-label="Carácter">
+            {charsOf(kind).map(ch => <option key={ch} value={ch}>{ch}</option>)}
+          </select>
+          <Button onClick={() => nudge('x', -0.01)} aria-label="Mover a la izquierda"><ArrowLeft className="w-4 h-4" aria-hidden="true" /></Button>
+          <Button onClick={() => nudge('x', 0.01)} aria-label="Mover a la derecha"><ArrowRight className="w-4 h-4" aria-hidden="true" /></Button>
+          <Button onClick={() => nudge('y', -0.01)} aria-label="Mover arriba"><ArrowUp className="w-4 h-4" aria-hidden="true" /></Button>
+          <Button onClick={() => nudge('y', 0.01)} aria-label="Mover abajo"><ArrowDown className="w-4 h-4" aria-hidden="true" /></Button>
+          <Button onClick={() => nudge('size', -0.02)} aria-label="Más chico"><Minus className="w-4 h-4" aria-hidden="true" /></Button>
+          <Button onClick={() => nudge('size', 0.02)} aria-label="Más grande"><Plus className="w-4 h-4" aria-hidden="true" /></Button>
+          <span className="num text-ink-3">
+            {Math.round((fix.x || 0) * 100)} · {Math.round((fix.y || 0) * 100)} · {Math.round((fix.size || 1) * 100)}%
+          </span>
+          {opts.adjust[adjustChar] && <Button onClick={resetChar}>Restablecer</Button>}
+        </div>
+      )}
       <Button variant="primary" disabled={!family || !editable || busy} onClick={generate}><Wand2 className="w-4 h-4" aria-hidden="true" />{busy ? 'Generando…' : 'Generar y aplicar a este kit'}</Button>
       {done && <p className="animate-in fade-in text-xs text-success-soft" role="status">Generada y verificada: {done}. Se exporta junto al config.txt.</p>}
       <ErrorText error={error} />

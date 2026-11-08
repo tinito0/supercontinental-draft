@@ -245,6 +245,8 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     try {
       await onSetValues(Object.fromEntries(Object.entries(draft).map(([k, v]) => [k, String(v)])));
       setDraft({});
+      // Saved: the dashed outline goes away; the bar stays a moment with the confirmation.
+      setSelected(null);
       setLetterSave({ done: 'Posición guardada en el kit (sin exportar).' });
     } catch (e) { setLetterSave({ error: e }); }
   };
@@ -289,7 +291,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
             ))}
           </div>
         </div>
-        {(selected || Object.keys(draft).length > 0) && (
+        {(selected || Object.keys(draft).length > 0 || letterSave?.done) && (
           <LetteringBar group={selected} steps={shownSteps} canEdit={canEdit} dirty={Object.keys(draft).length > 0}
             onResize={dir => selected && resize(selected, dir)} onDiscard={() => { setDraft({}); setSelected(null); setLetterSave(null); }}
             onSave={onSetValues ? saveLettering : undefined} saving={letterSave} />
