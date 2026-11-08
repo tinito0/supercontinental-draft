@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Check, Eye, Undo2 } from 'lucide-react';
 import { Button } from '../PesUi.jsx';
 import { KitGL, lightState, sharedThumbRenderer } from './kitRenderer.js';
-import { collarModel, fitParts } from '../../../pes/kits/kitModels.js';
+import { collarModel, fitParts, turnCollarLining, weldNormals } from '../../../pes/kits/kitModels.js';
 
-const THUMB = 72;
+const THUMB = 96;
 const FRAME_BUDGET_MS = 12;
 
 /**
@@ -50,10 +50,16 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
         const m = collarModel(pack, n);
         const target = thumbs.current.get(n);
         if (!m || !target) continue;
-        KitGL.upload(R, [...baseParts, { k: 'collar', m }]);
+        // Same preparation as the main viewer (selectKitParts): normals welded to the shirt, so the seam does not
+        // show as a dark line, and the lining turned inwards, so the inside of the neck is in shadow.
+        KitGL.upload(R, turnCollarLining(weldNormals([...baseParts, { k: 'collar', m }])));
         const focus = fitParts([{ k: 'collar', m }]);
+        const fr = Math.max(focus.radius, full.radius * 0.18);
         KitGL.draw(R, {
-          fit: { ...full, center: focus.center }, yaw: full.yaw0 + 0.35, pitch: 0.42, dist: full.radius * 0.95, fov: 40,
+          // Framed on the collar (the whole opening and the front panel in view), seen from the
+          // front-left and slightly above.
+          fit: { ...full, center: [focus.center[0], focus.center[1] + fr * 0.1, focus.center[2]] }, yaw: full.yaw0 + 0.3, pitch: 0.36,
+          dist: fr * 4.6, fov: 36,
           panX: 0, panY: 0, ortho: false, bg: false, bump: 1, nrm: false, glossK: 1, debug: 0, defSpec: 0.3, defRough: 0.6, L,
           textured: scene.textured, colors: scene.colors,
         });
