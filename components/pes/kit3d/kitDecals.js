@@ -87,30 +87,42 @@ function fontNote(kind, sheetName, result) {
  * @param {{ name?: HTMLCanvasElement, name_ex?: HTMLCanvasElement, back?: HTMLCanvasElement, chest?: HTMLCanvasElement, leg?: HTMLCanvasElement }} fonts decoded font sheets
  * @param {{ name: string, number: string }} sample
  * @param {object} render resolveKitRender(cfg) — placement from config.txt
- * @returns {{ canvas: HTMLCanvasElement, notes: {key: string, level: string, text: string}[] }}
+ * @param {{ highlight?: 'name'|'back'|'chest'|'shorts'|null }} [options] highlight: outline of the element being moved
+ * @returns {{ canvas: HTMLCanvasElement, notes: {key: string, level: string, text: string}[],
+ *   regions: Record<string, {u0: number, v0: number, u1: number, v1: number}> }}
+ *   regions: texture-space box (0–1) of each element drawn, to find it under the pointer in the 3D view.
  */
-export function composeKitTexture(base, value, fonts, sample, render, S = 1024) {
+export function composeKitTexture(base, value, fonts, sample, render, S = 1024, { highlight = null } = {}) {
   const c = document.createElement('canvas');
   c.width = S; c.height = S;
   const g = c.getContext('2d');
   g.drawImage(base || fallbackKitTexture(value, S), 0, 0, S, S);
   const notes = [];
+  const regions = {};
+  // Box of a cell: the unit square through the canvas transform M = [a, b, c, d, e, f].
+  const track = group => M => {
+    const r = regions[group] || (regions[group] = { u0: 1, v0: 1, u1: 0, v1: 0 });
+    for (const [x, y] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      const u = (M[0] * x + M[2] * y + M[4]) / S, v = (M[1] * x + M[3] * y + M[5]) / S;
+      r.u0 = Math.min(r.u0, u); r.u1 = Math.max(r.u1, u); r.v0 = Math.min(r.v0, v); r.v1 = Math.max(r.v1, v);
+    }
+  };
   const sheet = key => String(value(key) || '').trim();
   const num = render.back || render.chest || render.shorts ? printedNumber(render, sample.number) : '';
 
-  if (render.name && String(sample.name || '').trim()) drawName(g, S, fonts, sample.name, render.name, notes, sheet('NameFontFile'));
+  if (render.name && String(sample.name || '').trim()) drawName(g, S, fonts, sample.name, render.name, notes, sheet('NameFontFile'), track('name'));
   if (num && render.back) {
     const B = render.back;
     // region x (across) → u = 0.5 + W/2 − x·W, y (down the digits) → v = vTop − y·H: the back is upside down
     drawDigits(g, fonts.back, num, B.spacing, 0, (dx, dy, dw, dh) => [-dw * B.W * S, 0, 0, -dh * B.H * S, (0.5 + B.W / 2 - dx * B.W) * S, (B.vTop - dy * B.H) * S],
-      r => notes.push(fontNote('back', sheet('BackNumbersFile'), r)));
+      r => notes.push(fontNote('back', sheet('BackNumbersFile'), r)), track('back'));
   }
   if (num && render.chest) {
     const C = render.chest;
     // Without its own sheet the chest number uses the back numbers, as the game does with an empty sheet name.
     if (!fonts.chest) notes.push({ key: 'chest', level: 'info', text: `No se encontró «${sheet('ChestNumbersFile')}»: el número del pecho usa los números de la espalda.` });
     drawDigits(g, fonts.chest || fonts.back, num, render.back?.spacing ?? 0.5, 26, (dx, dy, dw, dh) => [dw * C.L * S, 0, 0, dh * C.L * S, (C.u - C.L / 2 + dx * C.L) * S, (C.v - C.L / 2 + dy * C.L) * S],
-      r => fonts.chest && notes.push(fontNote('chest', sheet('ChestNumbersFile'), r)));
+      r => fonts.chest && notes.push(fontNote('chest', sheet('ChestNumbersFile'), r)), track('chest'));
   }
   if (num && render.shorts) {
     const P = render.shorts, L = P.L * S, f = P.flipped ? -1 : 1;
@@ -118,9 +130,18 @@ export function composeKitTexture(base, value, fonts, sample, render, S = 1024) 
     // 128×128 number texture, digits turned 90° (top towards the waist): region x (across the digits) runs along v,
     // y (down a digit) runs against u; the left leg is the same texture turned 180°.
     drawDigits(g, fonts.leg || fonts.back, num, render.back?.spacing ?? 0.5, 26, (dx, dy, dw, dh) => [0, f * dw * L, -f * dh * L, 0, ox + f * (dy + dh) * L, oy + f * dx * L],
-      r => notes.push(fontNote('leg', sheet('LegNumbersFile'), r)));
+      r => notes.push(fontNote('leg', sheet('LegNumbersFile'), r)), track('shorts'));
   }
-  return { canvas: c, notes: notes.filter(Boolean) };
+  const box = highlight && regions[highlight];
+  if (box) {
+    // Outline of the element being moved, drawn on the texture so it follows the cloth (preview only).
+    const pad = 6;
+    g.save();
+    g.lineWidth = 4; g.setLineDash([14, 9]); g.strokeStyle = '#7aa2ff';
+    g.strokeRect(box.u0 * S - pad, box.v0 * S - pad, (box.u1 - box.u0) * S + pad * 2, (box.v1 - box.v0) * S + pad * 2);
+    g.restore();
+  }
+  return { canvas: c, notes: notes.filter(Boolean), regions };
 }
 
 /** Draws one sheet cell into the unit square mapped by M = [a, b, c, d, e, f] (canvas transform). */
@@ -132,9 +153,10 @@ function drawCell(g, tex, cell, M) {
 }
 
 /** Digits laid out like the game (digitLayout) and mapped by toCanvas(x, y, w, h) → transform of each cell. */
-function drawDigits(g, tex, num, spacing, inset, toCanvas, report) {
+function drawDigits(g, tex, num, spacing, inset, toCanvas, report, onCell = () => {}) {
   const horizontal = !tex || tex.width >= tex.height;
   const cells = digitLayout(num, spacing, { inset, horizontal });
+  for (const q of cells) onCell(toCanvas(q.x, q.y, q.w, q.h));
   if (!tex) {
     // No number sheet: plain digits in the same boxes.
     for (const q of cells) {
@@ -153,7 +175,7 @@ function drawDigits(g, tex, num, spacing, inset, toCanvas, report) {
 }
 
 /** The name on the game's 512×128 canvas (nameLayout), mapped onto the back: u = 0.5 + (256 − x)·kx, v = v + (64 − y)·ky. */
-function drawName(g, S, fonts, text, P, notes, sheetName) {
+function drawName(g, S, fonts, text, P, notes, sheetName, onCell = () => {}) {
   const L = nameLayout(text, P.shape);
   if (L.missing.length) notes.push({ key: 'name', level: 'warn', text: `El juego no tiene ${[...new Set(L.missing)].map(ch => `«${ch}»`).join(', ')} en la fuente del nombre: no se dibuja.` });
   const kx = nameScaleX(P, L.fraction), ky = P.ky;
@@ -167,6 +189,7 @@ function drawName(g, S, fonts, text, P, notes, sheetName) {
     const px0 = q.x - 0.5 * q.w * cos + 0.5 * q.h * sin, py0 = q.y - 0.5 * q.w * sin - 0.5 * q.h * cos;
     const M = [-S * kx * q.w * cos, -S * ky * q.w * sin, S * kx * q.h * sin, -S * ky * q.h * cos,
       S * (0.5 + (256 - px0) * kx), S * (P.v + (64 - py0) * ky)];
+    onCell(M);
     if (tex) { drawCell(g, tex, glyph, M); continue; }
     g.save();
     g.setTransform(M[0], M[1], M[2], M[3], M[4], M[5]);

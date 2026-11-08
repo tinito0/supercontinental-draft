@@ -111,7 +111,39 @@ export function selectKitParts(pack, value, view = {}) {
   const sub = pack.get(tuck === 'in' ? 'pants_sub_in' : tight ? 'pants_sub_tight' : 'pants_sub_out');
   const sp = parts.find(p => p.k === 'shorts');
   if (sub && sp) sp.m = { meshes: [...sp.m.meshes, ...sub.meshes] };
-  return { parts: weldNormals(parts), collar: col?.name ?? null, collarExact: Boolean(col?.exact) };
+  return { parts: turnCollarLining(weldNormals(parts)), collar: col?.name ?? null, collarExact: Boolean(col?.exact) };
+}
+
+/**
+ * The collar models include their inside (the lining you see through the neck opening) with normals pointing
+ * into the neck. Drawn as an outer surface it was lit by the key light and looked like a bright, stretched patch
+ * filling the opening. Turning those normals around makes the renderer treat them as the inside of the garment
+ * (in shadow, no shine), like a real shirt. Lining = the normal points towards the centre of the neck opening
+ * (on the collar's axis, at the height of its top rim): that covers the walls and the bottom of the lining, while
+ * the outer face, the front panel and the top rim point away from it or across it.
+ * @param {{k: string, m: {meshes: object[]}}[]} parts
+ */
+export function turnCollarLining(parts) {
+  return parts.map(part => {
+    if (part.k !== 'collar') return part;
+    let cx = 0, cz = 0, n = 0, top = -Infinity, low = Infinity;
+    for (const me of part.m.meshes) for (let i = 0; i < me.pos.length; i += 3) {
+      cx += me.pos[i]; cz += me.pos[i + 2]; n++;
+      top = Math.max(top, me.pos[i + 1]); low = Math.min(low, me.pos[i + 1]);
+    }
+    if (!n) return part;
+    cx /= n; cz /= n;
+    const cy = top - (top - low) * 0.08;
+    const meshes = part.m.meshes.map(me => {
+      const nrm = new Float32Array(me.nrm);
+      for (let i = 0; i < me.pos.length; i += 3) {
+        const dx = cx - me.pos[i], dy = cy - me.pos[i + 1], dz = cz - me.pos[i + 2], d = Math.hypot(dx, dy, dz) || 1;
+        if ((nrm[i] * dx + nrm[i + 1] * dy + nrm[i + 2] * dz) / d > 0.3) { nrm[i] = -nrm[i]; nrm[i + 1] = -nrm[i + 1]; nrm[i + 2] = -nrm[i + 2]; }
+      }
+      return { ...me, nrm };
+    });
+    return { ...part, m: { meshes } };
+  });
 }
 
 /** Averages normals of touching parts (shirt, sleeves, collar, shorts) so seams have no light steps. */
