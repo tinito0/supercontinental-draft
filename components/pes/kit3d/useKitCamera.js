@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Camera of the 3D kit viewer, like a model viewer: left drag turns, right (or middle, or Shift + left) drag moves,
-// the wheel zooms towards the pointer, two fingers pan and pinch. Preset views (front, back, collar) glide there
-// (ease-out, ~320 ms; instant with reduced motion). `intercept` lets the lettering editor take a left drag that
-// starts on the name or a number.
+// the wheel zooms towards the pointer, two fingers pan and pinch. Preset views (front, back, side, collar) glide
+// there (ease-out, ~320 ms). A turn released while still moving coasts to a stop, and auto-turn spins the kit
+// slowly; both, like the glide, are skipped with reduced motion. `intercept` lets the lettering editor take a left
+// drag that starts on the name or a number.
 
 export const DEFAULT_VIEW = { yaw: 0, pitch: 0.1, dist: 0, panX: 0, panY: 0 };
 const FOV = 48;
@@ -31,22 +32,68 @@ export const panPerPixel = (dist, cssHeight) => (2 * dist * tanHalf) / Math.max(
 /** Shortest turn from a to b (radians), so a glide to the back never spins the long way round. */
 export const shortestYaw = (a, b) => a + ((((b - a) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
 
+const COAST_FRICTION = 0.995; // share of the turn speed kept per millisecond after release
+const COAST_STOP = 2e-5; // rad/ms: slower than this the coast stops
+const COAST_MAX_IDLE_MS = 80; // a finger held still this long before lifting does not coast
+const AUTO_TURN = 0.00035; // rad/ms, one turn in ~18 s
+
+/** Turn speed (rad/ms) after dt ms of coasting; 0 once it is too slow to see. */
+export function decayVelocity(v, dt) {
+  const next = v * COAST_FRICTION ** dt;
+  return Math.abs(next) < COAST_STOP ? 0 : next;
+}
+
 /**
  * @param {React.RefObject<HTMLCanvasElement>} canvasRef
  * @param {{ viewRef: React.MutableRefObject<object>, fitRef: React.MutableRefObject<object>, draw: () => void,
  *   intercept?: { down: (e: PointerEvent) => boolean, move: (e: PointerEvent) => void, up: (e: PointerEvent) => void,
  *   wheel?: (e: WheelEvent) => boolean, hover?: (e: PointerEvent) => void } }} o
- * @returns {{ glideTo: (target: object) => void }}
+ * @returns {{ glideTo: (target: object, id?: string) => void, active: string|null, autoTurn: boolean,
+ *   setAutoTurn: (on: boolean) => void }}
+ *   active: id of the preset view on screen, null once the camera was moved by hand.
  */
 export function useKitCamera(canvasRef, { viewRef, fitRef, draw, intercept }) {
   const live = useRef({ draw, intercept });
   live.current = { draw, intercept };
   const anim = useRef(null);
+  // coast after a turn and auto-turn share one animation loop
+  const spin = useRef({ raf: 0, last: 0, velocity: 0, auto: false, dragging: false });
+  const [active, setActive] = useState('front');
+  const [autoTurn, setAutoTurnState] = useState(false);
 
   const stopGlide = () => { if (anim.current) cancelAnimationFrame(anim.current); anim.current = null; };
 
-  const glideTo = target => {
+  const spinStep = useCallback(now => {
+    const s = spin.current;
+    s.raf = 0;
+    const dt = s.last ? Math.min(64, now - s.last) : 16;
+    s.last = now;
+    if (!s.dragging && !anim.current) {
+      if (s.velocity) { viewRef.current.yaw += s.velocity * dt; s.velocity = decayVelocity(s.velocity, dt); }
+      if (s.auto) viewRef.current.yaw += AUTO_TURN * dt;
+      live.current.draw();
+    }
+    if (s.velocity || s.auto) s.raf = requestAnimationFrame(spinStep);
+    else s.last = 0;
+  }, [viewRef]);
+  const startSpin = useCallback(() => {
+    if (!spin.current.raf) spin.current.raf = requestAnimationFrame(spinStep);
+  }, [spinStep]);
+
+  const setAutoTurn = useCallback(on => {
+    spin.current.auto = Boolean(on) && !prefersReducedMotion();
+    setAutoTurnState(spin.current.auto);
+    if (spin.current.auto) { setActive(null); startSpin(); }
+  }, [startSpin]);
+
+  useEffect(() => () => cancelAnimationFrame(spin.current.raf), []);
+
+  const glideTo = (target, id = null) => {
     stopGlide();
+    // a chosen view stays on screen: it stops a coast and auto-turn
+    spin.current.velocity = 0;
+    if (spin.current.auto) { spin.current.auto = false; setAutoTurnState(false); }
+    setActive(id);
     const V = viewRef.current, from = { ...V };
     const to = { ...DEFAULT_VIEW, ...target };
     to.yaw = shortestYaw(from.yaw, to.yaw);
@@ -92,23 +139,33 @@ export function useKitCamera(canvasRef, { viewRef, fitRef, draw, intercept }) {
       V.panY = clamp(V.panY + dy * k, -maxPan(), maxPan());
     };
 
+    const S = spin.current;
+    const manual = () => { stopGlide(); setActive(null); };
+    const startPinch = () => {
+      const [a, b] = [...pointers.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      mode = 'pinch';
+    };
     const down = e => {
+      if (e.button === 1) e.preventDefault(); // middle button pans; without this Windows starts autoscroll
       stopGlide();
+      S.velocity = 0;
+      S.dragging = true;
       c.focus({ preventScroll: true });
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       c.setPointerCapture(e.pointerId);
-      if (pointers.size === 2) {
+      if (pointers.size >= 2) {
         // Second finger: pinch and pan replace whatever the first finger was doing.
         if (mode === 'letter') live.current.intercept?.up(e);
-        const [a, b] = [...pointers.values()];
-        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
-        mode = 'pinch';
+        manual();
+        startPinch();
         return;
       }
       const wantsPan = e.button === 2 || e.button === 1 || (e.button === 0 && e.shiftKey);
       if (!wantsPan && e.button === 0 && live.current.intercept?.down(e)) { mode = 'letter'; return; }
+      manual();
       mode = wantsPan ? 'pan' : 'turn';
-      last = { x: e.clientX, y: e.clientY };
+      last = { x: e.clientX, y: e.clientY, t: performance.now() };
       c.dataset.drag = mode;
     };
     const move = e => {
@@ -124,36 +181,51 @@ export function useKitCamera(canvasRef, { viewRef, fitRef, draw, intercept }) {
         return;
       }
       if (!last) return;
-      const dx = e.clientX - last.x, dy = e.clientY - last.y;
-      last = { x: e.clientX, y: e.clientY };
+      const now = performance.now(), dx = e.clientX - last.x, dy = e.clientY - last.y;
       if (mode === 'pan') panBy(dx, dy);
-      else { V.yaw += dx * 0.011; V.pitch = clamp(V.pitch + dy * 0.008, -1.2, 1.2); }
+      else {
+        const turn = dx * 0.011;
+        // smoothed turn speed, used for the coast when the button or finger is released
+        S.velocity = 0.7 * S.velocity + 0.3 * (turn / Math.max(1, now - last.t));
+        V.yaw += turn; V.pitch = clamp(V.pitch + dy * 0.008, -1.2, 1.2);
+      }
+      last = { x: e.clientX, y: e.clientY, t: now };
       redraw();
     };
     const up = e => {
-      pointers.delete(e.pointerId);
+      if (!pointers.delete(e.pointerId)) return;
       if (mode === 'letter') live.current.intercept?.up(e);
-      if (pointers.size === 0) { mode = null; last = null; pinch = null; delete c.dataset.drag; }
-      else if (mode === 'pinch' && pointers.size === 1) { const [p] = [...pointers.values()]; mode = 'turn'; last = { ...p }; }
+      if (pointers.size >= 2) { startPinch(); return; } // 3 → 2 fingers: pinch again from where they are
+      if (pointers.size === 1) {
+        if (mode === 'pinch') { const [p] = [...pointers.values()]; mode = 'turn'; last = { ...p, t: performance.now() }; S.velocity = 0; }
+        return;
+      }
+      // coast only after a turn that was still moving when released
+      const coasts = mode === 'turn' && last && performance.now() - last.t <= COAST_MAX_IDLE_MS && !prefersReducedMotion();
+      if (!coasts) S.velocity = 0;
+      mode = null; last = null; pinch = null; delete c.dataset.drag;
+      S.dragging = false;
+      if (S.velocity || S.auto) startSpin();
     };
     const wheel = e => {
       e.preventDefault();
-      stopGlide();
       if (live.current.intercept?.wheel?.(e)) return;
+      manual();
       zoomAt(1 + Math.sign(e.deltaY) * 0.1, e.clientX, e.clientY);
     };
     const key = e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return; // page zoom (Ctrl +/−/0) and history (Alt+arrows) stay the browser's
       const s = e.shiftKey ? 0.3 : 0.12;
       const act = {
         ArrowLeft: () => { V.yaw -= s; }, ArrowRight: () => { V.yaw += s; },
         ArrowUp: () => { V.pitch = Math.min(1.2, V.pitch + s * 0.6); }, ArrowDown: () => { V.pitch = Math.max(-1.2, V.pitch - s * 0.6); },
         '+': () => setDist(dist() * 0.9), '=': () => setDist(dist() * 0.9), '-': () => setDist(dist() * 1.1),
       }[e.key];
-      if (e.key === '0') { e.preventDefault(); glideTo(DEFAULT_VIEW); return; }
-      if (act) { e.preventDefault(); stopGlide(); act(); redraw(); }
+      if (e.key === '0') { e.preventDefault(); glideTo(DEFAULT_VIEW, 'front'); return; }
+      if (act) { e.preventDefault(); manual(); act(); redraw(); }
     };
     const menu = e => e.preventDefault();
-    const reset = () => glideTo(DEFAULT_VIEW);
+    const reset = () => glideTo(DEFAULT_VIEW, 'front');
     const ro = new ResizeObserver(() => redraw());
     ro.observe(c);
     const listeners = [['pointerdown', down], ['pointermove', move], ['pointerup', up], ['pointercancel', up],
@@ -164,7 +236,7 @@ export function useKitCamera(canvasRef, { viewRef, fitRef, draw, intercept }) {
       ro.disconnect();
       for (const [type, fn] of listeners) c.removeEventListener(type, fn);
     };
-  }, [canvasRef, viewRef, fitRef]);
+  }, [canvasRef, viewRef, fitRef, startSpin]);
 
-  return { glideTo };
+  return { glideTo, active, autoTurn, setAutoTurn };
 }

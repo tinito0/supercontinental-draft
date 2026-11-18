@@ -92,7 +92,7 @@ function fontNote(kind, sheetName, result) {
  *   regions: Record<string, {u0: number, v0: number, u1: number, v1: number}> }}
  *   regions: texture-space box (0–1) of each element drawn, to find it under the pointer in the 3D view.
  */
-export function composeKitTexture(base, value, fonts, sample, render, S = 1024, { highlight = null } = {}) {
+export function composeKitTexture(base, value, fonts, sample, render, S = 2048, { highlight = null } = {}) {
   const c = document.createElement('canvas');
   c.width = S; c.height = S;
   const g = c.getContext('2d');
@@ -135,9 +135,10 @@ export function composeKitTexture(base, value, fonts, sample, render, S = 1024, 
   const box = highlight && regions[highlight];
   if (box) {
     // Outline of the element being moved, drawn on the texture so it follows the cloth (preview only).
-    const pad = 6;
+    // sizes are given for a 1024 texture and scaled, so the outline looks the same at any resolution
+    const k = S / 1024, pad = 6 * k;
     g.save();
-    g.lineWidth = 4; g.setLineDash([14, 9]); g.strokeStyle = '#7aa2ff';
+    g.lineWidth = 4 * k; g.setLineDash([14 * k, 9 * k]); g.strokeStyle = '#7aa2ff';
     g.strokeRect(box.u0 * S - pad, box.v0 * S - pad, (box.u1 - box.u0) * S + pad * 2, (box.v1 - box.v0) * S + pad * 2);
     g.restore();
   }

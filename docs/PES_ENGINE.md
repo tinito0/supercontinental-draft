@@ -112,7 +112,7 @@ When the Super Admin creates a workspace, each source is packed (`pes/storage/so
 Supabase Storage at `<workspaceId>/sources/<contentSha256>.pesdb|edit|kits`; other users download it automatically,
 the content hash is verified and the copy is cached in IndexedDB. Upload is Super Admin only (bucket policy).
 
-## 4d. Kits: 3D preview, fabric maps, new kits
+## 4d. Kits: 3D preview, new kits
 
 Where things live in the UML patch: **values** (models, colours, name/number placement, which texture files a kit
 uses) are in Sider's `content/kit-server/<league>/<team>/<kit>/config.txt`; the **texture files** themselves
@@ -141,7 +141,22 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
 - **3D preview** (`components/pes/PesKit3DViewer.jsx`): garment models of the CometKIT previewer (via PES Editor
   Rebuilt, `public/kit3d/kitpack.bin`, downloaded on first use), parts chosen from config.txt (TightKit, Collar,
   ShortsModel, ShortSleevesModel, goalkeeper sleeves), WebGL fabric shader with stadium lights. Panels in tabs
-  (Vista · Camiseta · Letras · Tela · Diagnóstico).
+  (Vista · Camiseta · Letras · Diagnóstico). Relief and shine come only from the kit's own `_nrm` / `_srm`; the
+  generated fabric maps were removed (2026-11-18).
+- **Display quality** (`pes/kits/kitRefine.js`): the pack's meshes are low-poly (shirt ~2,300 triangles), so the
+  selected parts get ambient occlusion baked per vertex (BVH ray casting, 12 rays per hemisphere on the outside of
+  the garment), then Phong tessellation (1 level, collars 2) and normals welded again. The outside of each vertex
+  is decided by shape (away from the torso axis, or from each arm or leg; for a collar, everything but its lining,
+  `collarLining`), and the shader draws the other side as inner fabric. Refined parts keep the lining normals as
+  modelled (`selectKitParts(..., { turnLining: false })`); unrefined ones get them turned (`turnCollarLining`). ~250 ms per part set, cached by `selectKitParts().key`. Collar
+  thumbnails get the same treatment with 8 rays against the refined shirt. Cosmetic only: geometry and UVs keep
+  the CometKIT layout.
+- **Camera** (`components/pes/kit3d/useKitCamera.js`): left drag turns, right/middle/Shift drag pans, the wheel
+  zooms towards the pointer, two fingers pan and pinch; preset views Frente, Espalda, Costado, Cuello glide there.
+  A released turn coasts to a stop and auto-turn is opt-in; neither, nor the glide, runs with reduced motion.
+  With the Letras tab open the name and numbers are dragged on the model (`letteringEdit.js`, `KitGL.pick`).
+  The kit texture is composed at 2048 and the canvas drawn at 2–2.5× its CSS size. PNG download renders the
+  current view at 1600×2000, with or without the background and without the editing outline.
 - **Texture resolution** (`pes/kits/kitAssetResolver.js`, pure; providers in `components/pes/kit3d/loadKitTextures.js`):
   kit-server files only (the kit's own folder), livecpk is not searched. Order: (1) textures imported in the workspace
   (`kit.texture.set`), (2) original kit-server files shared to the cloud — Firestore
@@ -183,9 +198,6 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
   throwing; context loss/restoration is handled (re-upload on restore); `draw` disables its vertex attributes after
   each pass; collar thumbnails share one offscreen context (`sharedThumbRenderer`) instead of one per render, which
   was making the browser drop the main viewer's context.
-- **Fabric maps** (`pes/kits/fabricMaps.js`): normal map = repeating weave (8 fabrics) + relief of the kit drawings
-  from the texture brightness; SRM = shine/roughness of the fabric. Previewed live in 3D and saved as
-  `<KitFile>_nrm.ftex` (DXT5 2048) / `<KitFile>_srm.ftex` (DXT1 1024) through the normal texture import.
 - **New kits** (`kit.add`): copies a kit's config.txt into the next free `p<n>`/`g<n>` folder and appends it to
   the chosen `[section]` of order.ini / gk_order.ini, keeping every other line and the line endings. Allowed to the
   Super Admin and to Kit Managers for league teams. Not tested in game.

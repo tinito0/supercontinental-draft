@@ -73,11 +73,14 @@ team/sections/KitsSection ──(kits workspace, cfg, workspaceId, uid, canShare
                                providers: workspace → cloud manifest (Firestore kit_textures + Supabase) → local
                                kit-server folder; session AssetCache; "Compartir texturas" uploads local .ftex
   pes/kits/kitModels.js        model parts: collar / winter collar, sleeves, undershirt, shorts, socks
+  pes/kits/kitRefine.js        display meshes: baked ambient occlusion (BVH rays), garment outside, Phong tessellation
+  components/pes/kit3d/useKitCamera.js  views, zoom to pointer, pan/pinch, coast, auto-turn
+  components/pes/kit3d/letteringEdit.js  dragging name/numbers on the model → config.txt steps
   components/pes/kit3d/kitDecals.js   name/numbers drawn with the kit's font sheets (KitFont)
   components/pes/kit3d/useKitGL.js    context lifecycle (lost/restored → epoch), dispose on unmount
   components/pes/kit3d/kitRenderer.js WebGL (KitGL); deletes buffers/textures it replaces; sharedThumbRenderer
   components/pes/kit3d/CollarPicker.jsx  thumbnails on the shared context; "Usar" → kit.set Collar/WinterCollar
-  components/pes/kit3d/KitViewerPanels.jsx  presentational panels (Vista, Camiseta, Letras, Tela, Diagnóstico)
+  components/pes/kit3d/KitViewerPanels.jsx  presentational panels (Vista, Camiseta, Letras, Diagnóstico) + PNG bar
 ```
 
 ## Formation editor: states, positions, instructions

@@ -1,5 +1,5 @@
 import {
-  PENALTY_XG, buildHeatmaps, buildRatings, locateShots, positionSamples, shotXg, teamXg,
+  PENALTY_XG, buildHeatmaps, buildRatings, gameShots, locateShots, positionSamples, shotXg, teamXg,
 } from '../../pes-collector/collector/pitchData.js';
 
 // Synthetic probe events (encode/decode symmetry only, not game compatibility). The real-data check of the same
@@ -130,5 +130,66 @@ describe('locateShots and teamXg', () => {
 
   test('a team without shots has xG 0', () => {
     expect(teamXg([{ side: 'home', xg: 0.4 }])).toEqual({ home: 0.4, away: 0 });
+  });
+});
+
+// Probe v6 `shot` events, shaped like the live ones of 2026-11-11 (S16): emitted at the strike, then again with the
+// end point. Synthetic (decode logic only).
+const strike = (ms, n, x, z, dist, end) => ({
+  t: 'shot', ms, n, x, z, dist, idx: 23, ...(end ? { ex: end[0], ez: end[1] } : {}), c: [1, 10, 0],
+});
+
+describe('gameShots', () => {
+  test('one shot per strike, with the end point once the game writes it', () => {
+    const events = [
+      strike(1000, 5, 41.06, -4.25, 12.18),
+      strike(2900, 5, 41.06, -4.25, 12.18, [52.69, 12.38]),
+      { t: 'pos', ms: 3000 },
+      strike(9000, 6, 42.13, -2, 10.49),
+    ];
+
+    const shots = gameShots(events);
+
+    expect(shots).toEqual([
+      { ms: 1000, n: 5, x: 93.56, y: 29.75, distance: 12.18, end: { x: 105.19, y: 46.38 } },
+      { ms: 9000, n: 6, x: 94.63, y: 32, distance: 10.49, end: null },
+    ]);
+  });
+
+  test('older probes have no shot events', () => {
+    expect(gameShots([{ t: 'pos', ms: 1 }])).toEqual([]);
+  });
+});
+
+describe('locateShots with the game shot observer', () => {
+  const shots = [
+    { side: 'away', playerId: 110718, outcome: 'on_target', penalty: false },
+    { side: 'away', playerId: 132933, outcome: 'off_target', penalty: false },
+  ];
+  const rises = [{ ms: 4000, kind: 6, delta: 1 }, { ms: 20000, kind: 6, delta: 1 }];
+
+  test('takes the strike that came before the stats sample counting the shot', () => {
+    const strikes = gameShots([strike(1000, 5, 41.06, -4.25, 12.18, [52.69, 12.38])]);
+
+    const located = locateShots(shots, rises, [], strikes);
+
+    expect(located[0]).toMatchObject({ x: 93.6, y: 29.8, distance: 12.18, end: { x: 105.19, y: 46.38 }, located: 'game' });
+    expect(located[0].xg).toBe(shotXg({ x: 93.6, y: 29.8 }));
+    // No strike within the window and no positions: unknown.
+    expect(located[1]).toMatchObject({ x: null, y: null, xg: null });
+  });
+
+  test('a strike is used once, and a stale one falls back to the position estimate', () => {
+    const events = [lineup(0, HOME), lineup(1, AWAY), pos(19000, 1)];
+    const strikes = gameShots([strike(1000, 5, 41.06, -4.25, 12.18)]);
+    const twoRises = [{ ms: 4000, kind: 6, delta: 1 }, { ms: 4000, kind: 6, delta: 1 }];
+    const both = [shots[0], { ...shots[0] }];
+
+    const located = locateShots(both, twoRises, [], strikes);
+    expect(located.map(s => s.located)).toEqual(['game', undefined]);
+
+    const late = locateShots([{ side: 'home', playerId: 11, outcome: 'off_target', penalty: false }],
+      [{ ms: 20000, kind: 6, delta: 1 }], positionSamples(events), strikes);
+    expect(late[0]).toMatchObject({ x: 51.5, y: 32, located: 'estimate' });
   });
 });

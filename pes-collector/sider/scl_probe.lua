@@ -24,6 +24,9 @@ What it records (see docs/PES_MATCH_DATA_RESEARCH.md):
     the bytes change (the game copies them there when a menu change is confirmed).
   - pos (v5): the game's position snapshot (S15), 22 x (x, z) in metres, entry i = XI slot i (0–10 home), emitted
     when it changes. The game refreshes one team at a time, each player every 2–3 s: not a per-frame track.
+  - shot (v6): the game's shot observer (S16): where each shot was struck and where it ended (metres from the centre
+    spot, x toward the goal attacked), the game's distance to goal, the attacking team's shot count, a shooter
+    index and the raw 0x60 bytes. Emitted at the strike and again when the shot ends.
 
 Requires in sider.ini: lua.enabled = 1, luajit.ext.enabled = 1, match-stats.enabled = 1.
 --]]
@@ -97,6 +100,18 @@ local POS_OFFSET = 0x253FC
 local POS_ENTRIES = 22
 local POS_EVERY_MS = 100
 
+-- Shot observer (S16, live 2026-11-11): the game's match::record::ObserverShoot object (vtable 0x142640B18). The
+-- exe keeps a table of the match recorder's observers; its entry at 0x1436F4238 points at this one (seen in the
+-- second game run of 2026-11-11; the heap block around it differed from the first run). Fields: +0x08 where the
+-- shot was struck and +0x0c where it ended (0 until it does): i16 x, z in 1/16 m from the centre spot, x toward the
+-- goal being attacked (goal line at 840); +0x14 shooter index (u32, numbering not decoded); +0x38 distance to goal
+-- (f32, metres, the game's own); +0x3c the attacking team's shot count. Read every SHOOT_EVERY_MS; changes emitted.
+local SHOOT_POINTER = 0x1436F4238
+local SHOOT_VTABLE_LO, SHOOT_VTABLE_HI = 0x42640B18, 0x1
+local SHOOT_BYTES = 0x60
+local SHOOT_START, SHOOT_END, SHOOT_SHOOTER, SHOOT_DIST, SHOOT_COUNT = 0x08, 0x0C, 0x14, 0x38, 0x3C
+local SHOOT_EVERY_MS = 100
+
 local MEM_COMMIT, MEM_PRIVATE, PAGE_READWRITE = 0x1000, 0x20000, 0x04
 local MAX_USER_ADDRESS = 0x7FFFFFFEFFFF
 
@@ -115,6 +130,8 @@ local squads = {}
 local stats_region
 local pos_region, pos_buf, last_pos
 local last_pos_ms, last_pos_search_ms = 0, 0
+local shoot_obj, shoot_buf, last_shot
+local last_shot_ms, last_shoot_search_ms = 0, 0
 local stats_cur, stats_prev = {}, {}
 local team_cache, lineups = {}, {}
 local last_possession = {}
@@ -340,6 +357,53 @@ local function sample_positions()
     emit("pos", { p = p })
 end
 
+-- The shot observer through the exe's observer table, accepted only when its vtable is ObserverShoot's.
+local function find_shoot_object()
+    local obj = u64(SHOOT_POINTER)
+    if not obj or obj == 0 then return end
+    local vt = ffi.new("uint32_t[2]")
+    if read_into(obj, vt, 8) ~= 8 or vt[0] ~= SHOOT_VTABLE_LO or vt[1] ~= SHOOT_VTABLE_HI then return end
+    shoot_obj, last_shot = obj, nil
+    shoot_buf = shoot_buf or ffi.new("uint8_t[?]", SHOOT_BYTES)
+    emit("shot_block", { object = hex(obj) })
+end
+
+local function i16(buf, offset)
+    return tonumber(ffi.cast("int16_t*", buf + offset)[0])
+end
+
+local function sixteenths(v)
+    return math.floor(v / 16 * 100 + 0.5) / 100
+end
+
+-- One shot as the observer holds it. The first read after finding the object is the state left by an earlier
+-- shot, so it only becomes the baseline (shot_block); every later change is emitted: once at the strike (end
+-- still 0) and again when the shot ends.
+local function sample_shot()
+    if read_into(shoot_obj, shoot_buf, SHOOT_BYTES) ~= SHOOT_BYTES
+        or ffi.cast("uint32_t*", shoot_buf)[0] ~= SHOOT_VTABLE_LO then
+        emit("shot_block_lost", { object = hex(shoot_obj) })
+        shoot_obj = nil
+        return
+    end
+    local u = ffi.cast("uint32_t*", shoot_buf)
+    local key = string.format("%d:%d:%d", tonumber(u[SHOOT_START / 4]), tonumber(u[SHOOT_END / 4]), tonumber(u[SHOOT_COUNT / 4]))
+    if key == last_shot then return end
+    local first = last_shot == nil
+    last_shot = key
+    if first then return end
+    local ended = tonumber(u[SHOOT_END / 4]) ~= 0
+    emit("shot", {
+        n = tonumber(u[SHOOT_COUNT / 4]),
+        x = sixteenths(i16(shoot_buf, SHOOT_START)), z = sixteenths(i16(shoot_buf, SHOOT_START + 2)),
+        ex = ended and sixteenths(i16(shoot_buf, SHOOT_END)) or nil,
+        ez = ended and sixteenths(i16(shoot_buf, SHOOT_END + 2)) or nil,
+        dist = math.floor(tonumber(ffi.cast("float*", shoot_buf + SHOOT_DIST)[0]) * 100 + 0.5) / 100,
+        idx = tonumber(u[SHOOT_SHOOTER / 4]),
+        raw = (ffi.string(shoot_buf, SHOOT_BYTES):gsub(".", function(c) return string.format("%02x", c:byte()) end)),
+    })
+end
+
 local function find_stats_region()
     local found = {}
     for _, r in ipairs(list_regions()) do
@@ -529,8 +593,13 @@ local function sample()
         emit("stats_appeared", { sci = hex(stats_ptr()), squad_home = squads[0], squad_away = squads[1] })
         stats_region, lineups, team_cache, last_formation = nil, {}, {}, {}
         pos_region, last_pos, last_pos_search_ms = nil, nil, 0
+        shoot_obj, last_shot, last_shoot_search_ms = nil, nil, 0
         last_search_ms = 0
         last_snapshot_ms = t
+    end
+    if not shoot_obj and t - last_shoot_search_ms >= STATS_SEARCH_EVERY_MS then
+        last_shoot_search_ms = t
+        find_shoot_object()
     end
     if not stats_region and t - last_search_ms >= STATS_SEARCH_EVERY_MS then
         last_search_ms = t
@@ -598,11 +667,12 @@ local function open_session(ctx)
     seq, last_state, in_match, squads = 0, {}, false, {}
     stats_region, lineups, team_cache, last_possession, last_formation = nil, {}, {}, {}, {}
     pos_region, last_pos, last_pos_search_ms = nil, nil, 0
+    shoot_obj, last_shot = nil, nil
     emit("session", {
         home_team = ctx.home_team, away_team = ctx.away_team, tournament_id = ctx.tournament_id,
         match_time = ctx.match_time, extra_time = ctx.extra_time, penalties = ctx.penalties,
         substitutions = ctx.substitutions, difficulty = ctx.difficulty, mis = hex(mis_address()),
-        probe_version = 5,
+        probe_version = 6,
     })
 end
 
@@ -625,6 +695,10 @@ function m.display_frame(ctx)
     if in_match and pos_region and t - last_pos_ms >= POS_EVERY_MS then
         last_pos_ms = t
         sample_positions()
+    end
+    if in_match and shoot_obj and t - last_shot_ms >= SHOOT_EVERY_MS then
+        last_shot_ms = t
+        sample_shot()
     end
     if t - last_sample_ms < SAMPLE_EVERY_MS then return end
     last_sample_ms = t
@@ -665,7 +739,7 @@ function m.init(ctx)
         m[handler_name] = guarded(m[event])
         ctx.register(event, m[handler_name])
     end
-    log("scl_probe ready (v5), output: " .. out_dir)
+    log("scl_probe ready (v6), output: " .. out_dir)
 end
 
 return m

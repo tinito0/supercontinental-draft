@@ -151,11 +151,6 @@ export function KitsSection({ pes, teamId, access, onApply }) {
   // config.txt values chosen in the 3D view (collar picker): same kit.set operations as the value inputs.
   // Unlike apply(), errors propagate so the picker can show them next to its button.
   const setValues = values => onApply(Object.entries(values).map(([key, value]) => ({ type: 'kit.set', target: { teamId, kit }, key, value })));
-  // Same path as the texture import in PesKitTextures: content-addressed asset + kit.texture.set.
-  const importTexture = async (slot, file, tex) => {
-    const sha = await pes.registerAsset(tex.bytes);
-    await onApply([{ type: 'kit.texture.set', target: { teamId, kit }, slot: slot.slot, value: file, ext: tex.ext, asset: { sha256: sha } }]);
-  };
 
   return (
     <div className="space-y-4">
@@ -185,7 +180,7 @@ export function KitsSection({ pes, teamId, access, onApply }) {
         <Card title={`Vista 3D · ${kitLabel(kit, kitList.find(k => k.kit === kit)?.category)}`}>
           <PesKit3DViewer kits={kits} teamId={teamId} kit={kit} cfg={cfg} version={version} players={squadOf(ws, teamId)}
             workspaceId={pes.activeId} uid={pes.actor?.uid} canShare={editable}
-            onImportTexture={editable ? importTexture : undefined} onSetValues={editable ? setValues : undefined} />
+            onSetValues={editable ? setValues : undefined} />
         </Card>
       )}
       {cfg && (

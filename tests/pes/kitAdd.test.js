@@ -3,8 +3,6 @@ import { KitWorkspace, insertInOrder } from '../../pes/kits/kitWorkspace.js';
 import { applyOperations } from '../../pes/operations.js';
 import { authorize } from '../../pes/permissions.js';
 import { getKitValue } from '../../pes/kits/kitConfig.js';
-import { normalMapPixels, srmPixels, fabricTile, FABRICS } from '../../pes/kits/fabricMaps.js';
-import { textureFromPixels } from '../../pes/kits/kitTextures.js';
 import { syntheticKitServer } from './fixtures.js';
 
 const fresh = () => { const { texts, all } = syntheticKitServer(); return { kits: new KitWorkspace(texts, all), meta: {} }; };
@@ -71,46 +69,5 @@ describe('new kits', () => {
     expect(() => authorize(km, op, { leagueTeamIds: [9999] })).not.toThrow();
     expect(() => authorize(km, op, { leagueTeamIds: [8888] })).toThrow(expect.objectContaining({ code: 'TEAM_NOT_IN_LEAGUE' }));
     expect(() => authorize({ uid: 'd', role: 'draft_admin' }, op)).toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
-  });
-});
-
-describe('fabric maps', () => {
-  it('a plain fabric without a kit texture is a flat normal map', () => {
-    const px = normalMapPixels({ fabric: 'liso', size: 16 });
-    for (let i = 0; i < px.length; i += 4) expect([px[i], px[i + 1], px[i + 2], px[i + 3]]).toEqual([128, 128, 0, 255]);
-  });
-
-  it('every weave tiles without a seam', () => {
-    // Across the tile edge the weave must change no more than between any two neighbouring pixels inside it.
-    for (const { k } of FABRICS) {
-      const N = 64, t = fabricTile(k, N), at = (x, y) => t[y * N + x];
-      let inner = 0, seam = 0;
-      for (let y = 0; y < N; y++) {
-        for (let x = 0; x + 1 < N; x++) inner = Math.max(inner, Math.abs(at(x + 1, y) - at(x, y)), Math.abs(at(y, x + 1) - at(y, x)));
-        seam = Math.max(seam, Math.abs(at(0, y) - at(N - 1, y)), Math.abs(at(y, 0) - at(y, N - 1)));
-      }
-      expect(seam, k).toBeLessThanOrEqual(inner + 1e-9);
-    }
-  });
-
-  it('embosses the drawings of the kit texture', () => {
-    const W = 32, kit = { width: W, height: W, pixels: new Uint8Array(W * W * 4) };
-    for (let y = 0; y < W; y++) for (let x = 16; x < W; x++) kit.pixels.set([255, 255, 255, 255], (y * W + x) * 4); // white right half
-    const px = normalMapPixels({ kit, fabric: 'liso', emboss: 1, size: 32 });
-    const at = x => px[(10 * W + x) * 4];
-    expect(at(4)).toBe(128); // flat area
-    expect(at(15)).not.toBe(128); // edge of the drawing
-  });
-
-  it('encodes to a verified FTEX for the nrm and srm slots', () => {
-    expect(textureFromPixels('nrm', normalMapPixels({ fabric: 'malla', size: 64 }), 64, 64).info).toMatchObject({ format: 'DXT5', width: 64 });
-    const srm = srmPixels('malla', 32);
-    expect([srm[0], srm[1]]).toEqual([85, 120]);
-    expect(textureFromPixels('srm', srm, 32, 32).info).toMatchObject({ format: 'DXT1', width: 32 });
-  });
-
-  it('rejects unknown fabrics and non power-of-two sizes', () => {
-    expect(() => normalMapPixels({ fabric: 'seda' })).toThrow(expect.objectContaining({ code: 'UNKNOWN_FABRIC' }));
-    expect(() => normalMapPixels({ size: 100 })).toThrow(expect.objectContaining({ code: 'FTEX_SIZE' }));
   });
 });

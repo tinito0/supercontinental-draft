@@ -2,10 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Check, Eye, Undo2 } from 'lucide-react';
 import { Button } from '../PesUi.jsx';
 import { KitGL, lightState, sharedThumbRenderer } from './kitRenderer.js';
-import { collarModel, fitParts, turnCollarLining, weldNormals } from '../../../pes/kits/kitModels.js';
+import { collarModel, fitParts, weldNormals } from '../../../pes/kits/kitModels.js';
+import { buildOccluder, refineCollar } from '../../../pes/kits/kitRefine.js';
 
 const THUMB = 96;
+const RENDER_SCALE = 3; // thumbnails drawn at 3× their CSS size, sharp on high-density screens
 const FRAME_BUDGET_MS = 12;
+// Prepared thumbnail scenes per base shirt (the viewer keeps one base array per geometry): redrawing after a pick,
+// a light change or a config edit reuses them instead of refining every collar again.
+const preparedScenes = new WeakMap();
 
 /**
  * Every collar model of the pack (limited to the kit's Collar range), drawn on the kit's own shirt. Picking one
@@ -28,7 +33,7 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
   // browser drop the main viewer's context ("WebGL context was lost").
   useEffect(() => {
     if (!pack || !baseParts.length || !collars.length) return undefined;
-    const R = sharedThumbRenderer(THUMB * 2);
+    const R = sharedThumbRenderer(THUMB * RENDER_SCALE);
     if (!R) { setThumbError('No se pudieron dibujar las miniaturas (WebGL no disponible).'); return undefined; }
     setThumbError(null);
     const off = R.gl.canvas;
@@ -36,6 +41,18 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
     KitGL.setTex(R, 0, texture);
     KitGL.setTex(R, 4, L.env.canvas);
     const full = fitParts(baseParts);
+    if (!preparedScenes.has(baseParts)) preparedScenes.set(baseParts, { occluder: null, scenes: new Map() });
+    const cache = preparedScenes.get(baseParts);
+    // Same preparation as the main viewer: contact shadows, smoothing and the lining marked as the inside of the
+    // neck (kitRefine, against the shirt), normals welded to the shirt so the seam shows no line.
+    const prepared = (n, m) => {
+      if (!cache.scenes.has(n)) {
+        cache.occluder ??= buildOccluder(baseParts.flatMap(p => p.m.meshes));
+        const collar = refineCollar({ k: 'collar', m }, cache.occluder, full.radius);
+        cache.scenes.set(n, { parts: weldNormals([...baseParts, collar]), focus: fitParts([collar]) });
+      }
+      return cache.scenes.get(n);
+    };
     let i = 0, raf = 0, cancelled = false;
     const step = () => {
       if (cancelled) return;
@@ -50,10 +67,8 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
         const m = collarModel(pack, n);
         const target = thumbs.current.get(n);
         if (!m || !target) continue;
-        // Same preparation as the main viewer (selectKitParts): normals welded to the shirt, so the seam does not
-        // show as a dark line, and the lining turned inwards, so the inside of the neck is in shadow.
-        KitGL.upload(R, turnCollarLining(weldNormals([...baseParts, { k: 'collar', m }])));
-        const focus = fitParts([{ k: 'collar', m }]);
+        const { parts, focus } = prepared(n, m);
+        KitGL.upload(R, parts);
         const fr = Math.max(focus.radius, full.radius * 0.18);
         KitGL.draw(R, {
           // Framed on the collar (the whole opening and the front panel in view), seen from the
@@ -61,7 +76,7 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
           fit: { ...full, center: [focus.center[0], focus.center[1] + fr * 0.1, focus.center[2]] }, yaw: full.yaw0 + 0.3, pitch: 0.36,
           dist: fr * 4.6, fov: 36,
           panX: 0, panY: 0, ortho: false, bg: false, bump: 1, nrm: false, glossK: 1, debug: 0, defSpec: 0.3, defRough: 0.6, L,
-          textured: scene.textured, colors: scene.colors,
+          textured: scene.textured, colors: scene.colors, ao: 1,
         });
         const g = target.getContext('2d');
         g.clearRect(0, 0, target.width, target.height);
@@ -85,7 +100,7 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
           <button key={n} type="button" aria-pressed={n === current} aria-label={`Cuello ${n}${n === saved ? ', guardado' : ''}`} title={`Cuello ${n}${n === saved ? ' (guardado)' : ''}`}
             onClick={() => onPreview(n === saved ? null : n)}
             className={`relative rounded-lg border p-0.5 transition-[border-color,background-color,scale] duration-fast active:scale-[0.97] ${n === current ? 'border-accent bg-accent-deep' : 'border-line/[0.12] hover:border-line/30'}`}>
-            <canvas ref={el => { if (el) thumbs.current.set(n, el); else thumbs.current.delete(n); }} width={THUMB * 2} height={THUMB * 2} className="w-full aspect-square rounded-md bg-canvas" />
+            <canvas ref={el => { if (el) thumbs.current.set(n, el); else thumbs.current.delete(n); }} width={THUMB * RENDER_SCALE} height={THUMB * RENDER_SCALE} className="w-full aspect-square rounded-md bg-canvas" />
             <span className="absolute bottom-1 left-1 num text-[11px] font-semibold text-ink bg-canvas/85 rounded px-1">{n}</span>
             {n === saved && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-success-soft" aria-label="guardado" />}
           </button>

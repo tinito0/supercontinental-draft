@@ -77,10 +77,12 @@ function collarName(pack, n) {
  * Picks the model parts of a kit from its config.txt values.
  * @param {(key: string) => string|null} value config getter
  * @param {{ sleeve?: 'short'|'long', socks?: 'long'|'middle'|'short', tuck?: 'out'|'in', captain?: boolean, goalkeeper?: boolean,
- *           collar?: number|null, undershirtOnly?: boolean }} view
+ *           collar?: number|null, undershirtOnly?: boolean, turnLining?: boolean }} view
  *   collar: collar model to show (resolveKitRender: Collar, WinterCollar or a previewed one); default config Collar.
  *   undershirtOnly: LongSleevesType=187, long sleeves are the undershirt under the short-sleeved shirt.
- * @returns {{ parts: {k: string, m: object}[], collar: string|null, collarExact: boolean }}
+ *   turnLining: false keeps the collar lining's normals as modelled (for kitRefine.refineParts); default turned.
+ * @returns {{ parts: {k: string, m: object}[], collar: string|null, collarExact: boolean, key: string }}
+ *   key: names of the meshes used, the same for the same geometry (cache key of refineParts).
  */
 export function selectKitParts(pack, value, view = {}) {
   const g = k => String(value(k) ?? '').trim();
@@ -102,44 +104,60 @@ export function selectKitParts(pack, value, view = {}) {
     // `arm_long` mesh is not used: it is not placed on this body (checked in the browser).
     ['undershirt', undershirt ? `sleeve_long${tight ? '_tight' : ''}${kappa ? '_kappa' : ''}` : null],
   ];
-  const parts = [];
+  const parts = [], used = [];
   for (const [k, n] of want) {
-    const m = n && (pack.get(n) || (k === 'sleeve' ? pack.get(sleeve) : null));
-    if (m) parts.push({ k, m });
+    const name = n && (pack.has(n) ? n : k === 'sleeve' && pack.has(sleeve) ? sleeve : null);
+    if (name) { parts.push({ k, m: pack.get(name) }); used.push(`${k}:${name}`); }
   }
   // The top of the shorts hidden under the shirt (without it a gap shows between shirt and shorts).
   const sub = pack.get(tuck === 'in' ? 'pants_sub_in' : tight ? 'pants_sub_tight' : 'pants_sub_out');
   const sp = parts.find(p => p.k === 'shorts');
-  if (sub && sp) sp.m = { meshes: [...sp.m.meshes, ...sub.meshes] };
-  return { parts: turnCollarLining(weldNormals(parts)), collar: col?.name ?? null, collarExact: Boolean(col?.exact) };
+  if (sub && sp) { sp.m = { meshes: [...sp.m.meshes, ...sub.meshes] }; used.push(`sub:${tuck}${tight ? '_tight' : ''}`); }
+  const welded = weldNormals(parts);
+  return { parts: view.turnLining === false ? welded : turnCollarLining(welded), collar: col?.name ?? null, collarExact: Boolean(col?.exact), key: used.join(' ') };
 }
 
 /**
- * The collar models include their inside (the lining you see through the neck opening) with normals pointing
- * into the neck. Drawn as an outer surface it was lit by the key light and looked like a bright, stretched patch
- * filling the opening. Turning those normals around makes the renderer treat them as the inside of the garment
- * (in shadow, no shine), like a real shirt. Lining = the normal points towards the centre of the neck opening
- * (on the collar's axis, at the height of its top rim): that covers the walls and the bottom of the lining, while
- * the outer face, the front panel and the top rim point away from it or across it.
+ * Which vertices of a collar are its lining: the inside you see through the neck opening, modelled with normals
+ * pointing into the neck. Lining = the normal points towards the centre of the neck opening (on the collar's axis,
+ * at the height of its top rim): that covers the walls and the bottom of the lining, while the outer face, the
+ * front panel and the top rim point away from it or across it.
+ * @param {object[]} meshes the collar's meshes
+ * @returns {Uint8Array[]} per mesh, 1 for a lining vertex
+ */
+export function collarLining(meshes) {
+  let cx = 0, cz = 0, n = 0, top = -Infinity, low = Infinity;
+  for (const me of meshes) for (let i = 0; i < me.pos.length; i += 3) {
+    cx += me.pos[i]; cz += me.pos[i + 2]; n++;
+    top = Math.max(top, me.pos[i + 1]); low = Math.min(low, me.pos[i + 1]);
+  }
+  if (n) { cx /= n; cz /= n; }
+  const cy = top - (top - low) * 0.08;
+  return meshes.map(me => {
+    const mask = new Uint8Array(me.pos.length / 3);
+    if (!n) return mask;
+    for (let i = 0; i < me.pos.length; i += 3) {
+      const dx = cx - me.pos[i], dy = cy - me.pos[i + 1], dz = cz - me.pos[i + 2], d = Math.hypot(dx, dy, dz) || 1;
+      if ((me.nrm[i] * dx + me.nrm[i + 1] * dy + me.nrm[i + 2] * dz) / d > 0.3) mask[i / 3] = 1;
+    }
+    return mask;
+  });
+}
+
+/**
+ * Drawn as an outer surface, the collar lining (collarLining) was lit by the key light and looked like a bright,
+ * stretched patch filling the opening. Turning its normals around makes the renderer treat it as the inside of the
+ * garment (in shadow, no shine), like a real shirt. Meshes refined by kitRefine.js do not need it: they carry the
+ * outside side per vertex instead, and keep their normals continuous for smoothing (selectKitParts turnLining: false).
  * @param {{k: string, m: {meshes: object[]}}[]} parts
  */
 export function turnCollarLining(parts) {
   return parts.map(part => {
     if (part.k !== 'collar') return part;
-    let cx = 0, cz = 0, n = 0, top = -Infinity, low = Infinity;
-    for (const me of part.m.meshes) for (let i = 0; i < me.pos.length; i += 3) {
-      cx += me.pos[i]; cz += me.pos[i + 2]; n++;
-      top = Math.max(top, me.pos[i + 1]); low = Math.min(low, me.pos[i + 1]);
-    }
-    if (!n) return part;
-    cx /= n; cz /= n;
-    const cy = top - (top - low) * 0.08;
-    const meshes = part.m.meshes.map(me => {
+    const masks = collarLining(part.m.meshes);
+    const meshes = part.m.meshes.map((me, j) => {
       const nrm = new Float32Array(me.nrm);
-      for (let i = 0; i < me.pos.length; i += 3) {
-        const dx = cx - me.pos[i], dy = cy - me.pos[i + 1], dz = cz - me.pos[i + 2], d = Math.hypot(dx, dy, dz) || 1;
-        if ((nrm[i] * dx + nrm[i + 1] * dy + nrm[i + 2] * dz) / d > 0.3) { nrm[i] = -nrm[i]; nrm[i + 1] = -nrm[i + 1]; nrm[i + 2] = -nrm[i + 2]; }
-      }
+      masks[j].forEach((lining, v) => { if (lining) for (let i = v * 3; i < v * 3 + 3; i++) nrm[i] = -nrm[i]; });
       return { ...me, nrm };
     });
     return { ...part, m: { meshes } };

@@ -1,8 +1,7 @@
 import React from 'react';
-import { FolderOpen, Save, CloudUpload, CheckCircle2, AlertTriangle, XCircle, Info, CircleDashed } from 'lucide-react';
+import { FolderOpen, Download, CloudUpload, CheckCircle2, AlertTriangle, XCircle, Info, CircleDashed } from 'lucide-react';
 import { Button, Disclosure } from '../PesUi.jsx';
 import { LIGHT_PRESETS } from './kitRenderer.js';
-import { FABRICS } from '../../../pes/kits/fabricMaps.js';
 import { describeAsset } from '../../../pes/kits/kitAssetResolver.js';
 
 // Side panels of the 3D kit viewer (PesKit3DViewer). Presentational: state lives in the viewer.
@@ -154,44 +153,17 @@ export function LetteringPanel({ opts, set, sample, setSample, players, nameOff,
   );
 }
 
-export function FabricPanel({ fabric, setFabric, hasNrm, hasSrm, useGenerated, canEmboss, onSave, saving }) {
-  const slider = (label, key, min, max, step, disabled) => (
-    <Row label={label}>
-      <input type="range" className="w-full sm:w-44" min={min} max={max} step={step} value={fabric[key]} disabled={disabled}
-        aria-label={label} onChange={e => setFabric(f => ({ ...f, [key]: Number(e.target.value) }))} />
-    </Row>
-  );
+/** Under the preview: download the kit as framed now, as a PNG with or without the background. */
+export function KitImageBar({ image, onTransparent, onDownload, disabled }) {
   return (
-    <div className="space-y-4">
-      <Section>
-        <Row label="Mapas de relieve y brillo">
-          <select className={SELECT} value={fabric.mode} onChange={e => setFabric(f => ({ ...f, mode: e.target.value }))}>
-            <option value="auto">{hasNrm ? 'Los del kit' : hasSrm ? 'Relieve generado + brillo del kit' : 'Generados'} (automático)</option>
-            <option value="kit" disabled={!hasNrm}>Los del kit (_nrm/_srm)</option>
-            <option value="gen">Generar con una tela</option>
-          </select>
-        </Row>
-      </Section>
-      {useGenerated && (
-        <Section title="Tela generada">
-          <Row label="Tela">
-            <select className={SELECT} value={fabric.fabric} onChange={e => setFabric(f => ({ ...f, fabric: e.target.value }))}>
-              {FABRICS.map(f => <option key={f.k} value={f.k} title={f.d}>{f.n}</option>)}
-            </select>
-          </Row>
-          {slider('Tamaño de la trama', 'repeat', 16, 96, 4)}
-          {slider('Relieve de la trama', 'strength', 0, 1, 0.05)}
-          {slider('Relieve de escudo y sponsor', 'emboss', 0, 1, 0.05, !canEmboss)}
-          {onSave && (
-            <Button variant="primary" disabled={saving?.busy} onClick={onSave}>
-              <Save className="w-3.5 h-3.5" />{saving?.busy ? 'Generando 2048 px…' : 'Guardar nrm y srm en el kit'}
-            </Button>
-          )}
-          {saving?.done && <p className="text-[11px] text-success-soft">{saving.done}</p>}
-          {saving?.error && <p className="text-[11px] text-danger-soft" role="alert">{saving.error.message}</p>}
-        </Section>
-      )}
-      <p className="text-[11px] text-ink-3">PES 2021 usa del kit el brillo (&lt;KitFile&gt;_srm). El relieve generado es solo para la vista previa salvo que lo guardes.</p>
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Toggle checked={image.transparent} onChange={onTransparent}>Sin fondo</Toggle>
+        <Button onClick={onDownload} disabled={disabled || image.busy} className="min-h-11 sm:min-h-9">
+          <Download className="w-3.5 h-3.5" aria-hidden="true" />{image.busy ? 'Generando…' : 'Descargar PNG'}
+        </Button>
+      </div>
+      {image.error && <p className="text-[11px] text-danger-soft text-right" role="alert">No se pudo descargar la imagen: {image.error.message}</p>}
     </div>
   );
 }

@@ -7,8 +7,11 @@
 //   (0–10 home). The game refreshes one team at a time, each player every 2–3 s: a sample, not a track.
 // - Direction: whichever way the home keeper stands in each period, the home team attacks the other way. Heat maps
 //   and shots are stored as if every team attacked to the right (x 0 = own goal line, 105 = opponent's).
-// - Shot position: the shooter's last refreshed position before the stats sample that counted the shot (that
-//   sample is up to 2 s late), so it is approximate: a few metres.
+// - Shot position, probe v6: the game's own shot observer (`shot` events, research doc S16): where the shot was
+//   struck and where it ended, metres from the centre spot with x toward the goal attacked, and the game's
+//   distance to goal. Seen live in one match (2026-11-11). The lateral sign (which touchline is +z) is unverified.
+// - Shot position, fallback: the shooter's last refreshed position before the stats sample that counted the shot
+//   (that sample is up to 2 s late), so it is approximate: a few metres.
 import { KIND } from './statKinds.js';
 
 export const RATING_KIND = 179;
@@ -23,6 +26,9 @@ export const PENALTY_XG = 0.76;
 export const XG_MODEL = { intercept: -1.1, angle: 1.4, distance: -0.075 };
 
 const SIDES = ['home', 'away'];
+// The strike comes before the stats sample that counts the shot: the counter rose when the shot ended (0.8–1.9 s
+// after the strike in the live match) and the probe samples stats every 2 s.
+const GAME_SHOT_WINDOW_MS = 6000;
 const GOAL_HALF_WIDTH = 3.66;
 const ENTRIES_PER_SIDE = 11;
 // A keeper this far from the centre line (m) is in his own half: his side tells the direction.
@@ -30,6 +36,7 @@ const KEEPER_SURE_X = 25;
 const HALF_LENGTH = PITCH.length / 2;
 const HALF_WIDTH = PITCH.width / 2;
 const round1 = value => Math.round(value * 10) / 10;
+const round2 = value => Math.round(value * 100) / 100;
 
 const f32 = new DataView(new ArrayBuffer(4));
 function asFloat(word) {
@@ -173,6 +180,36 @@ function shotTimes(rises) {
   return times;
 }
 
+const toPitch = (x, z) => ({ x: round2(HALF_LENGTH + x), y: round2(HALF_WIDTH + z) });
+
+/**
+ * Shots seen by the game's shot observer (probe v6), one per strike, in the attacking-right frame (0..105, 0..68):
+ * [{ ms, n, x, y, distance, end }]. `end` is where the shot ended (crossed the line, saved, blocked), null while the
+ * probe never saw it. [] for older probes.
+ */
+export function gameShots(events) {
+  return events
+    .filter(e => e.t === 'shot' && Number.isFinite(e.x) && Number.isFinite(e.z))
+    .reduce((strikes, e) => {
+      const last = strikes[strikes.length - 1];
+      const end = Number.isFinite(e.ex) && Number.isFinite(e.ez) ? toPitch(e.ex, e.ez) : null;
+      if (last && last.n === e.n && last.raw.x === e.x && last.raw.z === e.z) {
+        return [...strikes.slice(0, -1), { ...last, end: end ?? last.end }];
+      }
+      return [...strikes, { ms: e.ms, n: e.n, ...toPitch(e.x, e.z), distance: e.dist ?? null, end, raw: { x: e.x, z: e.z } }];
+    }, [])
+    .map(({ raw, ...strike }) => strike);
+}
+
+/** Index of the latest unused strike in the window before `ms`, or -1. */
+function strikeFor(strikes, used, ms) {
+  let found = -1;
+  strikes.forEach((strike, index) => {
+    if (!used.has(index) && strike.ms <= ms && ms - strike.ms <= GAME_SHOT_WINDOW_MS) found = index;
+  });
+  return found;
+}
+
 function shooterPosition(samples, shot, ms) {
   let found = null;
   for (const sample of samples) {
@@ -184,18 +221,27 @@ function shooterPosition(samples, shot, ms) {
 }
 
 /**
- * Shots with x, y (attacking right, metres) and xg when the shooter's position is known. A penalty gets
- * PENALTY_XG and the spot even without positions. Shots without a position keep xg null.
+ * Shots with x, y (attacking right, metres) and xg. The position comes from the game's shot observer when a strike
+ * matches (`located: 'game'`, plus `distance` and `end`), else from the shooter's last refreshed position
+ * (`located: 'estimate'`). A penalty gets PENALTY_XG and the spot. Shots without a position keep xg null.
  */
-export function locateShots(shots, rises, samples) {
+export function locateShots(shots, rises, samples, strikes = []) {
   const times = shotTimes(rises);
+  const used = new Set();
   return shots.map((shot, index) => {
-    if (shot.penalty) return { ...shot, x: PITCH.length - 11, y: HALF_WIDTH, xg: PENALTY_XG };
     const ms = times[index];
+    const strikeIndex = ms != null ? strikeFor(strikes, used, ms) : -1;
+    if (strikeIndex >= 0) used.add(strikeIndex);
+    if (shot.penalty) return { ...shot, x: PITCH.length - 11, y: HALF_WIDTH, xg: PENALTY_XG };
+    if (strikeIndex >= 0) {
+      const { x, y, distance, end } = strikes[strikeIndex];
+      const located = { ...shot, x: round1(x), y: round1(y) };
+      return { ...located, xg: shotXg(located), distance, end, located: 'game' };
+    }
     const p = ms != null && samples.length ? shooterPosition(samples, shot, ms) : null;
     if (!p) return { ...shot, x: null, y: null, xg: null };
     const located = { ...shot, x: round1(p.x), y: round1(p.y) };
-    return { ...located, xg: shotXg(located) };
+    return { ...located, xg: shotXg(located), located: 'estimate' };
   });
 }
 

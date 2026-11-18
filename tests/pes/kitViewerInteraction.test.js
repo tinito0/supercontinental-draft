@@ -1,5 +1,5 @@
 // 3D kit viewer: camera math, dragging the name/numbers, and the collar lining (synthetic data, no game files).
-import { zoomPan, panPerPixel, shortestYaw, DEFAULT_VIEW } from '../../components/pes/kit3d/useKitCamera.js';
+import { zoomPan, panPerPixel, shortestYaw, decayVelocity, DEFAULT_VIEW } from '../../components/pes/kit3d/useKitCamera.js';
 import { LETTERING, decalCenter, stepsForTarget, nudgeSize, applyDraft, hitLettering } from '../../components/pes/kit3d/letteringEdit.js';
 import { parseKitConfig, getKitValue } from '../../pes/kits/kitConfig.js';
 import { turnCollarLining } from '../../pes/kits/kitModels.js';
@@ -11,6 +11,18 @@ const steps = {
 const all = () => true;
 
 describe('camera', () => {
+  it('slows a released turn down and stops it once it is too slow to see', () => {
+    const v0 = 0.004; // rad/ms, a quick flick
+    expect(decayVelocity(v0, 16)).toBeLessThan(v0);
+    expect(decayVelocity(v0, 16)).toBeGreaterThan(0);
+    expect(decayVelocity(-v0, 16)).toBeCloseTo(-decayVelocity(v0, 16), 12); // both directions alike
+    let v = v0, ms = 0;
+    while (v && ms < 10000) { v = decayVelocity(v, 16); ms += 16; }
+    expect(v).toBe(0);
+    expect(ms).toBeGreaterThan(300); // a visible coast
+    expect(ms).toBeLessThan(2000); // that does not go on and on
+  });
+
   it('keeps the point under the cursor still when zooming', () => {
     const view = { ...DEFAULT_VIEW };
     expect(zoomPan(view, [0, 0], 1.5, 10, 5)).toEqual({ panX: 0, panY: 0 });

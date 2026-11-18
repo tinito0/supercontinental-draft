@@ -11,7 +11,7 @@ import { KIND, KIND_NAME, TEAM_STATS, kindTotal } from './statKinds.js';
 import { buildBuckets, buildSeries, buildShots } from './matchActions.js';
 import { buildFormations } from './formations.js';
 import { buildPossession } from './possession.js';
-import { buildHeatmaps, buildRatings, locateShots, positionSamples, teamXg } from './pitchData.js';
+import { buildHeatmaps, buildRatings, gameShots, locateShots, positionSamples, teamXg } from './pitchData.js';
 
 // Fields added later (shots, series, buckets, formations, teamPlans, ratings, heatmaps, xg) are optional: readers must handle summaries
 // without them, so the schema name stays and the match-feed function keeps accepting both.
@@ -291,9 +291,12 @@ export function summarizeMatch({ session, events }) {
   if (!events.some(e => e.t === 'pstats')) warnings.push('no per-player stats in this recording (probe v1?)');
   const extraTime = Boolean(session?.extra_time);
   const samples = positionSamples(events);
-  // Shot positions and xG only when the probe recorded positions (v5+); older summaries keep their shots as they were.
-  const shots = samples.length
-    ? locateShots(buildShots(rises, { extraTime }), rises, samples)
+  const strikes = gameShots(events);
+  // Shot positions and xG only when the probe recorded the game's shots (v6) or positions (v5); older summaries keep
+  // their shots as they were.
+  const located = samples.length > 0 || strikes.length > 0;
+  const shots = located
+    ? locateShots(buildShots(rises, { extraTime }), rises, samples, strikes)
     : buildShots(rises, { extraTime });
   return {
     schema: SCHEMA,
@@ -317,7 +320,7 @@ export function summarizeMatch({ session, events }) {
     players: playersBySide,
     teamStats: buildTeamStats(playersBySide),
     shots,
-    xg: samples.length ? teamXg(shots) : null,
+    xg: located ? teamXg(shots) : null,
     ratings: buildRatings(players),
     heatmaps: buildHeatmaps(samples),
     series: buildSeries(rises, { extraTime: Boolean(session?.extra_time) }),

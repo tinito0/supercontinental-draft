@@ -6,9 +6,8 @@ Adapted code: `pes/formats/pes2021/editCrypto.js` (from `js/pescrypt.js`), `pes/
 (from `js/pesdata.js`), `pes/kits/ftex.js` (writer from `js/ftexenc.js`), `pes/kits/kitFonts.js` (glyph cells from
 `js/kitfont.js`), `pes/kits/kitTextures.js` (slot list from `js/kitstudio.js`), `pes/kits/imageDecode.js`
 (approach of `rawFromImage`), `pes/kits/textureDecode.js` (DXT/BC7 decoders from `js/dds.js`),
-`pes/kits/kitModels.js` (from `js/kit3d.js`: k3Pack, k3Load, weld, k3Fit), `pes/kits/fabricMaps.js` (from `js/kitmat.js`;
-the honeycomb weave was changed to whole periods so it tiles), `components/pes/kit3d/kitRenderer.js` (verbatim
-K3LIGHTS / K3ENV.scene / K3GL from `js/kit3d.js`), `components/pes/kit3d/kitDecals.js` (KFONT from `js/kitfont.js`;
+`pes/kits/kitModels.js` (from `js/kit3d.js`: k3Pack, k3Load, weld, k3Fit), `components/pes/kit3d/kitRenderer.js` (verbatim
+K3LIGHTS / K3ENV.scene / K3GL from `js/kit3d.js`, plus our ambient occlusion attribute), `components/pes/kit3d/kitDecals.js` (KFONT from `js/kitfont.js`;
 composition from `js/kitstudio.js`). Source inspected: `vendor/Pes-Editor-Rebuilt-main` (v0.044 alpha).
 
 `public/kit3d/kitpack.bin` is the garment model pack (shirt, sleeves, collars, shorts, socks) shipped by PES Editor

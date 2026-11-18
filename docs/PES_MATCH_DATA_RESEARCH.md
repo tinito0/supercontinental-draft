@@ -211,3 +211,30 @@ the game's high heap found the **position snapshot**:
 - No pointer to the block within 0x800 before it; the only `0x253FC` constant in the slice is in `.rdata` unwind
   data. The writer (and the per-frame source) is not found.
 - Ratings: no f32 3–10 / u8 or u16 30–100 field common to the 22 records of the stats block during play.
+
+## Shot observer (S16, 2026-11-11, live, session 20261111_023028, one match)
+
+Found through the exe's RTTI names (readable in `PES2021.exe`): the match recorder has `match::record::Record` and
+observers such as `ObserverShoot`, `ObserverGoal`, `ObserverBallTouch` and `ObserverPass`. Located by vtable in a
+read-only scan (vtable of `ObserverShoot` = `0x142640B18`), then watched every 50 ms while the user played; shots
+were matched to the probe's stats rises (kind 6 / 17) and the goal events.
+
+- Container: in the first game run a private 0x30000-byte allocation with header u64 `{80, 4723, 196}` (same block
+  in both matches); in the second run a 0x10000 block with another header. So the block is no fingerprint.
+- Static pointer (second run): the exe keeps a table of the recorder's observers at 0x1436F41C0.., one object per
+  entry (vtables 0x1426400xx–0x142640Fxx); entry `0x1436F4238` -> ObserverShoot. The probe reads it and checks the
+  vtable. (A pointer scan in the first run did not report it; not explained.)
+- `+0x08` strike: i16 x, z in 1/16 m from the centre spot, x toward the goal attacked (both teams positive).
+  Written at the strike. `+0x0c` end: same units, written 0.8–1.9 s later (0 in between); every end lay at
+  x ≈ 52.7–53.3 m (the goal line is 840 = 52.5 m). The goal of 40' ended at (53.3, 1.75): inside the posts.
+- `+0x38` f32: distance to goal in metres (12.18 and 10.49; recomputed from `+0x08`: 12.2 and 10.6).
+- `+0x3c` u32: shots of the attacking team (4 → 5 → 6, as the probe counted for that side).
+- `+0x14` u32: shooter index (23 for two shots of Mbappé in a row, 17 for player 132933); numbering not decoded.
+- `+0x1c`/`+0x20`: a second strike-like pair and probably the keeper (`(833, −2)` = on his goal line); unconfirmed.
+- Still open: the lateral sign of z, a header/foot flag, the flags at `+0x40`–`+0x58`.
+- `Record` (+0x08, 22 × {f32 x, 0, z, match-clock seconds, tag}, 0x14 each): one entry per player, probably the last
+  touch. `ReplayBall` (+0x20 position) also exists; the live ball is not found yet.
+
+Probe v6 finds the object through `0x1436F4238`, reads `+0x00`–`+0x5f` every 100 ms and emits `shot` (strike, then end) with the raw bytes. The collector
+(`pitchData.js` `gameShots` / `locateShots`) places each counted shot at the strike seen up to 6 s before its stats
+sample (`located: 'game'`) and falls back to the S15 estimate. Not yet run in a match.

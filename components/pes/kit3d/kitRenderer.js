@@ -7,7 +7,10 @@
 // buffer left enabled made the next background pass fail with "attrib array enabled but no buffer bound"),
 // and dispose() frees GPU objects without killing the context; the inside of the garment (seen through the collar
 // or the sleeves) is drawn as shaded inner fabric, and pick() returns the kit texture coordinate under a pixel so
-// the name and numbers can be dragged on the model.
+// the name and numbers can be dragged on the model. Meshes refined by pes/kits/kitRefine.js carry a per-vertex
+// attribute `a` = (ambient occlusion, which side of the surface is the outside): occlusion darkens ambient, direct
+// light and reflections in creases (sc.ao sets the strength, 0 turns it off), and a known outside side decides
+// what counts as the inside of the garment instead of the normal alone. Meshes without them get (1, 0): no change.
 /* eslint-disable */
 export const LIGHT_PRESETS = {
   'estudio': { n: 'Estudio', key: [-35, 32, 1.4, '#fff6ea'], fill: [55, 8, .5, '#cfe0ff'], rim: [175, 28, .9, '#ffffff'], amb: .55, exp: 1.05, env: 'estudio' },
@@ -60,10 +63,10 @@ export const KitEnv = (() => {
 })();
 
 export const KitGL = (() => {
-  const VS = `attribute vec3 p;attribute vec3 n;attribute vec2 t;uniform mat4 mvp;uniform mat4 mv;uniform float grow;varying vec3 vn;varying vec2 vt;varying vec3 vp;
-    void main(){vec3 q=p*grow;vn=mat3(mv)*n;vt=t;vp=(mv*vec4(q,1.)).xyz;gl_Position=mvp*vec4(q,1.);}`;
+  const VS = `attribute vec3 p;attribute vec3 n;attribute vec2 t;attribute vec2 a;uniform mat4 mvp;uniform mat4 mv;uniform float grow;varying vec3 vn;varying vec2 vt;varying vec3 vp;varying vec2 va;
+    void main(){vec3 q=p*grow;vn=mat3(mv)*n;vt=t;va=a;vp=(mv*vec4(q,1.)).xyz;gl_Position=mvp*vec4(q,1.);}`;
   const FS = `#extension GL_OES_standard_derivatives : enable
-    precision highp float;varying vec3 vn;varying vec2 vt;varying vec3 vp;
+    precision highp float;varying vec3 vn;varying vec2 vt;varying vec3 vp;varying vec2 va;uniform float aoK;
     uniform sampler2D tex;uniform sampler2D nrm;uniform sampler2D srm;uniform sampler2D gls;uniform sampler2D env;uniform sampler2D env2;
     uniform float useTex;uniform float useN;uniform float useS;uniform float useG;uniform float bump;uniform vec3 col;uniform float glossK;uniform float debug;
     uniform vec3 L1;uniform vec3 C1;uniform vec3 L2;uniform vec3 C2;uniform vec3 L3;uniform vec3 C3;uniform float amb;uniform float specK;uniform float expo;uniform float defSpec;uniform float defRough;
@@ -77,8 +80,9 @@ export const KitGL = (() => {
     vec3 light(vec3 N,vec3 V,vec3 L,vec3 C,vec3 alb,float sp,float sh_){float d=max(dot(N,L),0.);vec3 H=normalize(L+V);float s=pow(max(dot(N,H),0.),sh_)*sp*(sh_+8.)/40.;float w=.25;float dw=max((dot(N,L)+w)/(1.+w),0.);return C*(alb*mix(d,dw,.35)+s*d);}
     void main(){vec3 N=normalize(vn);vec3 V=normalize(-vp);
       // inside of the garment: the normal points away from the camera. Real fabric seen from inside is the same print,
-      // in shadow and without shine (soft edge so silhouettes do not flicker).
-      float inside=smoothstep(.02,-.22,dot(N,V));if(dot(N,V)<0.)N=-N;
+      // in shadow and without shine (soft edge so silhouettes do not flicker). A baked outside side (va.y = -1: the
+      // normal points into the body) flips the test, so a lining whose normal faces the viewer still reads as inside.
+      float sd=va.y<-.5?-1.:1.;float inside=smoothstep(.02,-.22,dot(N,V)*sd);if(dot(N,V)<0.)N=-N;
       if(useN>.5){vec3 dp1=dFdx(vp),dp2=dFdy(vp);vec2 du1=dFdx(vt),du2=dFdy(vt);vec3 p2=cross(dp2,N),p1=cross(N,dp1);vec3 T=p2*du1.x+p1*du2.x;vec3 B=p2*du1.y+p1*du2.y;float iv=inversesqrt(max(max(dot(T,T),dot(B,B)),1e-12));
         vec2 nn=(texture2D(nrm,vt).rg*2.-1.)*bump;vec3 tn=vec3(nn.x,-nn.y,sqrt(max(0.,1.-dot(nn,nn))));N=normalize(T*iv*tn.x+B*iv*tn.y+N*tn.z);}
       float g=useG>.5?texture2D(gls,vt).r:.5;
@@ -87,8 +91,9 @@ export const KitGL = (() => {
       vec3 alb=useTex>.5?texture2D(tex,vt).rgb:col;alb=pow(alb,vec3(2.2))*mix(1.,.42,inside);
       vec2 sr=useS>.5?texture2D(srm,vt).rg:vec2(defSpec,defRough);
       float gm=mix(1.,.15+g*1.85,glossK);float sp=sr.x*.55*specK*gm*(1.-inside*.9);float rough=clamp(sr.y-(g-.5)*.5*glossK,.04,1.);float sh_=mix(48.,5.,rough);
-      vec3 c=alb*amb*(useEnv>.5?irr(N)*envInt:vec3(.35))+light(N,V,L1,C1,alb,sp,sh_)+light(N,V,L2,C2,alb,sp*.5,sh_)+light(N,V,L3,C3,alb,sp*.8,sh_);
-      if(useEnv>.5){vec3 R=reflect(-V,N);float fr=.04+.96*pow(1.-max(dot(N,V),0.),5.);c+=envS(R,rough*7.)*fr*sp*1.4*envInt;}
+      float o=mix(1.,pow(clamp(va.x,0.,1.),1.6),aoK);
+      vec3 c=alb*amb*o*(useEnv>.5?irr(N)*envInt:vec3(.35))+(light(N,V,L1,C1,alb,sp,sh_)+light(N,V,L2,C2,alb,sp*.5,sh_)+light(N,V,L3,C3,alb,sp*.8,sh_))*mix(1.,o,.65);
+      if(useEnv>.5){vec3 R=reflect(-V,N);float fr=.04+.96*pow(1.-max(dot(N,V),0.),5.);c+=envS(R,rough*7.)*fr*sp*1.4*envInt*o;}
       c+=pow(1.-max(dot(N,V),0.),3.)*C3*.15*(1.-inside);
       gl_FragColor=vec4(pow(aces(c*expo),vec3(1./2.2)),1.);}`;
   // fondo: el entorno visto por la cámara
@@ -111,8 +116,8 @@ export const KitGL = (() => {
     const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o) || 'No se pudo compilar el shader (contexto WebGL perdido).'); return o; };
     const prog = (v, f) => { const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, v)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, f)); gl.linkProgram(pr); if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr) || 'No se pudo enlazar el programa WebGL.'); return pr; };
     const pr = prog(VS, FS), bp = prog(BVS, BFS), pp = prog(PVS, PFS); gl.useProgram(pr);
-    const U = (p, n) => gl.getUniformLocation(p, n), loc = { p: gl.getAttribLocation(pr, 'p'), n: gl.getAttribLocation(pr, 'n'), t: gl.getAttribLocation(pr, 't') };
-    for (const n of ['mvp', 'mv', 'grow', 'tex', 'nrm', 'srm', 'gls', 'env', 'env2', 'useTex', 'useN', 'useS', 'useG', 'bump', 'col', 'glossK', 'debug', 'L1', 'C1', 'L2', 'C2', 'L3', 'C3', 'amb', 'specK', 'expo', 'defSpec', 'defRough', 'envInt', 'envYaw', 'envMix', 'useEnv']) loc[n] = U(pr, n);
+    const U = (p, n) => gl.getUniformLocation(p, n), loc = { p: gl.getAttribLocation(pr, 'p'), n: gl.getAttribLocation(pr, 'n'), t: gl.getAttribLocation(pr, 't'), a: gl.getAttribLocation(pr, 'a') };
+    for (const n of ['mvp', 'mv', 'grow', 'aoK', 'tex', 'nrm', 'srm', 'gls', 'env', 'env2', 'useTex', 'useN', 'useS', 'useG', 'bump', 'col', 'glossK', 'debug', 'L1', 'C1', 'L2', 'C2', 'L3', 'C3', 'amb', 'specK', 'expo', 'defSpec', 'defRough', 'envInt', 'envYaw', 'envMix', 'useEnv']) loc[n] = U(pr, n);
     loc.sh = U(pr, 'sh');
     [['tex', 0], ['nrm', 1], ['srm', 2], ['gls', 3], ['env', 4], ['env2', 5]].forEach(([n, i]) => gl.uniform1i(loc[n], i));
     const bl = { q: gl.getAttribLocation(bp, 'q') }; for (const n of ['env', 'env2', 'envYaw', 'envMix', 'tanH', 'blur', 'expo', 'pitch']) bl[n] = U(bp, n);
@@ -130,10 +135,12 @@ export const KitGL = (() => {
   }
   const ORDER = { shirt: 0, undershirt: 1, shorts: 2, socks: 3, sleeve: 4, collar: 5 };
   function upload(R, parts) {
-    const { gl } = R; if (gl.isContextLost()) return; for (const b of R.bufs) for (const x of [b.p, b.n, b.t, b.i]) gl.deleteBuffer(x); R.bufs = [];
+    const { gl } = R; if (gl.isContextLost()) return; for (const b of R.bufs) for (const x of [b.p, b.n, b.t, b.a, b.i]) gl.deleteBuffer(x); R.bufs = [];
     for (const { k, m } of [...parts].sort((a, b) => (ORDER[a.k] ?? 9) - (ORDER[b.k] ?? 9))) for (const me of m.meshes) {
       const mk = (data, tgt = gl.ARRAY_BUFFER) => { const o = gl.createBuffer(); gl.bindBuffer(tgt, o); gl.bufferData(tgt, data, gl.STATIC_DRAW); return o; };
-      R.bufs.push({ k, p: mk(me.pos), n: mk(me.nrm), t: mk(me.uv), i: mk(me.idx, gl.ELEMENT_ARRAY_BUFFER), c: me.idx.length, uv: me.hasUV });
+      const nv = me.pos.length / 3, shade = new Float32Array(nv * 2); // (occlusion, outside side) per vertex
+      for (let i = 0; i < nv; i++) { shade[i * 2] = me.ao ? me.ao[i] : 1; shade[i * 2 + 1] = me.outside ? me.outside[i] : 0; }
+      R.bufs.push({ k, p: mk(me.pos), n: mk(me.nrm), t: mk(me.uv), a: mk(shade), i: mk(me.idx, gl.ELEMENT_ARRAY_BUFFER), c: me.idx.length, uv: me.hasUV });
     }
   }
   // slot: 0 kit, 1 normal, 2 srm, 3 brillo (alfa del kit), 4 y 5 entorno
@@ -171,7 +178,7 @@ export const KitGL = (() => {
       gl.bindBuffer(gl.ARRAY_BUFFER, R.quad); gl.enableVertexAttribArray(R.bl.q); gl.vertexAttribPointer(R.bl.q, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.disableVertexAttribArray(R.bl.q); gl.enable(gl.DEPTH_TEST);
     }
     gl.useProgram(R.pr);
-    gl.uniformMatrix4fv(loc.mvp, false, M.MVP); gl.uniformMatrix4fv(loc.mv, false, M.MV); gl.uniform1f(loc.grow, sc.grow || 1);
+    gl.uniformMatrix4fv(loc.mvp, false, M.MVP); gl.uniformMatrix4fv(loc.mv, false, M.MV); gl.uniform1f(loc.grow, sc.grow || 1); gl.uniform1f(loc.aoK, sc.ao ?? 1);
     const setL = (u, cu, l) => { const v = dir(l[0], Math.max(-10, Math.min(89, l[1]))), cc = rgb(l[3]).map(x => x * l[2]); gl.uniform3f(loc[u], v[0], v[1], v[2]); gl.uniform3f(loc[cu], cc[0], cc[1], cc[2]); };
     setL('L1', 'C1', Lt.key); setL('L2', 'C2', Lt.fill); setL('L3', 'C3', Lt.rim);
     gl.uniform1f(loc.amb, Lt.amb); gl.uniform1f(loc.specK, Lt.spec); gl.uniform1f(loc.expo, Lt.exp); gl.uniform1f(loc.envInt, Lt.envInt); gl.uniform1f(loc.envYaw, Lt.envYaw); gl.uniform1f(loc.envMix, R.tx[5] ? Lt.envMix : 1); gl.uniform1f(loc.useEnv, hasEnv ? 1 : 0);
@@ -184,10 +191,10 @@ export const KitGL = (() => {
       gl.uniform1f(loc.useTex, useTex ? 1 : 0); gl.uniform3f(loc.col, col[0], col[1], col[2]); gl.uniform1f(loc.useN, useN ? 1 : 0); gl.uniform1f(loc.useS, useTex && R.tx[2] ? 1 : 0); gl.uniform1f(loc.useG, useTex && R.tx[3] ? 1 : 0); gl.uniform1f(loc.bump, sc.bump ?? 1);
       // las piezas que van encima (cuello, mangas) se adelantan un poquito para que no "peleen" con la camiseta en las uniones
       const off = b.k === 'collar' ? 3 : b.k === 'sleeve' ? 1.5 : 0; if (off) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-off, -off); } else gl.disable(gl.POLYGON_OFFSET_FILL);
-      bindMesh(gl, [[loc.p, b.p, 3], [loc.n, b.n, 3], [loc.t, b.t, 2]], b); gl.drawElements(gl.TRIANGLES, b.c, gl.UNSIGNED_SHORT, 0);
+      bindMesh(gl, [[loc.p, b.p, 3], [loc.n, b.n, 3], [loc.t, b.t, 2], [loc.a, b.a, 2]], b); gl.drawElements(gl.TRIANGLES, b.c, gl.UNSIGNED_SHORT, 0);
     }
     gl.disable(gl.POLYGON_OFFSET_FILL);
-    for (const at of [loc.p, loc.n, loc.t]) if (at >= 0) gl.disableVertexAttribArray(at);
+    for (const at of [loc.p, loc.n, loc.t, loc.a]) if (at >= 0) gl.disableVertexAttribArray(at);
     return M;
   }
   /**
@@ -217,7 +224,7 @@ export const KitGL = (() => {
   /** Frees every GPU object of a renderer; the context itself stays usable (e.g. by a remount). */
   function dispose(R) {
     const { gl } = R; if (gl.isContextLost()) return;
-    for (const b of R.bufs) for (const x of [b.p, b.n, b.t, b.i]) gl.deleteBuffer(x); R.bufs = [];
+    for (const b of R.bufs) for (const x of [b.p, b.n, b.t, b.a, b.i]) gl.deleteBuffer(x); R.bufs = [];
     for (const k of Object.keys(R.tx)) if (R.tx[k]) gl.deleteTexture(R.tx[k]); R.tx = {}; R.src = {}; R.rev = {};
     gl.deleteBuffer(R.quad); for (const p of [R.pr, R.bp, R.pp]) gl.deleteProgram(p);
   }
