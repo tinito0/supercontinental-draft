@@ -4,8 +4,7 @@ import { KIT_SLOTS, MAX_PHOTO_URL_LENGTH, cleanPhotoUrl } from '../../utils/leag
 import { uploadClubKitImage } from '../../services/clubKitService.js';
 
 /* Administración → Web pública → Clubes: las camisetas que muestra la página del club (titular, suplente y
-   alternativa). Cada una es una imagen: se sube desde la compu o el celular, o se pega un link. La imagen 4K en
-   percha sale del visor 3D del editor PES («Imagen en percha»), que también puede publicarla directo. */
+   alternativa). Cada una es una imagen: se sube desde la compu o el celular, o se pega un link. */
 
 function KitPreview({ url }) {
   const clean = cleanPhotoUrl(url);
@@ -80,8 +79,7 @@ export function ClubKitsEditor({ teamId, kits, onChange }) {
     <fieldset className="space-y-3">
       <legend className="section-title">Camisetas</legend>
       <p className="text-sm text-ink-2">
-        Se muestran en la página del club. Subí una imagen (PNG, JPG o WEBP, hasta 12 MB) o pegá un link. La imagen en
-        percha sale del visor 3D del editor PES, con «Imagen en percha».
+        Se muestran en la página del club. Subí una imagen (PNG, JPG o WEBP, hasta 12 MB) o pegá un link.
       </p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {KIT_SLOTS.map(([slot, label]) => (

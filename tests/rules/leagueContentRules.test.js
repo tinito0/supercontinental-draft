@@ -1,6 +1,6 @@
 // Firestore security rules for the league site's texts (league_content), exercised with forged direct requests
 // against the emulator. Run with: npm run test:rules
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
@@ -103,14 +103,11 @@ describe('league_editors (editor de la web pública)', () => {
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: 'texto' })));
   });
 
-  it('an editor publishes one kit image without rewriting the rest of the club page', async () => {
+  it('an editor saves the club kits (https image links) with the club card', async () => {
     const db = asEditor();
-    await assertSucceeds(setDoc(content(db, 'club-abc123'), signed({ body: 'Historia', profile: { stadium: 'La Cabeza' } })));
-    await assertSucceeds(setDoc(content(db, 'club-abc123'), signed({ profile: { kits: { home: 'https://firebasestorage.googleapis.com/k.webp' } } }),
-      { mergeFields: ['profile.kits.home', 'updatedAt', 'updatedBy'] }));
-    const saved = (await getDoc(content(db, 'club-abc123'))).data();
-    expect(saved.body).toBe('Historia');
-    expect(saved.profile).toMatchObject({ stadium: 'La Cabeza', kits: { home: 'https://firebasestorage.googleapis.com/k.webp' } });
+    const kits = { home: 'https://firebasestorage.googleapis.com/k.webp', third: 'https://example.com/3.png' };
+    await assertSucceeds(setDoc(content(db, 'club-abc123'), signed({ body: 'Historia', profile: { stadium: 'La Cabeza', kits } })));
+    await assertSucceeds(setDoc(content(db, 'club-abc123'), signed({ body: 'Historia', profile: { stadium: 'La Cabeza', kits: {} } })));
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { kits: { home: 'http://example.com/k.png' } } })));
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { kits: { fourth: 'https://example.com/k.png' } } })));
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { kits: 'https://example.com/k.png' } })));

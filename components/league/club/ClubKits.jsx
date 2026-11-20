@@ -3,8 +3,8 @@ import { Expand } from 'lucide-react';
 import { Tabs } from '../../ui/Tabs.jsx';
 import { clubKits } from '../../../utils/leagueContent.js';
 
-/* Camisetas del club en su página (titular, suplente, alternativa), las que carga Administración → Web pública o
-   publica el visor 3D del editor PES. Una a la vez, grande; con más de una se elige arriba. Cambiar de camiseta
+/* Camisetas del club en su página (titular, suplente, alternativa), las que se suben en Administración → Web
+   pública. Una a la vez, grande; con más de una se elige arriba. Cambiar de camiseta
    funde la imagen nueva (.kit-swap, --dur-base). Sin camisetas cargadas no se muestra nada. */
 
 export function ClubKits({ profile, teamName }) {

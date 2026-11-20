@@ -179,7 +179,7 @@ export function KitsSection({ pes, teamId, access, onApply }) {
       {cfg && (
         <Card title={`Vista 3D · ${kitLabel(kit, kitList.find(k => k.kit === kit)?.category)}`}>
           <PesKit3DViewer kits={kits} teamId={teamId} kit={kit} cfg={cfg} version={version} players={squadOf(ws, teamId)}
-            workspaceId={pes.activeId} uid={pes.actor?.uid} role={pes.actor?.role} canShare={editable}
+            workspaceId={pes.activeId} uid={pes.actor?.uid} canShare={editable}
             onSetValues={editable ? setValues : undefined} />
         </Card>
       )}

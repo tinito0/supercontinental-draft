@@ -12,8 +12,6 @@ import { composeKitTexture, fallbackKitTexture } from './kit3d/kitDecals.js';
 import { useKitGL } from './kit3d/useKitGL.js';
 import { useKitAssets } from './kit3d/useKitAssets.js';
 import { ViewPanel, ShirtPanel, LetteringPanel, DiagnosticsPanel, KitImageBar } from './kit3d/KitViewerPanels.jsx';
-import { KitHangerBar } from './kit3d/KitHangerBar.jsx';
-import { renderKitOnHanger } from './kit3d/hangerRender.js';
 import { DEFAULT_VIEW, useKitCamera } from './kit3d/useKitCamera.js';
 import { LETTERING, applyDraft, decalCenter, hitLettering, nudgeSize, stepsForTarget, stepsOf } from './kit3d/letteringEdit.js';
 
@@ -53,12 +51,11 @@ function useDebounced(value, ms) {
  *   onSetValues: writes config.txt values (kit.set operations); omitted = collars can be previewed but not saved.
  *   canShare: the user may share the kit-server textures found locally (Super Admin, Kit Manager of the team).
  */
-export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], workspaceId, uid, role, canShare, onSetValues }) {
+export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], workspaceId, uid, canShare, onSetValues }) {
   const canvasRef = useRef(null);
   const viewRef = useRef({ ...DEFAULT_VIEW });
   const fitRef = useRef(null);
   const refinedRef = useRef(new Map());
-  const partsRef = useRef([]);
   const { glRef, epoch, error: glError } = useKitGL(canvasRef);
   const [pack, setPack] = useState(null);
   const [packError, setPackError] = useState(null);
@@ -149,7 +146,6 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
       if (cache.size > REFINED_CACHE_SIZE) cache.delete(cache.keys().next().value);
     }
     const parts = refined.parts;
-    partsRef.current = parts;
     KitGL.upload(glRef.current, parts);
     fitRef.current = refined.fit;
     // Height of the neck opening above the centre of the kit, for the «Cuello» view.
@@ -300,21 +296,6 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     }
   };
 
-  /** «Imagen en percha» (hangerRender.js): dibuja solo la camiseta de frente y después devuelve el kit entero al visor. */
-  const renderHanger = async () => {
-    const R = glRef.current;
-    if (!R || !partsRef.current.length) throw new Error('El kit todavía no está listo.');
-    const outlined = selected;
-    if (outlined) KitGL.setTex(R, 0, composeKitTexture(tex.kit?.canvas || null, value, fonts, lettering, render).canvas);
-    try {
-      return await renderKitOnHanger({ R, parts: partsRef.current, colors, textured: TEXTURED });
-    } finally {
-      KitGL.upload(R, partsRef.current);
-      if (outlined) KitGL.setTex(R, 0, composed.canvas);
-      draw();
-    }
-  };
-
   const set = patch => setOpts(o => ({ ...o, ...patch }));
   const saveCollar = async (n, winter) => {
     await onSetValues(winter && cfg.keys.has('WinterCollar') ? { Collar: String(n), WinterCollar: String(n) } : { Collar: String(n) });
@@ -361,7 +342,6 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
           </div>
         </div>
         <KitImageBar image={image} onTransparent={v => setImage(s => ({ ...s, transparent: v }))} onDownload={downloadImage} disabled={!pack || Boolean(error)} />
-        <KitHangerBar teamId={teamId} kit={kit} uid={uid} role={role} disabled={!pack || Boolean(error)} onRender={renderHanger} />
         {(selected || Object.keys(draft).length > 0 || letterSave?.done) && (
           <LetteringBar group={selected} steps={shownSteps} canEdit={canEdit} dirty={Object.keys(draft).length > 0}
             onResize={dir => selected && resize(selected, dir)} onDiscard={() => { setDraft({}); setSelected(null); setLetterSave(null); }}

@@ -173,9 +173,6 @@ de la web (los mismos que escriben las historias):
 
 - **Administración → Web pública → Clubes → Camisetas:** «Subir imagen» (PNG, JPG o WEBP, hasta 12 MB) o pegar un
   link https. Después **Guardar**.
-- **Editor PES → el equipo → Kits → Vista 3D → «Imagen en percha»:** descarga la camiseta de frente, colgada en una
-  percha, en 3072 × 3840. Si sos admin o editor de la web aparece «Publicar en la página del club»: elegís el club y si
-  es titular, suplente o alternativa.
 
 Las imágenes van a Firebase Storage (`league_kits/`). La primera vez hay que publicar `storage.rules`
 (`firebase deploy --only storage`); antes, mirá en la consola de Firebase que esas reglas no se pierdan nada de las
