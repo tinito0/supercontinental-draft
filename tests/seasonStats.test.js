@@ -2,7 +2,7 @@
 // recorded sessions (skipped when E:\ is missing) prove it runs on real probe output.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { buildSeasonStats, seasonHeat, clubMatchLog, headToHead, matchupFacts, playerMatchLog, seasonLeaders, teamOfTheRound, MIN_RATED_MATCHES } from '../utils/seasonStats.js';
+import { buildSeasonStats, seasonHeat, clubMatchLog, headToHead, matchupFacts, playerMatchLog, seasonLeaders, teamOfTheRound, MIN_RATED_MATCHES, MIN_SHOTS_FOR_CONVERSION, MIN_PASSES_FOR_ACCURACY } from '../utils/seasonStats.js';
 import { buildLiveMatchDoc } from '../supabase/functions/_shared/matchFeed.js';
 import { buildMatchLinesDoc } from '../supabase/functions/_shared/matchLines.js';
 import { parseEventLines, splitMatches, summarizeMatch } from '../pes-collector/collector/matchSummary.js';
@@ -198,6 +198,20 @@ describe('seasonLeaders', () => {
   it(`ranks ratings only for players with at least ${MIN_RATED_MATCHES} rated matches`, () => {
     // 9 averages 8 over two matches, the keeper 1 averages 6; 10 and 201 have one rated match each.
     expect(seasonLeaders(stats.players, 'rating').map(p => p.id)).toEqual([9, 1]);
+  });
+  it('ranks shot conversion and pass accuracy only above their minimums', () => {
+    const doc = lines('20261124T200000Z_1-2', team('A', 'Los Pibes', 2), team('B', 'La Banda', 0), [
+      // 1 de 1: 100 %, pero no llega al mínimo de tiros
+      player(1, 'home', { goals: 1, shots: 1 }),
+      player(2, 'home', { goals: MIN_SHOTS_FOR_CONVERSION, shots: MIN_SHOTS_FOR_CONVERSION * 2 }),
+      player(3, 'home', { passes: MIN_PASSES_FOR_ACCURACY, passesCompleted: MIN_PASSES_FOR_ACCURACY }),
+      player(4, 'away', { passes: MIN_PASSES_FOR_ACCURACY * 2, passesCompleted: MIN_PASSES_FOR_ACCURACY }),
+      player(5, 'away', { passes: 5, passesCompleted: 5 }),
+    ]);
+    const { players } = buildSeasonStats([doc]);
+    expect(players.find(p => p.id === 1).shotConversion).toBeNull();
+    expect(seasonLeaders(players, 'shotConversion').map(p => [p.id, p.shotConversion])).toEqual([[2, 50]]);
+    expect(seasonLeaders(players, 'passAccuracy').map(p => [p.id, p.passAccuracy])).toEqual([[3, 100], [4, 50]]);
   });
 });
 

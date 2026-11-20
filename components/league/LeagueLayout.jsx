@@ -13,6 +13,7 @@ export const LEAGUE_NAV_LINKS = [
   { to: '/equipos', label: 'Equipos' },
   { to: '/reglamento', label: 'Reglamento' },
   { to: '/torneo', label: 'Torneo' },
+  { to: '/estadisticas', label: 'Estadísticas' },
   { to: '/partidos', label: 'Partidos' },
   { to: '/en-vivo', label: 'En vivo' },
 ];

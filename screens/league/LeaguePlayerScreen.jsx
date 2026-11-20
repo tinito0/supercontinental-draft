@@ -138,7 +138,7 @@ export default function LeaguePlayerScreen() {
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6 md:py-14">
-      <Link to="/torneo?tab=estadisticas" className="mb-6 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent-soft hover:text-ink">
+      <Link to="/estadisticas" className="mb-6 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent-soft hover:text-ink">
         <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Estadísticas de la temporada
       </Link>
       {content}
