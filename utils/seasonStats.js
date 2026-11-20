@@ -317,3 +317,76 @@ export function seasonLeaders(players, field, { limit = 10 } = {}) {
     : players.filter(p => typeof p[field] === 'number' && p[field] > 0);
   return [...eligible].sort((a, b) => b[field] - a[field] || a.minutes - b.minutes).slice(0, limit);
 }
+
+// Números del equipo por partido (/equipos/:id?tab=estadisticas): sumas de las líneas de sus jugadores en cada
+// partido, y la posesión del encabezado del equipo (match_lines home/away.possession; falta en partidos donde el
+// juego no la contó, que no entran en ese promedio).
+export const CLUB_STAT_ROWS = [
+  { key: 'possession', label: 'Posesión', unit: '%', higherIsBetter: true },
+  { key: 'goalsFor', label: 'Goles a favor', higherIsBetter: true },
+  { key: 'goalsAgainst', label: 'Goles en contra', higherIsBetter: false },
+  { key: 'shots', label: 'Tiros', higherIsBetter: true },
+  { key: 'shotsOnTarget', label: 'Tiros al arco', higherIsBetter: true },
+  { key: 'passes', label: 'Pases', higherIsBetter: true },
+  { key: 'passAccuracy', label: 'Precisión de pase', unit: '%', higherIsBetter: true },
+  { key: 'tacklesWon', label: 'Quites', higherIsBetter: true },
+  { key: 'interceptions', label: 'Intercepciones', higherIsBetter: true },
+  { key: 'saves', label: 'Atajadas', higherIsBetter: true },
+];
+const TEAM_SUMS = ['shots', 'shotsOnTarget', 'passes', 'passesCompleted', 'tacklesWon', 'interceptions', 'saves'];
+const round1 = n => Math.round(n * 10) / 10;
+
+/** Lo que hizo un lado en un partido: goles del marcador y las sumas de sus jugadores. */
+function teamMatchLine(doc, side) {
+  const other = side === 'home' ? 'away' : 'home';
+  const lines = doc.players.filter(line => line.side === side);
+  const sums = Object.fromEntries(TEAM_SUMS.map(field => [field, lines.reduce((sum, line) => sum + (Number(line[field]) || 0), 0)]));
+  const possession = Number.isFinite(doc[side].possession) ? doc[side].possession : null;
+  return { clubKey: clubKeyOf(doc[side]), goalsFor: doc[side].score, goalsAgainst: doc[other].score, possession, ...sums };
+}
+
+/** Promedio por partido de cada fila; la precisión de pase sale del total de pases, no del promedio de porcentajes. */
+function averages(lines) {
+  if (!lines.length) return null;
+  const total = field => lines.reduce((sum, line) => sum + line[field], 0);
+  const out = {};
+  for (const { key } of CLUB_STAT_ROWS) {
+    if (key === 'passAccuracy') {
+      out[key] = total('passes') ? Math.round((total('passesCompleted') / total('passes')) * 100) : null;
+    } else if (key === 'possession') {
+      const known = lines.filter(line => line.possession != null);
+      out[key] = known.length ? round1(known.reduce((sum, line) => sum + line.possession, 0) / known.length) : null;
+    } else {
+      out[key] = round1(total(key) / lines.length);
+    }
+  }
+  return out;
+}
+
+/**
+ * Los números de un club por partido contra el promedio de la liga, con su puesto entre los clubes (1 = el mejor;
+ * en goles en contra, el que menos recibe).
+ * @param {object[]} docs documentos match_lines
+ * @param {string} clubKey id del club del draft
+ * @returns {null | { matches: number, rows: { key, label, unit?, value, league, rank, of }[] }} null si no jugó
+ */
+export function clubTeamStats(docs, clubKey, { officialKeys } = {}) {
+  const lines = withKnownClubs(countedMatches(docs, officialKeys)).flatMap(doc => SIDES.map(side => teamMatchLine(doc, side)));
+  const byClub = new Map();
+  for (const line of lines) byClub.set(line.clubKey, [...(byClub.get(line.clubKey) || []), line]);
+  const own = byClub.get(clubKey);
+  if (!own?.length) return null;
+  const clubAverages = [...byClub.entries()].map(([key, clubLines]) => ({ key, avg: averages(clubLines) }));
+  const mine = averages(own);
+  const league = averages(lines);
+  return {
+    matches: own.length,
+    rows: CLUB_STAT_ROWS.map(row => {
+      const better = (a, b) => (row.higherIsBetter ? a > b : a < b);
+      const value = mine[row.key];
+      const ranked = clubAverages.filter(entry => entry.avg[row.key] != null);
+      const rank = value == null ? null : 1 + ranked.filter(entry => better(entry.avg[row.key], value)).length;
+      return { key: row.key, label: row.label, unit: row.unit, value, league: league[row.key], rank, of: ranked.length };
+    }),
+  };
+}

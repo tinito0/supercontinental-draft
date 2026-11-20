@@ -138,7 +138,15 @@ function teamHeader(liveDoc, summary, side) {
     name: liveDoc[`${side}Name`],
     score: liveDoc.score[side],
     xg: typeof summary.xg?.[side] === 'number' ? round2(summary.xg[side]) : null,
+    // % del tiempo con la pelota, contado por el juego; null cuando el juego no llenó sus contadores.
+    possession: possessionOf(summary, side),
   };
+}
+
+/** Posesión de un lado según el resumen del colector (summary.possession), o null. */
+export function possessionOf(summary, side) {
+  const value = summary?.possession?.[side];
+  return Number.isFinite(value) ? value : null;
 }
 
 /**

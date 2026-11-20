@@ -17,7 +17,7 @@ const SPOTLIGHTS = [
   { field: 'goals', title: 'Goleadores', unit: 'goles' },
   { field: 'rating', title: 'Mejor valoración', unit: `promedio, desde ${MIN_RATED_MATCHES} partidos` },
 ];
-const GROUPS = [
+export const GROUPS = [
   {
     id: 'ataque',
     title: 'Ataque',
@@ -90,15 +90,15 @@ function Spotlight({ players, field, title, unit, catalog }) {
   );
 }
 
-function LeaderTable({ players, field, title, note, catalog }) {
-  const rows = seasonLeaders(players, field, { limit: TABLE_ROWS });
+export function LeaderTable({ players, field, title, note, catalog, limit = TABLE_ROWS, hideClub = false }) {
+  const rows = seasonLeaders(players, field, { limit });
   return (
     <section className="min-w-0" aria-labelledby={`season-${field}`}>
       <h3 id={`season-${field}`} className="eyebrow">{title}</h3>
       {note && <p className="mt-0.5 text-xs text-ink-3">{note}</p>}
       {rows.length ? (
         <ol className="mt-1 divide-y divide-line/10">
-          {rows.map((player, index) => <SeasonLeaderRow key={player.id} player={player} rank={index + 1} field={field} catalog={catalog} />)}
+          {rows.map((player, index) => <SeasonLeaderRow key={player.id} player={player} rank={index + 1} field={field} catalog={catalog} hideClub={hideClub} />)}
         </ol>
       ) : (
         <p className="py-2 text-sm text-ink-3">Todavía no hay.</p>
