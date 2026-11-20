@@ -37,4 +37,4 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions)."; exit 1; }
           # --no-verify-jwt: any visitor's browser calls it, without an account.
-          supabase functions deploy community-vote --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy
+          supabase functions deploy community-vote --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy --yes
