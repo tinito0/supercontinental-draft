@@ -1,6 +1,6 @@
 // Firestore security rules for the league site's texts (league_content), exercised with forged direct requests
 // against the emulator. Run with: npm run test:rules
-import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
