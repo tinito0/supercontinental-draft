@@ -130,6 +130,8 @@ export const CLUB_PROFILE_FIELDS = [
   ['colors', 'Colores', 60, 'Ej.: Azul y blanco'],
 ];
 export const MAX_PHOTO_URL_LENGTH = 500;
+/** The club's kits on its page: [key, label]. Each one is an image link (https), uploaded or pasted. */
+export const KIT_SLOTS = [['home', 'Titular'], ['away', 'Suplente'], ['third', 'Alternativa']];
 export const MAX_HONOURS = 30;
 export const MAX_CLUB_SEASONS = 40;
 const HONOUR_NAME_LENGTH = 80;
@@ -253,6 +255,13 @@ export function normalizeClubProfile(profile = {}) {
   if (photo === null) return { ok: false, error: 'La foto del estadio tiene que ser un link que empiece con https://.' };
   value.stadiumPhotoUrl = photo;
   value.stadiumPhotoFrame = cleanPhotoFrame(profile?.stadiumPhotoFrame);
+  const kits = {};
+  for (const [slot, label] of KIT_SLOTS) {
+    const url = cleanPhotoUrl(profile?.kits?.[slot]);
+    if (url === null) return { ok: false, error: `La camiseta ${label.toLowerCase()} tiene que ser un link que empiece con https://.` };
+    if (url) kits[slot] = url;
+  }
+  value.kits = kits;
   const honours = normalizeHonours(profile?.honours);
   if (!honours.ok) return honours;
   const seasons = normalizeClubSeasons(profile?.seasons);
@@ -333,5 +342,15 @@ export function groupHonours(honours) {
 export function hasClubProfile(profile) {
   if (!profile) return false;
   return CLUB_PROFILE_FIELDS.some(([key]) => String(profile[key] || '').trim())
-    || Boolean(profile.stadiumPhotoUrl) || Boolean(profile.honours?.length) || Boolean(profile.seasons?.length);
+    || Boolean(profile.stadiumPhotoUrl) || Boolean(profile.honours?.length) || Boolean(profile.seasons?.length)
+    || hasClubKits(profile);
+}
+
+/** The kits a club has on its page, in slot order: [{ slot, label, url }]. */
+export function clubKits(profile) {
+  return KIT_SLOTS.filter(([slot]) => cleanPhotoUrl(profile?.kits?.[slot])).map(([slot, label]) => ({ slot, label, url: profile.kits[slot] }));
+}
+
+export function hasClubKits(profile) {
+  return clubKits(profile).length > 0;
 }

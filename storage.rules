@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// Firebase Storage. Before this file the rules lived only in the Firebase console; deploying it
+// (`firebase deploy --only storage`) REPLACES them. Check the console rules first and add here anything they allow
+// that is not below. Paths the app uses:
+//   team_logos/{file}               club crests, uploaded by the admin (components/admin/TeamsAdminSection.jsx)
+//   league_kits/{teamId}/{file}     kit images on the club page (services/clubKitService.js), by the admin or a
+//                                   web editor (league_editors/{uid} in Firestore, the same people who edit the
+//                                   club histories)
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.uid == "2Qn5j9a9ABW66iPyFL6ZfqwXBqG3" ||
+        request.auth.token.get('admin', false) == true ||
+        request.auth.token.get('pes_role', '') == 'super_admin'
+      );
+    }
+    function isLeagueEditor() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/artifacts/scl-draft-2025/league_editors/$(request.auth.uid));
+    }
+    function isImage(maxBytes) {
+      return request.resource.size < maxBytes && request.resource.contentType.matches('image/(png|jpeg|webp)');
+    }
+
+    match /team_logos/{file} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /league_kits/{teamId}/{file} {
+      allow read: if true;
+      // 4K PNGs from the 3D viewer weigh a few MB; 12 MB leaves room without letting anything huge in.
+      allow create, update: if (isAdmin() || isLeagueEditor()) && isImage(12 * 1024 * 1024);
+      allow delete: if isAdmin() || isLeagueEditor();
+    }
+  }
+}

@@ -148,6 +148,7 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
   tap never leaves a hover stuck on phones. No `transition-all`: list the properties.
 - **Live values**: bars fed by live votes grow with `transform: scaleX()` and a 300ms ease-out transition, not `width`.
   A live score that changes flashes once (`.value-flash`), never on page load.
+- **Image swap** (`.kit-swap`): picking another kit on a club page fades the new image in, `--dur-base`, no movement.
 - **OBS overlay** (`components/broadcast/broadcast.css`) is broadcast graphics, not app UI: staged entries (~1.6 s) and
   short row staggers are allowed there; the exit is shorter than the entry (280ms). Every curve is `--scl-ease`.
   The community popup and cards (`CommunityFrame.jsx`, `.scl-pop`) sit at the bottom, clear of the game's score and

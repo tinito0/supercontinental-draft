@@ -369,6 +369,8 @@
 
 /* Versiones de solo opacidad, para movimiento reducido. */
 @keyframes app-fade { from { opacity: 0; } }
+/* Otra camiseta en la página del club (ClubKits.jsx): la imagen nueva se funde, sin moverse. */
+.kit-swap { animation: app-fade var(--dur-base) var(--ease-out) both; }
 @keyframes app-fade-out { to { opacity: 0; } }
 
 /* Confeti del festejo de fichaje (components/PlayerModal.jsx): duración, demora y giro por pieza en línea.

@@ -137,6 +137,8 @@ per browser). Never store binaries in Firestore or localStorage.
 
 - `vendor/` holds game files, an `EDIT00000000` that contains a Steam ID, and third-party tools. It is gitignored. Never commit it.
 - On Windows, a shell whose cwd is inside `dist/` locks it and `npm run build` fails with EBUSY.
+- `storage.rules` (Firebase Storage: `team_logos/`, `league_kits/`) replaced rules that lived only in the console; deploy with
+  `firebase deploy --only storage` after checking the console has nothing else.
 - `firestore.rules` changes need `npm run test:rules` and an explicit deploy. The catch-all
   `match /{document=**}` gives the app admin unrestricted writes on purpose. Don't widen other rules to "fix" access.
 - `app.jsx`, `components/FormationModal.jsx` and `components/PlayerModal.jsx` are over 800 lines. Prefer extracting
