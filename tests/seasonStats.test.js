@@ -2,7 +2,7 @@
 // recorded sessions (skipped when E:\ is missing) prove it runs on real probe output.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { buildSeasonStats, seasonHeat, clubMatchLog, headToHead, matchupFacts, playerMatchLog, seasonLeaders, teamOfTheRound, MIN_RATED_MATCHES, MIN_SHOTS_FOR_CONVERSION, MIN_PASSES_FOR_ACCURACY } from '../utils/seasonStats.js';
+import { buildSeasonStats, clubTeamStats, seasonHeat, clubMatchLog, headToHead, matchupFacts, playerMatchLog, seasonLeaders, teamOfTheRound, MIN_RATED_MATCHES, MIN_SHOTS_FOR_CONVERSION, MIN_PASSES_FOR_ACCURACY } from '../utils/seasonStats.js';
 import { buildLiveMatchDoc } from '../supabase/functions/_shared/matchFeed.js';
 import { buildMatchLinesDoc } from '../supabase/functions/_shared/matchLines.js';
 import { parseEventLines, splitMatches, summarizeMatch } from '../pes-collector/collector/matchSummary.js';
@@ -254,5 +254,31 @@ describe('seasonHeat', () => {
 
   it('is null for a player without heat maps', () => {
     expect(seasonHeat([m1], 9)).toBeNull();
+  });
+});
+
+describe('clubTeamStats', () => {
+  const doc = (key, home, away, homeLines, awayLines) => lines(key, home, away, [
+    ...homeLines.map((extra, i) => player(100 + i, 'home', extra)),
+    ...awayLines.map((extra, i) => player(200 + i, 'away', extra)),
+  ]);
+  const docs = [
+    doc('20261101T200000Z_1-2', team('A', 'Los Pibes', 2), team('B', 'La Banda', 0), [{ shots: 6, passes: 100, passesCompleted: 80 }], [{ shots: 2, passes: 50, passesCompleted: 30, saves: 3 }]),
+    doc('20261108T200000Z_3-1', team('C', 'El Club', 1), team('A', 'Los Pibes', 1), [{ shots: 4, passes: 60, passesCompleted: 45 }], [{ shots: 4, passes: 140, passesCompleted: 120 }]),
+  ];
+
+  it('averages the club per match from its players and ranks it among the clubs', () => {
+    const stats = clubTeamStats(docs, 'A');
+    expect(stats.matches).toBe(2);
+    const row = key => stats.rows.find(r => r.key === key);
+    expect(row('goalsFor')).toMatchObject({ value: 1.5, rank: 1, of: 3 });
+    expect(row('goalsAgainst')).toMatchObject({ value: 0.5, rank: 1 });
+    expect(row('shots')).toMatchObject({ value: 5, league: 4, rank: 1 });
+    // Precisión sobre el total: 200 de 240, no el promedio de 80 % y 85,7 %.
+    expect(row('passAccuracy')).toMatchObject({ value: 83, unit: '%', league: 79 });
+  });
+
+  it('is null for a club without official matches', () => {
+    expect(clubTeamStats(docs, 'Z')).toBeNull();
   });
 });

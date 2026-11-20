@@ -25,8 +25,9 @@ export function LeaderValue({ field, value, size = 'md' }) {
   );
 }
 
-/** Una fila de tabla de líderes: puesto, foto, nombre y club, valor. Toda la fila lleva a la ficha del jugador. */
-export function SeasonLeaderRow({ player, rank, field, catalog }) {
+/** Una fila de tabla de líderes: puesto, foto, nombre y club, valor. Toda la fila lleva a la ficha del jugador.
+    hideClub: en la página de un club todos son de ese club. */
+export function SeasonLeaderRow({ player, rank, field, catalog, hideClub = false }) {
   return (
     <li>
       <Link to={`/jugadores/${player.id}`} className="flex min-h-11 items-center gap-3 py-1.5 transition-colors hover:bg-white/[0.03]">
@@ -34,7 +35,7 @@ export function SeasonLeaderRow({ player, rank, field, catalog }) {
         <PlayerPhoto id={player.id} size={32} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-ink">{playerDisplayName(player, catalog)}</span>
-          {player.clubName && <span className="block truncate text-xs text-ink-3">{player.clubName}</span>}
+          {player.clubName && !hideClub && <span className="block truncate text-xs text-ink-3">{player.clubName}</span>}
         </span>
         <LeaderValue field={field} value={player[field]} />
       </Link>
