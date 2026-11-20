@@ -169,6 +169,7 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
 - **Defaults**: a bare `transition` or `transition-colors` resolves to `--dur-fast` and `--ease-out`
   (`tailwind.config.js` `DEFAULT`), never Tailwind's 150ms. The mobile sidebar opens in `--dur-move` and closes in
   `--dur-base`.
+- **Image swap** (`.kit-swap`): picking another kit on a club page fades the new image in, `--dur-base`, no movement.
 - **Reduced motion**: no animation runs except its declared reduced version, `--animation-reduced` next to the
   original (`index.css`). Entries and exits become fades; spinners turn slowly instead of freezing. Transitions are
   instant. Check `prefersReducedMotion()` (`utils/motion.js`) before starting JS-driven effects such as the confetti.

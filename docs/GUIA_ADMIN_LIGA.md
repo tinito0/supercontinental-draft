@@ -166,6 +166,18 @@ Administración → Equipos y usuarios → **Editar**: nombre, escudo, país, pr
 - La tabla del torneo y el overlay identifican a los clubes por nombre: al renombrar, el formulario los actualiza en
   la misma transacción y te dice dónde («También se renombró en el torneo y el overlay»).
 
+### Camisetas en la página del club
+
+La página de cada club muestra su camiseta titular, suplente y alternativa. Las pueden cargar el admin y los editores
+de la web (los mismos que escriben las historias):
+
+- **Administración → Web pública → Clubes → Camisetas:** «Subir imagen» (PNG, JPG o WEBP, hasta 12 MB) o pegar un
+  link https. Después **Guardar**.
+
+Las imágenes van a Firebase Storage (`league_kits/`). La primera vez hay que publicar `storage.rules`
+(`firebase deploy --only storage`); antes, mirá en la consola de Firebase que esas reglas no se pierdan nada de las
+que hay ahora (el archivo cubre `team_logos/` y `league_kits/`).
+
 ## 5. Eliminar un club
 
 Administración → Equipos y usuarios → Editar → **Eliminar equipo**. No se puede deshacer. Borra la ficha pública, el
