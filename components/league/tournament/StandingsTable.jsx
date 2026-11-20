@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowUp } from 'lucide-react';
 import { LeagueCrest } from '../match/FixtureRow.jsx';
+import { LiveDot, RankMove } from '../RankMove.jsx';
+import { useRankShift } from '../../../hooks/useRankShift.js';
 import { LEAGUE_POINTS } from '../../../utils/competitionRules.js';
 
 /* Tabla completa de la Supercontinental para la web pública (/torneo): posiciones en el orden oficial
@@ -57,15 +58,13 @@ function Entrants({ rows, clubOf }) {
   );
 }
 
-/** En la tabla en vivo, debajo del puesto: punto rojo si el club está jugando y una flecha si sube o baja. */
+/** En la tabla en vivo, debajo del puesto: punto rojo si el club está jugando y cuántos puestos sube o baja. */
 function LiveMarks({ row }) {
   if (!row.isLive && !row.move) return null;
   return (
-    <span className="flex items-center justify-center gap-0.5">
-      {row.isLive && <span className="h-2 w-2 rounded-full bg-danger animate-pulse" title={row.pendingShootout ? 'Jugando: empate, define por penales' : 'Jugando ahora'} aria-hidden="true" />}
-      {row.isLive && <span className="sr-only">{row.pendingShootout ? 'jugando, empata y define por penales' : 'jugando ahora'}</span>}
-      {row.move > 0 && <><ArrowUp className="h-3.5 w-3.5 text-success-soft" aria-hidden="true" /><span className="sr-only">sube {row.move}</span></>}
-      {row.move < 0 && <><ArrowDown className="h-3.5 w-3.5 text-danger-soft" aria-hidden="true" /><span className="sr-only">baja {-row.move}</span></>}
+    <span className="mt-1 flex items-center justify-center gap-1">
+      {row.isLive && <LiveDot pendingShootout={row.pendingShootout} />}
+      <RankMove move={row.move} />
     </span>
   );
 }
@@ -75,6 +74,8 @@ function LiveMarks({ row }) {
  *   rows: tournament.league, o la proyección de utils/liveTable.js con isLive
  */
 export function StandingsTable({ rows, clubOf, isLive = false }) {
+  const bodyRef = useRef(null);
+  useRankShift(bodyRef, rows.map(row => row.id || row.name).join('|'));
   if (!rows.some(row => Number(row.pj) > 0)) return <Entrants rows={rows} clubOf={clubOf} />;
   return (
     <div className="space-y-3">
@@ -99,7 +100,7 @@ export function StandingsTable({ rows, clubOf, isLive = false }) {
               <th scope="col" className="w-14 py-3 pl-1 pr-4 text-center font-bold text-ink"><abbr title="Puntos" className="no-underline">PTS</abbr></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={bodyRef}>
             {rows.map((row, index) => {
               const zone = zoneOf(index);
               const club = clubOf(row.name);
@@ -113,10 +114,10 @@ export function StandingsTable({ rows, clubOf, isLive = false }) {
                 </span>
               );
               return (
-                <tr key={row.id || row.name} className={`border-t ${index === GOLD_CUP_PLACES || index === SILVER_CUP_PLACES ? 'border-line/30' : 'border-line/10'}`}>
+                <tr key={row.id || row.name} data-rank-key={row.id || row.name} className={`border-t ${index === GOLD_CUP_PLACES || index === SILVER_CUP_PLACES ? 'border-line/30' : 'border-line/10'}`}>
                   <td className="relative py-3 pl-4 pr-2 text-center">
                     {zone && <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${ZONE_BAR[zone]}`} aria-hidden="true" />}
-                    <span className="num font-display text-lg font-bold text-ink">{index + 1}</span>
+                    <span data-rank-flash className="num inline-block font-display text-lg font-bold text-ink">{index + 1}</span>
                     <LiveMarks row={row} />
                     {zone && <span className="sr-only">{zone === 'oro' ? ', zona Copa de Oro' : ', zona Copa de Plata'}</span>}
                   </td>

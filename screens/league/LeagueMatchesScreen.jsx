@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, Gamepad2 } from 'lucide-react';
 import { Tabs } from '../../components/ui/Tabs.jsx';
 import { FixtureRow, makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
+import { FeaturedMatch } from '../../components/league/home/FeaturedMatch.jsx';
 import { LeagueLeaders } from '../../components/league/match/LeagueLeaders.jsx';
 import { useLeagueFixtures } from '../../hooks/useLeagueFixtures.js';
 import { Reveal } from '../../components/landing/Reveal.jsx';
@@ -67,7 +68,7 @@ const COMPETITIONS = [
 
 /** Fixture completo (utils/leagueFixtures.js): en vivo arriba, después cada ronda en orden, con su estado real. */
 function FixtureList({ teams, teamsById }) {
-  const { fixtures, groups, loading, error } = useLeagueFixtures(teamsById);
+  const { fixtures, groups, liveMatches, prediction, loading, error } = useLeagueFixtures(teamsById);
   const [competition, setCompetition] = useState('all');
   const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
   const rounds = useMemo(() => {
@@ -89,11 +90,12 @@ function FixtureList({ teams, teamsById }) {
   return (
     <div className="space-y-8">
       {groups.live.length > 0 && (
-        <section aria-label="En vivo">
-          <h2 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold uppercase leading-none text-danger-soft"><span className="h-2.5 w-2.5 rounded-full bg-danger animate-pulse" aria-hidden="true" />En vivo</h2>
-          <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
-            {groups.live.map(fixture => <FixtureRow key={fixture.id} fixture={fixture} clubOf={clubOf} />)}
-          </ul>
+        // Lo que se juega ahora, en grande: marcador, goles y números del juego (se juega un partido a la vez).
+        <section aria-label="En vivo" className="space-y-4">
+          {groups.live.map(fixture => (
+            <FeaturedMatch key={fixture.id} featured={{ fixture, kind: 'live' }} clubOf={clubOf} prediction={prediction}
+              liveMatch={(liveMatches || []).find(match => match.key === fixture.liveMatchKey) || null} />
+          ))}
         </section>
       )}
       <div className="flex flex-wrap gap-2" role="group" aria-label="Competición">
@@ -109,7 +111,7 @@ function FixtureList({ teams, teamsById }) {
         <section key={round.key} aria-label={round.title}>
           <h2 className="mb-3 font-display text-2xl font-bold uppercase leading-none text-ink">{round.title}</h2>
           <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
-            {round.fixtures.map(fixture => <FixtureRow key={fixture.id} fixture={fixture} clubOf={clubOf} showCompetition={false} />)}
+            {round.fixtures.map(fixture => <FixtureRow key={fixture.id} fixture={fixture} clubOf={clubOf} showCompetition={false} quietLive />)}
           </ul>
         </section>
       ))}
@@ -168,7 +170,7 @@ function GameLog({ teamsById }) {
         {groups.map(group => (
           <section key={group.label} aria-label={group.label}>
             {group.label === 'En vivo' ? (
-              <h2 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold uppercase leading-none text-danger-soft"><span className="h-2.5 w-2.5 rounded-full bg-danger animate-pulse" aria-hidden="true" />En vivo</h2>
+              <h2 className="mb-3 font-display text-2xl font-bold uppercase leading-none text-danger-soft">En vivo</h2>
             ) : (
               <h2 className="mb-3 font-display text-2xl font-bold uppercase leading-none text-ink first-letter:uppercase">{group.label}</h2>
             )}

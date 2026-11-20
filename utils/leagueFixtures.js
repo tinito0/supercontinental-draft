@@ -177,6 +177,8 @@ export function buildFixtures({ tournament, liveMatches = [], overlay = null, pr
       competitionLabel: COMPETITION_LABELS[fixture.competition],
       status,
       liveMatchKey: live?.key || null,
+      // El local del fixture es el visitante del partido del juego: los lados del partido en vivo van al revés.
+      liveFlipped: flipped,
       liveScore,
       minute: status === 'live' ? (live?.status?.label || minuteLabel(live?.summary?.clock)) : '',
       isOnAir: Boolean(overlay?.matchId) && overlay.matchId === fixture.id,

@@ -411,6 +411,17 @@
   .modal-backdrop[data-closing] .modal-panel { --exit-ty: 0; --exit-scale: 0.98; }
 }
 
+/* Gol en vivo (components/league/match/LiveScore.jsx): transitions.dev «Number pop-in» en la escala de la app. El número
+   que cambió entra 8 px desde abajo, con 2 px de desenfoque que se aclara, y destella una vez. Sin el sobrepique de la
+   receta original (la app no rebota). Con movimiento reducido, solo el destello. */
+.score-pop {
+  animation: score-pop var(--dur-move) var(--ease-out) both, value-flash var(--dur-flash) var(--ease-out);
+  --animation-reduced: value-flash var(--dur-flash) var(--ease-out);
+}
+@keyframes score-pop {
+  from { opacity: 0; translate: 0 8px; filter: blur(2px); }
+}
+
 /* Destello de una tarjeta cuyo contenido cambió en vivo (negociación en CartModal): un anillo que se apaga. */
 .row-flash {
   animation: row-flash var(--dur-flash) var(--ease-out);

@@ -43,6 +43,26 @@ export function mergeWithLeaving(items, leaving) {
   return merged;
 }
 
+/** How long a table row takes to slide to its new place (docs/DESIGN_SYSTEM.md "Table reorder"). */
+export const RANK_SHIFT_MS = 450;
+
+/**
+ * Rows that changed place between two layouts, and how far: `dy` is old top minus new top, so translating the row by
+ * `dy` puts it back where it was and animating to 0 slides it into place. Rows that are new, gone or did not move
+ * (less than half a pixel) are left out. Pure.
+ * @param {Map<string, number>} before row key → top, relative to the table
+ * @param {Map<string, number>} after row key → top, relative to the table
+ */
+export function rankShifts(before, after) {
+  const shifts = [];
+  after.forEach((top, key) => {
+    if (!before.has(key)) return;
+    const dy = before.get(key) - top;
+    if (Math.abs(dy) >= 0.5) shifts.push({ key, dy });
+  });
+  return shifts;
+}
+
 /** Removed items between two renders, with the index each one had. Pure. */
 export function findRemoved(previous, next) {
   const nextKeys = new Set(next.map(item => item.key));
