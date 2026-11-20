@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Award, Check, ChevronRight, Medal, Trophy, Vote } from 'lucide-react';
+import { Award, Check, Trophy, UserRoundCheck, Vote } from 'lucide-react';
 import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
-import { MatchStatus, TeamMark } from '../../components/league/match/MatchParts.jsx';
+import { TeamMark } from '../../components/league/match/MatchParts.jsx';
+import { LeagueCrest, makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
 import { LiveNowPanel, pickLiveMatch } from '../../components/league/match/LiveNowPanel.jsx';
-import { playerPlaceholder } from '../../utils/playerPlaceholder.js';
-import { useAllMvpVotes, useBroadcastOverlay, useLeagueTeams, useLiveMatches, useMvpVotes, SEASON_MATCH_LIMIT, usePoll, usePrediction, useTournament } from '../../hooks/useLeagueData.js';
+import { useBroadcastOverlay, useClubProfiles, useLeagueTeams, useLiveMatches, SEASON_MATCH_LIMIT, usePoll, usePrediction, useTournament } from '../../hooks/useLeagueData.js';
+import { useManagerRound } from '../../hooks/useManagerRound.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
-import { rankPlayerOfTournament } from '../../utils/playerOfTournament.js';
+import { managerWinner, rankManagerOfTournament } from '../../utils/managerOfTournament.js';
 import { getMyVote, sendVote } from '../../services/communityService.js';
-import { CUP_POLLS, fixtureIsPredictable, mvpOptions, mvpRanking, pickMvpMatch, pollResults, predictionOutcome, predictionShares } from '../../utils/communityView.js';
+import { CUP_POLLS, fixtureIsPredictable, managerRanking, pollResults, predictionOutcome, predictionShares } from '../../utils/communityView.js';
+import { teamKey } from '../../utils/competitionRules.js';
 
 /* /en-vivo, la página del QR del stream: predicción del partido al aire, voto del MVP del partido en juego y la
    encuesta «¿quién gana la copa?».
@@ -20,12 +21,6 @@ import { CUP_POLLS, fixtureIsPredictable, mvpOptions, mvpRanking, pickMvpMatch, 
 
 // Botón de una opción de voto: se hunde apenas al tocarlo (feedback inmediato en el celular).
 const CHOICE_BUTTON = 'flex items-center justify-center rounded-xl border border-line/[0.16] bg-raised transition-[border-color,background-color,transform] duration-fast ease-out hover:border-accent/60 hover:bg-overlay active:scale-[0.97] disabled:opacity-60';
-
-/** Sin foto del jugador, sus iniciales: un hueco vacío en el botón parecía un error de carga. */
-const photoFallback = name => event => {
-  event.currentTarget.onerror = null;
-  event.currentTarget.src = playerPlaceholder(String(name || '?')[0]);
-};
 
 function useNow(intervalMs = 30_000) {
   const [now, setNow] = useState(() => Date.now());
@@ -172,137 +167,171 @@ function CupPollPanel({ pollId, label }) {
   );
 }
 
-const PLAYER_OF_TOURNAMENT_ROWS = 5;
 
-/** Jugador del Torneo: quién ganó más veces el MVP de la comunidad (desempata por votos). */
-function PlayerOfTournamentPanel({ matches }) {
-  const { byMatchKey } = useAllMvpVotes();
-  const ranking = useMemo(() => rankPlayerOfTournament(matches, byMatchKey).slice(0, PLAYER_OF_TOURNAMENT_ROWS), [matches, byMatchKey]);
-  if (!ranking.length) return null;
-  return (
-    <section className="panel p-5 space-y-4" aria-labelledby="pot-title">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="pot-title" className="section-title flex items-center gap-2"><Award className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Jugador del Torneo</h2>
-        <span className="text-sm text-ink-2">MVP de la comunidad</span>
-      </div>
-      <ol className="divide-y divide-line/10">
-        {ranking.map((entry, index) => (
-          <li key={entry.playerId} className="flex min-h-14 items-center gap-3 py-2">
-            <span className={`num w-6 text-center font-display text-lg ${index === 0 ? 'text-accent-soft' : 'text-ink-3'}`}>{index + 1}</span>
-            <img src={`/fotos_jugadores/${entry.playerId}.webp`} alt="" width={36} height={36} loading="lazy"
-              className="h-9 w-9 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={photoFallback(entry.name)} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-ink">{entry.name}</span>
-              {entry.team && <span className="block truncate text-sm text-ink-2">{entry.team}</span>}
-            </span>
-            <span className="text-right">
-              <span className="num block font-display text-lg leading-none text-ink">{entry.awards}</span>
-              <span className="block text-sm text-ink-2">{entry.awards === 1 ? 'MVP' : 'MVPs'}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
-      <p className="text-sm text-ink-2">Cuenta los partidos terminados que registró el colector. Un empate en el primer puesto no da MVP.</p>
-    </section>
-  );
+/** El manager de un club: el nombre que cargó la administración en la ficha del club (Web pública). */
+function useManagerLookup(teams) {
+  const { byTeamId } = useClubProfiles();
+  return useMemo(() => {
+    const byName = new Map(teams.map(team => [teamKey(team.teamName), byTeamId[team.id]?.manager || '']));
+    return clubName => byName.get(teamKey(clubName)) || '';
+  }, [teams, byTeamId]);
 }
 
-/** showMatchLink: false cuando el partido ya está en grande arriba (LiveNowPanel); no se repite por tercera vez. */
-function MvpPanel({ matches, showMatchLink = true }) {
+/** Qué hizo un club en la fecha, para elegir con el resultado a la vista: «Ganó 2-1 a Talleres». */
+function resultLine(fixtures, club) {
+  const fixture = fixtures.find(f => f.home === club || f.away === club);
+  if (!fixture || fixture.homeScore == null || fixture.awayScore == null || fixture.homeScore === '') return '';
+  const isHome = fixture.home === club;
+  const own = Number(isHome ? fixture.homeScore : fixture.awayScore);
+  const other = Number(isHome ? fixture.awayScore : fixture.homeScore);
+  const rival = isHome ? fixture.away : fixture.home;
+  if (own > other) return `Ganó ${own}-${other} a ${rival}`;
+  if (own < other) return `Perdió ${own}-${other} con ${rival}`;
+  return `Empató ${own}-${other} con ${rival}`;
+}
+
+const hoursLeft = (closesAtMs, now) => (Number.isFinite(closesAtMs) && closesAtMs > now ? Math.ceil((closesAtMs - now) / 3_600_000) : null);
+
+/**
+ * Manager de la fecha: el público elige al manager que mejor manejó su equipo en el PES en la última fecha terminada.
+ * Abre cuando se carga el último resultado de la fecha y dura 24 h (supabase/functions/_shared/communityVote.js).
+ */
+function ManagerPanel({ tournament, matches, teams }) {
   const now = useNow();
-  const { match, open: inWindow } = pickMvpMatch(matches, now);
-  const { data: votes, loading: votesLoading } = useMvpVotes(match?.key || null);
-  // El admin puede cerrar el MVP antes de que termine la ventana (closedAt en el doc de votos).
-  const open = inWindow && !votes?.closedAt;
-  const round = votesLoading ? null : Number(votes?.resetCount) || 0;
+  const { round, loading } = useManagerRound(tournament, matches);
+  const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
+  const managerOf = useManagerLookup(teams);
+  const resetRound = loading ? null : Number(round?.votes?.resetCount) || 0;
   const [selected, setSelected] = useState(null);
   const [myVote, setMyVote] = useState(null);
   const [state, setState] = useState({ busy: false, error: '' });
   useEffect(() => {
     setSelected(null);
-    setMyVote(match ? getMyVote('mvp', match.key, round) : null);
-  }, [match?.key, round]);
+    setMyVote(round ? getMyVote('manager', round.roundId, resetRound) : null);
+  }, [round?.roundId, resetRound]);
 
-  const options = useMemo(() => mvpOptions(match?.summary), [match?.summary]);
-  const ranking = useMemo(() => mvpRanking(votes?.votes, match?.summary), [votes, match?.summary]);
+  const ranking = useMemo(() => managerRanking(round?.votes?.votes), [round?.votes]);
+  const clubs = useMemo(() => (round ? round.fixtures.flatMap(f => [f.home, f.away]).filter(Boolean) : []), [round]);
 
   const vote = async () => {
     setState({ busy: true, error: '' });
-    const result = await sendVote({ kind: 'mvp', matchKey: match.key, choice: selected }, { round });
-    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('mvp', match.key, round) || String(selected));
+    const result = await sendVote({ kind: 'manager', roundId: round.roundId, choice: selected }, { round: resetRound });
+    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('manager', round.roundId, resetRound) || selected);
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
+  const clubLabel = club => (
+    <span className="flex min-w-0 items-center gap-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center"><LeagueCrest name={club} club={clubOf(club)} size="sm" /></span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-ink">{managerOf(club) || club}</span>
+        {managerOf(club) && <span className="block truncate text-xs text-ink-2">{club}</span>}
+      </span>
+    </span>
+  );
+
   let body;
-  if (!match) {
-    body = <p className="text-base text-ink-2">Cuando haya un partido en juego vas a poder votar al mejor jugador acá.</p>;
-  } else if (myVote || !open) {
-    const winner = !open && ranking.length && (ranking.length === 1 || ranking[0].votes > ranking[1].votes) ? ranking[0] : null;
+  if (!round) {
+    body = <p className="text-base text-ink-2">Cuando termine la primera fecha vas a poder elegir al manager que mejor manejó su equipo.</p>;
+  } else if (myVote || !round.open) {
+    const winner = !round.open ? managerWinner(round.votes) : null;
     body = ranking.length ? (
       <div className="space-y-4">
-      {winner && (
-        <div className="flex items-center gap-4 border-b border-line/10 pb-4" role="status">
-          <img src={`/fotos_jugadores/${winner.id}.webp`} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-lg bg-white object-cover object-top" onError={photoFallback(winner.name)} />
-          <div className="min-w-0">
-            <p className="eyebrow">MVP del partido</p>
-            <p className="truncate font-display text-2xl font-bold text-ink">{winner.name}</p>
-            <p className="text-sm text-ink-2"><span className="num">{winner.pct}%</span> de los votos</p>
+        {winner && (
+          <div className="flex items-center gap-4 border-b border-line/10 pb-4" role="status">
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-white p-1.5"><LeagueCrest name={winner.club} club={clubOf(winner.club)} size="lg" /></span>
+            <div className="min-w-0">
+              <p className="eyebrow">Manager de la {round.title}</p>
+              <p className="truncate font-display text-2xl font-bold text-ink">{managerOf(winner.club) || winner.club}</p>
+              <p className="text-sm text-ink-2">{managerOf(winner.club) ? `${winner.club} · ` : ''}<span className="num">{ranking[0].pct}%</span> de los votos</p>
+            </div>
           </div>
-        </div>
-      )}
-      <ol className="space-y-3">
-        {ranking.map((entry, index) => (
-          <li key={entry.id}><ShareBar label={`${index + 1}. ${entry.name}`} pct={entry.pct} isMine={myVote === String(entry.id)} isLeader={index === 0} /></li>
-        ))}
-      </ol>
+        )}
+        <ol className="space-y-3">
+          {ranking.map((entry, index) => (
+            <li key={entry.club}>
+              <ShareBar label={`${index + 1}. ${managerOf(entry.club) ? `${managerOf(entry.club)} (${entry.club})` : entry.club}`} pct={entry.pct} isMine={myVote === entry.club} isLeader={index === 0} />
+            </li>
+          ))}
+        </ol>
       </div>
-    ) : <p className="text-base text-ink-2">{open ? 'Todavía no hay votos.' : 'Este partido terminó sin votos para el MVP.'}</p>;
-  } else if (!options.home.length && !options.away.length) {
-    body = <p className="text-base text-ink-2">La lista de jugadores aparece cuando el juego manda las alineaciones. Volvé en un minuto.</p>;
+    ) : <p className="text-base text-ink-2">{round.open ? 'Todavía no hay votos.' : `La ${round.title} cerró sin votos.`}</p>;
   } else {
     body = (
       <div className="space-y-4">
-        {[['home', match.home.name], ['away', match.away.name]].map(([side, teamName]) => (
-          <fieldset key={side}>
-            <legend className="mb-2 font-display text-base font-bold uppercase tracking-wide text-ink">{teamName}</legend>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {options[side].map(player => (
-                <button key={player.id} type="button" aria-pressed={selected === player.id} onClick={() => setSelected(player.id)}
-                  className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-[border-color,background-color,transform] duration-fast ease-out active:scale-[0.98] ${selected === player.id ? 'border-accent bg-accent-deep/60 text-ink' : 'border-line/[0.16] bg-raised text-ink hover:border-line/30'}`}>
-                  <img src={`/fotos_jugadores/${player.id}.webp`} alt="" width={28} height={28} loading="lazy"
-                    className="h-7 w-7 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={photoFallback(player.name)} />
-                  <span className="min-w-0 flex-1 truncate">{player.name}</span>
-                  {selected === player.id && <Check className="h-4 w-4 shrink-0 text-accent-soft" aria-hidden="true" />}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        ))}
-        <button type="button" className="btn btn-primary w-full min-h-11" disabled={!selected || state.busy || round == null} onClick={vote}
-          title={!selected ? 'Elegí un jugador' : undefined}>
+        <fieldset>
+          <legend className="mb-3 text-base text-ink-2">¿Quién manejó mejor su equipo en el PES en la {round.title}?</legend>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {clubs.map(club => (
+              <button key={club} type="button" aria-pressed={selected === club} onClick={() => setSelected(club)}
+                className={`flex min-h-14 items-center gap-3 rounded-lg border px-3 py-2 text-left transition-[border-color,background-color,transform] duration-fast ease-out active:scale-[0.98] ${selected === club ? 'border-accent bg-accent-deep/60' : 'border-line/[0.16] bg-raised hover:border-line/30'}`}>
+                <span className="min-w-0 flex-1">
+                  {clubLabel(club)}
+                  {resultLine(round.fixtures, club) && <span className="mt-1 block truncate pl-12 text-xs text-ink-3">{resultLine(round.fixtures, club)}</span>}
+                </span>
+                {selected === club && <Check className="h-4 w-4 shrink-0 text-accent-soft" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <button type="button" className="btn btn-primary w-full min-h-11" disabled={!selected || state.busy || resetRound == null} onClick={vote}
+          title={!selected ? 'Elegí un manager' : undefined}>
           {state.busy ? 'Votando…' : 'Votar'}
         </button>
       </div>
     );
   }
 
+  const left = round?.open ? hoursLeft(round.window.closesAtMs, now) : null;
   return (
-    <section className="panel p-5 space-y-4" aria-labelledby="mvp-title">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="mvp-title" className="section-title flex items-center gap-2"><Medal className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Jugador del partido</h2>
-        {match && <span className="text-sm text-ink-2">{open ? 'Votación abierta' : 'Votación cerrada'}</span>}
-      </div>
-      {match && showMatchLink && (
-        <Link to={`/partidos/${match.key}`} className="well flex min-h-11 items-center gap-3 px-4 py-3 transition-colors hover:bg-overlay">
-          <span className="min-w-0 flex-1 truncate text-sm text-ink">
-            {match.home.name} <span className="num font-display text-base">{match.home.score}-{match.away.score}</span> {match.away.name}
+    <section className="panel p-5 space-y-4" aria-labelledby="manager-title">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <h2 id="manager-title" className="section-title flex items-center gap-2"><UserRoundCheck className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Manager de la fecha</h2>
+        {round && (
+          <span className="text-sm text-ink-2">
+            {round.title} · {round.open ? (left != null ? `cierra en ${left} h` : 'votación abierta') : 'votación cerrada'}
           </span>
-          <MatchStatus status={match.status} className="text-xs" />
-          <ChevronRight className="h-4 w-4 text-ink-3" aria-hidden="true" />
-        </Link>
-      )}
+        )}
+      </div>
       {body}
       {state.error && <Alert tone="danger">{state.error}</Alert>}
+    </section>
+  );
+}
+
+const MANAGER_OF_TOURNAMENT_ROWS = 5;
+
+/** Manager del torneo: las fechas que ganó cada uno en la votación del público. */
+function ManagerOfTournamentPanel({ tournament, matches, teams }) {
+  const { round, byRoundId } = useManagerRound(tournament, matches);
+  const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
+  const managerOf = useManagerLookup(teams);
+  const openRoundId = round?.open ? round.roundId : null;
+  const ranking = useMemo(() => rankManagerOfTournament(byRoundId, { openRoundId }).slice(0, MANAGER_OF_TOURNAMENT_ROWS), [byRoundId, openRoundId]);
+  if (!ranking.length) return null;
+  return (
+    <section className="panel p-5 space-y-4" aria-labelledby="mot-title">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <h2 id="mot-title" className="section-title flex items-center gap-2"><Award className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Manager del torneo</h2>
+        <span className="text-sm text-ink-2">Fechas ganadas</span>
+      </div>
+      <ol className="divide-y divide-line/10">
+        {ranking.map((entry, index) => (
+          <li key={entry.club} className="flex min-h-14 items-center gap-3 py-2">
+            <span className={`num w-6 text-center font-display text-lg ${index === 0 ? 'text-accent-soft' : 'text-ink-3'}`}>{index + 1}</span>
+            <span className="grid h-9 w-9 shrink-0 place-items-center"><LeagueCrest name={entry.club} club={clubOf(entry.club)} size="sm" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-ink">{managerOf(entry.club) || entry.club}</span>
+              {managerOf(entry.club) && <span className="block truncate text-sm text-ink-2">{entry.club}</span>}
+            </span>
+            <span className="text-right">
+              <span className="num block font-display text-lg leading-none text-ink">{entry.awards}</span>
+              <span className="block text-sm text-ink-2">{entry.awards === 1 ? 'fecha' : 'fechas'}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-sm text-ink-2">Un empate en el primer puesto de una fecha no le da la fecha a nadie. Desempata el total de votos.</p>
     </section>
   );
 }
@@ -310,9 +339,9 @@ function MvpPanel({ matches, showMatchLink = true }) {
 export default function LeagueLiveScreen() {
   useDocumentTitle('En vivo');
   const { data: overlay } = useBroadcastOverlay();
-  // Toda la temporada, no los últimos 40: el Jugador del Torneo suma los MVP de todos los partidos terminados.
+  // Toda la temporada, no los últimos 40: la hora de final de cada partido de la fecha abre la votación del manager.
   const { matches, error } = useLiveMatches(SEASON_MATCH_LIMIT);
-  const { teamsById } = useLeagueTeams();
+  const { teams, teamsById } = useLeagueTeams();
   const { tournament, loading: tournamentLoading } = useTournament();
   // El overlay puede seguir apuntando a un partido de otra temporada o a un cruce sin equipos: eso no se vota.
   const predictionMatchId = !tournamentLoading && overlay?.matchId && fixtureIsPredictable(tournament, overlay.matchId) ? overlay.matchId : null;
@@ -322,7 +351,7 @@ export default function LeagueLiveScreen() {
     <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 md:py-16">
       <Reveal>
         <SectionHeading as="h1" title="En vivo">
-          Seguí el partido en juego, predecí el resultado, votá al mejor jugador del partido y elegí quién gana la copa. Sin cuenta: un voto por navegador.
+          Seguí el partido en juego, predecí el resultado, elegí al manager de la fecha y quién gana la copa. Sin cuenta: un voto por navegador.
         </SectionHeading>
       </Reveal>
       {error && <Alert tone="danger" title={error} className="mb-4">Recargá la página para intentar de nuevo.</Alert>}
@@ -330,12 +359,12 @@ export default function LeagueLiveScreen() {
         <LiveNowPanel matches={matches} teamsById={teamsById} />
         {/* Con un partido en juego y nada que predecir, el aviso «cuando haya un partido…» sobra. */}
         {(predictionMatchId || !liveMatch) && <PredictionPanel matchId={predictionMatchId} overlay={overlay} teamsById={teamsById} matches={matches} />}
-        <MvpPanel matches={matches} showMatchLink={!liveMatch} />
+        <ManagerPanel tournament={tournament} matches={matches} teams={teams} />
         {CUP_POLLS.map(poll => <CupPollPanel key={poll.id} pollId={poll.id} label={poll.label} />)}
-        <PlayerOfTournamentPanel matches={matches} />
+        <ManagerOfTournamentPanel tournament={tournament} matches={matches} teams={teams} />
       </div>
       <p className="mt-6 text-sm text-ink-2">
-        Los resultados se actualizan solos. La predicción cierra cuando empieza el partido; el MVP, 15 minutos después del final.
+        Los resultados se actualizan solos. La predicción cierra cuando empieza el partido; el manager de la fecha se vota durante las 24 horas siguientes al último partido de la fecha.
       </p>
     </section>
   );

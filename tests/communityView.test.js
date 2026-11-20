@@ -1,22 +1,5 @@
 // Página /en-vivo (utils/communityView.js): datos sintéticos.
-import { mvpOptions, mvpRanking, pickMvpMatch, pollResults, predictionShares } from '../utils/communityView.js';
-import { MVP_GRACE_MS } from '../supabase/functions/_shared/communityVote.js';
-
-const summary = {
-  lineups: { home: { starting: [10, 11] }, away: { starting: [20] } },
-  substitutions: [{ side: 'away', onId: 21, offId: 20 }],
-  names: { players: { 10: 'L. Trossard', 11: 'D. Rice', 20: 'M. Salah', 21: 'D. Núñez' } },
-};
-
-describe('pickMvpMatch', () => {
-  const now = 50_000_000;
-  const m = (key, kind, updatedAtMs) => ({ key, status: { kind }, updatedAtMs });
-  it('prefers the live match, then one that ended less than 15 minutes ago', () => {
-    expect(pickMvpMatch([m('a', 'finished', now), m('b', 'live')], now).match.key).toBe('b');
-    expect(pickMvpMatch([m('a', 'finished', now - 1000)], now)).toMatchObject({ open: true, match: { key: 'a' } });
-    expect(pickMvpMatch([m('a', 'finished', now - MVP_GRACE_MS - 1)], now)).toEqual({ match: null, open: false });
-  });
-});
+import { pollResults, predictionShares } from '../utils/communityView.js';
 
 describe('predictionShares', () => {
   it('rounds to whole percentages that add up to 100', () => {
@@ -39,20 +22,5 @@ describe('pollResults (¿quién gana la copa?)', () => {
       ],
     });
     expect(pollResults(null)).toEqual({ total: 0, options: [] });
-  });
-});
-
-describe('MVP options and ranking', () => {
-  it('groups the players who played by team', () => {
-    const options = mvpOptions(summary);
-    expect(options.home.map(p => p.name)).toEqual(['L. Trossard', 'D. Rice']);
-    expect(options.away.map(p => p.name)).toEqual(['M. Salah', 'D. Núñez']);
-  });
-
-  it('ranks by votes with percentages', () => {
-    expect(mvpRanking({ 10: 3, 20: 1 }, summary)).toEqual([
-      { id: 10, votes: 3, name: 'L. Trossard', pct: 75 },
-      { id: 20, votes: 1, name: 'M. Salah', pct: 25 },
-    ]);
   });
 });

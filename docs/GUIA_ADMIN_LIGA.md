@@ -189,7 +189,7 @@ test falla, no publica nada.
 | Si cambió algo de… | Archivos | Botón (GitHub → Actions → … → Run workflow, rama `master`) |
 |---|---|---|
 | Fichar, liberar, traspasos, comisión, presupuesto, franquicia, catálogo | `supabase/functions/_shared/market.js`, `budget.js`, `transferFee.js`, `franchise.js`, `marketConstants.js`, `catalog.json` | **deploy-market** |
-| Votos del público (predicción, MVP, encuestas de copa) o la forma de las copas | `supabase/functions/_shared/communityVote.js` y `community-vote/index.ts` | **deploy-community-vote** |
+| Votos del público (predicción, manager de la fecha, encuestas de copa) o la forma de las copas | `supabase/functions/_shared/communityVote.js` y `community-vote/index.ts` | **deploy-community-vote** |
 | Colector de partidos en vivo: lo que sube el puente, `match_lines`, cierre de la predicción, popups y tarjetas automáticas de OBS | `supabase/functions/match-feed/`, `_shared/matchFeed.js`, `matchLines.js`, `overlayControl.js` | **deploy-match-feed** |
 | Comandos del overlay de OBS (Macro Deck) | `supabase/functions/overlay-control/`, `_shared/overlayControl.js` | **deploy-overlay-control** |
 

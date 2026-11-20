@@ -9,7 +9,7 @@ export const POPUP_POSITIONS = ['right', 'left', 'center'];
 
 // Rutas de la web pública de la liga (utils/siteRoutes.js): el QR siempre lleva a la web, nunca al draft.
 export const POPUP_PRESETS = [
-  { id: 'vota', label: 'Votá el MVP', title: 'Votá al mejor del partido', text: 'Escaneá, predecí y elegí al MVP. Sin cuenta.', path: '/en-vivo' },
+  { id: 'vota', label: 'Votá en la web', title: 'Votá en la web', text: 'Predecí los partidos y elegí al manager de la fecha. Sin cuenta.', path: '/en-vivo' },
   { id: 'liga', label: 'Seguí la liga', title: 'Seguí la Supercontinental', text: 'Resultados, tabla y equipos en la web.', path: '/' },
   { id: 'tabla', label: 'Tabla y copas', title: 'Tabla y copas en vivo', text: 'Escaneá y seguí el torneo desde el celular.', path: '/torneo' },
   { id: 'equipos', label: 'Los equipos', title: 'Conocé a los equipos', text: 'Planteles e historia de cada club.', path: '/equipos' },

@@ -1,10 +1,9 @@
-// Página /en-vivo (screens/league/LeagueLiveScreen.jsx): qué partido mostrar, porcentajes de la predicción y ranking
-// del MVP. Las reglas de las ventanas son las mismas que aplica el servidor (supabase/functions/_shared/communityVote.js).
-import { mvpCandidates, mvpWindow } from '../supabase/functions/_shared/communityVote.js';
+// Página /en-vivo (screens/league/LeagueLiveScreen.jsx): porcentajes de la predicción, la fecha cuyo manager se vota y
+// su ranking. Las reglas de las ventanas son las mismas que aplica el servidor (supabase/functions/_shared/communityVote.js).
+import { managerWindow, roundFixtures, roundIdOf } from '../supabase/functions/_shared/communityVote.js';
 
 /** Si el partido al aire se puede predecir (está en el torneo con los dos clubes): la misma regla que el servidor. */
 export { fixtureIsPredictable } from '../supabase/functions/_shared/communityVote.js';
-import { playerName } from './matchCenter.js';
 
 /** Encuestas «¿quién gana la copa?» (public/data/polls/{id}); en este orden se elige la que muestra el overlay. */
 export const CUP_POLLS = [
@@ -12,14 +11,46 @@ export const CUP_POLLS = [
   { id: 'copa-plata', label: 'Copa de Plata', title: '¿Quién gana la Copa de Plata?' },
 ];
 
-/** El partido del juego para votar el MVP: el que está en vivo, o el último terminado hace menos de 15 minutos. */
-export function pickMvpMatch(matches, now) {
-  // La misma ventana que aplica el servidor (mvpWindow): en vivo con señal, o terminado hace menos de 15 min desde finishedAt.
-  const isOpen = match => mvpWindow({ status: match.status.kind, updatedAtMs: match.updatedAtMs, finishedAtMs: match.finishedAtMs }, now).open;
-  const live = matches.find(match => match.status.kind === 'live' && isOpen(match));
-  if (live) return { match: live, open: true };
-  const recent = matches.find(match => match.status.kind === 'finished' && isOpen(match));
-  return recent ? { match: recent, open: true } : { match: null, open: false };
+const toMillis = value => (value instanceof Date ? value.getTime() : typeof value?.toMillis === 'function' ? value.toMillis() : NaN);
+
+/**
+ * La fecha cuyo manager se vota: la última fecha de liga con todos sus resultados cargados. Con su ventana, calculada
+ * igual que en el servidor (managerWindow): 24 h desde el final del último partido, o desde el primer voto si algún
+ * resultado se cargó a mano. Null si ninguna fecha terminó todavía.
+ * @param {object} tournament public/data/tournament/official
+ * @param {object[]} liveMatches parseMatchDoc de live_matches (para el finishedAt de cada partido importado)
+ * @param {(roundId: string) => object|null} votesOf el doc de manager_votes de una fecha (o null)
+ * @returns {null | { roundId: string, title: string, fixtures: object[], window: ReturnType<typeof managerWindow> }}
+ */
+export function pickManagerRound(tournament, liveMatches, votesOf, now) {
+  const ids = [...new Set((tournament?.matches || []).filter(m => /fecha/i.test(String(m?.round || ''))).map(m => roundIdOf(m.round)).filter(Boolean))];
+  const finished = ids
+    .map(roundId => ({ roundId, fixtures: roundFixtures(tournament, roundId) }))
+    .filter(round => round.fixtures.length && round.fixtures.every(fixture => fixture.completed))
+    .sort((a, b) => Number(b.roundId.split('-')[1]) - Number(a.roundId.split('-')[1]));
+  const round = finished[0];
+  if (!round) return null;
+  const byKey = new Map((liveMatches || []).map(match => [match.key, match]));
+  const finishedAtMs = round.fixtures.filter(f => f.importedFrom).map(f => byKey.get(f.importedFrom)?.finishedAtMs ?? NaN);
+  const votes = votesOf?.(round.roundId) || null;
+  const window = managerWindow({ fixtures: round.fixtures, finishedAtMs, openedAtMs: toMillis(votes?.openedAt), now });
+  const closedByAdmin = Boolean(votes?.closedAt);
+  return {
+    roundId: round.roundId,
+    title: `Fecha ${round.roundId.split('-')[1]}`,
+    fixtures: round.fixtures,
+    window: closedByAdmin ? { open: false, reason: 'La votación de esta fecha está cerrada.', closesAtMs: window.closesAtMs } : window,
+  };
+}
+
+/** Ranking del manager de la fecha: más votados primero, con porcentaje entero que suma 100. */
+export function managerRanking(votes, limit = 12) {
+  const entries = Object.entries(votes || {}).map(([club, count]) => ({ club, votes: Number(count) || 0 })).filter(e => e.votes > 0);
+  const pcts = wholePercents(entries.map(entry => entry.votes));
+  return entries
+    .map((entry, index) => ({ ...entry, pct: pcts[index] }))
+    .sort((a, b) => b.votes - a.votes || a.club.localeCompare(b.club))
+    .slice(0, limit);
 }
 
 /** Porcentajes enteros que suman 100 (resto mayor); 0 sin votos. */
@@ -57,26 +88,6 @@ export function pollResults(poll) {
     total: options.reduce((sum, option) => sum + option.votes, 0),
     options: options.map((option, index) => ({ ...option, pct: pcts[index] })).sort((a, b) => b.votes - a.votes),
   };
-}
-
-/** Candidatos del MVP agrupados por equipo, con nombre (titulares y los que entraron). */
-export function mvpOptions(summary) {
-  const ids = mvpCandidates(summary);
-  const sideOf = id => (summary?.lineups?.away?.starting?.includes(id)
-    || (summary?.substitutions || []).some(sub => sub.side === 'away' && sub.onId === id) ? 'away' : 'home');
-  const options = { home: [], away: [] };
-  for (const id of ids) options[sideOf(id)].push({ id, name: playerName(summary, id) });
-  return options;
-}
-
-/** Ranking del MVP: más votados primero, con porcentaje. */
-export function mvpRanking(votes, summary, limit = 5) {
-  const entries = Object.entries(votes || {}).map(([id, count]) => ({ id: Number(id), votes: Number(count) || 0 }));
-  const total = entries.reduce((sum, entry) => sum + entry.votes, 0);
-  return entries
-    .sort((a, b) => b.votes - a.votes || a.id - b.id)
-    .slice(0, limit)
-    .map(entry => ({ ...entry, name: playerName(summary, entry.id), pct: total ? Math.round((entry.votes / total) * 100) : 0 }));
 }
 
 /**

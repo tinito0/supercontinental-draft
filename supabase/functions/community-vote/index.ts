@@ -1,8 +1,8 @@
 // Supabase Edge Function `community-vote`: votos del público sin cuenta (docs/COMMUNITY_PLATFORM.md).
 //   prediction → public/data/predictions/{matchId}   (partido del fixture al aire en el overlay, antes de empezar)
-//   mvp        → public/data/mvp_votes/{matchKey}     (partido en vivo del bridge, hasta 15 min después del final)
+//   manager    → public/data/manager_votes/{fecha-n}   (manager de la fecha: 24 h desde que termina la fecha)
 //   cup        → public/data/polls/{pollId}           (encuesta «¿quién gana la copa?», abierta por el admin)
-// Un voto por navegador y partido (boleta create-only en community_ballots) y un tope por IP (community_ip). El id del
+// Un voto por navegador y votación (boleta create-only en community_ballots) y un tope por IP (community_ip). El id del
 // navegador y la IP se guardan solo como hash con COMMUNITY_SALT. Las reglas validan en _shared/communityVote.js.
 //
 // Secrets: FIREBASE_SERVICE_ACCOUNT, COMMUNITY_SALT (≥ 32 caracteres al azar). Opcional: COMMUNITY_ALLOWED_ORIGINS
