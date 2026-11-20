@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { BarChart3, CalendarDays, ChevronRight, ListOrdered, Medal, Trophy } from 'lucide-react';
-import { SeasonStatsPanel } from '../../components/league/season/SeasonStatsView.jsx';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { CalendarDays, ChevronRight, ListOrdered, Medal, Trophy } from 'lucide-react';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { Tabs } from '../../components/ui/Tabs.jsx';
@@ -29,7 +28,6 @@ const TABS = [
   { id: 'oro', label: 'Copa de Oro', icon: Trophy },
   { id: 'plata', label: 'Copa de Plata', icon: Medal },
   { id: 'goleadores', label: 'Goleadores', icon: Medal },
-  { id: 'estadisticas', label: 'Estadísticas', icon: BarChart3 },
 ];
 // Enlaces viejos (?tab=groups|bracket|repechaje|stats, los de TournamentModal) siguen abriendo la pestaña correcta.
 const LEGACY_TABS = { groups: 'tabla', matches: 'tabla', bracket: 'oro', repechaje: 'plata', stats: 'goleadores' };
@@ -76,10 +74,11 @@ export default function LeagueTournamentScreen() {
 
   const setTab = next => setParams(next === 'tabla' ? {} : { tab: next }, { replace: true });
 
+  // Las estadísticas del juego tienen página propia; los links viejos a la pestaña siguen andando.
+  if (params.get('tab') === 'estadisticas') return <Navigate to="/estadisticas" replace />;
+
   let content;
-  // Estadísticas no depende del documento del torneo para mostrarse: trae sus propios datos y estados.
-  if (tab === 'estadisticas') content = <SeasonStatsPanel />;
-  else if (error) content = <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
+  if (error) content = <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
   else if (loading) content = <TableSkeleton />;
   else if (!tournament) content = <EmptyState icon={Trophy} title="El torneo todavía no empezó" description="Acá vas a ver la tabla, las copas y los goleadores apenas arranque." />;
   else if (tab === 'tabla') {
@@ -100,7 +99,7 @@ export default function LeagueTournamentScreen() {
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 md:py-16">
       <Reveal>
         <SectionHeading as="h1" title="Torneo">
-          {stage?.label ? `${[stage.label, stage.detail].filter(Boolean).join(' · ')}. ` : ''}La tabla oficial, las copas, los goleadores y las estadísticas del juego, actualizados con cada resultado.
+          {stage?.label ? `${[stage.label, stage.detail].filter(Boolean).join(' · ')}. ` : ''}La tabla oficial, las copas y los goleadores, actualizados con cada resultado.
         </SectionHeading>
       </Reveal>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

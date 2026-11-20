@@ -7,6 +7,12 @@ import { getPosCategory } from './helpers.js';
 import { decodeHeat } from '../supabase/functions/_shared/matchLines.js';
 
 export const MIN_RATED_MATCHES = 2;
+// Los porcentajes piden un mínimo, si no 1 gol en 1 tiro (100 %) le gana al goleador del torneo.
+export const MIN_SHOTS_FOR_CONVERSION = 5;
+export const MIN_PASSES_FOR_ACCURACY = 30;
+
+/** Porcentaje entero, o null si no llega al mínimo. */
+const percentage = (part, whole, minimum) => (whole >= minimum ? Math.round((part / whole) * 100) : null);
 const FULL_MATCH_MINUTES = 90;
 const HAT_TRICK = 3;
 const FORM_LENGTH = 5;
@@ -79,6 +85,9 @@ function finishPlayer({ ratingSum, xgKnown, ...total }) {
     rating: total.rated ? round2(ratingSum / total.rated) : null,
     // Un partido sin estimación deja el total sin sentido: mejor no mostrarlo que mostrarlo bajo.
     xg: xgKnown ? round2(total.xg) : null,
+    // Efectividad: % de tiros que fueron gol. Pases efectivos %: % de pases completados.
+    shotConversion: percentage(total.goals, total.shots, MIN_SHOTS_FOR_CONVERSION),
+    passAccuracy: percentage(total.passesCompleted, total.passes, MIN_PASSES_FOR_ACCURACY),
   };
 }
 
@@ -299,8 +308,8 @@ export function matchupFacts(docs, homeKey, awayKey, { officialKeys } = {}) {
 }
 
 /**
- * Tabla de líderes de un campo. El promedio de valoración pide MIN_RATED_MATCHES partidos valorados; el resto
- * deja afuera los ceros. Empate: el que jugó menos minutos va arriba.
+ * Tabla de líderes de un campo. El promedio de valoración pide MIN_RATED_MATCHES partidos valorados y los
+ * porcentajes su mínimo (null debajo); el resto deja afuera los ceros. Empate: el que jugó menos minutos va arriba.
  */
 export function seasonLeaders(players, field, { limit = 10 } = {}) {
   const eligible = field === 'rating'

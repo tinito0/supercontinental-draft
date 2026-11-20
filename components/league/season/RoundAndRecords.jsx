@@ -5,7 +5,7 @@ import { RatingChip } from '../match/MatchParts.jsx';
 import { playerDisplayName } from './SeasonLeaderRow.jsx';
 import { teamOfTheRound } from '../../../utils/seasonStats.js';
 
-/* Equipo de la fecha y récords de la temporada, debajo de los líderes en /torneo?tab=estadisticas. */
+/* Equipo de la fecha y récords de la temporada, debajo de los líderes en /estadisticas. */
 
 const LINES = [
   { id: 'forward', label: 'Delanteros' },
