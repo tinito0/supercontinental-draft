@@ -319,8 +319,10 @@ export function seasonLeaders(players, field, { limit = 10 } = {}) {
 }
 
 // Números del equipo por partido (/equipos/:id?tab=estadisticas): sumas de las líneas de sus jugadores en cada
-// partido. La posesión no se guarda en match_lines, así que no está.
+// partido, y la posesión del encabezado del equipo (match_lines home/away.possession; falta en partidos donde el
+// juego no la contó, que no entran en ese promedio).
 export const CLUB_STAT_ROWS = [
+  { key: 'possession', label: 'Posesión', unit: '%', higherIsBetter: true },
   { key: 'goalsFor', label: 'Goles a favor', higherIsBetter: true },
   { key: 'goalsAgainst', label: 'Goles en contra', higherIsBetter: false },
   { key: 'shots', label: 'Tiros', higherIsBetter: true },
@@ -339,7 +341,8 @@ function teamMatchLine(doc, side) {
   const other = side === 'home' ? 'away' : 'home';
   const lines = doc.players.filter(line => line.side === side);
   const sums = Object.fromEntries(TEAM_SUMS.map(field => [field, lines.reduce((sum, line) => sum + (Number(line[field]) || 0), 0)]));
-  return { clubKey: clubKeyOf(doc[side]), goalsFor: doc[side].score, goalsAgainst: doc[other].score, ...sums };
+  const possession = Number.isFinite(doc[side].possession) ? doc[side].possession : null;
+  return { clubKey: clubKeyOf(doc[side]), goalsFor: doc[side].score, goalsAgainst: doc[other].score, possession, ...sums };
 }
 
 /** Promedio por partido de cada fila; la precisión de pase sale del total de pases, no del promedio de porcentajes. */
@@ -348,9 +351,14 @@ function averages(lines) {
   const total = field => lines.reduce((sum, line) => sum + line[field], 0);
   const out = {};
   for (const { key } of CLUB_STAT_ROWS) {
-    out[key] = key === 'passAccuracy'
-      ? (total('passes') ? Math.round((total('passesCompleted') / total('passes')) * 100) : null)
-      : round1(total(key) / lines.length);
+    if (key === 'passAccuracy') {
+      out[key] = total('passes') ? Math.round((total('passesCompleted') / total('passes')) * 100) : null;
+    } else if (key === 'possession') {
+      const known = lines.filter(line => line.possession != null);
+      out[key] = known.length ? round1(known.reduce((sum, line) => sum + line.possession, 0) / known.length) : null;
+    } else {
+      out[key] = round1(total(key) / lines.length);
+    }
   }
   return out;
 }

@@ -281,4 +281,14 @@ describe('clubTeamStats', () => {
   it('is null for a club without official matches', () => {
     expect(clubTeamStats(docs, 'Z')).toBeNull();
   });
+
+  it('averages possession only over the matches where the game counted it', () => {
+    const withPossession = [
+      { ...docs[0], home: { ...docs[0].home, possession: 60 }, away: { ...docs[0].away, possession: 40 } },
+      docs[1],
+    ];
+    const row = clubTeamStats(withPossession, 'A').rows.find(r => r.key === 'possession');
+    expect(row).toMatchObject({ value: 60, unit: '%', league: 50, rank: 1, of: 2 });
+    expect(clubTeamStats(docs, 'A').rows.find(r => r.key === 'possession')).toMatchObject({ value: null, rank: null });
+  });
 });

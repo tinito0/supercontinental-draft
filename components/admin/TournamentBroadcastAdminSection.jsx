@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clapperboard, Maximize2, Trophy, Users } from 'lucide-react';
 import { ObsSceneStudio } from './obs/ObsSceneStudio.jsx';
 import { CollectorImportAdmin } from './CollectorImportAdmin.jsx';
+import { PossessionBackfillPanel } from './PossessionBackfillPanel.jsx';
 import { Tabs } from '../ui/Tabs.jsx';
 
 // Matchday from the phone: scenes first, one job per view (it used to be one long scroll of four).
@@ -89,6 +90,7 @@ export const TournamentBroadcastAdminSection = memo(function TournamentBroadcast
           {onUpdateTournament && (
             <CollectorImportAdmin tournamentData={tournamentData} onUpdateTournament={onUpdateTournament} showStatusMessage={showStatusMessage} />
           )}
+          {onUpdateTournament && <PossessionBackfillPanel showStatusMessage={showStatusMessage} />}
         </>
       ) : (
         <ObsSceneStudio
