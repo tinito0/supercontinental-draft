@@ -1,18 +1,19 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { serverTimestamp } from 'firebase/firestore';
-import { ExternalLink, Lock, Star, Unlock, Vote, X } from 'lucide-react';
+import { ExternalLink, Lock, Unlock, UserRoundCheck, Vote, X } from 'lucide-react';
 import { setVotingClosed } from '../../services/communityAdminService.js';
-import { useLiveMatches, useMvpVotes, usePrediction } from '../../hooks/useLeagueData.js';
-import { mvpRanking, pickMvpMatch, predictionShares } from '../../utils/communityView.js';
+import { useLiveMatches, usePrediction } from '../../hooks/useLeagueData.js';
+import { useManagerRound } from '../../hooks/useManagerRound.js';
+import { managerRanking, predictionShares } from '../../utils/communityView.js';
 import { EMPTY_OVERLAY_MATCH } from '../../utils/broadcastMatches.js';
-import { fixtureIsPredictable, MVP_GRACE_MS } from '../../supabase/functions/_shared/communityVote.js';
+import { fixtureIsPredictable } from '../../supabase/functions/_shared/communityVote.js';
 import { Alert } from '../ui/Alert.jsx';
 import { CupPollAdmin } from './CupPollAdmin.jsx';
 import { ResetVotesButton } from './ResetVotesButton.jsx';
 
 /* Administración → Comunidad: cómo van los votos del público (docs/COMMUNITY_PLATFORM.md). La predicción del partido
-   al aire (se puede cerrar o reabrir a mano: closedAt), la votación del MVP del partido del juego y las encuestas de
-   las copas. Los votos los suma la función community-vote; acá se miran, se abren o cierran y se reinician. */
+   al aire (se puede cerrar o reabrir a mano: closedAt), la votación del manager de la última fecha terminada y las
+   encuestas de las copas. Los votos los suma la función community-vote; acá se miran, se abren o cierran y se reinician. */
 
 const PREDICTION_LABELS = { home: 'Local', draw: 'Empate', away: 'Visitante' };
 
@@ -119,64 +120,65 @@ function PredictionStatus({ overlay, tournament, onUpdateBroadcastOverlay, showS
   );
 }
 
-function MvpStatus({ showStatusMessage }) {
+function ManagerStatus({ tournament, showStatusMessage }) {
   const now = useClock();
   const { matches } = useLiveMatches();
-  const { match, open: inWindow } = pickMvpMatch(matches, now);
-  const { data: votes } = useMvpVotes(match?.key || null);
+  const { round } = useManagerRound(tournament, matches);
   const [busy, setBusy] = useState(false);
+  const votes = round?.votes;
   const closedByAdmin = Boolean(votes?.closedAt);
-  const open = inWindow && !closedByAdmin;
   const total = Number(votes?.total) || 0;
 
   const setClosed = async closed => {
     setBusy(true);
     try {
-      await setVotingClosed('mvp', match.key, closed);
-      showStatusMessage?.('success', closed ? 'Votación del MVP cerrada.' : 'Votación del MVP reabierta.');
+      await setVotingClosed('manager', round.roundId, closed);
+      showStatusMessage?.('success', closed ? 'Votación del manager cerrada.' : 'Votación del manager reabierta.');
     } catch (error) {
-      console.error('[CommunityAdminSection] mvp', error);
-      showStatusMessage?.('error', 'No se pudo cambiar la votación del MVP. Revisá la conexión.');
+      console.error('[CommunityAdminSection] manager', error);
+      showStatusMessage?.('error', 'No se pudo cambiar la votación del manager. Revisá la conexión.');
     } finally {
       setBusy(false);
     }
   };
-  const ranking = useMemo(() => mvpRanking(votes?.votes, match?.summary, 3), [votes, match?.summary]);
-  const closesIn = match?.status.kind === 'finished' && Number.isFinite(match.finishedAtMs ?? match.updatedAtMs)
-    ? Math.max(0, Math.ceil(((match.finishedAtMs ?? match.updatedAtMs) + MVP_GRACE_MS - now) / 60_000)) : null;
+  const ranking = useMemo(() => managerRanking(votes?.votes, 3), [votes]);
+  const closesAt = round?.window.closesAtMs;
+  const closesInHours = Number.isFinite(closesAt) && closesAt > now ? Math.ceil((closesAt - now) / 3_600_000) : null;
 
   return (
-    <section className="panel space-y-4 p-5" aria-labelledby="admin-mvp">
+    <section className="panel space-y-4 p-5" aria-labelledby="admin-manager">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="admin-mvp" className="section-title flex items-center gap-2"><Star className="h-5 w-5 text-accent-soft" aria-hidden="true" /> MVP del partido</h2>
-        {match && <StatusBadge isOpen={open} />}
+        <h2 id="admin-manager" className="section-title flex items-center gap-2"><UserRoundCheck className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Manager de la fecha</h2>
+        {round && <StatusBadge isOpen={round.open} />}
       </div>
-      {!match ? (
-        <p className="text-sm text-ink-2">No hay votación abierta. Se abre sola con el partido en vivo y cierra 15 minutos después del final, o si el colector deja de mandar datos 10 minutos.</p>
+      {!round ? (
+        <p className="text-sm text-ink-2">Ninguna fecha terminó todavía. La votación se abre sola cuando se carga el último resultado de una fecha y queda abierta 24 horas.</p>
       ) : (
         <>
           <p className="text-sm text-ink-2">
-            <span className="font-semibold text-ink">{match.home.name} {match.home.score}-{match.away.score} {match.away.name}</span>
-            {closesIn != null && !closedByAdmin && <> · cierra en <span className="num font-semibold text-ink">{closesIn}</span> min</>}
+            <span className="font-semibold text-ink">{round.title}</span>
+            {round.open && closesInHours != null && <> · cierra en <span className="num font-semibold text-ink">{closesInHours}</span> h</>}
+            {round.open && closesInHours == null && ' · las 24 h corren desde el primer voto'}
             {closedByAdmin && ' · cerrada a mano'}
+            {!round.open && !closedByAdmin && ` · ${round.window.reason}`}
             {' · '}<span className="num font-semibold text-ink">{total}</span> votos
           </p>
           {ranking.length > 0 && (
             <ol className="space-y-1 text-sm">
-              {ranking.map((entry, index) => <li key={entry.id} className="text-ink"><span className="num font-bold">{index + 1}.</span> {entry.name} · <span className="num">{entry.pct}%</span></li>)}
+              {ranking.map((entry, index) => <li key={entry.club} className="text-ink"><span className="num font-bold">{index + 1}.</span> {entry.club} · <span className="num">{entry.pct}%</span></li>)}
             </ol>
           )}
           <div className="flex flex-wrap gap-2">
             {closedByAdmin ? (
               <button type="button" className="btn btn-secondary min-h-11" disabled={busy} onClick={() => setClosed(false)}>
-                <Unlock className="h-4 w-4" aria-hidden="true" /> Reabrir MVP
+                <Unlock className="h-4 w-4" aria-hidden="true" /> Reabrir
               </button>
-            ) : (
+            ) : round.open && (
               <button type="button" className="btn btn-secondary min-h-11" disabled={busy} onClick={() => setClosed(true)}>
                 <Lock className="h-4 w-4" aria-hidden="true" /> Cerrar ahora
               </button>
             )}
-            {total > 0 && <ResetVotesButton kind="mvp" target={match.key} label="el MVP del partido" total={total} showStatusMessage={showStatusMessage} />}
+            {total > 0 && <ResetVotesButton kind="manager" target={round.roundId} label={`el manager de la ${round.title}`} total={total} showStatusMessage={showStatusMessage} />}
           </div>
         </>
       )}
@@ -193,7 +195,7 @@ export const CommunityAdminSection = memo(function CommunityAdminSection({ broad
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <PredictionStatus overlay={broadcastOverlayData} tournament={tournamentData} onUpdateBroadcastOverlay={onUpdateBroadcastOverlay} showStatusMessage={showStatusMessage} />
-        <MvpStatus showStatusMessage={showStatusMessage} />
+        <ManagerStatus tournament={tournamentData} showStatusMessage={showStatusMessage} />
       </div>
       {!tournamentData && <Alert tone="info" title="Sin torneo cargado">Las encuestas de las copas sugieren equipos cuando hay tabla.</Alert>}
       <CupPollAdmin tournamentData={tournamentData} showStatusMessage={showStatusMessage} />

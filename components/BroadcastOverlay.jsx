@@ -118,7 +118,7 @@ function MatchPanel({ scene, data, home, away, live, fixture, season }) {
       )}
       {scene === 'previa' && season && <BroadcastSeasonFacts facts={season} />}
       {scene === 'previa' && live?.prediction && <BroadcastPrediction shares={live.prediction} />}
-      {scene === 'final' && <BroadcastFinalAwards mvp={live?.mvp} topRated={live?.topRated} />}
+      {scene === 'final' && <BroadcastFinalAwards topRated={live?.topRated} />}
     </BroadcastFrame>
   );
 }

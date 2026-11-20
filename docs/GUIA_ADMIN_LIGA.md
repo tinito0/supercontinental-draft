@@ -188,7 +188,7 @@ test falla, no publica nada.
 | Si cambió algo de… | Archivos | Botón (GitHub → Actions → … → Run workflow, rama `master`) |
 |---|---|---|
 | Fichar, liberar, traspasos, comisión, presupuesto, franquicia, catálogo | `supabase/functions/_shared/market.js`, `budget.js`, `transferFee.js`, `franchise.js`, `marketConstants.js`, `catalog.json` | **deploy-market** |
-| Votos del público (predicción, MVP, encuestas de copa) o la forma de las copas | `supabase/functions/_shared/communityVote.js` y `community-vote/index.ts` | **deploy-community-vote** |
+| Votos del público (predicción, manager de la fecha, encuestas de copa) o la forma de las copas | `supabase/functions/_shared/communityVote.js` y `community-vote/index.ts` | **deploy-community-vote** |
 | Colector de partidos en vivo, overlay | `match-feed`, `overlay-control` | sin botón todavía: `npx supabase functions deploy <nombre> --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy` desde una computadora |
 
 Paso a paso desde el celular:

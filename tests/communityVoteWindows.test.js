@@ -1,29 +1,12 @@
-// Ventanas y boletas de los votos sin cuenta (supabase/functions/_shared/communityVote.js): finishedAt, señal perdida,
-// partidos ya jugados, cierre por clubes y «ya votaste» con la opción contada. Datos sintéticos.
+// Ventanas y boletas de los votos sin cuenta (supabase/functions/_shared/communityVote.js): finishedAt, partidos ya
+// jugados, cierre por clubes, manager de la fecha y «ya votaste» con la opción contada. Datos sintéticos.
 import {
-  castVote, clientIp, CommunityVoteError, finishedAtFor, fixtureIsFinished, LIVE_SIGNAL_MS, MVP_GRACE_MS, mvpWindow,
+  castVote, clientIp, CommunityVoteError, finishedAtFor, fixtureIsFinished, MANAGER_WINDOW_MS,
   fixtureIsPredictable, predictionClosure, predictionWindow,
 } from '../supabase/functions/_shared/communityVote.js';
-import { pickMvpMatch, predictionOutcome } from '../utils/communityView.js';
+import { managerRanking, pickManagerRound, predictionOutcome } from '../utils/communityView.js';
 
 const now = 50_000_000;
-
-describe('mvpWindow with finishedAt and signal', () => {
-  it('counts the 15 minutes from finishedAt, not from the last upload', () => {
-    const late = { status: 'finished', finishedAtMs: now - MVP_GRACE_MS - 1, updatedAtMs: now };
-    expect(mvpWindow(late, now).open).toBe(false);
-    expect(mvpWindow({ ...late, finishedAtMs: now - 60_000 }, now).open).toBe(true);
-  });
-
-  it('falls back to updatedAt for matches saved before finishedAt existed', () => {
-    expect(mvpWindow({ status: 'finished', updatedAtMs: now - 60_000 }, now).open).toBe(true);
-  });
-
-  it('closes a live match that stopped uploading for 10 minutes', () => {
-    expect(mvpWindow({ status: 'live', updatedAtMs: now - LIVE_SIGNAL_MS - 1 }, now).open).toBe(false);
-    expect(mvpWindow({ status: 'live', updatedAtMs: now - 30_000 }, now).open).toBe(true);
-  });
-});
 
 describe('finishedAtFor (match-feed)', () => {
   it('stamps the first finished upload and keeps that time afterwards', () => {
@@ -95,29 +78,61 @@ describe('castVote: already voted', () => {
   });
 });
 
-describe('castVote: MVP closed by the admin', () => {
-  it('rejects the vote while the match is still inside its window', async () => {
-    const docs = {
-      'artifacts/x/public/data/mvp_votes/k1': { votes: {}, total: 0, closedAt: new Date(now) },
-      'artifacts/x/public/data/live_matches/k1': { status: 'live', updatedAt: new Date(now - 1000), summaryJson: JSON.stringify({ lineups: { home: { starting: [7] } } }) },
-    };
-    const firestore = { runTransaction: async fn => fn({ get: async path => (docs[path] ? { data: docs[path] } : null), create() {}, set() {} }) };
-    const vote = { kind: 'mvp', target: 'k1', choice: 7 };
-    const error = await castVote({ firestore, appId: 'x', vote, ipHash: 'i', deviceHash: 'd', now }).catch(e => e);
-    expect(error).toBeInstanceOf(CommunityVoteError);
-    expect(error.message).toMatch(/cerrada/);
+describe('castVote: manager de la fecha', () => {
+  const base = 'artifacts/x/public/data';
+  const tournament = {
+    matches: [
+      { id: '1', round: 'Fecha 3', homeTeam: 'Talleres', awayTeam: 'SK Konya', status: 'completed', importedFrom: 'k1' },
+      { id: '2', round: 'Fecha 3', homeTeam: 'Lourinhã', awayTeam: 'Portland Rovers', status: 'completed', importedFrom: 'k2' },
+    ],
+  };
+  const run = async (docs, choice = 'Talleres') => {
+    const writes = [];
+    const firestore = { runTransaction: async fn => fn({ get: async path => (docs[path] ? { data: docs[path] } : null), create() {}, set: (path, data, opts) => writes.push({ path, data, opts }) }) };
+    const result = await castVote({ firestore, appId: 'x', vote: { kind: 'manager', target: 'fecha-3', choice }, ipHash: 'i', deviceHash: 'd', now }).catch(e => e);
+    return { result, writes };
+  };
+  const ended = ms => ({
+    [`${base}/tournament/official`]: tournament,
+    [`${base}/live_matches/k1`]: { finishedAt: new Date(now - ms - 3_600_000) },
+    [`${base}/live_matches/k2`]: { finishedAt: new Date(now - ms) },
+  });
+
+  it('counts a vote for a club of the round and stamps when the vote opened', async () => {
+    const { result, writes } = await run(ended(60_000));
+    expect(result).toEqual({ votes: { Talleres: 1 }, total: 1 });
+    const totals = writes.find(w => w.path === `${base}/manager_votes/fecha-3`);
+    expect(totals.opts.serverTimestamps).toEqual(['updatedAt', 'openedAt']);
+  });
+
+  it('rejects a club that did not play the round, a closed window and an admin close', async () => {
+    expect((await run(ended(60_000), 'Aspra Calcio')).result.message).toMatch(/no jugó/);
+    expect((await run(ended(MANAGER_WINDOW_MS + 1))).result.message).toMatch(/ya cerró/);
+    const closed = { ...ended(60_000), [`${base}/manager_votes/fecha-3`]: { votes: {}, total: 0, closedAt: new Date(now) } };
+    expect((await run(closed)).result.message).toMatch(/cerrada/);
   });
 });
 
-describe('pickMvpMatch (página /en-vivo)', () => {
-  const match = (key, kind, extra = {}) => ({ key, status: { kind }, ...extra });
-  it('skips a live match without signal and offers the one that just finished', () => {
-    const matches = [match('a', 'live', { updatedAtMs: now - LIVE_SIGNAL_MS - 1 }), match('b', 'finished', { finishedAtMs: now - 60_000, updatedAtMs: now })];
-    expect(pickMvpMatch(matches, now).match.key).toBe('b');
+describe('pickManagerRound (/en-vivo, portada, OBS)', () => {
+  const m = (id, round, status, extra = {}) => ({ id, round, homeTeam: `H${id}`, awayTeam: `A${id}`, status, ...extra });
+  const tournament = { matches: [m('1', 'Fecha 1', 'completed'), m('2', 'Fecha 2', 'completed', { importedFrom: 'k2' }), m('3', 'Fecha 3', 'scheduled')] };
+
+  it('picks the latest round with every result, with the window from the game end time', () => {
+    const round = pickManagerRound(tournament, [{ key: 'k2', finishedAtMs: now - 1000 }], () => null, now);
+    expect(round).toMatchObject({ roundId: 'fecha-2', title: 'Fecha 2' });
+    expect(round.window).toMatchObject({ open: true, closesAtMs: now - 1000 + MANAGER_WINDOW_MS });
   });
 
-  it('closes when the end was more than 15 minutes ago, even with recent uploads', () => {
-    expect(pickMvpMatch([match('b', 'finished', { finishedAtMs: now - MVP_GRACE_MS - 1, updatedAtMs: now })], now)).toEqual({ match: null, open: false });
+  it('is closed when the admin closed it, and null before any round ends', () => {
+    expect(pickManagerRound(tournament, [], () => ({ closedAt: new Date() }), now).window.open).toBe(false);
+    expect(pickManagerRound({ matches: [m('3', 'Fecha 1', 'scheduled')] }, [], () => null, now)).toBeNull();
+  });
+
+  it('ranks clubs by votes with whole percentages', () => {
+    expect(managerRanking({ Talleres: 3, 'SK Konya': 1, Nadie: 0 })).toEqual([
+      { club: 'Talleres', votes: 3, pct: 75 },
+      { club: 'SK Konya', votes: 1, pct: 25 },
+    ]);
   });
 });
 
