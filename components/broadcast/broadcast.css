@@ -681,6 +681,15 @@
 .scl-table-legend span { display: inline-flex; align-items: center; gap: 8px; }
 .scl-table-legend i { width: 18px; height: 18px; display: inline-block; background: var(--scl-bar); }
 .scl-table-legend i.is-plata { background: var(--scl-slate); }
+/* Tabla en vivo: la fila del club que juega se marca con un punto quieto (el partido ya está en pantalla); la flecha
+   dice los puestos que gana o pierde con el marcador de ahora. Verde y rojo con forma distinta, no solo color. */
+.scl-table tr.is-live td:not(.scl-table-pos):not(.scl-table-pts) { background: #fbe9ea; }
+.scl-table-live { width: 12px; height: 12px; border-radius: 50%; background: #ef4444; flex: none; }
+.scl-table-move { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: 24px; font-weight: 800; flex: none; }
+.scl-table-move i { font-size: 18px; font-style: normal; }
+.scl-table-move.is-up { color: #166534; }
+.scl-table-move.is-down { color: #b91c1c; }
+.scl-table-legend-note { margin-left: auto; color: var(--scl-periwinkle); }
 
 /* ---- Escena «Fecha» (BroadcastFixtures.jsx) ---- */
 .scl-fx-frame { width: 1400px; }

@@ -20,8 +20,9 @@ function flash(row) {
 /**
  * @param {React.RefObject<HTMLElement>} containerRef element that holds the rows (a <tbody> works)
  * @param {string} orderKey row keys in order, e.g. rows.map(r => r.name).join('|')
+ * @param {string} [easing] the OBS overlay passes its own curve (var(--scl-ease)); the site uses --ease-in-out
  */
-export function useRankShift(containerRef, orderKey) {
+export function useRankShift(containerRef, orderKey, easing = 'cubic-bezier(0.4, 0, 0.2, 1)') {
   const previous = useRef(null);
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -40,10 +41,10 @@ export function useRankShift(containerRef, orderKey) {
       if (reduced || typeof row.animate !== 'function') { flash(row); continue; }
       const animation = row.animate(
         [{ translate: `0 ${dy}px` }, { translate: '0 0' }],
-        { duration: RANK_SHIFT_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+        { duration: RANK_SHIFT_MS, easing },
       );
       animation.id = 'rank-shift';
       flash(row);
     }
-  }, [containerRef, orderKey]);
+  }, [containerRef, orderKey, easing]);
 }

@@ -163,6 +163,9 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
   The community popup and cards (`CommunityFrame.jsx`, `.scl-pop`) sit at the bottom, clear of the game's score and
   clock, and enter softly: fade, a 20px rise and a blur that clears, then each line in turn. No bounce, no rotation.
   The QR ring pulses three times, then stops; a percentage that changes fades in place.
+  The «tabla» scene is the live table during a league match: same row slide as the site (`useRankShift` with
+  `--scl-ease`), ▲/▼ with the places gained or lost, a still red dot on the two clubs playing. No live scoreboard: the
+  game shows it (user's call).
 - **Defaults**: a bare `transition` or `transition-colors` resolves to `--dur-fast` and `--ease-out`
   (`tailwind.config.js` `DEFAULT`), never Tailwind's 150ms. The mobile sidebar opens in `--dur-move` and closes in
   `--dur-base`.
