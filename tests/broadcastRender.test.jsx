@@ -290,3 +290,24 @@ describe('BroadcastOverlay full-screen and tournament scenes', () => {
     expect(html).toMatch(/scl-card[^>]*data-position="right"/);
   });
 });
+
+describe('BroadcastLeagueTable live', () => {
+  const row = (name, pts, gf, gc) => ({ name, pj: 1, pg: pts / 2, gpen: 0, pp: pts ? 0 : 1, pts, gf, gc });
+  const league = [row('Norte', 2, 3, 1), row('Sur', 2, 2, 1), row('Este', 0, 1, 2), row('Oeste', 0, 0, 2)];
+
+  it('is the official table when nothing is live', () => {
+    const html = renderToStaticMarkup(<BroadcastLeagueTable league={league} />);
+    expect(html).toContain('Tabla de posiciones');
+    expect(html).not.toContain('scl-table-move');
+  });
+
+  it('reorders with the live score and says how many places each club moved', () => {
+    const fixtures = [{ competition: 'liga', status: 'live', home: { name: 'Oeste' }, away: { name: 'Norte' }, liveScore: { home: 3, away: 0 } }];
+    const html = renderToStaticMarkup(<BroadcastLeagueTable league={league} fixtures={fixtures} />);
+    expect(html).toContain('Tabla en vivo');
+    expect(html.indexOf('Oeste')).toBeLessThan(html.indexOf('Sur'));
+    expect(html).toContain('aria-label="sube 3"');
+    expect(html).toContain('aria-label="baja 2"');
+    expect((html.match(/class="scl-table-live"/g) || []).length).toBe(2);
+  });
+});

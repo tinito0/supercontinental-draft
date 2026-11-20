@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Award, Check, ChevronRight, Star, Trophy, Vote } from 'lucide-react';
+import { Award, Check, ChevronRight, Medal, Trophy, Vote } from 'lucide-react';
 import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { MatchStatus, TeamMark } from '../../components/league/match/MatchParts.jsx';
-import { LiveNowPanel } from '../../components/league/match/LiveNowPanel.jsx';
+import { LiveNowPanel, pickLiveMatch } from '../../components/league/match/LiveNowPanel.jsx';
+import { playerPlaceholder } from '../../utils/playerPlaceholder.js';
 import { useAllMvpVotes, useBroadcastOverlay, useLeagueTeams, useLiveMatches, useMvpVotes, SEASON_MATCH_LIMIT, usePoll, usePrediction, useTournament } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { rankPlayerOfTournament } from '../../utils/playerOfTournament.js';
@@ -19,6 +20,12 @@ import { CUP_POLLS, fixtureIsPredictable, mvpOptions, mvpRanking, pickMvpMatch, 
 
 // Botón de una opción de voto: se hunde apenas al tocarlo (feedback inmediato en el celular).
 const CHOICE_BUTTON = 'flex items-center justify-center rounded-xl border border-line/[0.16] bg-raised transition-[border-color,background-color,transform] duration-fast ease-out hover:border-accent/60 hover:bg-overlay active:scale-[0.97] disabled:opacity-60';
+
+/** Sin foto del jugador, sus iniciales: un hueco vacío en el botón parecía un error de carga. */
+const photoFallback = name => event => {
+  event.currentTarget.onerror = null;
+  event.currentTarget.src = playerPlaceholder(String(name || '?')[0]);
+};
 
 function useNow(intervalMs = 30_000) {
   const [now, setNow] = useState(() => Date.now());
@@ -183,7 +190,7 @@ function PlayerOfTournamentPanel({ matches }) {
           <li key={entry.playerId} className="flex min-h-14 items-center gap-3 py-2">
             <span className={`num w-6 text-center font-display text-lg ${index === 0 ? 'text-accent-soft' : 'text-ink-3'}`}>{index + 1}</span>
             <img src={`/fotos_jugadores/${entry.playerId}.webp`} alt="" width={36} height={36} loading="lazy"
-              className="h-9 w-9 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
+              className="h-9 w-9 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={photoFallback(entry.name)} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-ink">{entry.name}</span>
               {entry.team && <span className="block truncate text-sm text-ink-2">{entry.team}</span>}
@@ -200,7 +207,8 @@ function PlayerOfTournamentPanel({ matches }) {
   );
 }
 
-function MvpPanel({ matches }) {
+/** showMatchLink: false cuando el partido ya está en grande arriba (LiveNowPanel); no se repite por tercera vez. */
+function MvpPanel({ matches, showMatchLink = true }) {
   const now = useNow();
   const { match, open: inWindow } = pickMvpMatch(matches, now);
   const { data: votes, loading: votesLoading } = useMvpVotes(match?.key || null);
@@ -234,7 +242,7 @@ function MvpPanel({ matches }) {
       <div className="space-y-4">
       {winner && (
         <div className="flex items-center gap-4 border-b border-line/10 pb-4" role="status">
-          <img src={`/fotos_jugadores/${winner.id}.webp`} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-lg bg-white object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
+          <img src={`/fotos_jugadores/${winner.id}.webp`} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-lg bg-white object-cover object-top" onError={photoFallback(winner.name)} />
           <div className="min-w-0">
             <p className="eyebrow">MVP del partido</p>
             <p className="truncate font-display text-2xl font-bold text-ink">{winner.name}</p>
@@ -262,7 +270,7 @@ function MvpPanel({ matches }) {
                 <button key={player.id} type="button" aria-pressed={selected === player.id} onClick={() => setSelected(player.id)}
                   className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-[border-color,background-color,transform] duration-fast ease-out active:scale-[0.98] ${selected === player.id ? 'border-accent bg-accent-deep/60 text-ink' : 'border-line/[0.16] bg-raised text-ink hover:border-line/30'}`}>
                   <img src={`/fotos_jugadores/${player.id}.webp`} alt="" width={28} height={28} loading="lazy"
-                    className="h-7 w-7 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} />
+                    className="h-7 w-7 shrink-0 rounded-lg bg-overlay object-cover object-top" onError={photoFallback(player.name)} />
                   <span className="min-w-0 flex-1 truncate">{player.name}</span>
                   {selected === player.id && <Check className="h-4 w-4 shrink-0 text-accent-soft" aria-hidden="true" />}
                 </button>
@@ -281,10 +289,10 @@ function MvpPanel({ matches }) {
   return (
     <section className="panel p-5 space-y-4" aria-labelledby="mvp-title">
       <div className="flex items-center justify-between gap-3">
-        <h2 id="mvp-title" className="section-title flex items-center gap-2"><Star className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Jugador del partido</h2>
+        <h2 id="mvp-title" className="section-title flex items-center gap-2"><Medal className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Jugador del partido</h2>
         {match && <span className="text-sm text-ink-2">{open ? 'Votación abierta' : 'Votación cerrada'}</span>}
       </div>
-      {match && (
+      {match && showMatchLink && (
         <Link to={`/partidos/${match.key}`} className="well flex min-h-11 items-center gap-3 px-4 py-3 transition-colors hover:bg-overlay">
           <span className="min-w-0 flex-1 truncate text-sm text-ink">
             {match.home.name} <span className="num font-display text-base">{match.home.score}-{match.away.score}</span> {match.away.name}
@@ -308,6 +316,7 @@ export default function LeagueLiveScreen() {
   const { tournament, loading: tournamentLoading } = useTournament();
   // El overlay puede seguir apuntando a un partido de otra temporada o a un cruce sin equipos: eso no se vota.
   const predictionMatchId = !tournamentLoading && overlay?.matchId && fixtureIsPredictable(tournament, overlay.matchId) ? overlay.matchId : null;
+  const liveMatch = pickLiveMatch(matches);
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 md:py-16">
@@ -319,8 +328,9 @@ export default function LeagueLiveScreen() {
       {error && <Alert tone="danger" title={error} className="mb-4">Recargá la página para intentar de nuevo.</Alert>}
       <div className="space-y-5">
         <LiveNowPanel matches={matches} teamsById={teamsById} />
-        <PredictionPanel matchId={predictionMatchId} overlay={overlay} teamsById={teamsById} matches={matches} />
-        <MvpPanel matches={matches} />
+        {/* Con un partido en juego y nada que predecir, el aviso «cuando haya un partido…» sobra. */}
+        {(predictionMatchId || !liveMatch) && <PredictionPanel matchId={predictionMatchId} overlay={overlay} teamsById={teamsById} matches={matches} />}
+        <MvpPanel matches={matches} showMatchLink={!liveMatch} />
         {CUP_POLLS.map(poll => <CupPollPanel key={poll.id} pollId={poll.id} label={poll.label} />)}
         <PlayerOfTournamentPanel matches={matches} />
       </div>

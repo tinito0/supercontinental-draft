@@ -32,12 +32,13 @@ const STATUS = {
   postponed: { label: 'Postergado', className: 'text-warning-soft' },
 };
 
-function StatusCell({ fixture }) {
+/** quiet: el partido ya está en grande arriba con su punto que late; acá el punto va quieto (uno que late por pantalla). */
+function StatusCell({ fixture, quiet = false }) {
   if (fixture.status === 'live') {
     return (
-      <span className="inline-flex flex-col items-start gap-0.5 font-semibold text-danger-soft">
+      <span className="inline-flex items-center gap-1.5 font-semibold text-danger-soft sm:flex-col sm:items-start sm:gap-0.5">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-danger animate-pulse" aria-hidden="true" />
+          <span className={`h-2 w-2 rounded-full bg-danger ${quiet ? '' : 'animate-pulse'}`} aria-hidden="true" />
           <span className="num">{fixture.minute || 'En vivo'}</span>
         </span>
         <span className="sr-only">en vivo</span>
@@ -65,7 +66,7 @@ function TeamLine({ team, club, score, pens, outcome }) {
       <span className={`min-w-0 flex-1 truncate ${tone}`} title={team.name}>{team.name}</span>
       {/* Penales al lado del marcador, como en los centros de partidos: «1 (5)». */}
       {pens != null && <span className={`num text-sm ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink-2'}`} aria-label={`${pens} en los penales`}>({pens})</span>}
-      {score != null && <span key={score} className={`num w-6 text-right font-display text-lg ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink'} ${scoreChanged ? 'value-flash' : ''}`}>{score}</span>}
+      {score != null && <span key={score} className={`num w-6 text-right font-display text-lg ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink'} ${scoreChanged ? 'score-pop' : ''}`}>{score}</span>}
     </div>
   );
 }
@@ -73,9 +74,9 @@ function TeamLine({ team, club, score, pens, outcome }) {
 /** «Fecha 2», o la competición y la ronda en las copas: de qué fecha es cada partido, arriba del estado. */
 function RoundCell({ fixture }) {
   return (
-    <span className="mb-1 block">
-      {fixture.competition !== 'liga' && <span className="block text-xs font-semibold text-ink-2">{fixture.competitionLabel}</span>}
-      <span className="block font-display text-base font-bold uppercase leading-tight text-ink">{fixture.roundLabel}</span>
+    <span className="contents sm:mb-1 sm:block">
+      {fixture.competition !== 'liga' && <span className="text-xs font-semibold text-ink-2 sm:block">{fixture.competitionLabel}</span>}
+      <span className="font-display text-base font-bold uppercase leading-tight text-ink sm:block">{fixture.roundLabel}</span>
     </span>
   );
 }
@@ -86,25 +87,26 @@ function ShootoutLine({ fixture }) {
   const winner = fixture.winner === 'home' ? fixture.home.name : fixture.winner === 'away' ? fixture.away.name : '';
   const [hi, lo] = fixture.winner === 'away' ? [fixture.pens.away, fixture.pens.home] : [fixture.pens.home, fixture.pens.away];
   return (
-    <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-      <span className="h-3.5 w-1 shrink-0 rounded bg-accent" aria-hidden="true" />
+    <p className="text-sm font-semibold text-ink">
       {winner ? <>Ganó {winner} por penales <span className="num">{hi}-{lo}</span></> : <>Penales <span className="num">{fixture.pens.home}-{fixture.pens.away}</span></>}
     </p>
   );
 }
 
 /**
- * @param {{ fixture: object, clubOf: (name: string) => object | null, showCompetition?: boolean, action?: React.ReactNode }} props
+ * @param {{ fixture: object, clubOf: (name: string) => object | null, showCompetition?: boolean, action?: React.ReactNode,
+ *   quietLive?: boolean }} props
  */
-export function FixtureRow({ fixture, clubOf, showCompetition = true, action }) {
+export function FixtureRow({ fixture, clubOf, showCompetition = true, action, quietLive = false }) {
   const score = fixture.score || fixture.liveScore;
   const outcome = side => (fixture.winner ? (fixture.winner === side ? 'win' : 'loss') : null);
   const href = fixture.liveMatchKey ? `/partidos/${fixture.liveMatchKey}` : null;
   const body = (
     <>
-      <div className="pt-0.5 text-sm leading-tight">
+      {/* En el teléfono fecha y estado van en una línea arriba de los equipos, así los nombres usan todo el ancho. */}
+      <div className="col-span-2 flex flex-wrap items-baseline gap-x-2 text-sm leading-tight sm:col-span-1 sm:block sm:pt-0.5">
         {showCompetition && <RoundCell fixture={fixture} />}
-        <StatusCell fixture={fixture} />
+        <StatusCell fixture={fixture} quiet={quietLive} />
       </div>
       <div className="min-w-0 space-y-1.5">
         <TeamLine team={fixture.home} club={clubOf(fixture.home.name)} score={score?.home} pens={fixture.pens?.home} outcome={outcome('home')} />
@@ -115,13 +117,13 @@ export function FixtureRow({ fixture, clubOf, showCompetition = true, action }) 
       {href ? <ChevronRight className="mt-1 h-4 w-4 text-ink-3" aria-hidden="true" /> : <span aria-hidden="true" />}
     </>
   );
-  const rowClass = `grid grid-cols-[6.5rem_minmax(0,1fr)_1rem] items-start gap-3 px-4 py-3 ${fixture.status === 'live' ? 'bg-danger/[0.05]' : ''}`;
+  const rowClass = `grid grid-cols-[minmax(0,1fr)_1rem] items-start gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[6.5rem_minmax(0,1fr)_1rem] ${fixture.status === 'live' ? 'bg-danger/[0.05]' : ''}`;
   return (
     <li>
       {href
         ? <Link to={href} className={`${rowClass} min-h-11 transition-colors hover:bg-white/[0.03]`}>{body}</Link>
         : <div className={rowClass}>{body}</div>}
-      {action && <div className="px-4 pb-3 pl-[8rem]">{action}</div>}
+      {action && <div className="px-4 pb-3 sm:pl-[8rem]">{action}</div>}
     </li>
   );
 }

@@ -39,17 +39,22 @@ function Card({ title, children }) {
   );
 }
 
+/**
+ * Resumen. En el teléfono, en orden de importancia: lo que pasó (minuto a minuto), los números, y recién después los
+ * gráficos y el cara a cara. Un gráfico sin datos no ocupa lugar. En pantallas grandes, dos columnas: eventos y
+ * gráficos a la izquierda, números y cara a cara a la derecha (las columnas son `contents` en el teléfono).
+ */
 function SummaryTab({ match, views }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-      <div className="space-y-4">
-        <Card title="Dominio"><MomentumChart data={views.momentum} match={match} compact /></Card>
-        <Card title="Tiros"><ShotsPanel shots={views.shots} match={match} /></Card>
-        <HeadToHead match={match} />
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start">
+      <div className="contents lg:block lg:space-y-4">
+        <div className="order-1"><MatchTimeline timeline={views.timeline} match={match} /></div>
+        {views.momentum && <div className="order-3"><Card title="Dominio"><MomentumChart data={views.momentum} match={match} compact /></Card></div>}
+        {views.shots.length > 0 && <div className="order-4"><Card title="Tiros"><ShotsPanel shots={views.shots} match={match} /></Card></div>}
       </div>
-      <div className="space-y-4">
-        <TopStats sections={views.sections} match={match} />
-        <MatchTimeline timeline={views.timeline} match={match} />
+      <div className="contents lg:block lg:space-y-4">
+        <div className="order-2"><TopStats sections={views.sections} match={match} /></div>
+        <div className="order-5"><HeadToHead match={match} /></div>
       </div>
     </div>
   );

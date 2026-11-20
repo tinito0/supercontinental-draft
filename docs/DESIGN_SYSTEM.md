@@ -116,7 +116,7 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
 - **Duration classes**: `duration-fast` (feedback, hover, exits), `duration-base` (entries), `duration-move` (meters and
   anything that travels). No `duration-150/200/300/500`. The one literal is the live vote bar at 300ms (below).
   Easing keywords `ease`/`ease-in-out` are not used; transitions name their properties and use `var(--ease-out)`.
-- **Looping**: `animate-pulse` only on the live dot (`bg-danger`, marks a real live match). Loading placeholders use
+- **Looping**: `animate-pulse` only on the live dot (`bg-danger`, marks a real live match), one per screen. Loading placeholders use
   `.skeleton`, not `animate-pulse`. Nothing else loops.
 - **Guided tour** (`.guide-*`, used by `TutorialModal` and `ScoutAssignmentsPanel`): its ring animates
   `left/top/width/height` on purpose, because it is one small fixed element that follows another and `transform`
@@ -146,13 +146,26 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
 - **Press and hover** (2026-10-22 audit): pressables scale to 0.97 on `:active` (`.btn`, vote buttons, OBS scene
   buttons). `hover:` only applies with a real pointer (`future.hoverOnlyWhenSupported` in `tailwind.config.js`), so a
   tap never leaves a hover stuck on phones. No `transition-all`: list the properties.
-- **Live values**: bars fed by live votes grow with `transform: scaleX()` and a 300ms ease-out transition, not `width`.
-  A live score that changes flashes once (`.value-flash`), never on page load.
+- **Live values**: bars fed by live votes or live match stats grow with `transform: scaleX()` and a 300ms ease-out
+  transition, not `width`. A live score that changes flashes once (`.value-flash`), never on page load. On the league
+  site the scoreboards use `LiveScore` (`components/league/match/LiveScore.jsx`): only the number that changed re-enters
+  with `.score-pop`, transitions.dev *Number pop-in* on the app scale (8px up, 2px blur, `--dur-move`, no overshoot),
+  plus the flash. Reduced motion keeps only the flash.
+- **Table reorder** (`hooks/useRankShift.js`): when a goal reorders the live table, each row that changed place slides
+  from its old row to its new one (FLIP with `translate`, 450ms `--ease-in-out`, `RANK_SHIFT_MS` in `utils/motion.js`)
+  and its position flashes once. 450ms is off the 120/180/220 scale on purpose: a row can travel several places and
+  people need to follow which club went where; it happens once per goal, never on load. The arrow next to the
+  position says how many places it gained or lost (`RankMove`). Reduced motion: no slide, only the flash.
+- **One live dot per screen**: the pulsing dot marks the match being played. Rows of that match in a table carry a
+  still dot; titles that already say "en vivo" carry none.
 - **OBS overlay** (`components/broadcast/broadcast.css`) is broadcast graphics, not app UI: staged entries (~1.6 s) and
   short row staggers are allowed there; the exit is shorter than the entry (280ms). Every curve is `--scl-ease`.
   The community popup and cards (`CommunityFrame.jsx`, `.scl-pop`) sit at the bottom, clear of the game's score and
   clock, and enter softly: fade, a 20px rise and a blur that clears, then each line in turn. No bounce, no rotation.
   The QR ring pulses three times, then stops; a percentage that changes fades in place.
+  The «tabla» scene is the live table during a league match: same row slide as the site (`useRankShift` with
+  `--scl-ease`), ▲/▼ with the places gained or lost, a still red dot on the two clubs playing. No live scoreboard: the
+  game shows it (user's call).
 - **Defaults**: a bare `transition` or `transition-colors` resolves to `--dur-fast` and `--ease-out`
   (`tailwind.config.js` `DEFAULT`), never Tailwind's 150ms. The mobile sidebar opens in `--dur-move` and closes in
   `--dur-base`.

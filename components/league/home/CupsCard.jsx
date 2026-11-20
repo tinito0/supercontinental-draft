@@ -36,6 +36,11 @@ function Tie({ match, clubOf }) {
   );
 }
 
+/** True when at least one cup already has ties to show (CupsCard renders nothing otherwise). */
+export function hasCupTies(tournament) {
+  return [CUP_IDS.ORO, CUP_IDS.PLATA].some(cupId => cupSummary(cupId, tournament?.bracket));
+}
+
 export function CupsCard({ tournament, clubOf }) {
   const cups = [CUP_IDS.ORO, CUP_IDS.PLATA]
     .map(cupId => ({ cupId, cup: CUP_DEFINITIONS[cupId], summary: cupSummary(cupId, tournament?.bracket) }))
