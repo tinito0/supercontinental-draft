@@ -103,6 +103,16 @@ describe('league_editors (editor de la web pública)', () => {
     await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: 'texto' })));
   });
 
+  it('an editor saves the club kits (https image links) with the club card', async () => {
+    const db = asEditor();
+    const kits = { home: 'https://firebasestorage.googleapis.com/k.webp', third: 'https://example.com/3.png' };
+    await assertSucceeds(setDoc(content(db, 'club-abc123'), signed({ body: 'Historia', profile: { stadium: 'La Cabeza', kits } })));
+    await assertSucceeds(setDoc(content(db, 'club-abc123'), signed({ body: 'Historia', profile: { stadium: 'La Cabeza', kits: {} } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { kits: { home: 'http://example.com/k.png' } } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { kits: { fourth: 'https://example.com/k.png' } } })));
+    await assertFails(setDoc(content(db, 'club-abc123'), signed({ profile: { kits: 'https://example.com/k.png' } })));
+  });
+
   it('being an editor gives nothing outside the league texts', async () => {
     const db = asEditor();
     await assertFails(setDoc(doc(db, `artifacts/${APP}/public/data/tournament/official`), { matches: [] }));

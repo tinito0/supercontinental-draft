@@ -1,7 +1,7 @@
 // Ficha del club de la web pública (utils/leagueContent.js): estadio, autoridades, títulos y campañas. Datos sintéticos.
 import { describe, it, expect } from 'vitest';
 import {
-  cleanPhotoFrame, cleanPhotoUrl, clubChapters, DEFAULT_PHOTO_FRAME, groupHonours, hasClubProfile, MAX_HONOURS, MAX_PHOTO_ZOOM,
+  cleanPhotoFrame, cleanPhotoUrl, clubChapters, clubKits, DEFAULT_PHOTO_FRAME, groupHonours, hasClubProfile, MAX_HONOURS, MAX_PHOTO_ZOOM,
   normalizeClub, normalizeClubProfile, photoFrameStyle,
 } from '../utils/leagueContent.js';
 
@@ -102,5 +102,21 @@ describe('groupHonours and hasClubProfile', () => {
     expect(hasClubProfile(null)).toBe(false);
     expect(hasClubProfile(normalizeClubProfile({}).value)).toBe(false);
     expect(hasClubProfile({ stadium: 'La Cabeza' })).toBe(true);
+  });
+});
+
+describe('club kits', () => {
+  it('keeps an https link per slot, drops empty ones and rejects anything else', () => {
+    const result = normalizeClubProfile({ kits: { home: ' https://example.com/home.webp ', away: '', third: undefined, fourth: 'https://x.y/z.png' } });
+    expect(result.ok).toBe(true);
+    expect(result.value.kits).toEqual({ home: 'https://example.com/home.webp' });
+    expect(normalizeClubProfile({ kits: { away: 'http://example.com/a.png' } })).toEqual({ ok: false, error: expect.stringMatching(/suplente/) });
+  });
+
+  it('lists the kits in slot order, and counts them as something to show', () => {
+    const profile = { kits: { third: 'https://e.com/3.png', home: 'https://e.com/1.png', away: 'javascript:x' } };
+    expect(clubKits(profile).map(kit => kit.label)).toEqual(['Titular', 'Alternativa']);
+    expect(hasClubProfile({ kits: { home: 'https://e.com/1.png' } })).toBe(true);
+    expect(clubKits(null)).toEqual([]);
   });
 });

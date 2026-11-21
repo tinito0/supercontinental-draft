@@ -13,6 +13,7 @@ import { ClubFacts } from '../../components/league/club/ClubFacts.jsx';
 import { ClubHonours } from '../../components/league/club/ClubHonours.jsx';
 import { ClubSeasonCard, clubStanding } from '../../components/league/club/ClubSeasonCard.jsx';
 import { ClubFranchise } from '../../components/league/club/ClubFranchise.jsx';
+import { ClubKits } from '../../components/league/club/ClubKits.jsx';
 import { useFranchisePlayers, useLeagueContent, useLeagueTeams, useTournament } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { clubChapters, clubStoryDocId, hasClubProfile } from '../../utils/leagueContent.js';
@@ -82,6 +83,7 @@ export default function LeagueClubScreen() {
               />
             </section>
             <div className="space-y-4">
+              <ClubKits profile={profile} teamName={team?.teamName} />
               <ClubFranchise player={franchiseByTeam[userId] || null} loading={franchiseLoading} />
               <ClubSeasonCard standing={standing} />
             </div>

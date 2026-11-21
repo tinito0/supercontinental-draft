@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ImageOff, Plus, Trash2 } from 'lucide-react';
 import { Field } from '../ui/Field.jsx';
 import { Alert } from '../ui/Alert.jsx';
 import { PhotoFramer } from './PhotoFramer.jsx';
+import { ClubKitsEditor } from './ClubKitsEditor.jsx';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import {
   CLUB_PROFILE_FIELDS, DEFAULT_PHOTO_FRAME, HONOUR_SCOPES, MAX_CHAPTERS, MAX_CLUB_SEASONS, MAX_ERA_LENGTH, MAX_HONOURS, MAX_PHOTO_URL_LENGTH,
@@ -13,7 +14,7 @@ import {
 /* Administración → Web pública → Clubes: la ficha (estadio, autoridades, títulos, campañas) y la historia de un club.
    Se guardan juntas porque viven en el mismo documento (utils/leagueContent.js normalizeClub). */
 
-const emptyProfile = () => ({ ...Object.fromEntries(CLUB_PROFILE_FIELDS.map(([key]) => [key, ''])), stadiumPhotoUrl: '', stadiumPhotoFrame: { ...DEFAULT_PHOTO_FRAME }, honours: [], seasons: [] });
+const emptyProfile = () => ({ ...Object.fromEntries(CLUB_PROFILE_FIELDS.map(([key]) => [key, ''])), stadiumPhotoUrl: '', stadiumPhotoFrame: { ...DEFAULT_PHOTO_FRAME }, kits: {}, honours: [], seasons: [] });
 
 function fromSaved(content) {
   const saved = content?.profile || {};
@@ -26,6 +27,8 @@ function fromSaved(content) {
       ...base,
       ...Object.fromEntries(Object.keys(base).filter(key => typeof saved[key] === 'string').map(key => [key, saved[key]])),
       stadiumPhotoFrame: cleanPhotoFrame(saved.stadiumPhotoFrame),
+      // Las camisetas viajan con la ficha: guardar la ficha reescribe el documento entero.
+      kits: { ...(saved.kits || {}) },
       honours: (saved.honours || []).map(item => ({ ...newHonour(), ...item, count: String(item.count ?? 1) })),
       seasons: (saved.seasons || []).map(item => ({ ...newClubSeason(), ...item })),
     },
@@ -121,6 +124,8 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
         </Field>
         <PhotoPreview url={profile.stadiumPhotoUrl} frame={profile.stadiumPhotoFrame} onFrameChange={frame => setField('stadiumPhotoFrame', frame)} />
       </fieldset>
+
+      <ClubKitsEditor teamId={teamId} kits={profile.kits} onChange={(slot, url) => setField('kits', { ...profile.kits, [slot]: url })} />
 
       <RowList title="Palmarés" help="Títulos del club: de la Supercontinental, de su liga y copas nacionales, e internacionales."
         rows={profile.honours} max={MAX_HONOURS} addLabel="Agregar título" onAdd={() => addRow('honours', newHonour())}>
