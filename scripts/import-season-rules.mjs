@@ -3,6 +3,7 @@
 // Administración → Web pública → Reglamento. Validates with the same normalizeSeasonRules the admin editor uses.
 //   GOOGLE_APPLICATION_CREDENTIALS=key.json node scripts/import-season-rules.mjs content/x.json           (dry run)
 //   GOOGLE_APPLICATION_CREDENTIALS=key.json node scripts/import-season-rules.mjs content/x.json --apply   (writes)
+// It refuses when the published rules were saved from Administración since the last import (--force overrides).
 // From the phone: GitHub → Actions → import-season-rules.
 import { readFileSync } from 'node:fs';
 import { initializeApp, applicationDefault } from 'firebase-admin/app';
@@ -33,5 +34,13 @@ if (!APPLY) {
 
 initializeApp({ credential: applicationDefault() });
 const ref = getFirestore().doc(`artifacts/${APP_ID}/public/data/${LEAGUE_CONTENT_COLLECTION}/${SEASON_RULES_DOC}`);
+// A save from Administración → Web pública stamps the admin's uid: overwriting it would lose those edits.
+const current = await ref.get();
+const editedInAdmin = current.exists && current.get('updatedBy') && current.get('updatedBy') !== 'import';
+if (editedInAdmin && !process.argv.includes('--force')) {
+  console.error('El reglamento publicado se editó desde Administración después de la última importación.');
+  console.error('Pasá esos cambios al archivo o corré con --force para reemplazarlos.');
+  process.exit(1);
+}
 await ref.set({ season, chapters, updatedAt: FieldValue.serverTimestamp(), updatedBy: 'import' });
 console.log(`Publicado en ${ref.path}.`);
