@@ -6,6 +6,7 @@ import { TeamSelect } from './TournamentTeamsContext.jsx';
 import { hasScore } from '../../utils/bracketModel.js';
 import { leagueMatchOutcome } from '../../utils/competitionRules.js';
 import { formatFixtureDate } from '../../utils/leagueFixtures.js';
+import { formatEta } from '../../utils/matchEta.js';
 import { Disclosure } from '../pes/PesUi.jsx';
 import { FromGameLock, FromGameNote, isFromGame } from './FromGame.jsx';
 
@@ -33,6 +34,7 @@ export const MatchCenter = memo(function MatchCenter({
   redoRound = null,
   onDrawRoundOne = null,
   importPanel = null,
+  etaById = null,
 }) {
   const [selectedRound, setSelectedRound] = useState('all');
   // Partidos del juego que el admin desbloqueó para corregir a mano en esta edición.
@@ -178,7 +180,11 @@ export const MatchCenter = memo(function MatchCenter({
                       {/* Top status */}
                       <div className="mb-2.5 flex items-center justify-between gap-2 text-xs border-b border-line/[0.08] pb-2">
                         <span className="flex items-center gap-2 min-w-0 text-ink-3 font-medium text-[11px]">
-                          <span className="truncate">{formatFixtureDate(match) || 'Fecha a confirmar'}</span>
+                          <span className="truncate" title={etaById?.has(`league-${match.id}`) ? `Programado: ${formatFixtureDate(match) || 'sin hora'}` : undefined}>
+                            {etaById?.has(`league-${match.id}`) && match.status !== 'completed'
+                              ? [formatFixtureDate({ date: match.date }), formatEta(etaById.get(`league-${match.id}`))].filter(Boolean).join(' · ')
+                              : formatFixtureDate(match) || 'Fecha a confirmar'}
+                          </span>
                           {fromGame && <FromGameNote />}
                         </span>
                         <div className="flex items-center gap-2">

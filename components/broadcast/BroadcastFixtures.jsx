@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { BroadcastFrame } from './BroadcastFrame.jsx';
 import { BroadcastCrest, isLongName } from './BroadcastCrest.jsx';
 import { formatFixtureDate } from '../../utils/leagueFixtures.js';
+import { formatEta } from '../../utils/matchEta.js';
 
 // Escena «Fecha» del OBS: los partidos de la fecha o ronda en curso (utils/leagueFixtures.currentRound), con el
 // resultado si está cargado, «En vivo» si se está jugando y la fecha/hora si está programado.
@@ -25,7 +26,7 @@ function Middle({ fixture }) {
       </div>
     );
   }
-  const when = formatFixtureDate(fixture);
+  const when = fixture.etaMs ? formatEta(fixture.etaMs) : formatFixtureDate(fixture);
   return (
     <div className="scl-fx-score is-upcoming">
       <strong>{STATUS_TEXT[fixture.status] || 'vs'}</strong>
