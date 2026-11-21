@@ -191,6 +191,10 @@ Administración → General → reinicio de temporada (`utils/seasonReset.js`): 
 noticias, formaciones compartidas, carritos y scouting, y devuelve el cupo de jugador franquicia. Mantiene
 presupuesto base, nombre, escudo y permisos. Es el mejor momento para actualizar el mercado (sección 1).
 
+El reglamento de `/reglamento` se edita en Administración → Web pública → Reglamento. Para cargarlo entero desde un
+archivo (`content/reglamento-temporada-3.json`, capítulos con título y texto): GitHub → Actions →
+**import-season-rules** → Run workflow, rama `master`. Reemplaza todo el reglamento publicado.
+
 ## 7. Publicar las funciones del servidor (sin Claude y sin computadora)
 
 La web (Vercel) se publica sola con cada push a `master`. Las **funciones de Supabase** no: si un cambio toca sus

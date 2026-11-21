@@ -1,0 +1,43 @@
+# Publishes a season rules file (content/*.json) to /reglamento, replacing what is there
+# (scripts/import-season-rules.mjs). Manual: Actions → import-season-rules → Run workflow (works from the phone).
+# Runs from master only. Uses the repository secret FIREBASE_SERVICE_ACCOUNT.
+name: import-season-rules
+
+on:
+  workflow_dispatch:
+    inputs:
+      file:
+        description: Archivo del reglamento
+        type: string
+        default: content/reglamento-temporada-3.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: import-season-rules
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx vitest run tests/leagueContent.test.js tests/seasonRulesContent.test.js --reporter=default --reporter=github-actions
+      - name: Import
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FILE: ${{ inputs.file }}
+        run: |
+          test -n "$FIREBASE_SERVICE_ACCOUNT" || { echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT."; exit 1; }
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
+          node scripts/import-season-rules.mjs "$FILE" --apply
+          rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
