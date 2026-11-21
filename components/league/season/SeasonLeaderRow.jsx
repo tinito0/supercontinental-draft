@@ -4,7 +4,10 @@ import { PlayerPhoto } from '../match/MatchDetailViews.jsx';
 import { RatingChip } from '../match/MatchParts.jsx';
 import { catalogEntry } from '../../../hooks/useSeasonStats.js';
 
-/* Piezas de las estadísticas de temporada (/torneo?tab=estadisticas y /jugadores/:id). */
+/* Piezas de las estadísticas de temporada (/estadisticas y /jugadores/:id). */
+
+// Campos que son porcentajes (utils/seasonStats.js finishPlayer).
+const PERCENT_FIELDS = new Set(['shotConversion', 'passAccuracy']);
 
 /** Nombre del jugador: el del juego (match_lines), si no el del catálogo, si no su id. */
 export function playerDisplayName(player, catalog) {
@@ -15,11 +18,16 @@ export function playerDisplayName(player, catalog) {
 export function LeaderValue({ field, value, size = 'md' }) {
   if (field === 'rating') return <RatingChip value={value} size={size === 'lg' ? 'lg' : 'sm'} />;
   const text = size === 'lg' ? 'text-5xl' : 'text-xl';
-  return <span className={`num font-display font-bold leading-none text-ink ${text}`}>{value}</span>;
+  return (
+    <span className={`num font-display font-bold leading-none text-ink ${text}`}>
+      {value}{PERCENT_FIELDS.has(field) && <span className="ml-0.5 text-[0.6em] text-ink-2">%</span>}
+    </span>
+  );
 }
 
-/** Una fila de tabla de líderes: puesto, foto, nombre y club, valor. Toda la fila lleva a la ficha del jugador. */
-export function SeasonLeaderRow({ player, rank, field, catalog }) {
+/** Una fila de tabla de líderes: puesto, foto, nombre y club, valor. Toda la fila lleva a la ficha del jugador.
+    hideClub: en la página de un club todos son de ese club. */
+export function SeasonLeaderRow({ player, rank, field, catalog, hideClub = false }) {
   return (
     <li>
       <Link to={`/jugadores/${player.id}`} className="flex min-h-11 items-center gap-3 py-1.5 transition-colors hover:bg-white/[0.03]">
@@ -27,7 +35,7 @@ export function SeasonLeaderRow({ player, rank, field, catalog }) {
         <PlayerPhoto id={player.id} size={32} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-ink">{playerDisplayName(player, catalog)}</span>
-          {player.clubName && <span className="block truncate text-xs text-ink-3">{player.clubName}</span>}
+          {player.clubName && !hideClub && <span className="block truncate text-xs text-ink-3">{player.clubName}</span>}
         </span>
         <LeaderValue field={field} value={player[field]} />
       </Link>

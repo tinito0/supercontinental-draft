@@ -29,6 +29,7 @@ const summary = (extra = {}) => ({
   },
   shots: [{ side: 'home', playerId: 9, xg: 0.31 }, { side: 'home', playerId: 9, xg: 0.2 }, { side: 'home', playerId: 7, xg: null }],
   xg: { home: 0.51, away: 0 },
+  possession: { home: 58, away: 42 },
   ratings: { 9: 8, 10: 7, 101: 6.5 },
   names: { teams: { home: 'Argentina', away: 'England' }, players: { 9: 'Delantero', 101: 'Arquero' }, positions: { 1: 0, 101: 0, 9: 12 } },
   ...extra,
@@ -53,10 +54,15 @@ describe('buildMatchLinesDoc', () => {
     const doc = linesOf();
     expect(doc).toMatchObject({
       schema: MATCH_LINES_SCHEMA, matchKey: KEY, status: 'finished', startedAt: '20261104T162412Z', competition: 'friendly',
-      home: { gameTeamId: 50, draftTeamId: 'uidA', name: 'Los Pibes', score: 2, xg: 0.51 },
-      away: { gameTeamId: 45, draftTeamId: 'uidB', name: 'La Banda', score: 0, xg: 0 },
+      home: { gameTeamId: 50, draftTeamId: 'uidA', name: 'Los Pibes', score: 2, xg: 0.51, possession: 58 },
+      away: { gameTeamId: 45, draftTeamId: 'uidB', name: 'La Banda', score: 0, xg: 0, possession: 42 },
       shootout: null,
     });
+  });
+
+  it('leaves possession empty when the game did not count it', () => {
+    expect(linesOf(summary({ possession: null })).home.possession).toBeNull();
+    expect(linesOf(summary({ possession: { home: 'x', away: 40 } })).home.possession).toBeNull();
   });
 
   it('writes one line per player who played, starters and subs, nobody from the bench', () => {

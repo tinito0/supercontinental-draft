@@ -34,13 +34,14 @@ docs/PES_MATCH_DATA_RESEARCH.md, S9). Nada de esto toca el torneo:
 vincular un partido a un cruce y cargar el resultado es un paso aparte, con revisión del admin.
 
 Con cada subida la función también escribe `match_lines/{misma clave}`: una línea por jugador que jugó (minutos,
-goles, asistencias, tarjetas, tiros, xG, valoración, atajadas, entradas…), más el marcador, los dos equipos y la
-lista de goles con minuto (`goals`, para el gol más rápido y las remontadas; si no cuadra con el marcador, esos
+goles, asistencias, tarjetas, tiros, xG, valoración, atajadas, entradas…), más el marcador, los dos equipos (con su
+posesión, `home/away.possession`, null si el juego no la contó) y la lista de goles con minuto (`goals`, para el gol más rápido y las remontadas; si no cuadra con el marcador, esos
 récords ignoran el partido). Cada línea lleva además su mapa de calor (`heat`, grilla en `heatGrid`): un nivel 0–9 por
 celda con las rachas de celdas vacías como letras (`encodeHeat`/`decodeHeat`), ~54 caracteres por jugador; la página
 del jugador suma los de la temporada pesando cada partido por minutos jugados (`seasonHeat`). Pesa unos pocos KB, contra 13–35 KB del resumen, y es lo que suman las estadísticas de temporada (`utils/seasonStats.js`).
 Para la temporada cuentan solo los partidos terminados e importados al torneo (`importedFrom`). Los partidos subidos
-antes de este cambio no tienen líneas: se generan si el puente los vuelve a subir.
+antes de este cambio no tienen líneas: se generan si el puente los vuelve a subir. Los que se guardaron antes de
+que se copiara la posesión la reciben con Administración → Torneo → «Completar posesión» (`utils/possessionBackfill.js`).
 
 ## Seguridad
 

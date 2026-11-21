@@ -38,4 +38,4 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions)."; exit 1; }
           # --no-verify-jwt: the bridge is not a Supabase or Firebase user; it signs with MATCH_FEED_TOKEN.
-          supabase functions deploy match-feed --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy
+          supabase functions deploy match-feed --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy --yes

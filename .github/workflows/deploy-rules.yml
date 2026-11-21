@@ -1,0 +1,61 @@
+# Publishes firestore.rules or storage.rules to project supercont-d62df from GitHub, so a rules deploy does not need a
+# computer with the Firebase CLI. Manual: Actions → deploy-rules → Run workflow (works from the phone).
+# Runs from master only. `ref` picks the branch or commit whose rules are published (default master): new rules go out
+# before the app code that needs them is merged. The rules tests of that ref run first, on the emulator.
+# Needs the repository secret FIREBASE_SERVICE_ACCOUNT: the JSON key of a service account of the project
+# (Firebase console → Project settings → Service accounts → Generate new private key).
+# Before the first storage deploy, check the console's Storage rules: storage.rules replaces them entirely.
+name: deploy-rules
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Qué reglas publicar
+        type: choice
+        options: [firestore:rules, storage]
+        default: firestore:rules
+      ref:
+        description: Rama o commit de donde salen las reglas
+        type: string
+        default: master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-rules
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci --no-audit --no-fund
+      - run: >
+          npx -y firebase-tools@13.35.1 emulators:exec --only firestore --project demo-scl
+          "npx vitest run --config vitest.rules.config.js --reporter=default --reporter=github-actions"
+      - name: Deploy ${{ inputs.target }} rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          test -n "$FIREBASE_SERVICE_ACCOUNT" || { echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT (Settings → Secrets and variables → Actions)."; exit 1; }
+          key="$RUNNER_TEMP/sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$key"
+          export GOOGLE_APPLICATION_CREDENTIALS="$key"
+          npx -y firebase-tools@13.35.1 deploy --only "$TARGET" --project supercont-d62df --non-interactive
+          rm -f "$key"
