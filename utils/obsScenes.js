@@ -60,7 +60,8 @@ export function resolveObsRequest(draftPath, search) {
   if (path === '/overlay' || path.startsWith('/overlay/')) {
     const scene = normalizeSceneId(params.get('scene')) || normalizeSceneId(view);
     const follow = String(params.get('follow') || '').toLowerCase();
-    return { scene, follow: !scene && FOLLOW_GROUPS[follow] ? follow : null, transparent: true };
+    // ?control=obs: the remote control source, which draws nothing and switches the real OBS scenes.
+    return { scene, follow: !scene && FOLLOW_GROUPS[follow] ? follow : null, transparent: true, control: params.get('control') === 'obs' };
   }
   if (mode === 'obs') return { scene: fromView('tabla'), follow: null, transparent: true };
   if (mode === 'table') return { scene: fromView('tabla'), follow: null, transparent: false };

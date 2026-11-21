@@ -7,6 +7,7 @@ import { BroadcastOverlayLive } from '../../broadcast/BroadcastOverlayLive.jsx';
 import { OverlayPopupAdmin } from '../OverlayPopupAdmin.jsx';
 import { CommunityLayerControl } from '../OverlaySceneControl.jsx';
 import { MatchSettings, TextSettings, TournamentDataNote } from './SceneSettings.jsx';
+import { ObsRemoteControl } from './ObsRemoteControl.jsx';
 import { ObsConnection, sourceShortLabel } from './ObsConnection.jsx';
 import { FULLSCREEN_SCENES, MATCH_SCENES, OBS_SCENES, sceneLabel, sourcesShowingOnAir } from '../../../utils/obsScenes.js';
 import { EMPTY_OVERLAY_MATCH, buildOverlayPatchForMatch, rebaseOverlayForm } from '../../../utils/broadcastMatches.js';
@@ -229,6 +230,7 @@ export const ObsSceneStudio = memo(function ObsSceneStudio({ allTeams, tournamen
         </div>
       </section>
 
+      <ObsRemoteControl overlay={overlay} onSave={persist} />
       <ObsConnection showStatusMessage={showStatusMessage} />
     </div>
   );

@@ -1,34 +1,58 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { BroadcastStage } from '../components/broadcast/BroadcastStage.jsx';
 import { BroadcastOverlayLive } from '../components/broadcast/BroadcastOverlayLive.jsx';
 import { OverlayErrorBoundary } from '../components/broadcast/OverlayErrorBoundary.jsx';
 import { useBroadcastOverlay, useLeagueTeams, useTournament } from '../hooks/useLeagueData.js';
+import { useNow } from '../hooks/useNow.js';
+import { useObsSceneControl } from '../hooks/useObsSceneControl.js';
 import { sceneForSource } from '../utils/obsScenes.js';
+import { effectiveOverlay, obsSceneName } from '../utils/obsAutoScene.js';
+import { SITE_URL } from '../utils/sharePages.js';
+
+const CONTROL_STATUS = {
+  'no-obs': 'Esta página cambia las escenas cuando está como fuente «Navegador» dentro de OBS.',
+  'no-permission': 'Falta el permiso: en las propiedades de esta fuente, «Permisos de página» → «Acceso avanzado a OBS».',
+  ready: 'Conectado. Cambia la escena de OBS cuando cambia la del overlay.',
+  switched: 'Conectado. Cambia la escena de OBS cuando cambia la del overlay.',
+};
+
+/** ?control=obs: draws nothing on air; switches the real OBS scene with the overlay (utils/obsAutoScene.js). */
+function ObsSceneControl({ overlay }) {
+  const status = useObsSceneControl(obsSceneName(overlay?.scene, overlay?.obsScenes));
+  // Text only outside OBS or while the permission is missing, so the source stays empty on air.
+  if (status === 'ready' || status === 'switched') return null;
+  return <p style={{ position: 'absolute', top: 40, left: 40, right: 40, font: '600 28px system-ui', color: '#fff', textShadow: '0 2px 6px #000' }}>{CONTROL_STATUS[status]}</p>;
+}
 
 /**
  * Fuente de OBS (/draft/overlay y las URLs ?mode=obs de antes; utils/obsScenes.resolveObsRequest). main.jsx la monta
  * sin el draft: no hay login, mercado ni service de perfiles, solo los datos públicos que muestra la transmisión.
  * Todo vive en el lienzo de 1920×1080 de BroadcastStage, transparente para OBS. Si algo falla no sale una página de
  * error al aire: la fuente queda transparente y se reintenta sola (OverlayErrorBoundary).
- * @param {{ request: { scene: string | null, follow: string | null, transparent: boolean } }} props
+ * @param {{ request: { scene: string | null, follow: string | null, transparent: boolean, control?: boolean } }} props
  */
 export default function ObsScreen({ request }) {
   const { teamsById } = useLeagueTeams();
   const { tournament } = useTournament();
   const { data: overlay, loading: overlayLoading } = useBroadcastOverlay();
+  const now = useNow(5000);
+  // Two minutes after an automatic «Final» every source moves to the table on its own (no write needed).
+  const shown = useMemo(() => effectiveOverlay(overlay, now, SITE_URL), [overlay, now]);
 
   useEffect(() => {
     document.title = 'SCL · OBS';
   }, []);
 
+  if (request.control) return <ObsSceneControl overlay={shown} />;
+
   return (
     <BroadcastStage transparent={request.transparent} label="Overlay de la Supercontinental">
       <OverlayErrorBoundary name="overlay" resetKey={overlay}>
         <BroadcastOverlayLive
-          overlayData={overlay || {}}
+          overlayData={shown || {}}
           allTeams={teamsById}
           tournamentData={tournament}
-          forcedScene={sceneForSource(request, overlay?.scene)}
+          forcedScene={sceneForSource(request, shown?.scene)}
           overlayLoaded={!overlayLoading}
         />
       </OverlayErrorBoundary>

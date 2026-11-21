@@ -740,3 +740,56 @@
 
 /* ---- Goleadores con escudo ---- */
 .broadcast-ranking-row .scl-crest-initials, .broadcast-ranking-row .broadcast-ranking-crest { width: 40px; height: 40px; object-fit: contain; font-size: 16px; flex: none; }
+
+/* Previa, entretiempo y final: una tira arriba con los dos clubes y el resultado. La cámara de los relatores ocupa
+   toda la pantalla; goles, siguiente partido y horario van en el lower third (utils/obsLowerThird.js). */
+.scl-strip {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1120px;
+  display: grid;
+  grid-template-columns: 150px 1fr 150px 1fr;
+  align-items: stretch;
+  height: 84px;
+  background: #ffffff;
+  color: var(--scl-ink);
+  border-top: 4px solid var(--scl-lilac);
+  box-shadow: 0 12px 32px rgba(2, 16, 44, 0.35);
+}
+.scl-strip-label {
+  display: grid;
+  place-items: center;
+  background: var(--scl-bar);
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.scl-strip-team { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 16px; padding: 0 20px; }
+.scl-strip-team.away { justify-content: flex-start; }
+.scl-strip-team strong {
+  min-width: 0;
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scl-strip-team strong.is-long-name { font-size: 24px; }
+.scl-strip-crest, .scl-strip-team img { width: 56px; height: 56px; object-fit: contain; flex: none; }
+.scl-strip-crest.scl-crest-initials { font-size: 20px; }
+.scl-strip-center {
+  display: grid;
+  place-items: center;
+  background: var(--scl-frame);
+  color: #ffffff;
+  font-size: 48px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.scl-strip[data-scene='previa'] .scl-strip-center { font-size: 30px; }
