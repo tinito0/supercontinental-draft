@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { currentSiteUrl, nextArrival, popupRemainingMs, qrSvgPath, timedRemainingMs } from '../../utils/overlayPopup.js';
 import { CommunityFrame } from './CommunityFrame.jsx';
 
@@ -44,6 +44,24 @@ export function useRemaining(item, remainingMs = timedRemainingMs, loaded = true
   return remaining;
 }
 
+/**
+ * Hidden by hand (visible: false, or a newer command) while it still had time left: it plays the exit instead of
+ * vanishing. A popup that runs out of time already starts its exit LEAVE_MS early.
+ * @returns {boolean} true while that exit plays
+ */
+export function useExitLinger(remaining) {
+  const previous = useRef(remaining);
+  const [lingering, setLingering] = useState(false);
+  if (remaining === 0 && previous.current !== 0 && (previous.current === null || previous.current > LEAVE_MS) && !lingering) setLingering(true);
+  previous.current = remaining;
+  useEffect(() => {
+    if (!lingering) return undefined;
+    const timer = setTimeout(() => setLingering(false), LEAVE_MS);
+    return () => clearTimeout(timer);
+  }, [lingering]);
+  return lingering;
+}
+
 /** Cambia con cada nuevo `shownAt`: la key reinicia la animación de entrada. */
 export function shownKey(item) {
   const shownAt = item.shownAt;
@@ -65,10 +83,11 @@ function displayUrl(href) {
 
 export const OverlayPopup = memo(function OverlayPopup({ popup, loaded = true }) {
   const remaining = useRemaining(popup, popupRemainingMs, loaded);
-  if (remaining === 0) return null;
+  const lingering = useExitLinger(remaining);
+  if ((remaining === 0 && !lingering) || !popup?.url) return null;
   const url = currentSiteUrl(popup.url);
   const host = displayUrl(url);
-  const isLeaving = remaining !== null && remaining <= LEAVE_MS;
+  const isLeaving = lingering || (remaining !== null && remaining <= LEAVE_MS);
   return (
     // La key reinicia la animación de entrada cada vez que el admin vuelve a mostrarlo (nuevo shownAt).
     <CommunityFrame

@@ -158,8 +158,13 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
   position says how many places it gained or lost (`RankMove`). Reduced motion: no slide, only the flash.
 - **One live dot per screen**: the pulsing dot marks the match being played. Rows of that match in a table carry a
   still dot; titles that already say "en vivo" carry none.
+- **OBS enter / exit** (`broadcast.css`, `components/broadcast/Presence.jsx`): every overlay piece enters with
+  `--scl-ease` and leaves in about half the time with an accelerating ease. Scenes swap with the old one lifting out
+  (300 ms) and the new one entering 140 ms later; the top strip opens from the centre; the lower third wipes in from
+  the left and out to the right, and its text cross-blurs in place when it changes; the ticker rises; a popup or card
+  hidden by hand still plays its exit. Reduced motion turns all of it into 200 ms fades.
 - **OBS overlay** (`components/broadcast/broadcast.css`) is broadcast graphics, not app UI: staged entries (~1.6 s) and
-  short row staggers are allowed there; the exit is shorter than the entry (280ms). Every curve is `--scl-ease`.
+  short row staggers are allowed there; the exit is shorter than the entry (280ms). Entries use `--scl-ease`; the newer exits accelerate.
   The community popup and cards (`CommunityFrame.jsx`, `.scl-pop`) sit at the bottom, clear of the game's score and
   clock, and enter softly: fade, a 20px rise and a blur that clears, then each line in turn. No bounce, no rotation.
   The QR ring pulses three times, then stops; a percentage that changes fades in place.
