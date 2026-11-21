@@ -220,12 +220,14 @@ function ManagerPanel({ tournament, matches, teams }) {
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
-  const clubLabel = club => (
+  // `detail` (the club's result in the round) goes in the same text column as the name, so the two read as one entry.
+  const clubLabel = (club, detail = '') => (
     <span className="flex min-w-0 items-center gap-3">
       <span className="grid h-9 w-9 shrink-0 place-items-center"><LeagueCrest name={club} club={clubOf(club)} size="sm" /></span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold text-ink">{managerOf(club) || club}</span>
         {managerOf(club) && <span className="block truncate text-xs text-ink-2">{club}</span>}
+        {detail && <span className="block truncate text-xs text-ink-3">{detail}</span>}
       </span>
     </span>
   );
@@ -265,10 +267,7 @@ function ManagerPanel({ tournament, matches, teams }) {
             {clubs.map(club => (
               <button key={club} type="button" aria-pressed={selected === club} onClick={() => setSelected(club)}
                 className={`flex min-h-14 items-center gap-3 rounded-lg border px-3 py-2 text-left transition-[border-color,background-color,transform] duration-fast ease-out active:scale-[0.98] ${selected === club ? 'border-accent bg-accent-deep/60' : 'border-line/[0.16] bg-raised hover:border-line/30'}`}>
-                <span className="min-w-0 flex-1">
-                  {clubLabel(club)}
-                  {resultLine(round.fixtures, club) && <span className="mt-1 block truncate pl-12 text-xs text-ink-3">{resultLine(round.fixtures, club)}</span>}
-                </span>
+                <span className="min-w-0 flex-1">{clubLabel(club, resultLine(round.fixtures, club))}</span>
                 {selected === club && <Check className="h-4 w-4 shrink-0 text-accent-soft" aria-hidden="true" />}
               </button>
             ))}
@@ -324,9 +323,8 @@ function ManagerOfTournamentPanel({ tournament, matches, teams }) {
               <span className="block truncate text-sm font-semibold text-ink">{managerOf(entry.club) || entry.club}</span>
               {managerOf(entry.club) && <span className="block truncate text-sm text-ink-2">{entry.club}</span>}
             </span>
-            <span className="text-right">
-              <span className="num block font-display text-lg leading-none text-ink">{entry.awards}</span>
-              <span className="block text-sm text-ink-2">{entry.awards === 1 ? 'fecha' : 'fechas'}</span>
+            <span className="shrink-0 whitespace-nowrap text-sm text-ink-2">
+              <span className="num font-display text-lg text-ink">{entry.awards}</span> {entry.awards === 1 ? 'fecha' : 'fechas'}
             </span>
           </li>
         ))}

@@ -98,6 +98,8 @@ export default function LeagueMatchScreen() {
           onChange={id => setSearchParams(id === 'resumen' ? {} : { tab: id }, { replace: true })}
           tabs={TABS}
         />
+        {/* The sections inside each tab are h3: this keeps the outline h1 → h2 → h3 («Jugadores» has its own h2). */}
+        {tab !== 'jugadores' && <h2 className="sr-only">{TABS.find(t => t.id === tab)?.label}</h2>}
         {tab === 'resumen' && <SummaryTab match={match} views={views} />}
         {tab === 'estadisticas' && (
           <div className="space-y-8">

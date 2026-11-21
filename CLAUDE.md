@@ -150,13 +150,13 @@ per browser). Never store binaries in Firestore or localStorage.
 - A knowledge graph lives in `graphify-out/`. Query it before broad searches (`graphify query "<q>"`) and run
   `graphify update .` after code changes. It misses string-path Firestore coupling, `.sql`, rules and CSS.
 
-<!-- antislop:start -->
 ## impeccable
 Design skill in `.claude/skills/impeccable` (v4.10, from github.com/pbakaus/impeccable; its sub-agents in `.claude/agents/`).
 Use it with antislop for UI work: `/impeccable audit|critique|polish …`. The project has no PRODUCT.md/DESIGN.md for it
 yet (`/impeccable init` writes them); docs/DESIGN_SYSTEM.md is the incumbent system. Installed without its edit hooks.
 Update with `npx impeccable update --providers=claude --scope=project`.
 
+<!-- antislop:start -->
 ## antislop
 For UI, copy, people, mobile layout, or code comments work, read these installed skill files directly (use these paths even if a same-named global skill exists):
 - Core filter, always on: `antislop`: `.claude/skills/antislop/SKILL.md`

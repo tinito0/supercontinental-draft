@@ -27,7 +27,8 @@ function actionFor(fixture, prediction) {
 
 function List({ fixtures, clubOf, prediction }) {
   return (
-    <ul className="divide-y divide-line/10">
+    // Two columns on wide screens: a single column left two thirds of the row empty.
+    <ul className="divide-y divide-line/10 lg:grid lg:grid-cols-2 lg:divide-y-0 lg:[&>li:nth-child(odd)]:border-r lg:[&>li:nth-child(n+3)]:border-t lg:[&>li]:border-line/10">
       {fixtures.slice(0, PREVIEW_ROWS).map(fixture => (
         <FixtureRow key={fixture.id} fixture={fixture} clubOf={clubOf} action={actionFor(fixture, prediction)} />
       ))}

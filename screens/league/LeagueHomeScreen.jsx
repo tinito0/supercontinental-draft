@@ -48,10 +48,10 @@ function PreseasonHero({ teams, stage }) {
     <section aria-labelledby="hero-title" className="league-hero overflow-hidden border-b border-line/10">
       <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-10 pt-10 sm:px-6 md:pt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-12 lg:pb-14">
         <div className="landing-enter">
-          <p className="eyebrow mb-3">Liga de eFootball PES 2021</p>
           <h1 id="hero-title" className="font-display text-[2.6rem] font-bold uppercase leading-[0.92] tracking-tight text-ink [text-wrap:balance] sm:text-6xl">
             {LEAGUE_NAME}
           </h1>
+          <p className="mt-2 text-ink-2">Liga de eFootball PES 2021</p>
           <StageLine stage={stage} liveCount={0} />
           <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-ink-2 [text-wrap:pretty]">
             {teams.length > 0 && <><span className="num font-semibold text-ink">{teams.length}</span> clubes. </>}Resultados, tabla, copas y la historia de cada club, en un solo lugar.
@@ -93,8 +93,8 @@ function NowHero({ stage, liveCount, featured, liveMatch, clubOf, prediction, to
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 sm:px-6 md:pt-10 lg:pb-14">
         <div className="landing-enter flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
           <div>
-            <p className="eyebrow">Liga de eFootball PES 2021</p>
-            <h1 id="hero-title" className="mt-1 font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink sm:text-5xl">{LEAGUE_NAME}</h1>
+            <h1 id="hero-title" className="font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink sm:text-5xl">{LEAGUE_NAME}</h1>
+            <p className="mt-1.5 text-sm text-ink-2">Liga de eFootball PES 2021</p>
           </div>
           {/* El partido en vivo ya lo anuncia su tarjeta: acá solo la etapa. */}
           <StageLine stage={stage} liveCount={featured?.kind === 'live' ? 0 : liveCount} className="" />
@@ -105,13 +105,15 @@ function NowHero({ stage, liveCount, featured, liveMatch, clubOf, prediction, to
               {featured
                 ? <FeaturedMatch featured={featured} clubOf={clubOf} prediction={prediction} liveMatch={liveMatch} />
                 : <div className="skeleton h-72 rounded-2xl" aria-busy="true" aria-label="Cargando el partido" />}
+              {/* Under the match: it fills the column beside the taller table and sits next to what it is about. */}
+              <ManagerVoteLink round={managerRound} />
             </div>
           )}
           <div className="min-w-0">
             <StandingsCard tournament={tournament} fixtures={fixtures} clubOf={clubOf} loading={loading} error={error} />
           </div>
         </div>
-        <ManagerVoteLink round={managerRound} />
+        {!(featured || loading) && <ManagerVoteLink round={managerRound} />}
       </div>
     </section>
   );
@@ -133,7 +135,7 @@ export default function LeagueHomeScreen() {
   const matches = (
     <section id="partidos" aria-labelledby="partidos-title" className={SECTION_CLASS}>
       <SectionHeading id="partidos-title" title="Partidos" />
-      <div className={`grid items-start gap-6 ${showCups ? 'lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]' : 'max-w-3xl'}`}>
+      <div className={`grid items-start gap-6 ${showCups ? 'lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]' : ''}`}>
         <div className="min-w-0">
           <MatchCentre groups={groups} round={round} clubOf={clubOf} loading={loading} error={error} liveError={liveError} prediction={prediction} featuredId={isPreseason ? null : featured?.fixture.id} />
         </div>

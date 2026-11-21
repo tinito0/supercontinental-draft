@@ -394,7 +394,7 @@
   --animation-reduced: value-flash var(--dur-flash) var(--ease-out);
 }
 @keyframes value-flash {
-  from { text-shadow: 0 0 14px rgb(var(--c-accent-soft) / 0.95); color: rgb(var(--c-accent-soft)); }
+  from { color: rgb(var(--c-accent-soft)); }
 }
 
 /* Salida de BaseModal (components/ui/BaseModal.jsx): el fondo se funde; la hoja baja 8 px en celular y el
