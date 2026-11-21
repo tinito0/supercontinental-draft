@@ -109,8 +109,8 @@ export const AdminModal = memo(function AdminModal({
     return (
       <Page className="pb-16">
         {isEditorOnly
-          ? <PageHeader eyebrow="Gestión" title="Web pública" description="Los textos del sitio de la liga: su historia, la de cada club y el reglamento de la temporada." />
-          : <PageHeader eyebrow="Gestión" title="Administración" description="Configuración de la liga, equipos y usuarios, reglas del plantel, torneo y transmisión, y los textos de la web pública." />}
+          ? <PageHeader title="Web pública" description="Los textos del sitio de la liga: su historia, la de cada club y el reglamento de la temporada." />
+          : <PageHeader title="Administración" description="Configuración de la liga, equipos y usuarios, reglas del plantel, torneo y transmisión, y los textos de la web pública." />}
         {tabs}
         <div>{section}</div>
       </Page>

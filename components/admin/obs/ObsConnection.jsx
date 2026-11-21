@@ -76,12 +76,12 @@ export const ObsConnection = memo(function ObsConnection({ showStatusMessage }) 
       <Alert tone="warning" title="Si la escena del juego usa …/overlay?scene=live">
         Esa fuente queda fija en «En partido»: Previa, Entretiempo y Final nunca se ven. Cambiala por la de abajo.
       </Alert>
-      <ul className="divide-y divide-line/10 rounded-xl border border-line/[0.12] bg-raised/40">
+      <ul className="border-y border-line/10">
         <SourceRow source={byId('partido')} copiedId={copiedId} onCopy={copy} />
       </ul>
       <div className="space-y-2">
-        <p className="eyebrow">Escenas del torneo, cada una en su escena de OBS</p>
-        <ul className="divide-y divide-line/10 rounded-xl border border-line/[0.12] bg-raised/40">
+        <h3 className="pt-2 text-sm font-semibold text-ink">Escenas del torneo, cada una en su escena de OBS</h3>
+        <ul className="divide-y divide-line/10 border-y border-line/10">
           {TOURNAMENT_SOURCES.map(source => <SourceRow key={source.id} source={source} copiedId={copiedId} onCopy={copy} />)}
         </ul>
         <p className="text-xs text-ink-3">Las fuentes que ya tenés con los enlaces viejos de la tabla y las copas siguen andando.</p>

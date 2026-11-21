@@ -56,7 +56,7 @@ function PollEditor({ config, tournamentData, showStatusMessage }) {
   const isOpen = Boolean(poll?.open);
   const shown = hasVotes ? results.options.map(option => option.name) : cup.teams;
   return (
-    <div className="well p-4 space-y-3">
+    <div className="space-y-3 border-t border-line/10 pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-lg font-bold text-ink">{config.label}</h3>
         <span className={`text-sm font-semibold ${isOpen ? 'text-success-soft' : 'text-ink-2'}`}>

@@ -204,10 +204,16 @@ export const ObsSceneStudio = memo(function ObsSceneStudio({ allTeams, tournamen
             </div>
             {feedback && <p role="status" className={`text-xs ${feedback.tone === 'success' ? 'text-success-soft' : 'text-danger-soft'}`}>{feedback.text}</p>}
 
-            <div className="overflow-hidden rounded-xl border border-line/[0.12]">
+            <div className="relative overflow-hidden rounded-xl border border-line/[0.12]">
               <BroadcastStage mode="contained" transparent={false} label={`Vista previa: ${sceneLabel(selected)}`}>
                 <BroadcastOverlayLive overlayData={previewData} allTeams={allTeams} tournamentData={tournamentData} forcedScene={selected} />
               </BroadcastStage>
+              {/* «En partido» is transparent until a popup or card goes on air: say so inside the box instead of a blank 16:9. */}
+              {selected === 'live' && !previewData?.popup && !previewData?.card && (
+                <p className="pointer-events-none absolute inset-0 m-auto grid h-fit max-w-[46ch] place-items-center px-6 text-center text-sm text-ink-3">
+                  Durante el partido el overlay queda limpio: el juego ya muestra el marcador y el reloj. Acá aparecen el popup con QR y las tarjetas cuando estén al aire.
+                </p>
+              )}
             </div>
             <p className="text-xs text-ink-3">Vista previa a escala de la fuente de 1920×1080, con los datos en vivo y tus cambios sin guardar.</p>
 
@@ -216,9 +222,6 @@ export const ObsSceneStudio = memo(function ObsSceneStudio({ allTeams, tournamen
                 onChange={onChange} onPickMatch={pickMatch} onClearMatch={clearMatch} />
             )}
             {FULLSCREEN_SCENES.has(selected) && <TournamentDataNote onOpenTournamentModal={onOpenTournamentModal} />}
-            {selected === 'live' && (
-              <p className="text-sm text-ink-2">Durante el partido el overlay queda limpio: solo el popup con QR y las tarjetas de la comunidad. El juego ya muestra el marcador y el reloj.</p>
-            )}
             {showsTexts && <TextSettings draft={draft} onChange={onChange} onResetTexts={resetTexts} />}
             {/* Phones: the same actions at the end of the panel, stuck to the bottom edge while the panel scrolls by. */}
             <div className="sm:hidden sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-wrap justify-end gap-2 rounded-b-2xl border-t border-line/10 bg-surface/95 p-3 backdrop-blur-sm">{sceneActions}</div>
