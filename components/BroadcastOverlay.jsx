@@ -2,7 +2,8 @@ import React, { memo, useCallback, useMemo } from 'react';
 import { DEFAULT_LOGO } from '../utils/constants.js';
 import { CUP_IDS } from '../utils/bracketModel.js';
 import { teamKey } from '../utils/competitionRules.js';
-import { buildFixtures, currentRound, formatFixtureDate } from '../utils/leagueFixtures.js';
+import { buildFixtures, currentRound } from '../utils/leagueFixtures.js';
+import { nextFixture, nextLine, sceneLowerThird } from '../utils/obsLowerThird.js';
 import { FULLSCREEN_SCENES, MATCH_SCENES, sceneLabel } from '../utils/obsScenes.js';
 import { BroadcastFrame } from './broadcast/BroadcastFrame.jsx';
 import { BroadcastCrest, isLongName } from './broadcast/BroadcastCrest.jsx';
@@ -10,7 +11,6 @@ import { BroadcastFixtures } from './broadcast/BroadcastFixtures.jsx';
 import { BroadcastLeagueTable } from './broadcast/BroadcastLeagueTable.jsx';
 import { OverlayPopup } from './broadcast/OverlayPopup.jsx';
 import { CommunityCard } from './broadcast/CommunityCard.jsx';
-import { BroadcastFinalAwards, BroadcastPrediction, BroadcastScorers, BroadcastSeasonFacts } from './broadcast/BroadcastMatchExtras.jsx';
 import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
 import { OverlayErrorBoundary } from './broadcast/OverlayErrorBoundary.jsx';
 
@@ -83,43 +83,27 @@ function RankingRows({ rows, unit, getTeamLogo }) {
   );
 }
 
-/** Previa, entretiempo y final del partido al aire. */
-function MatchPanel({ scene, data, home, away, live, fixture, season }) {
+/**
+ * Previa, entretiempo y final: a thin strip at the top with both clubs and the result (or VS), so the commentators'
+ * camera keeps the full screen. Goals, the next match and the kickoff go on the lower third (utils/obsLowerThird.js).
+ */
+function MatchStrip({ scene, data, home, away, live }) {
   const showsResult = scene === 'final' || scene === 'descanso';
   // El marcador del juego (bridge) manda; si no hay, el resultado cargado en el torneo; si no, el del admin.
-  const score = live?.score
-    || (fixture?.score ? fixture.score : null)
-    || { home: data.homeScore || 0, away: data.awayScore || 0 };
-  const when = fixture ? formatFixtureDate(fixture) : '';
+  const score = live?.score || { home: data.homeScore || 0, away: data.awayScore || 0 };
   return (
-    <BroadcastFrame
-      className="broadcast-panel"
-      kicker={[fixture?.competitionLabel || data.competitionLabel, fixture?.roundLabel || data.roundLabel].filter(Boolean).join(' · ')}
-      title={MATCH_SCENE_TITLES[scene]}
-      aside={scene === 'previa' && when ? when : null}
-    >
-      <div className="broadcast-versus">
-        <div className="broadcast-versus-team">
-          <BroadcastCrest className="broadcast-versus-crest" name={home.name} logo={home.logoUrl} />
-          <strong className={isLongName(home.name) ? 'is-long-name' : undefined} title={home.name}>{home.name}</strong>
-        </div>
-        <div className="broadcast-vs">VS</div>
-        <div className="broadcast-versus-team away">
-          <BroadcastCrest className="broadcast-versus-crest" name={away.name} logo={away.logoUrl} />
-          <strong className={isLongName(away.name) ? 'is-long-name' : undefined} title={away.name}>{away.name}</strong>
-        </div>
+    <div className="scl-strip" data-scene={scene}>
+      <span className="scl-strip-label">{MATCH_SCENE_TITLES[scene]}</span>
+      <div className="scl-strip-team">
+        <strong className={isLongName(home.name) ? 'is-long-name' : undefined} title={home.name}>{home.name}</strong>
+        <BroadcastCrest className="scl-strip-crest" name={home.name} logo={home.logoUrl} />
       </div>
-      {showsResult && (
-        <>
-          <div className="broadcast-final-score">{score.home}-{score.away}</div>
-          {scene === 'final' && fixture?.pens && <div className="broadcast-final-pens">Penales {fixture.pens.home}-{fixture.pens.away}</div>}
-          <BroadcastScorers scorers={live?.scorers} />
-        </>
-      )}
-      {scene === 'previa' && season && <BroadcastSeasonFacts facts={season} />}
-      {scene === 'previa' && live?.prediction && <BroadcastPrediction shares={live.prediction} />}
-      {scene === 'final' && <BroadcastFinalAwards topRated={live?.topRated} />}
-    </BroadcastFrame>
+      <div className="scl-strip-center">{showsResult ? `${score.home}-${score.away}` : 'VS'}</div>
+      <div className="scl-strip-team away">
+        <BroadcastCrest className="scl-strip-crest" name={away.name} logo={away.logoUrl} />
+        <strong className={isLongName(away.name) ? 'is-long-name' : undefined} title={away.name}>{away.name}</strong>
+      </div>
+    </div>
   );
 }
 
@@ -156,11 +140,20 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
   const away = withLogo(teamOf(data.awayTeamId, allTeams, data.awayTeamName || onAirFixture?.away.name || 'VISITANTE'));
 
   const showChrome = scene !== 'live' && !FULLSCREEN_SCENES.has(scene);
+  // Previa, entretiempo and final write their own lower third from the match (utils/obsLowerThird.js); the admin's
+  // headline and subheadline stay for the other scenes.
+  const next = useMemo(() => nextFixture(fixtures, matchId), [fixtures, matchId]);
+  const liveScore = live?.score || onAirFixture?.score || null;
+  const lower = sceneLowerThird({ scene, home: home.name, away: away.name, score: liveScore, fixture: onAirFixture, scorers: live?.scorers, next })
+    || { headline: data.headline, subheadline: data.subheadline };
   // La tarjeta va del lado contrario al popup cuando el popup está a la izquierda (antes se pisaban).
   const cardSide = data.popup?.visible && data.popup?.position === 'left' ? 'right' : 'left';
 
   let content = null;
-  if (MATCH_SCENES.has(scene)) content = <MatchPanel scene={scene} data={data} home={home} away={away} live={live} fixture={onAirFixture} season={season} />;
+  if (MATCH_SCENES.has(scene)) {
+    const withScore = live?.score ? live : { ...live, score: onAirFixture?.score || null };
+    content = <MatchStrip scene={scene} data={data} home={home} away={away} live={withScore?.score ? withScore : live} />;
+  }
   else if (scene === 'tabla') content = <BroadcastLeagueTable league={tournamentData?.league} fixtures={fixtures} getTeamLogo={getTeamLogo} />;
   else if (scene === 'bracket' || scene === 'repechaje') {
     content = <BroadcastBracket cupId={scene === 'bracket' ? CUP_IDS.ORO : CUP_IDS.PLATA} bracket={tournamentData?.bracket} getTeamLogo={getTeamLogo} />;
@@ -186,9 +179,17 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
             <img className="broadcast-brand-logo" src={DEFAULT_LOGO} alt="SCL" width={72} height={72} onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }} />
           </div>
           <div className="broadcast-headline">
-            <strong>{data.headline}</strong>
-            <span>{data.subheadline}</span>
+            <strong>{lower.headline}</strong>
+            {lower.subheadline && <span>{lower.subheadline}</span>}
           </div>
+        </div>
+      )}
+
+      {/* Between matches the table scene carries the next match on the ticker line (it hides the lower third). */}
+      {scene === 'tabla' && next && (
+        <div className="broadcast-ticker">
+          <div className="broadcast-ticker-label">Siguiente</div>
+          <div className="broadcast-ticker-text">{nextLine(next)}</div>
         </div>
       )}
 

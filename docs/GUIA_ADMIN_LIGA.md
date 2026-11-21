@@ -222,6 +222,18 @@ semifinal → final, sin semis de Plata), además de `utils/bracketModel.js` hay
 `supabase/functions/_shared/communityVote.js` (las rondas que se pueden votar) y después publicar
 **deploy-community-vote**.
 
+### OBS automático
+
+- **Escenas**: al arrancar un partido el overlay pasa a «En partido»; al terminar, a «Final» (tira arriba con el
+  resultado y el siguiente partido en el lower third), y a los dos minutos a «Tabla» con «Siguiente» abajo. Se apaga en
+  Torneo y transmisión → Escenas automáticas.
+- **Popups con QR**: al arrancar, a los 15', 30', 60' y 75' de juego (15 segundos), en el entretiempo y al final (45) y
+  entre partidos al pasar a la tabla (30).
+- **OBS a distancia**: una fuente «Navegador» con `/draft/overlay?control=obs` y «Permisos de página» en «Acceso
+  avanzado a OBS» cambia la escena real de OBS cuando cambia la del overlay. Los nombres de las escenas se cargan en
+  el mismo panel.
+- Después de cambiar `_shared/overlayControl.js`, publicá **deploy-match-feed** y **deploy-overlay-control**.
+
 ## 8. Cargar los partidos del torneo
 
 Torneo → **Centro de partidos**. Los resultados salen del juego: el colector sube cada partido terminado y vos lo

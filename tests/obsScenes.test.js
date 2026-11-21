@@ -18,10 +18,10 @@ describe('OBS scenes', () => {
 
 describe('resolveObsRequest', () => {
   it('the overlay follows the saved scene unless the URL fixes one', () => {
-    expect(resolveObsRequest('/overlay', '')).toEqual({ scene: null, follow: null, transparent: true });
-    expect(resolveObsRequest('/overlay', '?scene=tabla')).toEqual({ scene: 'tabla', follow: null, transparent: true });
-    expect(resolveObsRequest('/overlay', '?view=bracket')).toEqual({ scene: 'bracket', follow: null, transparent: true });
-    expect(resolveObsRequest('/overlay', '?scene=cualquiera')).toEqual({ scene: null, follow: null, transparent: true });
+    expect(resolveObsRequest('/overlay', '')).toEqual({ scene: null, follow: null, transparent: true, control: false });
+    expect(resolveObsRequest('/overlay', '?scene=tabla')).toEqual({ scene: 'tabla', follow: null, transparent: true, control: false });
+    expect(resolveObsRequest('/overlay', '?view=bracket')).toEqual({ scene: 'bracket', follow: null, transparent: true, control: false });
+    expect(resolveObsRequest('/overlay', '?scene=cualquiera')).toEqual({ scene: null, follow: null, transparent: true, control: false });
   });
 
   it('maps the old ?mode=obs tournament views to overlay scenes', () => {
@@ -49,10 +49,10 @@ describe('sceneForSource', () => {
   const partido = resolveObsRequest('/overlay', '?follow=partido');
 
   it('reads ?follow=partido, which a fixed ?scene= overrides', () => {
-    expect(partido).toEqual({ scene: null, follow: 'partido', transparent: true });
+    expect(partido).toEqual({ scene: null, follow: 'partido', transparent: true, control: false });
     expect(resolveObsRequest('/overlay', '?follow=PARTIDO').follow).toBe('partido');
     expect(resolveObsRequest('/overlay', '?follow=torneo').follow).toBeNull();
-    expect(resolveObsRequest('/overlay', '?scene=tabla&follow=partido')).toEqual({ scene: 'tabla', follow: null, transparent: true });
+    expect(resolveObsRequest('/overlay', '?scene=tabla&follow=partido')).toEqual({ scene: 'tabla', follow: null, transparent: true, control: false });
   });
 
   it('the match source follows the match scenes and stays clean during tournament scenes', () => {

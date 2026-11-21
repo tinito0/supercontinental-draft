@@ -240,10 +240,11 @@ describe('community card and live scenes (overlay en vivo)', () => {
     expect(html).not.toContain('MVP');
   });
 
-  it('the previa scene shows the community prediction', () => {
-    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'previa' }} live={live} />);
-    expect(html).toContain('La comunidad dice');
-    expect(html).toContain('Empate 30%');
+  it('the previa scene is a strip with both clubs and the lower third, leaving the camera free', () => {
+    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'previa', homeTeamName: 'Racing', awayTeamName: 'Boca' }} live={live} />);
+    expect(html).toContain('scl-strip');
+    expect(html).toContain('Previa: Racing vs Boca');
+    expect(html).not.toContain('La comunidad dice');
   });
 });
 

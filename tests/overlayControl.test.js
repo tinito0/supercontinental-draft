@@ -1,5 +1,5 @@
 // Comandos de overlay-control (Macro Deck → scl-obs → función): supabase/functions/_shared/overlayControl.js.
-import { AUTO_CARD_SECONDS, AUTO_POPUP_SECONDS, buildOverlayCommand, liveOverlayUpdate, OVERLAY_SCENES, POPUP_PRESETS as SERVER_PRESETS } from '../supabase/functions/_shared/overlayControl.js';
+import { AUTO_CARD_SECONDS, AUTO_POPUP_IN_PLAY_SECONDS, AUTO_POPUP_SECONDS, buildOverlayCommand, liveOverlayUpdate, OVERLAY_SCENES, POPUP_PRESETS as SERVER_PRESETS } from '../supabase/functions/_shared/overlayControl.js';
 import { POPUP_PRESETS } from '../utils/overlayPopup.js';
 import { parseObsArgs } from '../pes-collector/bridge/obsCommand.js';
 
@@ -52,7 +52,7 @@ describe('liveOverlayUpdate (match-feed → overlay)', () => {
 
   it('links the overlay to the match the bridge is uploading live, once', () => {
     expect(run(live(1, 10)).data.liveMatchKey).toBe(key);
-    expect(run(live(1, 11), { liveMatchKey: key })).toBeNull();
+    expect(run(live(1, 11), { liveMatchKey: key, autoPopupDone: `${key}:kickoff` })).toBeNull();
   });
 
   it('shows the vote popup at half-time (second half clock at 45:00) and only once', () => {
@@ -67,13 +67,13 @@ describe('liveOverlayUpdate (match-feed → overlay)', () => {
 
   it('ignores the first-half replay period (5) and the first half itself', () => {
     expect(run(live(5, 46), { liveMatchKey: key })).toBeNull();
-    expect(run(live(1, 47), { liveMatchKey: key })).toBeNull();
+    expect(run(live(1, 47), { liveMatchKey: key, autoPopupDone: `${key}:m30` })).toBeNull();
   });
 
   it('shows it again at full time, never back to half-time after that', () => {
     const finished = { matchKey: key, status: 'finished', clock: { period: 3, minute: 90, second: 0 } };
     expect(run(finished, { liveMatchKey: key, autoPopupDone: `${key}:half` }).data.autoPopupDone).toBe(`${key}:final`);
-    expect(run(finished, { liveMatchKey: key, autoPopupDone: `${key}:final` })).toBeNull();
+    expect(run(finished, { liveMatchKey: key, autoPopupDone: `${key}:final`, autoFinalKey: key })).toBeNull();
     expect(run(live(2, 46), { liveMatchKey: key, autoPopupDone: `${key}:final` })).toBeNull();
   });
 
@@ -84,17 +84,40 @@ describe('liveOverlayUpdate (match-feed → overlay)', () => {
   });
 
   it('respects the admin switch: links the match but shows no popup', () => {
-    expect(run(live(2, 45), { autoPopup: false })).toEqual({ data: { liveMatchKey: key }, mask: ['liveMatchKey'] });
+    expect(run(live(2, 45), { autoPopup: false, autoScenes: false })).toEqual({ data: { liveMatchKey: key }, mask: ['liveMatchKey'] });
   });
 
   it('shows the prediction card when a new match goes live, and no other card during the match', () => {
-    const kickoff = run(live(1, 0));
-    expect(kickoff.mask).toEqual(['liveMatchKey', 'card', 'autoCardDone']);
+    const kickoff = run(live(1, 0), { autoScenes: false });
+    expect(kickoff.mask).toEqual(['liveMatchKey', 'popup', 'autoPopupDone', 'card', 'autoCardDone']);
     expect(kickoff.data.card).toEqual({ visible: true, kind: 'prediction', autoHideSec: AUTO_CARD_SECONDS, shownAt: ctx.now });
-    expect(run(live(2, 69), { liveMatchKey: key, autoCardDone: `${key}:kickoff`, autoPopupDone: `${key}:half` })).toBeNull();
+    expect(run(live(2, 69), { liveMatchKey: key, autoCardDone: `${key}:kickoff`, autoPopupDone: `${key}:m60` })).toBeNull();
     // El manager de la fecha se vota cuando termina la fecha: ya no hay tarjeta automática desde el minuto 70.
-    expect(run(live(2, 80), { liveMatchKey: key, autoCardDone: `${key}:kickoff`, autoPopupDone: `${key}:half` })).toBeNull();
-    expect(run(live(1, 0), { autoPopup: false }).mask).toEqual(['liveMatchKey']);
+    expect(run(live(2, 80), { liveMatchKey: key, autoCardDone: `${key}:kickoff`, autoPopupDone: `${key}:m75` })).toBeNull();
+    expect(run(live(1, 0), { autoPopup: false, autoScenes: false }).mask).toEqual(['liveMatchKey']);
+  });
+
+  it('shows the QR at kickoff and every 15 game minutes, briefly, once each', () => {
+    const at = (period, minute, done) => run(live(period, minute), { liveMatchKey: key, autoScenes: false, autoPopupDone: done && `${key}:${done}` });
+    expect(at(1, 16, 'kickoff').data).toMatchObject({ autoPopupDone: `${key}:m15`, popup: { autoHideSec: AUTO_POPUP_IN_PLAY_SECONDS } });
+    expect(at(1, 31, 'm15').data.autoPopupDone).toBe(`${key}:m30`);
+    expect(at(2, 61, 'half').data.autoPopupDone).toBe(`${key}:m60`);
+    expect(at(2, 76, 'm60').data.autoPopupDone).toBe(`${key}:m75`);
+    expect(at(2, 77, 'm75')).toBeNull();
+    // A missed stage is not shown late: the bridge jumping from 10' to 50' shows only the half-time one.
+    expect(at(2, 50, 'kickoff').data).toMatchObject({ autoPopupDone: `${key}:half`, popup: { autoHideSec: AUTO_POPUP_SECONDS } });
+  });
+
+  it('switches scenes: «En partido» when a match starts, «Final» once when the match on air ends', () => {
+    expect(run(live(1, 0), { scene: 'tabla' }).data.scene).toBe('live');
+    expect(run(live(1, 0), { scene: 'live' }).mask).not.toContain('scene');
+    const finished = { matchKey: key, status: 'finished', clock: { period: 3, minute: 90, second: 0 } };
+    const ended = run(finished, { liveMatchKey: key, scene: 'live', autoPopupDone: `${key}:final` });
+    expect(ended).toEqual({ data: { scene: 'final', autoFinalAt: ctx.now, autoFinalKey: key }, mask: ['scene', 'autoFinalAt', 'autoFinalKey'] });
+    expect(run(finished, { liveMatchKey: key, scene: 'final', autoFinalKey: key, autoPopupDone: `${key}:final` })).toBeNull();
+    expect(run(finished, { liveMatchKey: key, autoScenes: false, autoPopupDone: `${key}:final` })).toBeNull();
+    const old = { matchKey: '20261001T200000Z_1-2', status: 'finished', clock: { period: 3, minute: 90, second: 0 } };
+    expect(run(old, { liveMatchKey: key, autoPopupDone: `${key}:final` })).toBeNull();
   });
 
   it('shows and hides a community card on demand', () => {
