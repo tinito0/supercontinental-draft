@@ -38,13 +38,7 @@ export function ClubCrestGrid({ teams, loading }) {
   );
 }
 
-const FRANCHISE_RULES = [
-  '1 por club',
-  `${FRANCHISE_MIN_AGE}+ años`,
-  `OVR ${FRANCHISE_MIN_OVR} a ${FRANCHISE_MAX_OVR}`,
-  'gratis',
-  'fijo toda la temporada',
-];
+const FRANCHISE_RULE = `Uno por club, de ${FRANCHISE_MIN_AGE} años o más y con media de ${FRANCHISE_MIN_OVR} a ${FRANCHISE_MAX_OVR}. No gasta presupuesto.`;
 
 /** El jugador franquicia de un club, en chico: foto con OVR, nombre y escudo. */
 function FranchiseTile({ team, player }) {
@@ -68,7 +62,7 @@ function FranchiseTile({ team, player }) {
         )}
         <img src={teamCrestUrl(team)} alt="" width="24" height="24" loading="lazy" className="absolute bottom-1 right-1 h-6 w-6 object-contain" />
       </span>
-      <span className="mt-1.5 block truncate text-xs font-semibold text-ink group-hover:text-accent-soft">{player.name}</span>
+      <span className="mt-1.5 line-clamp-2 break-words text-xs font-semibold leading-tight text-ink group-hover:text-accent-soft">{player.name}</span>
       <span className="sr-only">, de {team.teamName}</span>
     </Link>
   );
@@ -80,22 +74,14 @@ export function FranchiseSummary({ teams, franchise, loading, error = '', headin
   return (
     <div className="panel p-5 sm:p-7">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <div>
-          <p className="eyebrow text-crest-soft">La regla de la casa</p>
-          <h2 id={headingId} className="mt-1 font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink">Jugadores franquicia</h2>
-        </div>
+        <h2 id={headingId} className="font-display text-3xl font-bold uppercase leading-none tracking-tight text-ink">Jugadores franquicia</h2>
         {entries.length > 0 && (
           <p className="text-sm text-ink-2"><span className="num font-semibold text-ink">{entries.length}</span> de <span className="num">{teams.length}</span> clubes ya eligieron el suyo</p>
         )}
       </div>
-      <p className="mt-3 max-w-[60ch] text-ink-2 [text-wrap:pretty]">
-        Cada club elige un referente que nadie le puede sacar en toda la temporada.
+      <p className="mt-3 max-w-[64ch] text-ink-2 [text-wrap:pretty]">
+        Cada club elige un referente que nadie le puede sacar en toda la temporada. {FRANCHISE_RULE}
       </p>
-      <ul className="mt-3 flex flex-wrap gap-x-2 gap-y-1.5" aria-label="Reglas del jugador franquicia">
-        {FRANCHISE_RULES.map(rule => (
-          <li key={rule} className="rounded-md border border-crest/30 px-2 py-1 text-xs font-semibold text-crest-soft">{rule}</li>
-        ))}
-      </ul>
       {error ? (
         <p className="mt-5 text-sm text-warning-soft">No se pudieron cargar los jugadores franquicia. Recargá la página para intentar de nuevo.</p>
       ) : !loading && !entries.length ? (

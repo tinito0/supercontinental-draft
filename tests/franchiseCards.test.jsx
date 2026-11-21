@@ -45,8 +45,8 @@ describe('FranchiseSummary', () => {
     expect(html).toContain('id="f"');
     expect(html).toContain('Veterano Uno');
     expect(html).not.toContain('Otro');
-    expect(html).toContain(`${FRANCHISE_MIN_AGE}+ años`);
-    expect(html).toContain(`OVR ${FRANCHISE_MIN_OVR} a ${FRANCHISE_MAX_OVR}`);
+    expect(html).toContain(`de ${FRANCHISE_MIN_AGE} años o más`);
+    expect(html).toContain(`media de ${FRANCHISE_MIN_OVR} a ${FRANCHISE_MAX_OVR}`);
     expect(html).not.toContain('—');
   });
 

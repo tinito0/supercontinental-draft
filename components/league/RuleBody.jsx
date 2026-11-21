@@ -10,7 +10,7 @@ function Labeled({ label, text }) {
 /** A rules chapter's text with its subtitles and lists (utils/ruleText.js); always rendered as text, never HTML. */
 export function RuleBody({ body }) {
   return (
-    <div className="max-w-[68ch] space-y-4 text-base leading-[1.7] text-ink/[0.88] sm:text-[17px]">
+    <div className="max-w-[62ch] space-y-4 text-base leading-[1.7] text-ink/[0.88] sm:text-[17px] [&_li]:[text-wrap:pretty] [&_p]:[text-wrap:pretty]">
       {toRuleBlocks(body).map((block, index) => {
         if (block.type === 'subtitle') {
           return <h3 key={index} className="!mt-9 font-display text-[22px] font-bold leading-tight tracking-wide text-ink first:!mt-0">{block.text}</h3>;

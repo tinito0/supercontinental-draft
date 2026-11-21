@@ -19,11 +19,11 @@ function ClubName({ name, club }) {
   const label = (
     <>
       <LeagueCrest name={name} club={club} size="sm" />
-      <span className="truncate font-medium text-ink">{name}</span>
+      <span className="club-name line-clamp-2 break-words font-medium leading-tight text-ink">{name}</span>
     </>
   );
   return club
-    ? <Link to={`/equipos/${club.id}`} className="flex min-h-11 min-w-0 items-center gap-2.5 hover:[&>span]:text-accent-soft">{label}</Link>
+    ? <Link to={`/equipos/${club.id}`} className="flex min-h-11 min-w-0 items-center gap-2.5 hover:[&_.club-name]:text-accent-soft">{label}</Link>
     : <span className="flex min-h-11 min-w-0 items-center gap-2.5">{label}</span>;
 }
 
@@ -78,7 +78,8 @@ export function StandingsCard({ tournament, fixtures, clubOf, loading, error = '
                     <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${isGold ? 'bg-accent' : 'bg-ink-3'}`} aria-hidden="true" />
                     <span className="flex flex-col items-start gap-0.5">
                       <span data-rank-flash className="num inline-block font-display text-base font-bold text-ink">{index + 1}</span>
-                      <RankMove move={row.move} />
+                      {/* Reserved in every row of a live table, so rows keep their height as clubs move. */}
+                      {live && <span className="flex h-3.5 items-center"><RankMove move={row.move} /></span>}
                     </span>
                     <span className="sr-only">{isGold ? ', zona Copa de Oro' : ', zona Copa de Plata'}</span>
                   </td>
