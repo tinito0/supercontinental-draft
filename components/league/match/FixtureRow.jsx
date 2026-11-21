@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { formatFixtureDate } from '../../../utils/leagueFixtures.js';
@@ -16,7 +16,11 @@ export function makeClubLookup(teams) {
 export function LeagueCrest({ name, club, size = 'md' }) {
   const box = size === 'lg' ? 'h-14 w-14 text-lg' : size === 'sm' ? 'h-6 w-6 text-[11px]' : 'h-8 w-8 text-xs';
   const px = size === 'lg' ? 56 : size === 'sm' ? 24 : 32;
-  if (club?.logoUrl) return <img src={club.logoUrl} alt="" width={px} height={px} className={`${box} shrink-0 object-contain`} loading="lazy" decoding="async" />;
+  const [failedUrl, setFailedUrl] = useState('');
+  if (club?.logoUrl && failedUrl !== club.logoUrl) {
+    return <img src={club.logoUrl} alt="" width={px} height={px} className={`${box} shrink-0 object-contain`} loading="lazy" decoding="async"
+      onError={() => setFailedUrl(club.logoUrl)} />;
+  }
   const initials = String(name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();
   return (
     <span aria-hidden="true" className={`${box} grid shrink-0 place-items-center rounded-full bg-raised font-display font-bold text-ink-2`}>

@@ -26,7 +26,7 @@ export function latestRoundXi(docs, rounds) {
 function RoundPlayer({ player, catalog }) {
   return (
     <li>
-      <Link to={`/jugadores/${player.id}`} className="flex min-h-11 w-40 items-center gap-2 rounded-lg bg-raised px-2 py-1.5 transition-colors hover:bg-overlay sm:w-44">
+      <Link to={`/jugadores/${player.id}`} className="flex min-h-11 w-full items-center gap-2 rounded-lg bg-raised px-2 py-1.5 transition-colors hover:bg-overlay">
         <PlayerPhoto id={player.id} size={32} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-ink">{playerDisplayName(player, catalog)}</span>
@@ -52,7 +52,7 @@ export function RoundXi({ docs, rounds, catalog }) {
         {LINES.map(line => latest.xi[line.id].length > 0 && (
           <div key={line.id}>
             <h3 className="eyebrow mb-2">{line.label}</h3>
-            <ol className="flex flex-wrap gap-2">
+            <ol className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-2">
               {latest.xi[line.id].map(player => <RoundPlayer key={`${player.matchKey}-${player.id}`} player={player} catalog={catalog} />)}
             </ol>
           </div>

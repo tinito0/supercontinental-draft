@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, UserRound } from 'lucide-react';
 import { BallIcon } from './BallIcon.jsx';
 import { Tabs } from '../../ui/Tabs.jsx';
 import { CardMark } from './MatchParts.jsx';
@@ -19,7 +19,14 @@ export function PlayerPhoto({ id, size = 32 }) {
     img.addEventListener('error', () => setFailed(true), { once: true });
     img.addEventListener('load', check, { once: true });
   };
-  if (failed) return <span className="shrink-0 rounded-lg bg-raised" style={box} aria-hidden="true" />;
+  if (failed) {
+    // Players without a photo in /fotos_jugadores keep the same box, with a silhouette instead of an empty square.
+    return (
+      <span className="grid shrink-0 place-items-center rounded-lg bg-raised text-ink-3" style={box} aria-hidden="true">
+        <UserRound style={{ width: size * 0.55, height: size * 0.55 }} strokeWidth={1.75} />
+      </span>
+    );
+  }
   return (
     <img ref={checkLoaded} src={`/fotos_jugadores/${id}.webp`} alt="" width={size} height={size} loading="lazy" style={box}
       className="shrink-0 rounded-lg bg-raised object-cover object-top" onError={() => setFailed(true)} />

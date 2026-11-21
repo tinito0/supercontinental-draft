@@ -60,9 +60,9 @@ function Entrants({ rows, clubOf }) {
 
 /** En la tabla en vivo, debajo del puesto: punto rojo si el club está jugando y cuántos puestos sube o baja. */
 function LiveMarks({ row }) {
-  if (!row.isLive && !row.move) return null;
+  // Every row of a live table keeps this line, empty or not, so rows don't change height as clubs move.
   return (
-    <span className="mt-1 flex items-center justify-center gap-1">
+    <span className="mt-1 flex h-3.5 items-center justify-center gap-1">
       {row.isLive && <LiveDot pendingShootout={row.pendingShootout} />}
       <RankMove move={row.move} />
     </span>
@@ -80,9 +80,9 @@ export function StandingsTable({ rows, clubOf, isLive = false }) {
   return (
     <div className="space-y-3">
       {isLive && (
-        <p className="flex items-center gap-2 text-sm font-semibold text-danger-soft" role="status">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-danger animate-pulse" aria-hidden="true" />
-          Tabla en vivo: suma los partidos que se están jugando con el marcador de ahora. Un empate no suma puntos hasta los penales.
+        <p className="flex items-baseline gap-2 text-sm text-ink-2" role="status">
+          <span className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-full bg-danger animate-pulse" aria-hidden="true" />
+          <span><strong className="font-semibold text-danger-soft">Tabla en vivo:</strong> suma los partidos que se están jugando con el marcador de ahora. Un empate no suma puntos hasta los penales.</span>
         </p>
       )}
       <div className="panel overflow-hidden">
@@ -110,7 +110,7 @@ export function StandingsTable({ rows, clubOf, isLive = false }) {
               const name = (
                 <span className="flex min-w-0 items-center gap-3">
                   <LeagueCrest name={row.name} club={club} size="md" />
-                  <span className="truncate font-semibold text-ink">{row.name}</span>
+                  <span className="club-name line-clamp-2 break-words font-semibold leading-tight text-ink">{row.name}</span>
                 </span>
               );
               return (
@@ -118,11 +118,11 @@ export function StandingsTable({ rows, clubOf, isLive = false }) {
                   <td className="relative py-3 pl-4 pr-2 text-center">
                     {zone && <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${ZONE_BAR[zone]}`} aria-hidden="true" />}
                     <span data-rank-flash className="num inline-block font-display text-lg font-bold text-ink">{index + 1}</span>
-                    <LiveMarks row={row} />
+                    {isLive && <LiveMarks row={row} />}
                     {zone && <span className="sr-only">{zone === 'oro' ? ', zona Copa de Oro' : ', zona Copa de Plata'}</span>}
                   </td>
                   <td className="max-w-0 py-2 pr-2">
-                    {club?.id ? <Link to={`/equipos/${club.id}`} className="block min-h-11 py-1.5 hover:[&_span.truncate]:text-accent-soft">{name}</Link> : name}
+                    {club?.id ? <Link to={`/equipos/${club.id}`} className="block min-h-11 py-1.5 hover:[&_.club-name]:text-accent-soft">{name}</Link> : name}
                   </td>
                   {COLUMNS.map(col => (
                     <td key={col.key} className={`num px-1 py-3 text-center text-ink ${col.always ? '' : 'hidden sm:table-cell'}`}>{values[col.key]}</td>
