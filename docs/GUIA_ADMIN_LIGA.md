@@ -232,6 +232,11 @@ semifinal → final, sin semis de Plata), además de `utils/bracketModel.js` hay
 - **OBS a distancia**: una fuente «Navegador» con `/draft/overlay?control=obs` y «Permisos de página» en «Acceso
   avanzado a OBS» cambia la escena real de OBS cuando cambia la del overlay. Los nombres de las escenas se cargan en
   el mismo panel.
+- **Cámaras** (con la fuente de control): en Previa y Final pasa una vez por Jugador 1, Jugador 2 y queda en el
+  Relator (12 s cada una). Con un gol, a los 5 s muestra 8 s la cámara del que lo hizo (Jugador 1 = local del partido) y
+  vuelve al juego. Las escenas se llaman «SCL Jugador 1», «SCL Jugador 2» y «SCL Relator», o como las cargues en el
+  panel. La fuente «Escena del juego» tiene que estar también en esas escenas.
+- En partido, el QR y las tarjetas van por encima de las tres cámaras de abajo.
 - Después de cambiar `_shared/overlayControl.js`, publicá **deploy-match-feed** y **deploy-overlay-control**.
 
 ## 8. Cargar los partidos del torneo
