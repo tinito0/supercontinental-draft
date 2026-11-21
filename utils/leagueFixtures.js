@@ -160,6 +160,19 @@ export function buildFixtures({ tournament, liveMatches = [], overlay = null, pr
     claimed.add(live.key);
     linked.set(candidates[0].id, live);
   }
+  // 5) A finished game match against the only completed fixture of those two clubs that has none: an official result
+  //    loaded by hand keeps its minute-by-minute reachable from the fixture (a live rematch never links backwards).
+  for (const live of liveByKey.values()) {
+    if (claimed.has(live.key) || liveState(live, now) !== 'finished') continue;
+    const pair = [nameOf(live.home?.draftTeamId), nameOf(live.away?.draftTeamId)];
+    if (!pair[0] || !pair[1]) continue;
+    const wanted = pair.map(teamKey).sort().join('|');
+    const candidates = fixtures.filter(fixture => fixture.storedStatus === 'completed' && !linked.has(fixture.id)
+      && [teamKey(fixture.home.name), teamKey(fixture.away.name)].sort().join('|') === wanted);
+    if (candidates.length !== 1) continue;
+    claimed.add(live.key);
+    linked.set(candidates[0].id, live);
+  }
 
   return fixtures.map(fixture => {
     const live = linked.get(fixture.id) || null;
