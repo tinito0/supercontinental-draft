@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { CommunityFrame } from './CommunityFrame.jsx';
-import { LEAVE_MS, shownKey, useRemaining } from './OverlayPopup.jsx';
+import { LEAVE_MS, shownKey, useExitLinger, useRemaining } from './OverlayPopup.jsx';
 
 // Tarjeta de la comunidad sobre el overlay de OBS (lado izquierdo, el popup con QR va a la derecha): el manager de la
 // fecha, la predicción del partido o la encuesta de la copa, con los votos en vivo (utils/overlayLive.js).
@@ -60,11 +60,12 @@ function cardContent(kind, live, homeName, awayName) {
 
 export const CommunityCard = memo(function CommunityCard({ card, live, homeName, awayName, side = 'left', loaded = true }) {
   const remaining = useRemaining(card, undefined, loaded);
-  if (remaining === 0) return null;
+  const lingering = useExitLinger(remaining);
+  if ((remaining === 0 && !lingering) || !card?.kind) return null;
   // Sin votos no hay nada que mostrar: la tarjeta no aparece vacía.
   const content = cardContent(card.kind, live, homeName, awayName);
   if (!content) return null;
-  const isLeaving = remaining !== null && remaining <= LEAVE_MS;
+  const isLeaving = lingering || (remaining !== null && remaining <= LEAVE_MS);
   return (
     <CommunityFrame
       key={`${shownKey(card)}|${card.kind}`}

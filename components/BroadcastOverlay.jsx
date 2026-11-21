@@ -13,6 +13,7 @@ import { OverlayPopup } from './broadcast/OverlayPopup.jsx';
 import { CommunityCard } from './broadcast/CommunityCard.jsx';
 import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
 import { OverlayErrorBoundary } from './broadcast/OverlayErrorBoundary.jsx';
+import { Presence, SceneSwitch } from './broadcast/Presence.jsx';
 
 export const DEFAULT_BROADCAST_OVERLAY = {
   scene: 'live',
@@ -98,7 +99,8 @@ function MatchStrip({ scene, data, home, away, live }) {
         <strong className={isLongName(home.name) ? 'is-long-name' : undefined} title={home.name}>{home.name}</strong>
         <BroadcastCrest className="scl-strip-crest" name={home.name} logo={home.logoUrl} />
       </div>
-      <div className="scl-strip-center">{showsResult ? `${score.home}-${score.away}` : 'VS'}</div>
+      {/* Keyed by the result: a goal makes the score pop in (transitions.dev number pop-in). */}
+      <div className="scl-strip-center"><span key={showsResult ? `${score.home}-${score.away}` : 'vs'} className="scl-strip-score">{showsResult ? `${score.home}-${score.away}` : 'VS'}</span></div>
       <div className="scl-strip-team away">
         <BroadcastCrest className="scl-strip-crest" name={away.name} logo={away.logoUrl} />
         <strong className={isLongName(away.name) ? 'is-long-name' : undefined} title={away.name}>{away.name}</strong>
@@ -169,36 +171,38 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
   return (
     <div className="broadcast-overlay-root" data-scene={scene} aria-label="SCL OBS overlay">
       <OverlayErrorBoundary name={`escena ${scene}`} resetKey={tournamentData}>
-        {/* La key es solo la escena: la entrada se ve al cambiar de escena, no con cada dato que llega. */}
-        {content && <div className="scl-scene" key={scene}>{content}</div>}
+        {/* Keyed by scene only: the old scene leaves and the new one enters on a scene change, not with every update. */}
+        <SceneSwitch sceneKey={scene}>{content}</SceneSwitch>
       </OverlayErrorBoundary>
 
-      {showChrome && data.showLowerThird && (
-        <div className="broadcast-lower">
-          <div className="broadcast-brand">
-            <img className="broadcast-brand-logo" src={DEFAULT_LOGO} alt="SCL" width={72} height={72} onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }} />
+      <Presence show={showChrome && data.showLowerThird}>
+        {leaving => (
+          <div className={`broadcast-lower ${leaving ? 'is-leaving' : ''}`}>
+            <div className="broadcast-brand">
+              <img className="broadcast-brand-logo" src={DEFAULT_LOGO} alt="SCL" width={72} height={72} onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }} />
+            </div>
+            {/* Keyed by text: Previa → Final → Siguiente partido cross-blur in place instead of jumping. */}
+            <div className="broadcast-headline">
+              <strong><span key={lower.headline} className="scl-swap">{lower.headline}</span></strong>
+              {lower.subheadline && <span><span key={lower.subheadline} className="scl-swap">{lower.subheadline}</span></span>}
+            </div>
           </div>
-          <div className="broadcast-headline">
-            <strong>{lower.headline}</strong>
-            {lower.subheadline && <span>{lower.subheadline}</span>}
-          </div>
-        </div>
-      )}
+        )}
+      </Presence>
 
       {/* Between matches the table scene carries the next match on the ticker line (it hides the lower third). */}
-      {scene === 'tabla' && next && (
-        <div className="broadcast-ticker">
-          <div className="broadcast-ticker-label">Siguiente</div>
-          <div className="broadcast-ticker-text">{nextLine(next)}</div>
-        </div>
-      )}
-
-      {showChrome && data.showTicker && (
-        <div className="broadcast-ticker">
-          <div className="broadcast-ticker-label">Último momento</div>
-          <div className="broadcast-ticker-text">{data.ticker}</div>
-        </div>
-      )}
+      <Presence show={Boolean(scene === 'tabla' && next) || (showChrome && data.showTicker)}>
+        {leaving => {
+          const isNext = scene === 'tabla' && next;
+          const text = isNext ? nextLine(next) : data.ticker;
+          return (
+            <div className={`broadcast-ticker ${leaving ? 'is-leaving' : ''}`}>
+              <div className="broadcast-ticker-label">{isNext ? 'Siguiente' : 'Último momento'}</div>
+              <div className="broadcast-ticker-text"><span key={text} className="scl-swap">{text}</span></div>
+            </div>
+          );
+        }}
+      </Presence>
 
       <OverlayErrorBoundary name="comunidad" resetKey={overlayData}>
         <CommunityCard card={overlayData?.card} live={live} homeName={home.name} awayName={away.name} side={cardSide} loaded={overlayLoaded} />

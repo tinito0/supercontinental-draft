@@ -212,7 +212,7 @@
 }
 .broadcast-brand-logo { width: 72px; height: 72px; object-fit: contain; }
 .broadcast-headline { min-width: 0; display: grid; grid-template-rows: auto auto; }
-.broadcast-headline strong {
+.broadcast-headline > strong {
   display: block;
   padding: 10px 28px 8px;
   background: var(--scl-bar);
@@ -225,7 +225,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.broadcast-headline span {
+.broadcast-headline > span {
   display: block;
   padding: 8px 28px;
   background: var(--scl-slate);
@@ -630,12 +630,49 @@
   to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
 }
 
+/* Salida de escena (components/broadcast/Presence.jsx SceneSwitch): la vieja se va hacia arriba con blur, más corta que
+   la entrada y acelerando; la nueva entra apenas después, así no se pisan. */
+.scl-scene.is-leaving { animation: scl-scene-out 300ms cubic-bezier(0.4, 0, 1, 1) forwards; pointer-events: none; }
+.scl-scene.is-after { animation-delay: 140ms; }
+@keyframes scl-scene-out { to { opacity: 0; transform: translateY(-10px); filter: blur(4px); } }
+
+/* Tira de previa, entretiempo y final: se abre desde el centro y después aparecen sus partes. El resultado entra como
+   número nuevo con cada gol (transitions.dev number pop-in: 8px, blur 2px). */
+.scl-scene .scl-strip { animation: scl-strip-open 560ms var(--scl-ease) backwards; }
+.scl-scene .scl-strip-label,
+.scl-scene .scl-strip-team { animation: scl-pop-rise 420ms 220ms var(--scl-ease) backwards; }
+.scl-scene .scl-strip-team.away { animation-delay: 280ms; }
+.scl-strip-score { display: inline-block; animation: scl-number-in 400ms var(--scl-ease) backwards; }
+@keyframes scl-strip-open { from { clip-path: inset(0 50% 0 50%); opacity: 0.6; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+@keyframes scl-number-in { from { opacity: 0; transform: translateY(8px); filter: blur(2px); } }
+
+/* Lower third: el escudo aparece, la barra se abre de izquierda a derecha y después la segunda línea. Se cierra hacia
+   la derecha. Un texto nuevo (Previa → Final → Siguiente partido) se funde en el lugar (text swap: 4px, blur 2px). */
+.broadcast-lower .broadcast-brand { animation: scl-pop-qr-in 420ms var(--scl-ease) backwards; }
+.broadcast-lower .broadcast-headline > strong { animation: scl-wipe-in 560ms 100ms var(--scl-ease) backwards; }
+.broadcast-lower .broadcast-headline > span { animation: scl-wipe-in 520ms 220ms var(--scl-ease) backwards; }
+.broadcast-lower.is-leaving { animation: scl-wipe-out 320ms cubic-bezier(0.4, 0, 1, 1) forwards; }
+.broadcast-ticker { animation: scl-ticker-in 480ms 300ms var(--scl-ease) backwards; }
+.broadcast-ticker.is-leaving { animation: scl-ticker-out 300ms cubic-bezier(0.4, 0, 1, 1) forwards; }
+.scl-swap { display: inline-block; animation: scl-swap-in 250ms ease-in-out backwards; }
+@keyframes scl-wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes scl-wipe-out { to { clip-path: inset(0 0 0 100%); opacity: 0.4; } }
+@keyframes scl-ticker-in { from { opacity: 0; transform: translateY(100%); } }
+@keyframes scl-ticker-out { to { opacity: 0; transform: translateY(100%); } }
+@keyframes scl-swap-in { from { opacity: 0; transform: translateY(4px); filter: blur(2px); } }
+
+/* Movimiento reducido: sin desplazamientos ni barridos, solo fundidos cortos de entrada y salida. */
 @media (prefers-reduced-motion: reduce) {
-  .scl-scene, .scl-scene .scl-frame-stripe { animation: none !important; }
-  .scl-pop, .scl-pop *, .scl-pop.is-leaving { animation: none !important; }
+  .scl-scene, .scl-scene .scl-frame-stripe, .scl-scene .scl-strip, .scl-scene .scl-strip-label, .scl-scene .scl-strip-team,
+  .scl-strip-score, .scl-swap, .broadcast-lower *, .broadcast-ticker { animation: scl-fade-in 200ms ease-out backwards !important; }
+  .scl-scene.is-leaving, .broadcast-lower.is-leaving, .broadcast-ticker.is-leaving { animation: scl-fade-out 200ms ease-out forwards !important; }
+  .scl-pop, .scl-pop * { animation: scl-fade-in 200ms ease-out backwards !important; }
+  .scl-pop.is-leaving { animation: scl-fade-out 200ms ease-out forwards !important; }
   .scl-popup-qr::after { display: none; }
   .scl-card-bar span { transition: none; }
 }
+@keyframes scl-fade-in { from { opacity: 0; } }
+@keyframes scl-fade-out { to { opacity: 0; } }
 
 /* ---- Tabla de la liga (BroadcastLeagueTable.jsx, dentro del ObsStage de 1920×1080) ---- */
 .scl-stage { width: 1920px; height: 1080px; display: flex; align-items: center; justify-content: center; }
