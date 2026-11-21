@@ -13,7 +13,7 @@ on:
       target:
         description: Qué reglas publicar
         type: choice
-        options: [firestore:rules, storage]
+        options: [firestore:rules, storage, storage:ver]
         default: firestore:rules
       ref:
         description: Rama o commit de donde salen las reglas
@@ -45,10 +45,33 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm ci --no-audit --no-fund
-      - run: >
+      - if: inputs.target != 'storage:ver'
+        run: >
           npx -y firebase-tools@13.35.1 emulators:exec --only firestore --project demo-scl
           "npx vitest run --config vitest.rules.config.js --reporter=default --reporter=github-actions"
+      # storage:ver publishes nothing: it prints the Storage rules live in the project and their diff with storage.rules,
+      # the check to make before the first `storage` deploy.
+      - name: Show live Storage rules
+        if: inputs.target == 'storage:ver'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          test -n "$FIREBASE_SERVICE_ACCOUNT" || { echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT (Settings → Secrets and variables → Actions)."; exit 1; }
+          key="$RUNNER_TEMP/sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$key"
+          gcloud auth activate-service-account --key-file="$key" --quiet
+          rm -f "$key"
+          token=$(gcloud auth print-access-token)
+          api=https://firebaserules.googleapis.com/v1
+          releases=$(curl -sf -H "Authorization: Bearer $token" "$api/projects/supercont-d62df/releases")
+          echo "$releases" | jq -r '.releases[] | "\(.name) -> \(.rulesetName)"'
+          ruleset=$(echo "$releases" | jq -r '[.releases[] | select(.name | contains("firebase.storage/"))][0].rulesetName // empty')
+          test -n "$ruleset" || { echo "::notice::No hay reglas de Storage publicadas en el proyecto."; exit 0; }
+          curl -sf -H "Authorization: Bearer $token" "$api/$ruleset" | jq -r '.source.files[0].content' > "$RUNNER_TEMP/live.rules"
+          echo "::group::Reglas de Storage publicadas ($ruleset)"; cat "$RUNNER_TEMP/live.rules"; echo "::endgroup::"
+          echo "::group::Diferencia con storage.rules"; diff -u "$RUNNER_TEMP/live.rules" storage.rules || true; echo "::endgroup::"
       - name: Deploy ${{ inputs.target }} rules
+        if: inputs.target != 'storage:ver'
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           TARGET: ${{ inputs.target }}
