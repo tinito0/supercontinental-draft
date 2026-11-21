@@ -1,0 +1,70 @@
+{
+  "season": "Temporada 3",
+  "chapters": [
+    {
+      "id": "torneo",
+      "title": "El torneo",
+      "body": "El torneo consiste en duelos en el PES 2021 VirtuaRED Patch V10 entre las 12 personas que componen la competición, con equipos ficticios creados por los participantes.\n\nLa administración se reserva el derecho de admisión y de modificación de estas normas para preservar la integridad de la competición."
+    },
+    {
+      "id": "creacion",
+      "title": "Creación de los equipos",
+      "body": "Cada participante deberá diseñar y desarrollar completamente su propio equipo, desde su lugar de origen hasta su historia. Es válido inspirarse en otros clubes, pero la creación debe ser 100% original.\n\nFausto Lonardi es el encargado de la administración y el diseño de la identidad visual del torneo (logo, kits, diario, etc.). Cualquier inquietud o sugerencia sobre el diseño de tu equipo se la comunicás directamente a él, que va a estar dispuesto a escucharte para lograr una buena representación gráfica de tu club.\n\nEstructura de la historia y los logotipos:\nI. Introducción: presentación formal del equipo. Lugar de origen, cantidad de socios, nombre oficial del club, nombre del estadio (aunque no se use en el juego) y año de fundación.\nII. Desarrollo: la historia en profundidad. Cómo y dónde se fundó el club, sus hitos y triunfos más importantes y su situación actual. Opcional: quién es su rival clásico en su país de origen.\nIII. Cierre y diseño: un texto inspirador, una frase propia del club o una chicana característica. Además, cómo querés el logo y el kit: una imagen de referencia, un dibujo o una descripción detallada si no sabés diseñar.\n\nPautas obligatorias:\n1. Formato APA: la historia se presenta con citas y referencias en formato APA.\n2. Realismo: la historia y la información del club tienen que ser lo más verosímiles posible.\n3. Lenguaje apropiado: está prohibido el lenguaje vulgar o inapropiado y los nombres sin sentido.\n4. Coherencia histórica: la narrativa del club tiene que ser lógica y coherente.\n\nLa historia (documento de Word o de Google), el escudo y los kits se envían a la carpeta de Drive de la liga.\n\nCada club crea su cuenta de Twitter/X, para que se sienta más real."
+    },
+    {
+      "id": "presupuestos",
+      "title": "Presupuestos y plantilla",
+      "body": "Este marco normativo busca garantizar la equidad competitiva, fomentar la identidad de los clubes y recompensar la planificación a largo plazo.\n\nEl presupuesto de cada equipo es una cifra fija e inalterable para toda la temporada, calculada para armar una plantilla completa de 21 jugadores (el mínimo exigido). Bajo ninguna circunstancia se permiten ajustes ni inyecciones de capital.\n\nJugador Franquicia\nCada mánager puede incorporar un Jugador Franquicia gratis, sin impacto en su presupuesto. La elección tiene tres condiciones:\n1. Tiene que tener 30 años o más.\n2. Su media tiene que estar entre 81 y 88 (ambos incluidos).\n3. Se permite un solo Jugador Franquicia por equipo, y se anuncia a la administración antes de la apertura del mercado.\n\nMedia del banco\nPara que los planteles sean equilibrados y no se concentren las figuras en el 11 inicial con un banco de relleno:\n• Media mínima del banco: el promedio de los jugadores que no forman parte del 11 inicial tiene que ser de 73 o más.\n• Momento de control: se verifica con la plantilla completa, una vez alcanzado el mínimo de 21 jugadores.\n• Incumplimiento: el club que no llegue a la media mínima tiene que ajustar su plantilla antes del inicio de la Fase de Liga."
+    },
+    {
+      "id": "mercado",
+      "title": "Mercado de fichajes",
+      "body": "La plataforma web de la liga es la única herramienta válida para cualquier transacción (compras o ventas).\n\nFichaje inmediato\n1. Selección: el mánager busca al jugador disponible.\n2. Ejecución: toca «Fichar».\n3. Propiedad: el jugador pasa a su plantilla de manera exclusiva e irrevocable.\nEl primer club que completa la compra se queda con el jugador.\n\nHerramientas de scouting\n• Filtros por posición, media, edad o precio.\n• IA Scout: sugiere jugadores similares si el que buscabas ya lo fichó otro club.\n• Comparador: enfrenta las estadísticas de dos jugadores (radares de atributos, historial y mapas de calor) antes de comprar.\n\nVenta de jugadores\nDesde «Mi equipo», los jugadores se pueden vender al sistema de la liga de forma inmediata. Al vender, el club recupera el 100% de lo que pagó: no hay comisión ni descuento.\n\nTraspasos entre mánagers\nAdemás de fichar jugadores libres, los mánagers pueden negociar entre sí desde la sección de traspasos.\n• Oferta: el interesado envía una oferta por un jugador de otro club; el dueño la acepta o la rechaza.\n• Precio máximo: ninguna oferta puede superar el 115% del valor base del jugador.\n• Comisión de la liga (15%): se cobra solo sobre la prima, es decir, lo pagado por encima del valor base. El vendedor recibe el valor base completo más el 85% de la prima.\n• Ejemplo: un jugador de $40M traspasado por $46M tiene una prima de $6M y una comisión de $0,90M. El comprador paga $46M y el vendedor recibe $45,10M.\n• Garantía para el vendedor: vender por traspaso nunca deja menos dinero que vender al sistema.\n• Ejecución: aceptada la oferta, el jugador pasa al club comprador de inmediato y de forma irrevocable.\n• Canal oficial: solo valen los traspasos hechos en la web. Los acuerdos por fuera no los reconoce la administración.\n\nApertura del mercado\nEl mercado abre el día y a la hora que defina la administración (a definir)."
+    },
+    {
+      "id": "fair-play",
+      "title": "Fair play financiero y soporte",
+      "body": "Reporte de incidencias: cualquier error técnico, inconsistencia en la plataforma o diferencia en el presupuesto se comunica de inmediato, desde el botón «Sugerencias» de la web o hablando directamente con la administración (Santino).\n\nProhibición y sanciones: está prohibido usar software de terceros, programas externos, scripts o bots para automatizar, acelerar o facilitar los fichajes. La competencia tiene que ser puramente humana. Si se comprueba, el mánager y su equipo quedan expulsados de la liga de forma inmediata y definitiva, sin posibilidad de recurso."
+    },
+    {
+      "id": "origen",
+      "title": "Jugadores del país de origen",
+      "body": "Cada club tiene que tener al menos siete (7) jugadores originarios de la localidad, ciudad o zona donde tiene su sede.\n\nSe considera originario al jugador nacido en esa jurisdicción o que tenga su nacionalidad.\n\nNo cumplirlo puede llevar a sanciones, desde multas económicas hasta la pérdida de puntos en la competición."
+    },
+    {
+      "id": "draft",
+      "title": "Draft de jóvenes promesas",
+      "body": "Antes de la apertura del mercado se hace un Draft de jóvenes promesas, inspirado en el de la NBA, para que cada club sume proyección e identidad a su plantel.\n\n• Jugadores elegibles: futbolistas de entre 17 y 21 años, con media de entre 50 y 60 (ambos incluidos).\n• Potenciación: la administración lleva a cada jugador elegido a una media de entre 84 y 86.\n• Orden de elección: inverso a la tabla final de la temporada anterior. El último elige primero y el campeón, último.\n• Rondas: 1.\n• Impacto en el presupuesto: ninguno.\n• Fecha: a definir, siempre antes de la apertura del mercado."
+    },
+    {
+      "id": "sorteo",
+      "title": "Sorteo y comunicación",
+      "body": "Sorteo\nLa Fecha 1 se define por sorteo el día que arranca la competencia, con todos los equipos confirmados. La administración lo hace desde la sección Torneo de la página: el sistema mezcla al azar a los clubes y los empareja de a dos (el primero de cada par es local). El sorteo se revisa antes de confirmarlo y queda publicado en la página. Las fechas siguientes no se sortean: se arman solas por el Sistema Suizo (ver Fase de Liga).\n\nComunicación\nLos cruces de cada fecha, con días y horarios tentativos, se publican en una imagen oficial en el grupo de WhatsApp del torneo, que es la fuente única para organizar los partidos."
+    },
+    {
+      "id": "liga",
+      "title": "Fase de Liga (Sistema Suizo)",
+      "body": "Esta fase define a los 8 equipos que pasan a la Fase Eliminatoria.\n\n• Participación: los 12 equipos inscriptos.\n• Formato: 4 fechas por Sistema Suizo, donde se enfrentan equipos con puntajes parecidos. La Fecha 1 sale del sorteo; desde la Fecha 2, la página arma los cruces sola cuando termina la fecha anterior, eligiendo entre todas las combinaciones la que enfrenta a los equipos con puntajes más parecidos (y, a igual puntaje, con posiciones más cercanas en la tabla).\n\nPuntuación\n1. Victoria en los 90 minutos: 2 puntos.\n2. No hay empates: si el partido termina igualado, se define por penales.\n3. Victoria por penales: 1 punto. Los goles de la tanda no cuentan para la diferencia de gol ni para los goles a favor.\n\nSin cruces repetidos: ningún cruce se repite en la Fase de Liga. El sistema descarta cualquier combinación que repita rival; si no hay forma de emparejar a todos sin repetir, decide la administración.\n\nLocalía: es local el club que menos veces lo fue hasta esa fecha; si están parejos, el mejor ubicado en la tabla. En la Fecha 1, el que sale primero en el sorteo.\n\nDesempate\nSi dos o más equipos terminan con los mismos puntos:\n1. Mejor diferencia de gol.\n2. Más victorias en los 90 minutos.\n3. Más victorias totales (incluidas las de penales).\n4. Más goles a favor.\n5. Si sigue el empate, decide la administración."
+    },
+    {
+      "id": "eliminatoria",
+      "title": "Fase Eliminatoria (Copa de Oro)",
+      "body": "Los 8 clasificados juegan eliminación directa: el que pierde, queda afuera.\n\nCuartos de final, según la tabla de la Fase de Liga:\n• 1.º vs. 8.º\n• 4.º vs. 5.º\n• 2.º vs. 7.º\n• 3.º vs. 6.º\n\nSemifinales: el ganador de 1.º vs. 8.º enfrenta al de 4.º vs. 5.º, y el de 2.º vs. 7.º al de 3.º vs. 6.º. La página lleva a cada ganador a su próximo cruce a medida que se cargan los resultados.\n\nTodas las instancias son a partido único. Si termina empatado, se juega tiempo extra y, si sigue igualado, penales."
+    },
+    {
+      "id": "plata",
+      "title": "Copa de Plata",
+      "body": "La Copa de Plata es la segunda oportunidad de ganar un título para los equipos que no lo lograron en la Copa de Oro, por no clasificar o por quedar eliminados en cuartos.\n\nLa juegan los cuatro últimos de la Fase de Liga (9.º a 12.º) y los 4 eliminados en cuartos de final de la Copa de Oro. Son tres rondas de eliminación directa, a partido único, con tiempo extra y penales como en la Copa de Oro. La página arma cada cruce sola a medida que se cargan los resultados.\n\n1. 1er Reducido: los clubes del 9.º al 12.º de la Fase de Liga enfrentan a los 4 eliminados en cuartos de la Copa de Oro. El 9.º juega contra el peor ubicado de esos cuatro en la tabla, y así hasta el 12.º contra el mejor ubicado. Los cuatro ganadores pasan al 2do Reducido.\n2. 2do Reducido (semifinal): ganador del cruce 1 vs. ganador del cruce 2, y ganador del cruce 3 vs. ganador del cruce 4.\n3. Final de Plata: los dos ganadores del 2do Reducido juegan por el trofeo."
+    },
+    {
+      "id": "formato",
+      "title": "Formato de los partidos",
+      "body": "Los partidos duran 8 minutos, con 5 cambios.\n\nSe juegan los partidos cuyos jugadores estén presentes el día de la fecha. Si falta un jugador, se busca un reemplazo, y el ausente se hace cargo de los resultados."
+    },
+    {
+      "id": "transmisiones",
+      "title": "Transmisiones en vivo",
+      "body": "Al sumarse a la liga, todos los participantes aceptan que sus partidos se transmitan en vivo por los canales oficiales.\n\n• Consentimiento: cada jugador de los equipos inscriptos en la Temporada 3 acepta aparecer en el contenido del canal oficial de la liga en Kick: partidos, entrevistas antes y después, análisis y cualquier otro contenido de la competencia.\n• Plataforma: Kick es la plataforma oficial de las transmisiones. Cada participante está atento a los horarios y a que cualquiera de sus partidos puede ser elegido para transmitirse.\n• Derechos de imagen: la liga puede usar las grabaciones para promoción, resúmenes, repeticiones y archivo, siempre dentro de la Supercontinental League.\n\nAceptar este punto es requisito para participar. Negarse u obstruir a propósito la transmisión de un partido programado puede llevar a sanciones de la administración."
+    }
+  ]
+}
