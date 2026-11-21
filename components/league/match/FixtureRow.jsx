@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { formatFixtureDate } from '../../../utils/leagueFixtures.js';
+import { formatEta } from '../../../utils/matchEta.js';
 
 /* Una fila de partido del fixture (utils/leagueFixtures.js), al estilo de los centros de partidos: estado a la
    izquierda, los dos clubes con escudo, el marcador a la derecha. La usan la portada y /partidos. */
@@ -54,6 +55,11 @@ function StatusCell({ fixture, quiet = false }) {
   }
   if (STATUS[fixture.status]) return <span className={STATUS[fixture.status].className}>{STATUS[fixture.status].label}</span>;
   const when = formatFixtureDate(fixture);
+  if (fixture.etaMs) {
+    // Estimated from how long the round's games are taking; the scheduled time stays in the tooltip.
+    const day = formatFixtureDate({ date: fixture.date });
+    return <span className="text-ink-2" title={when ? `Programado: ${when}` : undefined}>{[day, formatEta(fixture.etaMs)].filter(Boolean).join(' · ')}</span>;
+  }
   return <span className="text-ink-2">{when || 'A confirmar'}</span>;
 }
 

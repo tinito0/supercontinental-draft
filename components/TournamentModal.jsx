@@ -34,6 +34,7 @@ import { Alert } from './ui/Alert.jsx';
 import { confirmAction } from './ui/ConfirmDialog.jsx';
 import { draftUrl } from '../utils/siteRoutes.js';
 import { CollectorImportAdmin } from './admin/CollectorImportAdmin.jsx';
+import { useMatchEtas } from '../hooks/useMatchEtas.js';
 
 export {
   TournamentTeamsContext,
@@ -91,6 +92,8 @@ export const TournamentModal = memo(function TournamentModal({
   const editStartDataRef = useRef(null);
   const changedWhileEditing = isEditing && editStartDataRef.current !== null && editStartDataRef.current !== tournamentData;
 
+  // Estimated kickoffs of the round being played (utils/matchEta.js), from the published tournament.
+  const etaById = useMatchEtas(tournamentData, allTeams);
   const teamOptions = useMemo(() => Object.entries(allTeams || {})
     .map(([id, team]) => ({ id, name: String(team?.teamName || '').trim() }))
     .filter(team => team.name)
@@ -399,6 +402,7 @@ export const TournamentModal = memo(function TournamentModal({
       {activeTab === 'matches' && (
         <MatchCenter
           matches={localData.matches}
+          etaById={etaById}
           isEditing={isEditing}
           onUpdate={updateTournamentMatch}
           onAdd={addTournamentMatch}

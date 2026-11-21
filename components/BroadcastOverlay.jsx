@@ -131,7 +131,7 @@ function MatchPanel({ scene, data, home, away, live, fixture, season }) {
  *   live?: object, liveMatch?: object|null, overlayLoaded?: boolean }} props
  *   overlayLoaded: false mientras la fuente de OBS espera el doc del overlay (el popup que ya estaba no vuelve a salir).
  */
-export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, allTeams, tournamentData, forcedScene, live, liveMatch, season = null, overlayLoaded = true }) {
+export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, allTeams, tournamentData, forcedScene, live, liveMatch, season = null, overlayLoaded = true, etaById = null }) {
   const data = { ...DEFAULT_BROADCAST_OVERLAY, ...(overlayData || {}) };
   const scene = forcedScene || data.scene || 'live';
 
@@ -145,8 +145,9 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
   const { matchId, liveMatchKey } = data;
   const fixtures = useMemo(
     // teamsById: sin partido al aire, el juego en vivo se vincula por los clubes del draft (tabla en vivo).
-    () => buildFixtures({ tournament: tournamentData, liveMatches: liveMatch ? [liveMatch] : [], overlay: { matchId, liveMatchKey }, teamsById: allTeams || {} }),
-    [tournamentData, liveMatch, matchId, liveMatchKey, allTeams],
+    () => buildFixtures({ tournament: tournamentData, liveMatches: liveMatch ? [liveMatch] : [], overlay: { matchId, liveMatchKey }, teamsById: allTeams || {} })
+      .map(fixture => (etaById?.has(fixture.id) ? { ...fixture, etaMs: etaById.get(fixture.id) } : fixture)),
+    [tournamentData, liveMatch, matchId, liveMatchKey, allTeams, etaById],
   );
   const onAirFixture = fixtures.find(fixture => fixture.id === matchId) || null;
   // homeTeamName/awayTeamName vienen del partido elegido en el panel: cubren clubes del torneo sin cuenta.
