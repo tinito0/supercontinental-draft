@@ -6,7 +6,7 @@ import path from 'node:path';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { createFirestore } from '../../supabase/functions/_shared/firestoreRest.js';
-import { castVote, CommunityVoteError, MAX_VOTES_PER_IP, MVP_GRACE_MS, parseVote, predictionClosure } from '../../supabase/functions/_shared/communityVote.js';
+import { castVote, CommunityVoteError, MANAGER_WINDOW_MS, MAX_VOTES_PER_IP, parseVote, predictionClosure } from '../../supabase/functions/_shared/communityVote.js';
 
 const PROJECT = 'demo-scl';
 const APP = 'scl-draft-2025';
@@ -25,7 +25,7 @@ const vote = (body, { ip = 'ip1', dev = 1, now = Date.now() } = {}) => castVote(
   firestore, appId: APP, vote: parseVote({ deviceId: device(dev), ...body }), ipHash: ip, deviceHash: `h${dev}`, now,
 });
 const predict = (choice, opts) => vote({ kind: 'prediction', matchId: 'm12', choice }, opts);
-const mvp = (choice, opts) => vote({ kind: 'mvp', matchKey: KEY, choice }, opts);
+const manager = (choice, opts) => vote({ kind: 'manager', roundId: 'fecha-3', choice }, opts);
 const rejects = (promise, pattern) => expect(promise).rejects.toSatisfy(e => e instanceof CommunityVoteError && pattern.test(e.message));
 
 async function read(p) {
@@ -75,18 +75,30 @@ describe('predictions', () => {
   });
 });
 
-describe('MVP', () => {
-  it('accepts players who played, during the match', async () => {
-    await mvp(12, { dev: 1 });
-    expect(await mvp(10, { dev: 2 })).toEqual({ votes: { 12: 1, 10: 1 }, total: 2 });
-    await rejects(mvp(999, { dev: 3 }), /no jugó/);
+describe('manager de la fecha', () => {
+  const end = new Date(Date.now() - 60_000);
+  const round = (status = 'completed') => seed(async db => {
+    await setDoc(doc(db, `${base}/tournament/official`), {
+      matches: [
+        { id: '1', round: 'Fecha 3', homeTeam: 'Los Pibes', awayTeam: 'La Banda', status, homeScore: 2, awayScore: 1, importedFrom: KEY },
+      ],
+    });
+    await setDoc(doc(db, `${base}/live_matches/${KEY}`), { status: 'finished', updatedAt: end, finishedAt: end, summaryJson: JSON.stringify(summary) });
   });
 
-  it('stays open 15 minutes after the end, then closes', async () => {
-    const end = new Date(Date.now() - 60_000);
-    await setLive('finished', end);
-    await mvp(20, { dev: 1 });
-    await rejects(mvp(20, { dev: 2, now: end.getTime() + MVP_GRACE_MS + 1 }), /ya cerró/);
+  it('accepts the clubs of a finished round, one vote per browser, and records when it opened', async () => {
+    await round();
+    await manager('Los Pibes', { dev: 1 });
+    expect(await manager('La Banda', { dev: 2 })).toEqual({ votes: { 'Los Pibes': 1, 'La Banda': 1 }, total: 2 });
+    await rejects(manager('Otro Club', { dev: 3 }), /no jugó/);
+    expect((await read(`${base}/manager_votes/fecha-3`)).openedAt).toBeTruthy();
+  });
+
+  it('is closed before the last result and 24 h after the round ended', async () => {
+    await round('scheduled');
+    await rejects(manager('Los Pibes', { dev: 1 }), /todavía no terminó/);
+    await round();
+    await rejects(manager('Los Pibes', { dev: 2, now: end.getTime() + MANAGER_WINDOW_MS + 1 }), /ya cerró/);
   });
 });
 
@@ -121,10 +133,10 @@ describe('rules', () => {
     const visitor = env.unauthenticatedContext().firestore();
     const fan = env.authenticatedContext('fan').firestore();
     await assertSucceeds(getDoc(doc(visitor, `${base}/predictions/m12`)));
-    await assertSucceeds(getDoc(doc(visitor, `${base}/mvp_votes/${KEY}`)));
-    await assertSucceeds(getDocs(collection(visitor, `${base}/mvp_votes`)));
+    await assertSucceeds(getDoc(doc(visitor, `${base}/manager_votes/fecha-3`)));
+    await assertSucceeds(getDocs(collection(visitor, `${base}/manager_votes`)));
     await assertFails(setDoc(doc(fan, `${base}/predictions/m12`), { votes: { home: 999 }, total: 999 }));
-    await assertFails(setDoc(doc(fan, `${base}/mvp_votes/${KEY}`), { votes: { 10: 999 } }));
+    await assertFails(setDoc(doc(fan, `${base}/manager_votes/fecha-3`), { votes: { 'Los Pibes': 999 } }));
     await assertSucceeds(getDoc(doc(visitor, `${base}/polls/copa-oro`)));
     await assertFails(setDoc(doc(fan, `${base}/polls/copa-oro`), { open: true, votes: { team_7: 999 } }));
     await assertFails(getDoc(doc(fan, 'community_ballots/prediction_m12_h1')));

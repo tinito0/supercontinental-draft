@@ -55,7 +55,7 @@ describe('liveOverlayUpdate (match-feed → overlay)', () => {
     expect(run(live(1, 11), { liveMatchKey: key })).toBeNull();
   });
 
-  it('shows the MVP popup at half-time (second half clock at 45:00) and only once', () => {
+  it('shows the vote popup at half-time (second half clock at 45:00) and only once', () => {
     const update = run(live(2, 45), { liveMatchKey: key, popup: { position: 'left' } });
     expect(update.mask).toEqual(['popup', 'autoPopupDone']);
     expect(update.data.autoPopupDone).toBe(`${key}:half`);
@@ -87,14 +87,13 @@ describe('liveOverlayUpdate (match-feed → overlay)', () => {
     expect(run(live(2, 45), { autoPopup: false })).toEqual({ data: { liveMatchKey: key }, mask: ['liveMatchKey'] });
   });
 
-  it('shows the prediction card when a new match goes live, and the MVP card from minute 70', () => {
+  it('shows the prediction card when a new match goes live, and no other card during the match', () => {
     const kickoff = run(live(1, 0));
     expect(kickoff.mask).toEqual(['liveMatchKey', 'card', 'autoCardDone']);
     expect(kickoff.data.card).toEqual({ visible: true, kind: 'prediction', autoHideSec: AUTO_CARD_SECONDS, shownAt: ctx.now });
     expect(run(live(2, 69), { liveMatchKey: key, autoCardDone: `${key}:kickoff`, autoPopupDone: `${key}:half` })).toBeNull();
-    const mvp = run(live(2, 70), { liveMatchKey: key, autoCardDone: `${key}:kickoff`, autoPopupDone: `${key}:half` });
-    expect(mvp.data).toMatchObject({ card: { kind: 'mvp' }, autoCardDone: `${key}:mvp` });
-    expect(run(live(2, 80), { liveMatchKey: key, autoCardDone: `${key}:mvp`, autoPopupDone: `${key}:half` })).toBeNull();
+    // El manager de la fecha se vota cuando termina la fecha: ya no hay tarjeta automática desde el minuto 70.
+    expect(run(live(2, 80), { liveMatchKey: key, autoCardDone: `${key}:kickoff`, autoPopupDone: `${key}:half` })).toBeNull();
     expect(run(live(1, 0), { autoPopup: false }).mask).toEqual(['liveMatchKey']);
   });
 
@@ -113,9 +112,9 @@ describe('liveOverlayUpdate (match-feed → overlay)', () => {
 
 describe('parseObsArgs (scl-obs)', () => {
   it('builds community card commands', () => {
-    expect(parseObsArgs(['card', 'MVP', '15'])).toEqual({ action: 'card', kind: 'mvp', seconds: 15 });
+    expect(parseObsArgs(['card', 'MANAGER', '15'])).toEqual({ action: 'card', kind: 'manager', seconds: 15 });
     expect(parseObsArgs(['card', 'off'])).toEqual({ action: 'card', kind: 'off' });
-    expect(() => parseObsArgs(['card', 'mvp', 'x'])).toThrow(/Uso/);
+    expect(() => parseObsArgs(['card', 'manager', 'x'])).toThrow(/Uso/);
     expect(parseObsArgs(['toggle', 'auto', 'off'])).toEqual({ action: 'toggle', target: 'auto', value: 'off' });
   });
 

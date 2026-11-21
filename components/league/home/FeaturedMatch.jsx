@@ -197,11 +197,7 @@ export function FeaturedMatch({ featured, clubOf, prediction, liveMatch = null }
       <Link to={action.to} className={`btn btn-lg mt-5 w-full ${action.primary ? 'btn-primary' : 'btn-secondary'}`}>
         {action.icon && <action.icon className="h-4 w-4" aria-hidden="true" />} {action.label} <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </Link>
-      {kind === 'live' && (
-        <Link to="/en-vivo" className="mt-1 flex min-h-11 items-center justify-center gap-1.5 text-sm font-semibold text-accent-soft hover:text-ink">
-          <Vote className="h-4 w-4" aria-hidden="true" /> Votá al mejor del partido
-        </Link>
-      )}
+
     </article>
   );
 }

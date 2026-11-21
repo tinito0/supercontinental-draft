@@ -204,16 +204,16 @@ describe('community card and live scenes (overlay en vivo)', () => {
     score: { home: 2, away: 1 },
     scorers: { home: [{ key: 'g0', name: 'Saka', minute: "12'", tag: '' }], away: [{ key: 'g1', name: 'Nine', minute: "61'", tag: 'p.' }] },
     prediction: { home: 50, draw: 30, away: 20, total: 10, leader: 'home' },
-    mvp: { id: 7, name: 'Saka', votes: 5, pct: 63 },
-    mvpTop: [{ id: 7, name: 'Saka', votes: 5, pct: 63 }, { id: 9, name: 'Nine', votes: 3, pct: 37 }],
+    manager: { title: 'Fecha 3', open: true, total: 8, top: [{ club: 'Talleres', votes: 5, pct: 63 }, { club: 'SK Konya', votes: 3, pct: 37 }] },
     cup: { title: '¿Quién gana la Copa de Oro?', open: true, total: 4, options: [{ id: 'a', name: 'Los Pibes', votes: 3, pct: 75 }, { id: 'b', name: 'La Banda', votes: 1, pct: 25 }] },
   };
   const overlay = card => ({ scene: 'live', homeTeamName: 'Arsenal', awayTeamName: 'Gençlerbirliği', card: { visible: true, autoHideSec: 20, shownAt: now, ...card } });
 
-  it('shows the MVP leader with its share during the match', () => {
-    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={overlay({ kind: 'mvp' })} live={live} />);
-    expect(html).toContain('MVP en vivo');
-    expect(html).toContain('Saka');
+  it('shows the manager of the round with each share', () => {
+    const html = renderToStaticMarkup(<BroadcastOverlay overlayData={overlay({ kind: 'manager' })} live={live} />);
+    expect(html).toContain('Manager de la Fecha 3');
+    expect(html).toContain('Votá en /en-vivo');
+    expect(html).toContain('Talleres');
     expect(html).toContain('63%');
     expect(html).toContain('is-leader');
   });
@@ -228,16 +228,16 @@ describe('community card and live scenes (overlay en vivo)', () => {
 
   it('shows the cup poll and hides the card when there are no votes or it expired', () => {
     expect(renderToStaticMarkup(<BroadcastOverlay overlayData={overlay({ kind: 'cup' })} live={live} />)).toContain('Los Pibes');
-    expect(renderToStaticMarkup(<BroadcastOverlay overlayData={overlay({ kind: 'mvp' })} live={{ ...live, mvpTop: [] }} />)).not.toContain('scl-card');
-    expect(renderToStaticMarkup(<BroadcastOverlay overlayData={overlay({ kind: 'mvp', shownAt: now - 60_000 })} live={live} />)).not.toContain('scl-card');
+    expect(renderToStaticMarkup(<BroadcastOverlay overlayData={overlay({ kind: 'manager' })} live={{ ...live, manager: null }} />)).not.toContain('scl-card');
+    expect(renderToStaticMarkup(<BroadcastOverlay overlayData={overlay({ kind: 'manager', shownAt: now - 60_000 })} live={live} />)).not.toContain('scl-card');
   });
 
-  it('the final scene uses the game score, the scorers and the community MVP', () => {
+  it('the final scene uses the game score and the scorers, with no player vote', () => {
     const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'final', homeScore: '0', awayScore: '0' }} live={live} />);
     expect(html).toContain('2-1');
     expect(html).toContain('Saka');
     expect(html).toContain("61&#x27; p.");
-    expect(html).toContain('MVP de la comunidad');
+    expect(html).not.toContain('MVP');
   });
 
   it('the previa scene shows the community prediction', () => {
@@ -284,8 +284,8 @@ describe('BroadcastOverlay full-screen and tournament scenes', () => {
 
   it('moves the community card to the right when the popup is on the left', () => {
     const now = Date.now();
-    const live = { mvpTop: [{ id: 1, name: 'Saka', pct: 60, votes: 3 }], mvp: null };
-    const overlayData = { scene: 'live', popup: { ...popup, position: 'left', shownAt: now }, card: { visible: true, kind: 'mvp', autoHideSec: 0, shownAt: now } };
+    const live = { manager: { title: 'Fecha 1', open: true, total: 3, top: [{ club: 'Talleres', pct: 100, votes: 3 }] } };
+    const overlayData = { scene: 'live', popup: { ...popup, position: 'left', shownAt: now }, card: { visible: true, kind: 'manager', autoHideSec: 0, shownAt: now } };
     const html = renderToStaticMarkup(<BroadcastOverlay overlayData={overlayData} live={live} />);
     expect(html).toMatch(/scl-card[^>]*data-position="right"/);
   });

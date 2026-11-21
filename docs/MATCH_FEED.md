@@ -121,7 +121,7 @@ El camino es Macro Deck → `pes-collector/bridge/scl-obs.cmd` → `obs.mjs` →
   - body JSON, por ejemplo `{"action":"scene","scene":"previa"}`,
     `{"action":"popup","preset":"tabla","seconds":30}`, `{"action":"popup","preset":"off"}` o
     `{"action":"toggle","target":"ticker","value":"off"}`.
-  - tarjetas de la comunidad: `{"action":"card","kind":"mvp","seconds":20}` (también `prediction`, `cup` y `off`);
+  - tarjetas de la comunidad: `{"action":"card","kind":"manager","seconds":20}` (también `prediction`, `cup` y `off`);
   - modo automático: `{"action":"toggle","target":"auto","value":"off"}`.
 
   La lista completa, con botones para copiar, está en Admin → Overlay → «Botones de Macro Deck 3».
@@ -131,7 +131,7 @@ El camino es Macro Deck → `pes-collector/bridge/scl-obs.cmd` → `obs.mjs` →
   - `popup tabla 30`: popups `liga`, `tabla`, `equipos`, con segundos (0 = fijo) y posición opcional `right`, `left` o
     `center`;
   - `popup off`;
-  - `card mvp 20`: tarjetas `mvp`, `prediction`, `cup` y `off`;
+  - `card manager 20`: tarjetas `manager`, `prediction`, `cup` y `off`;
   - `toggle ticker off`: elementos `marcador`, `lower`, `ticker` y `auto`.
 - **Necesita:** Node en el PATH y `%APPDATA%\scl-bridge\config.json`, creado por `setup.mjs`.
 - **Si falla:** el resultado queda en `_bridge\obs.log`.

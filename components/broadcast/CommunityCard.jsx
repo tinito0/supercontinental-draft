@@ -2,9 +2,9 @@ import React, { memo } from 'react';
 import { CommunityFrame } from './CommunityFrame.jsx';
 import { LEAVE_MS, shownKey, useRemaining } from './OverlayPopup.jsx';
 
-// Tarjeta de la comunidad sobre el overlay de OBS (lado izquierdo, el popup con QR va a la derecha): el MVP que va
-// ganando, la predicción del partido o la encuesta de la copa, con los votos en vivo (utils/overlayLive.js).
-// La muestran el admin, Macro Deck (action card) o match-feed solo (al arrancar y desde el minuto 70).
+// Tarjeta de la comunidad sobre el overlay de OBS (lado izquierdo, el popup con QR va a la derecha): el manager de la
+// fecha, la predicción del partido o la encuesta de la copa, con los votos en vivo (utils/overlayLive.js).
+// La muestran el admin, Macro Deck (action card) o match-feed solo (la predicción, al arrancar un partido).
 
 const PREDICTION_LABEL = { home: null, draw: 'Empate', away: null };
 
@@ -30,11 +30,11 @@ function verdict(shares, homeName, awayName) {
 }
 
 function cardContent(kind, live, homeName, awayName) {
-  if (kind === 'mvp' && live?.mvpTop?.length) {
+  if (kind === 'manager' && live?.manager) {
     return {
-      title: 'MVP en vivo',
-      aside: 'Votá en /en-vivo',
-      rows: live.mvpTop.map((entry, index) => ({ key: String(entry.id), label: entry.name, pct: entry.pct, isLeader: index === 0 })),
+      title: `Manager de la ${live.manager.title}`,
+      aside: live.manager.open ? 'Votá en /en-vivo' : 'Votación cerrada',
+      rows: live.manager.top.map((entry, index) => ({ key: entry.club, label: entry.club, pct: entry.pct, isLeader: index === 0 })),
     };
   }
   if (kind === 'prediction' && live?.prediction) {

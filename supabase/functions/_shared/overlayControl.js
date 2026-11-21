@@ -13,15 +13,16 @@ export const OVERLAY_TOGGLES = { marcador: 'showScoreboard', lower: 'showLowerTh
 export const DEFAULT_SITE_URL = 'https://supercontinental-draft.vercel.app';
 
 export const POPUP_PRESETS = [
-  { id: 'vota', title: 'Votá al mejor del partido', text: 'Escaneá, predecí y elegí al MVP. Sin cuenta.', path: '/en-vivo' },
+  { id: 'vota', title: 'Votá en la web', text: 'Predecí los partidos y elegí al manager de la fecha. Sin cuenta.', path: '/en-vivo' },
   { id: 'liga', title: 'Seguí la Supercontinental', text: 'Resultados, tabla y equipos en la web.', path: '/' },
   { id: 'tabla', title: 'Tabla y copas en vivo', text: 'Escaneá y seguí el torneo desde el celular.', path: '/torneo' },
   { id: 'equipos', title: 'Conocé a los equipos', text: 'Planteles e historia de cada club.', path: '/equipos' },
 ];
 
 export const POPUP_DEFAULT_SECONDS = 30;
-// Tarjetas de la comunidad (components/broadcast/CommunityCard.jsx): MVP en vivo, predicción y encuesta de la copa.
-export const OVERLAY_CARD_KINDS = ['mvp', 'prediction', 'cup'];
+// Tarjetas de la comunidad (components/broadcast/CommunityCard.jsx): manager de la fecha, predicción y encuesta de
+// la copa.
+export const OVERLAY_CARD_KINDS = ['manager', 'prediction', 'cup'];
 export const CARD_DEFAULT_SECONDS = 20;
 const MAX_POPUP_SECONDS = 600;
 
@@ -100,15 +101,14 @@ export function buildOverlayCommand(command, { siteUrl, now }) {
   }
 }
 
-// Popup automático «Votá el MVP» (docs/COMMUNITY_PLATFORM.md, C3). Lo dispara match-feed con cada subida del bridge.
+// Popup automático «Votá en la web» (docs/COMMUNITY_PLATFORM.md, C3). Lo dispara match-feed con cada subida del bridge.
 export const AUTO_POPUP_SECONDS = 45;
 export const AUTO_CARD_SECONDS = 20;
-const MVP_CARD_MINUTE = 70;
 const HALF_TIME_MINUTE = 45;
 // Períodos del segundo tiempo según el probe: 2, y 3/4 en el descuento y el alargue. El 5 aparece en repeticiones
 // del primer tiempo, así que no cuenta.
 const SECOND_HALF_PERIODS = [2, 3, 4];
-const STAGE_ORDER = { half: 1, final: 2, kickoff: 1, mvp: 2 };
+const STAGE_ORDER = { half: 1, final: 2, kickoff: 1 };
 
 function autoPopupStage(doc) {
   if (doc.status === 'finished') return 'final';
@@ -117,11 +117,10 @@ function autoPopupStage(doc) {
   return null;
 }
 
-// Tarjetas automáticas: la predicción cuando arranca un partido nuevo y el MVP desde el minuto 70.
+// Tarjeta automática: la predicción cuando arranca un partido nuevo. El manager de la fecha se vota cuando termina la
+// fecha, no durante un partido: su tarjeta la pone el admin.
 function autoCardStage(doc, isNewMatch) {
   if (doc.status !== 'live') return null;
-  const clock = doc.clock || {};
-  if (SECOND_HALF_PERIODS.includes(clock.period) && (clock.minute ?? 0) >= MVP_CARD_MINUTE) return 'mvp';
   return isNewMatch ? 'kickoff' : null;
 }
 
@@ -134,7 +133,7 @@ function stageDone(marker, matchKey, stage) {
  * Qué cambia en el overlay cuando el bridge sube un partido:
  * - `liveMatchKey`: el partido en vivo, que usan las escenas Entretiempo y Final.
  * - el popup «vota», una vez en el entretiempo (o al arrancar el segundo tiempo si se saltea) y otra al final.
- * - la tarjeta de la comunidad: la predicción al arrancar y el MVP que va ganando desde el minuto 70.
+ * - la tarjeta de la comunidad: la predicción al arrancar.
  * Un partido terminado solo cuenta si fue el que estaba en vivo: el bridge reenvía partidos viejos al arrancar.
  * El admin lo apaga con `autoPopup: false`.
  * @returns {null | { data: object, mask: string[] }}
@@ -160,7 +159,7 @@ export function liveOverlayUpdate({ doc, overlay, siteUrl, now }) {
   }
   const cardStage = autoCardStage(doc, Boolean(data.liveMatchKey));
   if (cardStage && overlay?.autoPopup !== false && !stageDone(overlay?.autoCardDone, doc.matchKey, cardStage)) {
-    data.card = buildOverlayCommand({ action: 'card', kind: cardStage === 'kickoff' ? 'prediction' : 'mvp', seconds: AUTO_CARD_SECONDS }, { siteUrl, now }).data.card;
+    data.card = buildOverlayCommand({ action: 'card', kind: 'prediction', seconds: AUTO_CARD_SECONDS }, { siteUrl, now }).data.card;
     data.autoCardDone = `${doc.matchKey}:${cardStage}`;
     mask.push('card', 'autoCardDone');
   }

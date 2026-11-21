@@ -1,14 +1,14 @@
-// Votos del público sin cuenta (docs/COMMUNITY_PLATFORM.md): predicción de quién gana un partido del fixture y MVP de
-// un partido en vivo. Las reglas de las ventanas y la validación viven acá, puras; la Edge Function `community-vote`
-// las aplica en una transacción. tests/communityVote.test.js.
+// Votos del público sin cuenta (docs/COMMUNITY_PLATFORM.md): predicción de quién gana un partido del fixture, manager
+// de la fecha (el que mejor manejó su equipo en el PES) y encuestas de la copa. Las reglas de las ventanas y la
+// validación viven acá, puras; la Edge Function `community-vote` las aplica en una transacción.
+// tests/communityVote.test.js.
 
-export const MVP_GRACE_MS = 15 * 60 * 1000;       // el MVP se sigue votando 15 min después del final
-// Un partido «en vivo» sin subidas del bridge durante este tiempo se da por cortado: el MVP deja de votarse
-// (antes quedaba abierto para siempre si el bridge se cerraba en medio del partido).
-export const LIVE_SIGNAL_MS = 10 * 60 * 1000;
+// El manager de la fecha se vota cuando termina el último partido de la fecha y durante las 24 h siguientes.
+export const MANAGER_WINDOW_MS = 24 * 60 * 60 * 1000;
 export const MAX_VOTES_PER_IP = 8;                 // casas o bares con varios votantes; no es una barrera total
 const DEVICE_ID = /^[A-Za-z0-9-]{16,64}$/;
-const MATCH_KEY = /^\d{8}T\d{6}Z_\d{1,6}-\d{1,6}$/;
+const ROUND_ID = /^fecha-(\d{1,2})$/;
+const CLUB_NAME_MAX = 80;
 const FIXTURE_ID = /^[A-Za-z0-9_-]{1,80}$/;
 const POLL_ID = /^[a-z0-9-]{1,40}$/;
 const OPTION_ID = /^[A-Za-z0-9_-]{1,80}$/;
@@ -76,7 +76,7 @@ const fail = (message, status) => { throw new CommunityVoteError(message, status
 
 /**
  * @param {unknown} body { kind: 'prediction', matchId, choice: 'home'|'draw'|'away', deviceId }
- *                       | { kind: 'mvp', matchKey, choice: playerId, deviceId }
+ *                       | { kind: 'manager', roundId: 'fecha-<n>', choice: nombre del club, deviceId }
  *                       | { kind: 'cup', pollId, choice: optionId, deviceId }  (encuesta «¿quién gana la copa?»)
  */
 export function parseVote(body) {
@@ -87,11 +87,11 @@ export function parseVote(body) {
     if (!PREDICTION_CHOICES.includes(body.choice)) fail('Elegí local, empate o visitante.');
     return { kind: 'prediction', target: body.matchId, choice: body.choice, deviceId: body.deviceId };
   }
-  if (body.kind === 'mvp') {
-    if (typeof body.matchKey !== 'string' || !MATCH_KEY.test(body.matchKey)) fail('Partido inválido.');
-    const playerId = Number(body.choice);
-    if (!Number.isInteger(playerId) || playerId <= 0) fail('Jugador inválido.');
-    return { kind: 'mvp', target: body.matchKey, choice: playerId, deviceId: body.deviceId };
+  if (body.kind === 'manager') {
+    if (typeof body.roundId !== 'string' || !ROUND_ID.test(body.roundId)) fail('Fecha inválida.');
+    const club = typeof body.choice === 'string' ? body.choice.trim() : '';
+    if (!club || club.length > CLUB_NAME_MAX) fail('Club inválido.');
+    return { kind: 'manager', target: body.roundId, choice: club, deviceId: body.deviceId };
   }
   if (body.kind === 'cup') {
     if (typeof body.pollId !== 'string' || !POLL_ID.test(body.pollId)) fail('Encuesta inválida.');
@@ -122,33 +122,54 @@ export function pollWindow(poll, choice) {
   return { open: true };
 }
 
-/** Jugadores que jugaron el partido: titulares y los que entraron, de los dos equipos. */
-export function mvpCandidates(summary) {
-  const ids = new Set();
-  for (const side of ['home', 'away']) {
-    for (const id of summary?.lineups?.[side]?.starting || []) ids.add(id);
-  }
-  for (const sub of summary?.substitutions || []) ids.add(sub.onId);
-  return ids;
+/** Id de la fecha para la votación: «Fecha 4» → «fecha-4»; null si el nombre no tiene número. */
+export function roundIdOf(label) {
+  const number = /(\d{1,2})/.exec(String(label || ''))?.[1];
+  return number ? `fecha-${Number(number)}` : null;
 }
 
 /**
- * MVP: abierto durante el partido (mientras el bridge siga subiendo datos) y hasta 15 minutos después del final.
- * El final es `finishedAt`, que match-feed pone una sola vez: antes se contaba desde la última subida, y reenviar un
- * partido viejo reabría la votación. Docs anteriores sin finishedAt usan la última subida.
- * @param {{ status, updatedAtMs, finishedAtMs? }} live doc de live_matches
+ * Los partidos de liga de una fecha en el torneo, con los dos clubes, si ya se cargó el resultado y el partido del
+ * juego del que se importó (importedFrom), si lo hay.
+ * @returns {{ home: string, away: string, completed: boolean, importedFrom: string|null, homeScore, awayScore }[]}
  */
-export function mvpWindow(live, now) {
-  if (!live) return { open: false, reason: 'Ese partido no existe.' };
-  if (live.status === 'live') {
-    if (Number.isFinite(live.updatedAtMs) && now - live.updatedAtMs > LIVE_SIGNAL_MS) {
-      return { open: false, reason: 'Se perdió la conexión con el partido: la votación del MVP está cerrada.' };
-    }
-    return { open: true };
+export function roundFixtures(tournament, roundId) {
+  const number = Number(ROUND_ID.exec(String(roundId || ''))?.[1]);
+  if (!number) return [];
+  return (tournament?.matches || [])
+    .filter(match => /fecha/i.test(String(match?.round || '')) && roundIdOf(match.round) === roundId)
+    .map(match => ({
+      home: String(match.homeTeam || '').trim(),
+      away: String(match.awayTeam || '').trim(),
+      completed: match.status === 'completed',
+      importedFrom: typeof match.importedFrom === 'string' && match.importedFrom ? match.importedFrom : null,
+      // Solo para mostrar en /en-vivo qué hizo cada club en la fecha; la ventana no los usa.
+      homeScore: match.homeScore ?? null,
+      awayScore: match.awayScore ?? null,
+    }));
+}
+
+/**
+ * Manager de la fecha: abre cuando todos los partidos de la fecha tienen resultado y queda abierta MANAGER_WINDOW_MS.
+ * El final de la fecha es el `finishedAt` más nuevo de sus partidos del juego (live_matches, lo pone match-feed). Si
+ * algún resultado se cargó a mano (sin partido del juego), no hay hora de final: cuenta desde el primer voto
+ * (`openedAt` del doc de votos, lo pone esta función).
+ * @param {{ fixtures: ReturnType<typeof roundFixtures>, finishedAtMs?: number[], openedAtMs?: number, now: number }} input
+ *   finishedAtMs: el finishedAt de cada partido importado de la fecha (NaN si no tiene)
+ * @returns {{ open: true, candidates: Set<string>, closesAtMs: number|null } | { open: false, reason: string, closesAtMs?: number }}
+ */
+export function managerWindow({ fixtures, finishedAtMs = [], openedAtMs = NaN, now }) {
+  if (!fixtures.length) return { open: false, reason: 'Esa fecha no está en el torneo.' };
+  if (fixtures.some(fixture => !fixture.completed)) {
+    return { open: false, reason: 'La fecha todavía no terminó: la votación abre cuando se juega el último partido.' };
   }
-  const end = Number.isFinite(live.finishedAtMs) ? live.finishedAtMs : live.updatedAtMs;
-  if (live.status === 'finished' && Number.isFinite(end) && now - end <= MVP_GRACE_MS) return { open: true };
-  return { open: false, reason: 'La votación del MVP ya cerró.' };
+  const allTimed = fixtures.every(fixture => fixture.importedFrom) && finishedAtMs.length === fixtures.length
+    && finishedAtMs.every(Number.isFinite);
+  const start = allTimed ? Math.max(...finishedAtMs) : openedAtMs;
+  const closesAtMs = Number.isFinite(start) ? start + MANAGER_WINDOW_MS : null;
+  if (closesAtMs != null && now > closesAtMs) return { open: false, reason: 'La votación de esta fecha ya cerró.', closesAtMs };
+  const candidates = new Set(fixtures.flatMap(fixture => [fixture.home, fixture.away]).filter(Boolean));
+  return { open: true, candidates, closesAtMs };
 }
 
 /**
@@ -213,7 +234,7 @@ export function predictionClosure({ liveStatus, matchKey, overlay, prediction, l
   };
 }
 
-const TOTALS_COLLECTION = { prediction: 'predictions', mvp: 'mvp_votes', cup: 'polls' };
+const TOTALS_COLLECTION = { prediction: 'predictions', manager: 'manager_votes', cup: 'polls' };
 const toMillis = value => (value instanceof Date ? value.getTime() : typeof value === 'string' ? Date.parse(value) : NaN);
 const isDuplicateBallot = error => ['FAILED_PRECONDITION', 'ALREADY_EXISTS'].includes(error?.code);
 
@@ -231,6 +252,7 @@ export async function castVote({ firestore, appId, vote, ipHash, deviceHash, now
     return await firestore.runTransaction(async tx => {
       const current = await tx.get(totalsPath);
       let extra = {};
+      let stampOpenedAt = false;
       if (isPrediction) {
         const overlay = await tx.get(`${base}/broadcast/overlay`);
         const tournament = await tx.get(`${base}/tournament/official`);
@@ -241,14 +263,19 @@ export async function castVote({ firestore, appId, vote, ipHash, deviceHash, now
         const window = pollWindow(current?.data, vote.choice);
         if (!window.open) throw new CommunityVoteError(window.reason, 409);
       } else {
-        const live = (await tx.get(`${base}/live_matches/${vote.target}`))?.data;
-        const window = mvpWindow(live ? { status: live.status, updatedAtMs: toMillis(live.updatedAt), finishedAtMs: toMillis(live.finishedAt) } : null, now);
+        const tournament = (await tx.get(`${base}/tournament/official`))?.data;
+        const fixtures = roundFixtures(tournament, vote.target);
+        const finishedAtMs = [];
+        for (const fixture of fixtures) {
+          if (!fixture.importedFrom) continue;
+          finishedAtMs.push(toMillis((await tx.get(`${base}/live_matches/${fixture.importedFrom}`))?.data?.finishedAt));
+        }
+        const window = managerWindow({ fixtures, finishedAtMs, openedAtMs: toMillis(current?.data?.openedAt), now });
         if (!window.open) throw new CommunityVoteError(window.reason, 409);
         // El admin puede cerrarla antes de tiempo (Administración → Comunidad): closedAt en el doc de votos.
-        if (current?.data?.closedAt) throw new CommunityVoteError('La votación del MVP está cerrada.', 409);
-        let summary = null;
-        try { summary = JSON.parse(live.summaryJson); } catch { /* sin resumen no hay candidatos */ }
-        if (!mvpCandidates(summary).has(vote.choice)) throw new CommunityVoteError('Ese jugador no jugó este partido.');
+        if (current?.data?.closedAt) throw new CommunityVoteError('La votación de esta fecha está cerrada.', 409);
+        if (!window.candidates.has(vote.choice)) throw new CommunityVoteError('Ese club no jugó esta fecha.');
+        if (!current?.data?.openedAt) stampOpenedAt = true;
       }
 
       const ipPath = `community_ip/${vote.kind}_${vote.target}_${ipHash}`;
@@ -261,7 +288,8 @@ export async function castVote({ firestore, appId, vote, ipHash, deviceHash, now
       tx.set(ipPath, { count: ipCount + 1 }, { serverTimestamps: ['updatedAt'] });
       const votes = addVote(current?.data?.votes, vote.choice);
       const total = Object.values(votes).reduce((sum, n) => sum + Number(n), 0);
-      tx.set(totalsPath, { ...(current?.data || {}), ...extra, votes, total }, { serverTimestamps: ['updatedAt'] });
+      tx.set(totalsPath, { ...(current?.data || {}), ...extra, votes, total },
+        { serverTimestamps: stampOpenedAt ? ['updatedAt', 'openedAt'] : ['updatedAt'] });
       return { votes, total };
     });
   } catch (error) {
@@ -270,7 +298,8 @@ export async function castVote({ firestore, appId, vote, ipHash, deviceHash, now
       const ballotPath = `community_ballots/${vote.kind}_${vote.target}_${deviceHash}`;
       const ballot = await firestore.runTransaction(tx => tx.get(ballotPath)).catch(() => null);
       throw new CommunityVoteError(
-        vote.kind === 'cup' ? 'Ya votaste en esta encuesta desde este navegador.' : 'Ya votaste en este partido desde este navegador.',
+        { cup: 'Ya votaste en esta encuesta desde este navegador.', manager: 'Ya votaste en esta fecha desde este navegador.' }[vote.kind]
+          || 'Ya votaste en este partido desde este navegador.',
         409,
         { code: 'ALREADY_VOTED', choice: ballot?.data?.choice ?? null },
       );

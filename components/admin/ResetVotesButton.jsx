@@ -5,7 +5,7 @@ import { confirmAction } from '../ui/ConfirmDialog.jsx';
 
 /**
  * «Reiniciar votos» de una votación del público: pide confirmación porque borra los votos y no se puede deshacer.
- * @param {{ kind: 'prediction'|'mvp'|'cup', target: string, label: string, total: number,
+ * @param {{ kind: 'prediction'|'manager'|'cup', target: string, label: string, total: number,
  *   showStatusMessage?: (tone: string, message: string) => void }} props label: qué se reinicia, para la confirmación
  */
 export function ResetVotesButton({ kind, target, label, total, showStatusMessage }) {

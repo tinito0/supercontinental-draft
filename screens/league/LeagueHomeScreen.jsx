@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Shield, Trophy } from 'lucide-react';
+import { ChevronRight, Shield, Trophy, UserRoundCheck } from 'lucide-react';
 import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { LEAGUE_NAME } from '../../components/landing/leagueLinks.js';
@@ -13,6 +13,7 @@ import { ClubCrestGrid, FollowCompact, FranchiseSummary } from '../../components
 import { makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
 import { useFranchisePlayers, useLeagueTeams } from '../../hooks/useLeagueData.js';
 import { useLeagueFixtures } from '../../hooks/useLeagueFixtures.js';
+import { useManagerRound } from '../../hooks/useManagerRound.js';
 import { currentRound } from '../../utils/leagueFixtures.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 
@@ -69,8 +70,24 @@ function PreseasonHero({ teams, stage }) {
   );
 }
 
+/** Votación abierta del manager de la fecha: una línea que lleva a /en-vivo, mientras dura (24 h). */
+function ManagerVoteLink({ round }) {
+  if (!round?.open) return null;
+  const left = Number.isFinite(round.window.closesAtMs) ? Math.max(1, Math.ceil((round.window.closesAtMs - Date.now()) / 3_600_000)) : null;
+  return (
+    <Link to="/en-vivo" className="group mt-4 flex min-h-14 items-center gap-3 rounded-2xl border border-accent/40 bg-accent-deep/30 px-4 py-3 transition-colors hover:border-accent/70">
+      <UserRoundCheck className="h-5 w-5 shrink-0 text-accent-soft" aria-hidden="true" />
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-ink">Votá al manager de la {round.title}</span>
+        <span className="block text-sm text-ink-2">¿Quién manejó mejor su equipo en el PES?{left != null && ` Cierra en ${left} h.`}</span>
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-ink-3 group-hover:text-ink" aria-hidden="true" />
+    </Link>
+  );
+}
+
 /** Temporada en juego: el nombre en una línea y, debajo, el partido de ahora junto a la tabla. */
-function NowHero({ stage, liveCount, featured, liveMatch, clubOf, prediction, tournament, fixtures, loading, error }) {
+function NowHero({ stage, liveCount, featured, liveMatch, clubOf, prediction, tournament, fixtures, loading, error, managerRound }) {
   return (
     <section aria-labelledby="hero-title" className="league-hero border-b border-line/10">
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 sm:px-6 md:pt-10 lg:pb-14">
@@ -94,6 +111,7 @@ function NowHero({ stage, liveCount, featured, liveMatch, clubOf, prediction, to
             <StandingsCard tournament={tournament} fixtures={fixtures} clubOf={clubOf} loading={loading} error={error} />
           </div>
         </div>
+        <ManagerVoteLink round={managerRound} />
       </div>
     </section>
   );
@@ -107,6 +125,7 @@ export default function LeagueHomeScreen() {
   const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
   const { byTeamId: franchise, loading: franchiseLoading, error: franchiseError } = useFranchisePlayers();
   const featured = loading ? null : pickFeatured(groups);
+  const { round: managerRound } = useManagerRound(tournament, liveMatches);
   const liveMatch = featured?.fixture.liveMatchKey ? (liveMatches || []).find(match => match.key === featured.fixture.liveMatchKey) || null : null;
   const isPreseason = !loading && !error && stage?.phase === 'preseason' && !groups.live.length;
   const showCups = !isPreseason && hasCupTies(tournament);
@@ -150,6 +169,7 @@ export default function LeagueHomeScreen() {
           <NowHero
             stage={loading ? null : stage} liveCount={groups.live.length} featured={featured} liveMatch={liveMatch}
             clubOf={clubOf} prediction={prediction} tournament={tournament} fixtures={fixtures} loading={loading} error={error}
+            managerRound={managerRound}
           />
         )}
 
