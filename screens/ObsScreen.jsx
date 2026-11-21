@@ -2,9 +2,10 @@ import React, { useEffect, useMemo } from 'react';
 import { BroadcastStage } from '../components/broadcast/BroadcastStage.jsx';
 import { BroadcastOverlayLive } from '../components/broadcast/BroadcastOverlayLive.jsx';
 import { OverlayErrorBoundary } from '../components/broadcast/OverlayErrorBoundary.jsx';
-import { useBroadcastOverlay, useLeagueTeams, useTournament } from '../hooks/useLeagueData.js';
+import { useBroadcastOverlay, useLeagueTeams, useLiveMatch, useTournament } from '../hooks/useLeagueData.js';
 import { useNow } from '../hooks/useNow.js';
 import { useObsSceneControl } from '../hooks/useObsSceneControl.js';
+import { useObsDirector } from '../hooks/useObsDirector.js';
 import { sceneForSource } from '../utils/obsScenes.js';
 import { effectiveOverlay, obsSceneName } from '../utils/obsAutoScene.js';
 import { SITE_URL } from '../utils/sharePages.js';
@@ -16,9 +17,14 @@ const CONTROL_STATUS = {
   switched: 'Conectado. Cambia la escena de OBS cuando cambia la del overlay.',
 };
 
-/** ?control=obs: draws nothing on air; switches the real OBS scene with the overlay (utils/obsAutoScene.js). */
+/**
+ * ?control=obs: draws nothing on air; switches the real OBS scene with the overlay, plus the cameras: the Previa and
+ * Final tour and the scorer's camera after a goal (hooks/useObsDirector.js).
+ */
 function ObsSceneControl({ overlay }) {
-  const status = useObsSceneControl(obsSceneName(overlay?.scene, overlay?.obsScenes));
+  const { match } = useLiveMatch(overlay?.liveMatchKey || null);
+  const shot = useObsDirector(overlay?.scene || 'live', overlay?.liveMatchKey ? match : null);
+  const status = useObsSceneControl(obsSceneName(shot, overlay?.obsScenes));
   // Text only outside OBS or while the permission is missing, so the source stays empty on air.
   if (status === 'ready' || status === 'switched') return null;
   return <p style={{ position: 'absolute', top: 40, left: 40, right: 40, font: '600 28px system-ui', color: '#fff', textShadow: '0 2px 6px #000' }}>{CONTROL_STATUS[status]}</p>;

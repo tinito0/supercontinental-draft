@@ -14,6 +14,9 @@ const SCENE_FIELDS = [
   ['bracket', 'Copa de Oro', ''],
   ['repechaje', 'Copa de Plata', ''],
   ['goleadores', 'Goleadores', ''],
+  ['jugador1', 'Cámara Jugador 1', 'El local del partido: 5 s después de su gol, 8 s'],
+  ['jugador2', 'Cámara Jugador 2', 'El visitante'],
+  ['relator', 'Cámara Relator', 'Previa y Final: Jugador 1, Jugador 2 y queda el relator (12 s cada una)'],
 ];
 
 const STEPS = [
@@ -21,6 +24,7 @@ const STEPS = [
   'En las propiedades de esa fuente, «Permisos de página»: «Acceso avanzado a OBS». Sin eso no puede cambiar escenas.',
   'Dejá destildado «Apagar la fuente cuando no esté visible», así sigue funcionando en cualquier escena.',
   'Poné a las escenas de OBS los nombres de la lista, o escribí acá los que ya usás.',
+  'Agregá la fuente «Escena del juego» también a las escenas de las cámaras, así la tira y el lower third se ven en todas.',
 ];
 
 export const ObsRemoteControl = memo(function ObsRemoteControl({ overlay, onSave }) {

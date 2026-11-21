@@ -492,6 +492,9 @@
 /* translate (no transform) para centrar: las animaciones usan transform y no lo pisan. */
 .scl-pop[data-position=center] { left: 50%; translate: -50% 0; }
 .broadcast-overlay-root:has(.broadcast-lower) .scl-pop { bottom: 268px; }
+/* En partido: las tres cámaras (jugador 1, relator, jugador 2) ocupan los ~330 px de abajo; el QR y las tarjetas van
+   por encima de ellas. */
+.broadcast-overlay-root[data-scene=live] .scl-pop { bottom: 356px; }
 
 .scl-pop-head {
   position: relative;
@@ -745,14 +748,15 @@
    toda la pantalla; goles, siguiente partido y horario van en el lower third (utils/obsLowerThird.js). */
 .scl-strip {
   position: absolute;
-  top: 40px;
+  /* Arriba de todo y angosta: no pisa el marcador del juego (arriba a la izquierda, desde y≈99) ni el logo de la liga. */
+  top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  width: 1120px;
+  width: 960px;
   display: grid;
-  grid-template-columns: 150px 1fr 150px 1fr;
+  grid-template-columns: 128px 1fr 124px 1fr;
   align-items: stretch;
-  height: 84px;
+  height: 72px;
   background: #ffffff;
   color: var(--scl-ink);
   border-top: 4px solid var(--scl-lilac);
@@ -772,7 +776,7 @@
 .scl-strip-team.away { justify-content: flex-start; }
 .scl-strip-team strong {
   min-width: 0;
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1;
   font-weight: 800;
   text-transform: uppercase;
@@ -781,14 +785,14 @@
   text-overflow: ellipsis;
 }
 .scl-strip-team strong.is-long-name { font-size: 24px; }
-.scl-strip-crest, .scl-strip-team img { width: 56px; height: 56px; object-fit: contain; flex: none; }
+.scl-strip-crest, .scl-strip-team img { width: 48px; height: 48px; object-fit: contain; flex: none; }
 .scl-strip-crest.scl-crest-initials { font-size: 20px; }
 .scl-strip-center {
   display: grid;
   place-items: center;
   background: var(--scl-frame);
   color: #ffffff;
-  font-size: 48px;
+  font-size: 42px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
