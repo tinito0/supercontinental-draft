@@ -24,7 +24,7 @@ esta lista cubre lo revisado, no todo lo posible.
 |---|---|---|---|
 | S1 | **Alta** | Cualquier cuenta de Google que entra a `/draft` recibe un equipo «pendiente» (`useAuth`). Las reglas daban lectura con solo tener sesión, así que un desconocido podía leer **todas las ofertas, las negociaciones y el chat de managers**. | **Corregido y desplegado.** Ofertas: solo los dos clubes. Mensajes: solo los dos clubes de la oferta. Chat de managers: solo managers aprobados. Siempre, además, el admin. Tests en `tests/rules/marketRules.test.js`. |
 | S2 | Media | `presence/{uid}`: cualquier cuenta con sesión podía borrar la presencia de otro manager. | **Corregido y desplegado**: solo la propia o el admin. Lleva test. |
-| S3 | Media | **Firebase Storage** (escudos subidos desde Admin → Equipos): no hay `storage.rules` en el repo, así que las reglas viven solo en la consola y no se pudieron verificar. | **Pendiente: revisar en la consola.** Lo esperado es lectura pública y escritura solo del admin en `team_logos/`. |
+| S3 | Media | Escudos y camisetas: Firebase Storage no está habilitado (el proyecto no tiene reglas de Storage publicadas). Las imágenes van al bucket público `league-media` de Supabase por la función `league-media`, que verifica el token de Firebase: escudos solo el admin, camisetas el admin o un editor de la web. | Resuelto (2026-11-21). |
 | S4 | Media | No hay Content-Security-Policy ni Permissions-Policy en el hosting. Sí están `nosniff`, `X-Frame-Options` y `Referrer-Policy`. | **Hecho, sin desplegar (2026-10-22).** `Content-Security-Policy-Report-Only` y `Permissions-Policy` en `firebase.json`. Los scripts inline de `index.html` pasaron a `public/boot.js`, así que la política no necesita `'unsafe-inline'` en scripts. Siguiente paso: revisar la consola del navegador en producción (login con Google, mercado, GIFs, `/en-vivo`, OBS) y, sin violaciones, pasarla a `Content-Security-Policy`. |
 | S5 | Baja | `npm audit`: 4 altas y 1 baja. `@grpc/grpc-js` viene por `firebase` y solo se usa en Node, no en el navegador. `dompurify` <3.4.16 viene por `jspdf`; las advertencias son del modo `IN_PLACE`, que la app no usa. | Pendiente: `npm audit fix` para dompurify (sin cambios incompatibles). Firebase, cuando salga una versión corregida. |
 | S6 | Baja | `market` responde CORS `*` si falta `MARKET_ALLOWED_ORIGINS`. La función exige el token de Firebase, así que no hay CSRF, pero conviene limitarlo. | Pendiente: fijar el secret con el dominio de producción. |
@@ -53,8 +53,7 @@ esta lista cubre lo revisado, no todo lo posible.
 ## Qué falta antes de abrir votaciones y predicciones al público
 
 1. ~~Desplegar las reglas (S1, S2).~~ Hecho.
-2. Revisar las reglas de Firebase Storage en la consola (S3).
-3. Votos y predicciones sin cuenta (lo eligió el usuario):
+2. Votos y predicciones sin cuenta (lo eligió el usuario):
    - pasan por una Edge Function nueva, nunca por escrituras directas del navegador;
    - la función controla la ventana de votación con el estado en vivo del partido (`live_matches`), un voto por
      navegador y partido, y un tope por IP (guardada solo como hash con sal secreta);
@@ -65,4 +64,4 @@ esta lista cubre lo revisado, no todo lo posible.
 
    Riesgo aceptado: sin cuenta, una persona puede votar más de una vez con otro navegador o dispositivo. El tope por IP
    lo limita, pero no lo evita.
-4. S4 a S7 se pueden hacer en paralelo; no bloquean.
+3. S4 a S7 se pueden hacer en paralelo; no bloquean.
