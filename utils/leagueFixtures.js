@@ -251,5 +251,7 @@ export function leagueStage(tournament, leagueRounds = 4) {
   const pending = leagueMatches.filter(match => roundIndex(match.round) === last && match.status !== 'completed').length;
   if (last >= leagueRounds && pending === 0) return { phase: 'league-done', label: 'Fase suiza terminada', detail: 'Se vienen las copas' };
   const left = pending ? ` · ${pending} ${pending === 1 ? 'partido por jugar' : 'partidos por jugar'}` : '';
-  return { phase: 'league', label: 'Fase suiza', detail: `Fecha ${last} de ${leagueRounds}${left}` };
+  // A round past the planned count (an extra Fecha loaded by the admin) is shown alone, never as «Fecha 5 de 4».
+  const round = last > leagueRounds ? `Fecha ${last}` : `Fecha ${last} de ${leagueRounds}`;
+  return { phase: 'league', label: 'Fase suiza', detail: `${round}${left}` };
 }
