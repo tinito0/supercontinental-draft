@@ -86,7 +86,7 @@ export function LeagueLayout() {
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
 
   return (
-    <div className="landing-root flex min-h-[100dvh] flex-col overflow-x-hidden bg-canvas font-sans text-ink">
+    <div className="landing-root flex min-h-[100dvh] flex-col overflow-x-clip bg-canvas font-sans text-ink">
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:font-semibold focus:text-on-accent">Saltar al contenido</a>
       <LeagueNav />
       <main id="contenido" tabIndex={-1} className="flex-1 pt-16 outline-none">

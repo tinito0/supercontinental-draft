@@ -176,7 +176,7 @@ function SeasonRulesEditor({ showStatusMessage }) {
               <input className="input" value={chapter.title} maxLength={MAX_TITLE_LENGTH} placeholder="Ej.: Formato de la competencia"
                 onChange={event => updateChapter(chapter.id, { title: event.target.value })} />
             </Field>
-            <Field label="Texto" help={PARAGRAPH_HELP}>
+            <Field label="Texto" help={`${PARAGRAPH_HELP} Listas: empezá la línea con «• » o «1. ». Subtítulo: una línea corta sin punto, arriba del texto. «Nombre: texto» resalta el nombre.`}>
               <textarea className="input min-h-[10rem] py-2 leading-relaxed" value={chapter.body} maxLength={MAX_STORY_LENGTH}
                 onChange={event => updateChapter(chapter.id, { body: event.target.value })} />
             </Field>

@@ -6,7 +6,8 @@ import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
-import { SEASON_RULES_DOC, toParagraphs } from '../../utils/leagueContent.js';
+import { SEASON_RULES_DOC } from '../../utils/leagueContent.js';
+import { RuleBody } from '../../components/league/RuleBody.jsx';
 
 const chapterAnchor = index => `capitulo-${index + 1}`;
 
@@ -39,13 +40,13 @@ export default function LeagueRulesScreen() {
     body = (
       <div className="grid gap-10 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-14">
         {chapters.length > 1 && (
-          <nav aria-label="Capítulos del reglamento" className="lg:sticky lg:top-24 lg:self-start">
+          <nav aria-label="Capítulos del reglamento" className="lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:self-start lg:overflow-y-auto">
             <p className="eyebrow mb-3">Capítulos</p>
             <ol className="space-y-1">
               {chapters.map((chapter, index) => (
                 <li key={chapter.id}>
-                  <a href={`#${chapterAnchor(index)}`} className="flex min-h-10 items-baseline gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-2 transition-colors hover:bg-white/[0.04] hover:text-ink">
-                    <span className="num text-ink-3">{index + 1}.</span> {chapter.title}
+                  <a href={`#${chapterAnchor(index)}`} className="flex min-h-11 items-baseline gap-2 rounded-lg px-2 py-2 text-[15px] lg:min-h-9 lg:py-1.5 [@media(pointer:coarse)]:min-h-11 text-ink-2 transition-colors hover:bg-white/[0.04] hover:text-ink">
+                    <span className="num w-6 shrink-0 text-right text-ink-3">{index + 1}.</span> {chapter.title}
                   </a>
                 </li>
               ))}
@@ -55,11 +56,11 @@ export default function LeagueRulesScreen() {
         <div className={`space-y-12 ${chapters.length > 1 ? '' : 'lg:col-span-2'}`}>
           {chapters.map((chapter, index) => (
             <article key={chapter.id} id={chapterAnchor(index)} className="scroll-mt-24">
-              <h2 className="section-title border-b border-line/[0.14] pb-3 text-accent-soft">
-                <span className="num">{index + 1}.</span> {chapter.title}
+              <h2 className="flex items-baseline gap-3 border-b border-line/[0.14] pb-3 font-display text-2xl font-bold uppercase leading-tight tracking-wide text-ink sm:text-[28px]">
+                <span className="num text-accent-soft">{index + 1}.</span> {chapter.title}
               </h2>
-              <div className="mt-4 max-w-[68ch] space-y-4 leading-relaxed text-ink-2">
-                {toParagraphs(chapter.body).map((paragraph, i) => <p key={i} className="whitespace-pre-line">{paragraph}</p>)}
+              <div className="mt-5">
+                <RuleBody body={chapter.body} />
               </div>
             </article>
           ))}
