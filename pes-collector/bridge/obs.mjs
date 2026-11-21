@@ -5,7 +5,7 @@
 //
 //   scl-obs scene <live|previa|descanso|final|tabla|bracket|repechaje|goleadores>
 //   scl-obs popup <vota|liga|tabla|equipos|off> [segundos] [right|left|center]
-//   scl-obs card <mvp|prediction|cup|off> [segundos]
+//   scl-obs card <manager|prediction|cup|off> [segundos]
 //   scl-obs toggle <marcador|lower|ticker|auto> <on|off>
 //
 // Sale con 0 si el overlay cambió y con 1 si no (el motivo queda en _bridge/obs.log y en la consola).

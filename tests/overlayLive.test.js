@@ -20,7 +20,7 @@ const match = parseMatchDoc({ matchKey: '20261022T200000Z_101-1230', status: 'fi
 
 describe('buildOverlayLive', () => {
   it('returns nothing to show without a live match or votes', () => {
-    expect(buildOverlayLive({})).toEqual({ score: null, scorers: { home: [], away: [] }, prediction: null, mvp: null, mvpTop: [], cup: null, topRated: null });
+    expect(buildOverlayLive({})).toEqual({ score: null, scorers: { home: [], away: [] }, prediction: null, manager: null, cup: null, topRated: null });
   });
 
   it('names the best rated player of the game, every one of them on a tie', () => {
@@ -45,10 +45,13 @@ describe('buildOverlayLive', () => {
     expect(buildOverlayLive({ prediction: { votes: { home: 3, away: 1 } } }).prediction).toEqual({ home: 75, draw: 0, away: 25, total: 4, leader: 'home' });
   });
 
-  it('names the community MVP leader with the match player names', () => {
-    expect(buildOverlayLive({ match, mvpVotes: { votes: { 7: 5, 9: 3 } } }).mvp).toEqual({ id: 7, name: 'Saka', votes: 5, pct: 63 });
-    expect(buildOverlayLive({ match, mvpVotes: { votes: { 7: 5, 9: 3 } } }).mvpTop.map(entry => entry.name)).toEqual(['Saka', 'Nine']);
-    expect(buildOverlayLive({ match, mvpVotes: { votes: {} } }).mvp).toBeNull();
+  it('shows the manager of the round once somebody voted, top three', () => {
+    const managerRound = { title: 'Fecha 3', open: true, votes: { votes: { Talleres: 5, 'SK Konya': 3, Lourinhã: 1, Otro: 1 }, total: 10 } };
+    expect(buildOverlayLive({ managerRound }).manager).toEqual({
+      title: 'Fecha 3', open: true, total: 10,
+      top: [{ club: 'Talleres', votes: 5, pct: 50 }, { club: 'SK Konya', votes: 3, pct: 30 }, { club: 'Lourinhã', votes: 1, pct: 10 }],
+    });
+    expect(buildOverlayLive({ managerRound: { ...managerRound, votes: { votes: {} } } }).manager).toBeNull();
   });
 
   it('features the open cup poll (Oro before Plata) with its top four options', () => {
@@ -67,12 +70,12 @@ describe('communityCardStatus (botones de la capa de la comunidad)', () => {
   it('says why each card will not show without votes', () => {
     const empty = buildOverlayLive({});
     expect(communityCardStatus(empty, {})).toEqual({
-      mvp: { ready: false, note: 'No hay partido del juego en vivo' },
+      manager: { ready: false, note: 'Ninguna fecha terminó todavía' },
       prediction: { ready: false, note: 'No hay partido al aire' },
       cup: { ready: false, note: 'No hay encuesta de copa cargada' },
     });
     expect(communityCardStatus(empty, { matchId: 'league-1', liveMatchKey: 'k' }).prediction.note).toBe('Todavía nadie votó la predicción');
-    expect(communityCardStatus(empty, { matchId: 'league-1', liveMatchKey: 'k' }).mvp.note).toBe('Todavía nadie votó al MVP');
+    expect(communityCardStatus(empty, {}, { title: 'Fecha 3' }).manager.note).toBe('Fecha 3: todavía nadie votó');
   });
 
   it('marks a card ready as soon as it has a vote', () => {

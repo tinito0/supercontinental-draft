@@ -194,14 +194,16 @@ presupuesto base, nombre, escudo y permisos. Es el mejor momento para actualizar
 ## 7. Publicar las funciones del servidor (sin Claude y sin computadora)
 
 La web (Vercel) se publica sola con cada push a `master`. Las **funciones de Supabase** no: si un cambio toca sus
-archivos, hay que publicarlas a mano. Cada una tiene su botón en GitHub y corre sus tests antes de publicar; si un
+archivos, hay que publicarlas a mano. `_shared/overlayControl.js` lo usan las dos funciones del overlay: si cambia,
+publicá **deploy-match-feed** y **deploy-overlay-control**. Cada una tiene su botón en GitHub y corre sus tests antes de publicar; si un
 test falla, no publica nada.
 
 | Si cambió algo de… | Archivos | Botón (GitHub → Actions → … → Run workflow, rama `master`) |
 |---|---|---|
 | Fichar, liberar, traspasos, comisión, presupuesto, franquicia, catálogo | `supabase/functions/_shared/market.js`, `budget.js`, `transferFee.js`, `franchise.js`, `marketConstants.js`, `catalog.json` | **deploy-market** |
-| Votos del público (predicción, MVP, encuestas de copa) o la forma de las copas | `supabase/functions/_shared/communityVote.js` y `community-vote/index.ts` | **deploy-community-vote** |
-| Colector de partidos en vivo, overlay | `match-feed`, `overlay-control` | sin botón todavía: `npx supabase functions deploy <nombre> --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy` desde una computadora |
+| Votos del público (predicción, manager de la fecha, encuestas de copa) o la forma de las copas | `supabase/functions/_shared/communityVote.js` y `community-vote/index.ts` | **deploy-community-vote** |
+| Colector de partidos en vivo: lo que sube el puente, `match_lines`, cierre de la predicción, popups y tarjetas automáticas de OBS | `supabase/functions/match-feed/`, `_shared/matchFeed.js`, `matchLines.js`, `overlayControl.js` | **deploy-match-feed** |
+| Comandos del overlay de OBS (Macro Deck) | `supabase/functions/overlay-control/`, `_shared/overlayControl.js` | **deploy-overlay-control** |
 
 Paso a paso desde el celular:
 

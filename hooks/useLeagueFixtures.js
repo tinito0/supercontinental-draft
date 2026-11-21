@@ -28,5 +28,5 @@ export function useLeagueFixtures(teamsById) {
   const groups = useMemo(() => groupFixtures(fixtures), [fixtures]);
   const stage = useMemo(() => leagueStage(tournament), [tournament]);
 
-  return { tournament, fixtures, groups, stage, overlay, prediction, loading, error, liveLoading, liveError };
+  return { tournament, fixtures, groups, stage, overlay, prediction, liveMatches, loading, error, liveLoading, liveError };
 }

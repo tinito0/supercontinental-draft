@@ -4,7 +4,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { FranchisePlayerCard } from '../components/league/FranchisePlayerCard.jsx';
-import { FranchiseShowcase } from '../components/league/home/FranchiseShowcase.jsx';
+import { ClubCrestGrid, FranchiseSummary } from '../components/league/home/HomeCompact.jsx';
+import { FRANCHISE_MIN_AGE, FRANCHISE_MIN_OVR, FRANCHISE_MAX_OVR } from '../supabase/functions/_shared/marketConstants.js';
 import { ClubGrid } from '../components/league/ClubGrid.jsx';
 
 const team = { id: 'teamA', teamName: 'Club de Prueba' };
@@ -37,16 +38,29 @@ describe('FranchisePlayerCard', () => {
   });
 });
 
-describe('FranchiseShowcase', () => {
-  it('shows only the clubs that signed one', () => {
-    const html = render(<FranchiseShowcase teams={[team, { id: 'teamB', teamName: 'Otro' }]} franchise={{ teamA: player }} loading={false} error="" />);
+describe('FranchiseSummary', () => {
+  it('shows only the clubs that signed one, and the rules from the market constants', () => {
+    const html = render(<FranchiseSummary teams={[team, { id: 'teamB', teamName: 'Otro' }]} franchise={{ teamA: player }} loading={false} headingId="f" />);
 
+    expect(html).toContain('id="f"');
     expect(html).toContain('Veterano Uno');
     expect(html).not.toContain('Otro');
+    expect(html).toContain(`${FRANCHISE_MIN_AGE}+ años`);
+    expect(html).toContain(`OVR ${FRANCHISE_MIN_OVR} a ${FRANCHISE_MAX_OVR}`);
+    expect(html).not.toContain('—');
   });
 
-  it('says so when no club has one yet', () => {
-    expect(render(<FranchiseShowcase teams={[team]} franchise={{}} loading={false} error="" />)).toContain('Todavía no hay jugadores franquicia');
+  it('says how one gets there when no club has one yet, and when loading failed', () => {
+    expect(render(<FranchiseSummary teams={[team]} franchise={{}} loading={false} />)).toContain('Mercado Franquicia');
+    expect(render(<FranchiseSummary teams={[team]} franchise={{}} loading={false} error="x" />)).toContain('No se pudieron cargar');
+  });
+});
+
+describe('ClubCrestGrid', () => {
+  it('links every crest to its club', () => {
+    const html = render(<ClubCrestGrid teams={[team]} loading={false} />);
+    expect(html).toContain('href="/equipos/teamA"');
+    expect(html).toContain('Club de Prueba');
   });
 });
 
@@ -56,19 +70,5 @@ describe('ClubGrid', () => {
 
     expect(html).toContain('Franquicia');
     expect(html).toContain('Veterano Uno');
-  });
-});
-
-describe('FranchiseExplainer', () => {
-  it('states the rules from the market constants', async () => {
-    const { FranchiseExplainer } = await import('../components/league/home/FranchiseExplainer.jsx');
-    const { FRANCHISE_MIN_AGE, FRANCHISE_MIN_OVR, FRANCHISE_MAX_OVR } = await import('../supabase/functions/_shared/marketConstants.js');
-    const html = render(<FranchiseExplainer headingId="f" />);
-
-    expect(html).toContain('id="f"');
-    expect(html).toContain(`${FRANCHISE_MIN_AGE}+`);
-    expect(html).toContain(`OVR ${FRANCHISE_MIN_OVR} a ${FRANCHISE_MAX_OVR}`);
-    expect(html).toContain('Mercado Franquicia');
-    expect(html).not.toContain('—');
   });
 });

@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { BallIcon } from './BallIcon.jsx';
 import { CardMark, MatchStatus, TeamMark } from './MatchParts.jsx';
+import { LiveScore } from './LiveScore.jsx';
 
 /* Encabezado y minuto a minuto del partido (screens/league/LeagueMatchScreen.jsx). Datos: utils/matchCenter.js. */
 
@@ -12,12 +13,9 @@ function scorersOf(timeline, side) {
 }
 
 export function MatchHeader({ match, timeline, teamsById }) {
-  // Un gol en vivo hace destellar el marcador (.value-flash en index.css); al abrir la página no destella.
-  const score = `${match.home.score}-${match.away.score}`;
-  const firstScore = useRef(score);
-  const scoreChanged = score !== firstScore.current;
+  // Fecha corta en 24 h, para que entre en una línea en el teléfono.
   const date = match.startedAt
-    ? new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(match.startedAt)
+    ? new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(match.startedAt)
     : '';
   const team = (side, align) => (
     <div className={`flex min-w-0 flex-col items-center gap-2 text-center ${align}`}>
@@ -35,9 +33,8 @@ export function MatchHeader({ match, timeline, teamsById }) {
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 sm:gap-6">
         {team('home', '')}
         <div className="flex flex-col items-center pt-3">
-          <div key={score} className={`num font-display text-5xl font-bold leading-none text-ink sm:text-6xl ${scoreChanged ? 'value-flash' : ''}`} aria-label={`${match.home.score} a ${match.away.score}`}>
-            {match.home.score}<span className="px-2 text-ink-3">-</span>{match.away.score}
-          </div>
+          {/* Un gol en vivo hace entrar solo el número que cambió (LiveScore); al abrir la página no se anima. */}
+          <LiveScore home={match.home.score} away={match.away.score} className="text-5xl sm:text-6xl" />
           <MatchStatus status={match.status} className="mt-2 text-sm" />
           {match.shootout && (
             <p className="mt-1 text-sm text-ink-2">Penales <span className="num font-semibold text-ink">{match.shootout.home}-{match.shootout.away}</span></p>

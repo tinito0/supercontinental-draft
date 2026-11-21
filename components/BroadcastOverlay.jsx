@@ -118,7 +118,7 @@ function MatchPanel({ scene, data, home, away, live, fixture, season }) {
       )}
       {scene === 'previa' && season && <BroadcastSeasonFacts facts={season} />}
       {scene === 'previa' && live?.prediction && <BroadcastPrediction shares={live.prediction} />}
-      {scene === 'final' && <BroadcastFinalAwards mvp={live?.mvp} topRated={live?.topRated} />}
+      {scene === 'final' && <BroadcastFinalAwards topRated={live?.topRated} />}
     </BroadcastFrame>
   );
 }
@@ -144,8 +144,9 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
 
   const { matchId, liveMatchKey } = data;
   const fixtures = useMemo(
-    () => buildFixtures({ tournament: tournamentData, liveMatches: liveMatch ? [liveMatch] : [], overlay: { matchId, liveMatchKey } }),
-    [tournamentData, liveMatch, matchId, liveMatchKey],
+    // teamsById: sin partido al aire, el juego en vivo se vincula por los clubes del draft (tabla en vivo).
+    () => buildFixtures({ tournament: tournamentData, liveMatches: liveMatch ? [liveMatch] : [], overlay: { matchId, liveMatchKey }, teamsById: allTeams || {} }),
+    [tournamentData, liveMatch, matchId, liveMatchKey, allTeams],
   );
   const onAirFixture = fixtures.find(fixture => fixture.id === matchId) || null;
   // homeTeamName/awayTeamName vienen del partido elegido en el panel: cubren clubes del torneo sin cuenta.
@@ -159,7 +160,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
 
   let content = null;
   if (MATCH_SCENES.has(scene)) content = <MatchPanel scene={scene} data={data} home={home} away={away} live={live} fixture={onAirFixture} season={season} />;
-  else if (scene === 'tabla') content = <BroadcastLeagueTable league={tournamentData?.league} getTeamLogo={getTeamLogo} />;
+  else if (scene === 'tabla') content = <BroadcastLeagueTable league={tournamentData?.league} fixtures={fixtures} getTeamLogo={getTeamLogo} />;
   else if (scene === 'bracket' || scene === 'repechaje') {
     content = <BroadcastBracket cupId={scene === 'bracket' ? CUP_IDS.ORO : CUP_IDS.PLATA} bracket={tournamentData?.bracket} getTeamLogo={getTeamLogo} />;
   } else if (scene === 'partidos') content = <BroadcastFixtures round={currentRound(fixtures)} getTeamLogo={getTeamLogo} />;

@@ -171,17 +171,17 @@ export const useBroadcastOverlay = () => usePublicDoc(`${PUBLIC_DATA}/broadcast/
 /** Totales de la predicción de un partido del fixture (los escribe la función community-vote). */
 export const usePrediction = matchId => usePublicDoc(matchId ? `${PUBLIC_DATA}/predictions/${matchId}` : null, 'usePrediction');
 
-/** Totales del MVP de un partido en vivo. */
-export const useMvpVotes = matchKey => usePublicDoc(matchKey ? `${PUBLIC_DATA}/mvp_votes/${matchKey}` : null, 'useMvpVotes');
-
-/** Todos los totales de MVP, por matchKey: el Jugador del Torneo (utils/playerOfTournament.js) los suma. */
-export function useAllMvpVotes() {
-  const [state, setState] = useState({ byMatchKey: {}, loading: true, error: '' });
+/**
+ * Votos del manager de la fecha, todas las fechas (pocas por temporada), por id «fecha-n». Los escribe la función
+ * community-vote; /en-vivo muestra la fecha abierta y el manager del torneo (utils/managerOfTournament.js) los suma.
+ */
+export function useManagerVotes() {
+  const [state, setState] = useState({ byRoundId: {}, loading: true, error: '' });
   useEffect(() => onSnapshot(
-    collection(db, `${PUBLIC_DATA}/mvp_votes`),
-    (snap) => setState({ byMatchKey: Object.fromEntries(snap.docs.map(d => [d.id, d.data()])), loading: false, error: '' }),
+    collection(db, `${PUBLIC_DATA}/manager_votes`),
+    (snap) => setState({ byRoundId: Object.fromEntries(snap.docs.map(d => [d.id, d.data()])), loading: false, error: '' }),
     (err) => {
-      console.error('[useAllMvpVotes]', err);
+      console.error('[useManagerVotes]', err);
       setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar los votos.' }));
     },
   ), []);

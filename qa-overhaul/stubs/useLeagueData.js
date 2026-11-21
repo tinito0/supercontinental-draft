@@ -14,8 +14,7 @@ export const useLiveMatches = () => ({ matches: loading ? [] : live, loading, er
 export const useLiveMatch = key => ({ match: live.find(m => m.key === key) || null, loading: false, error: '' });
 export const useBroadcastOverlay = () => ({ data: state.overlay, loading: false, error: '' });
 export const usePrediction = id => ({ data: id ? { votes: { home: 12, draw: 5, away: 7 }, homeTeam: '', awayTeam: '' } : null, loading: false, error: '' });
-export const useMvpVotes = () => ({ data: null, loading: false, error: '' });
-export const useAllMvpVotes = () => ({ byMatchKey: {}, loading: false, error: '' });
+export const useManagerVotes = () => ({ byRoundId: {}, loading: false, error: '' });
 export const usePesTeamMap = () => ({ data: null, loading: false, error: '' });
 export const usePoll = () => ({ data: null, loading: false, error: '' });
 export const SEASON_MATCH_LIMIT = 300;

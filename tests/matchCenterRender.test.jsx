@@ -31,7 +31,7 @@ describe('match page views', () => {
   it('header: teams, live score, minute and scorers with minute', () => {
     const html = renderToStaticMarkup(<MatchHeader match={match} timeline={timeline} teamsById={{}} />);
     expect(html).toContain('Arsenal');
-    expect(html).toContain('aria-label="2 a 1"');
+    expect(html).toContain('<span class="sr-only">2 a 1</span>');
     expect(html).toContain("63&#x27;");
     expect(html).toContain('en vivo');
     expect(html).toContain('L. Trossard 15&#x27;');

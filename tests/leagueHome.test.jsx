@@ -21,14 +21,22 @@ describe('MatchCentre', () => {
     expect(html).not.toContain('En vivo');
   });
 
-  it('starts on the live tab with the MVP vote link when a game is live', () => {
+  it('starts on the live tab when a game is live, without a vote link on the row', () => {
     const live = { key: 'k1', status: { kind: 'live', label: "12'" }, updatedAtMs: NOW - 1000, home: { name: 'x', score: 0, draftTeamId: null }, away: { name: 'y', score: 0, draftTeamId: null } };
     const groups = groupsOf([match('1', { importedFrom: 'k1' })], { liveMatches: [live] });
     const html = render(<MatchCentre groups={groups} clubOf={clubOf} />);
     expect(html).toMatch(/aria-selected="true"[^>]*>[\s\S]*?En vivo/);
     expect(html).toContain("12&#x27;");
-    expect(html).toContain('Votá el MVP del partido');
+    expect(html).not.toContain('Votá');
     expect(html).toContain('href="/partidos/k1"');
+  });
+
+  it('does not repeat the live match the home already shows on top', () => {
+    const live = { key: 'k1', status: { kind: 'live', label: "12'" }, updatedAtMs: NOW - 1000, home: { name: 'x', score: 0, draftTeamId: null }, away: { name: 'y', score: 0, draftTeamId: null } };
+    const groups = groupsOf([match('1', { importedFrom: 'k1' }), match('2')], { liveMatches: [live] });
+    const html = render(<MatchCentre groups={groups} clubOf={clubOf} featuredId={groups.live[0].id} />);
+    expect(html).not.toContain('href="/partidos/k1"');
+    expect(html).toMatch(/aria-selected="true"[^>]*>[\s\S]*?Próximos/);
   });
 
   it('offers the prediction only for the on-air match while it is open', () => {

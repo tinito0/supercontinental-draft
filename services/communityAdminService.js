@@ -4,7 +4,7 @@ import { collection, deleteField, doc, documentId, getDocs, increment, query, se
 import { db } from '../config/firebase.js';
 import { APP_ID } from '../utils/constants.js';
 
-const TOTALS_COLLECTION = { prediction: 'predictions', mvp: 'mvp_votes', cup: 'polls' };
+const TOTALS_COLLECTION = { prediction: 'predictions', manager: 'manager_votes', cup: 'polls' };
 const BATCH_LIMIT = 450;
 // Último carácter posible para un rango por prefijo de id (U+F8FF, uso privado).
 const PREFIX_END = '\uf8ff';
@@ -44,6 +44,6 @@ export async function resetCommunityVotes(kind, target) {
 
 /** Cierra o reabre a mano una predicción o la votación del MVP (closedAt; community-vote lo respeta). */
 export async function setVotingClosed(kind, target, closed) {
-  if (!['prediction', 'mvp'].includes(kind) || !target) throw new Error(`Votación inválida: ${kind}/${target}`);
+  if (!['prediction', 'manager'].includes(kind) || !target) throw new Error(`Votación inválida: ${kind}/${target}`);
   await setDoc(totalsRef(kind, target), { closedAt: closed ? serverTimestamp() : deleteField(), updatedAt: serverTimestamp() }, { merge: true });
 }

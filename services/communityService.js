@@ -59,14 +59,14 @@ function rememberVote(kind, target, choice, round) {
 }
 
 /**
- * @param {{ kind: 'prediction', matchId: string, choice: 'home'|'draw'|'away' } | { kind: 'mvp', matchKey: string, choice: number }
+ * @param {{ kind: 'prediction', matchId: string, choice: 'home'|'draw'|'away' } | { kind: 'manager', roundId: string, choice: string }
  *   | { kind: 'cup', pollId: string, choice: string }} vote
  * @param {{ round?: number }} [options] round: el resetCount actual de esa votación, para recordar el voto en su ronda
  * @returns {Promise<{ ok: true, votes, total } | { ok: false, error: string, alreadyVoted?: boolean }>}
  */
 export async function sendVote(vote, { round = 0 } = {}) {
   if (!SUPABASE_FUNCTIONS_URL) return { ok: false, error: 'La votación no está disponible ahora.' };
-  const target = { prediction: vote.matchId, mvp: vote.matchKey, cup: vote.pollId }[vote.kind];
+  const target = { prediction: vote.matchId, manager: vote.roundId, cup: vote.pollId }[vote.kind];
   try {
     const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/community-vote`, {
       method: 'POST',

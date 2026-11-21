@@ -338,7 +338,8 @@ service cloud.firestore {
         allow read: if true;
         allow write: if isAdmin();
       }
-      match /public/data/mvp_votes/{matchKey} {
+      // Manager de la fecha, un doc por fecha (fecha-n).
+      match /public/data/manager_votes/{roundId} {
         allow read: if true;
         allow write: if isAdmin();
       }

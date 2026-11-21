@@ -44,16 +44,6 @@ export function BroadcastPrediction({ shares }) {
   );
 }
 
-/** El más votado como MVP del partido. */
-export function BroadcastMvp({ mvp }) {
-  return (
-    <div className="broadcast-community broadcast-mvp">
-      <span className="broadcast-community-label"><span>MVP de la comunidad</span><span>{mvp.pct}%</span></span>
-      <strong>{mvp.name}</strong>
-    </div>
-  );
-}
-
 /** Mejor valoración del juego; si empatan, todos. */
 export function BroadcastTopRated({ topRated }) {
   return (
@@ -66,13 +56,12 @@ export function BroadcastTopRated({ topRated }) {
   );
 }
 
-/** Final: el MVP que votó la comunidad y la mejor valoración del juego, lado a lado cuando están los dos. */
-export function BroadcastFinalAwards({ mvp, topRated }) {
-  if (!mvp && !topRated) return null;
+/** Final: la mejor valoración del juego. El público vota al manager de la fecha, no al jugador del partido. */
+export function BroadcastFinalAwards({ topRated }) {
+  if (!topRated) return null;
   return (
     <div className="broadcast-final-awards">
-      {mvp && <BroadcastMvp mvp={mvp} />}
-      {topRated && <BroadcastTopRated topRated={topRated} />}
+      <BroadcastTopRated topRated={topRated} />
     </div>
   );
 }

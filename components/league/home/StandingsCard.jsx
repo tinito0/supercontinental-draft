@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, LayoutGrid } from 'lucide-react';
 import { EmptyState } from '../../ui/EmptyState.jsx';
+import { Alert } from '../../ui/Alert.jsx';
 import { LeagueCrest } from '../match/FixtureRow.jsx';
+import { LiveDot, RankMove } from '../RankMove.jsx';
+import { projectLiveTable } from '../../../utils/liveTable.js';
+import { useRankShift } from '../../../hooks/useRankShift.js';
 
 /* Tabla de la liga en la portada: el orden guardado del torneo (ya con los desempates del reglamento), con las
-   zonas de clasificación: 1-8 Copa de Oro, 9-12 Copa de Plata. Antes del primer partido el orden es solo el de
-   carga, así que se muestran los clubes inscriptos sin puestos ni zonas. */
+   zonas de clasificación: 1-8 Copa de Oro, 9-12 Copa de Plata. Mientras se juega un partido de liga es la tabla en
+   vivo (utils/liveTable.js): cada gol reordena y las filas se deslizan a su lugar, con flecha y puestos ganados o
+   perdidos. Antes del primer partido el orden es solo el de carga: clubes inscriptos, sin puestos ni zonas. */
 
 const GOLD_CUP_PLACES = 8;
 
@@ -35,12 +40,17 @@ function EntrantsList({ rows, clubOf }) {
   );
 }
 
-export function StandingsCard({ tournament, clubOf, loading }) {
-  const rows = (tournament?.league || []).filter(row => row?.name && row.name !== 'Club...').slice(0, 12);
+export function StandingsCard({ tournament, fixtures, clubOf, loading, error = '' }) {
+  const official = useMemo(() => (tournament?.league || []).filter(row => row?.name && row.name !== 'Club...').slice(0, 12), [tournament]);
+  const live = useMemo(() => projectLiveTable(official, fixtures), [official, fixtures]);
+  const rows = live || official;
   const played = rows.some(row => Number(row.pj) > 0);
+  const bodyRef = useRef(null);
+  useRankShift(bodyRef, rows.map(row => row.id || row.name).join('|'));
 
   let body;
-  if (loading) body = <div className="space-y-2 p-4" aria-busy="true">{[0, 1, 2, 3].map(i => <div key={i} className="h-9 skeleton" />)}</div>;
+  if (error) body = <div className="p-4"><Alert tone="danger" title="No se pudo cargar la tabla">Recargá la página para intentar de nuevo.</Alert></div>;
+  else if (loading) body = <div className="space-y-2 p-4" aria-busy="true">{[0, 1, 2, 3].map(i => <div key={i} className="h-9 skeleton" />)}</div>;
   else if (!rows.length) body = <div className="p-4"><EmptyState icon={LayoutGrid} title="La tabla todavía no está armada" description="Aparece cuando se cargan los clubes del torneo." /></div>;
   else if (!played) body = <EntrantsList rows={rows} clubOf={clubOf} />;
   else {
@@ -57,19 +67,27 @@ export function StandingsCard({ tournament, clubOf, loading }) {
               <th scope="col" className="w-14 py-2 pr-4 text-right font-semibold">Pts</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={bodyRef}>
             {rows.map((row, index) => {
               const diff = (Number(row.gf) || 0) - (Number(row.gc) || 0);
               const isGold = index < GOLD_CUP_PLACES;
               const club = clubOf(row.name);
               return (
-                <tr key={row.id || row.name} className={`border-t ${index === GOLD_CUP_PLACES ? 'border-line/30' : 'border-line/10'}`}>
+                <tr key={row.id || row.name} data-rank-key={row.id || row.name} className={`border-t ${index === GOLD_CUP_PLACES ? 'border-line/30' : 'border-line/10'} ${row.isLive ? 'bg-danger/[0.06]' : ''}`}>
                   <td className="relative py-2 pl-4">
                     <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${isGold ? 'bg-accent' : 'bg-ink-3'}`} aria-hidden="true" />
-                    <span className="num font-display text-base font-bold text-ink">{index + 1}</span>
+                    <span className="flex flex-col items-start gap-0.5">
+                      <span data-rank-flash className="num inline-block font-display text-base font-bold text-ink">{index + 1}</span>
+                      <RankMove move={row.move} />
+                    </span>
                     <span className="sr-only">{isGold ? ', zona Copa de Oro' : ', zona Copa de Plata'}</span>
                   </td>
-                  <td className="max-w-0"><ClubName name={row.name} club={club} /></td>
+                  <td className="max-w-0">
+                    <span className="flex min-w-0 items-center gap-2 pr-2">
+                      <span className="min-w-0 flex-1"><ClubName name={row.name} club={club} /></span>
+                      {row.isLive && <LiveDot pendingShootout={row.pendingShootout} />}
+                    </span>
+                  </td>
                   <td className="num py-2 text-center text-ink-2">{Number(row.pj) || 0}</td>
                   <td className="num py-2 text-center text-ink-2">{diff > 0 ? `+${diff}` : diff}</td>
                   <td className="num py-2 pr-4 text-right font-display text-base font-bold text-ink">{Number(row.pts) || 0}</td>
@@ -78,7 +96,12 @@ export function StandingsCard({ tournament, clubOf, loading }) {
             })}
           </tbody>
         </table>
-        <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line/10 px-4 py-3 text-sm text-ink-2">
+        {live && (
+          <p className="border-t border-line/10 px-4 pt-3 text-sm text-ink-2" role="status">
+            Con el marcador de ahora. Un empate no suma puntos hasta los penales.
+          </p>
+        )}
+        <p className={`flex flex-wrap gap-x-4 gap-y-1 px-4 py-3 text-sm text-ink-2 ${live ? '' : 'border-t border-line/10'}`}>
           <span className="inline-flex items-center gap-2"><span className="h-3 w-1 rounded bg-accent" aria-hidden="true" />1.° a 8.°: Copa de Oro</span>
           <span className="inline-flex items-center gap-2"><span className="h-3 w-1 rounded bg-ink-3" aria-hidden="true" />9.° a 12.°: Copa de Plata</span>
         </p>
@@ -89,7 +112,9 @@ export function StandingsCard({ tournament, clubOf, loading }) {
   return (
     <div className="panel overflow-hidden p-0">
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
-        <h3 className="section-title">{!loading && rows.length && !played ? 'Clubes inscriptos' : 'Tabla'}</h3>
+        <h3 className="section-title">
+          {!loading && rows.length && !played ? 'Clubes inscriptos' : live ? 'Tabla en vivo' : 'Tabla'}
+        </h3>
         <Link to="/torneo" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink">
           Tabla completa <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Link>

@@ -7,22 +7,54 @@ import { useMarketCatalog, useSeasonStats } from '../../../hooks/useSeasonStats.
 import { PlayerPhoto } from '../match/MatchDetailViews.jsx';
 import { LeaderValue, SeasonLeaderRow, playerDisplayName } from './SeasonLeaderRow.jsx';
 import { RoundXi, SeasonRecords } from './RoundAndRecords.jsx';
-import { MIN_RATED_MATCHES, seasonLeaders } from '../../../utils/seasonStats.js';
+import { MIN_PASSES_FOR_ACCURACY, MIN_RATED_MATCHES, MIN_SHOTS_FOR_CONVERSION, seasonLeaders } from '../../../utils/seasonStats.js';
 
-/* /torneo?tab=estadisticas: líderes de la temporada con los datos del juego (match_lines de los partidos oficiales).
-   Dos bloques grandes (goleador y mejor valoración), después las tablas cortas. Sin partidos, nada inventado. */
+/* /estadisticas: los mejores de la temporada en cada aspecto, con los datos del juego (match_lines de los partidos
+   oficiales). Dos bloques grandes (goleador y mejor valoración), después los cinco mejores de cada estadística,
+   agrupados por ataque, pases, defensa y arco. Sin partidos, nada inventado. */
 
 const SPOTLIGHTS = [
   { field: 'goals', title: 'Goleadores', unit: 'goles' },
   { field: 'rating', title: 'Mejor valoración', unit: `promedio, desde ${MIN_RATED_MATCHES} partidos` },
 ];
-const TABLES = [
-  { field: 'assists', title: 'Asistencias' },
-  { field: 'shotsOnTarget', title: 'Tiros al arco' },
-  { field: 'tacklesWon', title: 'Duelos ganados' },
-  { field: 'interceptions', title: 'Intercepciones' },
-  { field: 'cleanSheets', title: 'Vallas invictas' },
-  { field: 'saves', title: 'Atajadas' },
+export const GROUPS = [
+  {
+    id: 'ataque',
+    title: 'Ataque',
+    tables: [
+      { field: 'assists', title: 'Asistencias' },
+      { field: 'shots', title: 'Tiros' },
+      { field: 'shotsOnTarget', title: 'Tiros al arco' },
+      { field: 'shotConversion', title: 'Efectividad', note: `Goles por tiro, desde ${MIN_SHOTS_FOR_CONVERSION} tiros` },
+      { field: 'dribblesCompleted', title: 'Regates' },
+    ],
+  },
+  {
+    id: 'pases',
+    title: 'Pases',
+    tables: [
+      { field: 'passes', title: 'Pases' },
+      { field: 'passesCompleted', title: 'Pases efectivos' },
+      { field: 'passAccuracy', title: 'Precisión de pase', note: `Pases efectivos sobre el total, desde ${MIN_PASSES_FOR_ACCURACY} pases` },
+    ],
+  },
+  {
+    id: 'defensa',
+    title: 'Defensa',
+    tables: [
+      { field: 'tacklesWon', title: 'Quites' },
+      { field: 'interceptions', title: 'Intercepciones' },
+      { field: 'clearances', title: 'Despejes' },
+    ],
+  },
+  {
+    id: 'arco',
+    title: 'Arco',
+    tables: [
+      { field: 'saves', title: 'Atajadas' },
+      { field: 'cleanSheets', title: 'Vallas invictas' },
+    ],
+  },
 ];
 const SPOTLIGHT_ROWS = 5;
 const TABLE_ROWS = 5;
@@ -58,14 +90,15 @@ function Spotlight({ players, field, title, unit, catalog }) {
   );
 }
 
-function LeaderTable({ players, field, title, catalog }) {
-  const rows = seasonLeaders(players, field, { limit: TABLE_ROWS });
+export function LeaderTable({ players, field, title, note, catalog, limit = TABLE_ROWS, hideClub = false }) {
+  const rows = seasonLeaders(players, field, { limit });
   return (
     <section className="min-w-0" aria-labelledby={`season-${field}`}>
-      <h3 id={`season-${field}`} className="eyebrow mb-1">{title}</h3>
+      <h3 id={`season-${field}`} className="eyebrow">{title}</h3>
+      {note && <p className="mt-0.5 text-xs text-ink-3">{note}</p>}
       {rows.length ? (
-        <ol className="divide-y divide-line/10">
-          {rows.map((player, index) => <SeasonLeaderRow key={player.id} player={player} rank={index + 1} field={field} catalog={catalog} />)}
+        <ol className="mt-1 divide-y divide-line/10">
+          {rows.map((player, index) => <SeasonLeaderRow key={player.id} player={player} rank={index + 1} field={field} catalog={catalog} hideClub={hideClub} />)}
         </ol>
       ) : (
         <p className="py-2 text-sm text-ink-3">Todavía no hay.</p>
@@ -109,13 +142,26 @@ export function SeasonStatsView({ stats, catalog, docs = [], rounds = [] }) {
         <span className="num font-semibold text-ink">{stats.matches}</span> {stats.matches === 1 ? 'partido oficial' : 'partidos oficiales'} con datos del juego.
         La valoración es la que da el PES; un partido sin datos del juego no suma acá.
       </p>
+      {/* Atajos a cada grupo: en el teléfono la página pasa las 6.000 px. */}
+      <nav aria-label="Ir a un grupo de estadísticas" className="flex flex-wrap gap-2">
+        {GROUPS.map(group => (
+          <a key={group.id} href={`#season-group-${group.id}-panel`} className="inline-flex min-h-11 items-center rounded-lg border border-line/20 px-4 text-sm font-semibold text-ink-2 transition-colors hover:border-line/40 hover:text-ink">
+            {group.title}
+          </a>
+        ))}
+      </nav>
       <div className="grid gap-4 lg:grid-cols-2">
         {SPOTLIGHTS.map(spot => <Spotlight key={spot.field} players={stats.players} catalog={catalog} {...spot} />)}
       </div>
       <RoundXi docs={docs} rounds={rounds} catalog={catalog} />
-      <div className="panel grid gap-x-8 gap-y-6 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-3">
-        {TABLES.map(table => <LeaderTable key={table.field} players={stats.players} catalog={catalog} {...table} />)}
-      </div>
+      {GROUPS.map(group => (
+        <section key={group.id} id={`season-group-${group.id}-panel`} className="panel scroll-mt-20 p-5 sm:p-6" aria-labelledby={`season-group-${group.id}`}>
+          <h2 id={`season-group-${group.id}`} className="section-title">{group.title}</h2>
+          <div className="mt-4 grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+            {group.tables.map(table => <LeaderTable key={table.field} players={stats.players} catalog={catalog} {...table} />)}
+          </div>
+        </section>
+      ))}
       <SeasonRecords records={stats.records} catalog={catalog} />
     </div>
   );

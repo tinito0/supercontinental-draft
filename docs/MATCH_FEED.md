@@ -34,13 +34,14 @@ docs/PES_MATCH_DATA_RESEARCH.md, S9). Nada de esto toca el torneo:
 vincular un partido a un cruce y cargar el resultado es un paso aparte, con revisión del admin.
 
 Con cada subida la función también escribe `match_lines/{misma clave}`: una línea por jugador que jugó (minutos,
-goles, asistencias, tarjetas, tiros, xG, valoración, atajadas, entradas…), más el marcador, los dos equipos y la
-lista de goles con minuto (`goals`, para el gol más rápido y las remontadas; si no cuadra con el marcador, esos
+goles, asistencias, tarjetas, tiros, xG, valoración, atajadas, entradas…), más el marcador, los dos equipos (con su
+posesión, `home/away.possession`, null si el juego no la contó) y la lista de goles con minuto (`goals`, para el gol más rápido y las remontadas; si no cuadra con el marcador, esos
 récords ignoran el partido). Cada línea lleva además su mapa de calor (`heat`, grilla en `heatGrid`): un nivel 0–9 por
 celda con las rachas de celdas vacías como letras (`encodeHeat`/`decodeHeat`), ~54 caracteres por jugador; la página
 del jugador suma los de la temporada pesando cada partido por minutos jugados (`seasonHeat`). Pesa unos pocos KB, contra 13–35 KB del resumen, y es lo que suman las estadísticas de temporada (`utils/seasonStats.js`).
 Para la temporada cuentan solo los partidos terminados e importados al torneo (`importedFrom`). Los partidos subidos
-antes de este cambio no tienen líneas: se generan si el puente los vuelve a subir.
+antes de este cambio no tienen líneas: se generan si el puente los vuelve a subir. Los que se guardaron antes de
+que se copiara la posesión la reciben con Administración → Torneo → «Completar posesión» (`utils/possessionBackfill.js`).
 
 ## Seguridad
 
@@ -120,7 +121,7 @@ El camino es Macro Deck → `pes-collector/bridge/scl-obs.cmd` → `obs.mjs` →
   - body JSON, por ejemplo `{"action":"scene","scene":"previa"}`,
     `{"action":"popup","preset":"tabla","seconds":30}`, `{"action":"popup","preset":"off"}` o
     `{"action":"toggle","target":"ticker","value":"off"}`.
-  - tarjetas de la comunidad: `{"action":"card","kind":"mvp","seconds":20}` (también `prediction`, `cup` y `off`);
+  - tarjetas de la comunidad: `{"action":"card","kind":"manager","seconds":20}` (también `prediction`, `cup` y `off`);
   - modo automático: `{"action":"toggle","target":"auto","value":"off"}`.
 
   La lista completa, con botones para copiar, está en Admin → Overlay → «Botones de Macro Deck 3».
@@ -130,7 +131,7 @@ El camino es Macro Deck → `pes-collector/bridge/scl-obs.cmd` → `obs.mjs` →
   - `popup tabla 30`: popups `liga`, `tabla`, `equipos`, con segundos (0 = fijo) y posición opcional `right`, `left` o
     `center`;
   - `popup off`;
-  - `card mvp 20`: tarjetas `mvp`, `prediction`, `cup` y `off`;
+  - `card manager 20`: tarjetas `manager`, `prediction`, `cup` y `off`;
   - `toggle ticker off`: elementos `marcador`, `lower`, `ticker` y `auto`.
 - **Necesita:** Node en el PATH y `%APPDATA%\scl-bridge\config.json`, creado por `setup.mjs`.
 - **Si falla:** el resultado queda en `_bridge\obs.log`.

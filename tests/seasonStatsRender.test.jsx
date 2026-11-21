@@ -147,16 +147,14 @@ describe('BroadcastSeasonFacts', () => {
 });
 
 describe('BroadcastFinalAwards', () => {
-  it('shows the community MVP and the best game rating side by side', () => {
-    const html = renderToStaticMarkup(<BroadcastFinalAwards mvp={{ name: 'Saka', pct: 60 }} topRated={{ names: ['Saka', 'Nine'], rating: 7.5 }} />);
-    expect(html).toContain('MVP de la comunidad');
+  it('shows the best game rating, every player on a tie', () => {
+    const html = renderToStaticMarkup(<BroadcastFinalAwards topRated={{ names: ['Saka', 'Nine'], rating: 7.5 }} />);
     expect(html).toContain('Mejor valoración');
     expect(html).toContain('7,5');
     expect(html).toContain('aria-label="Saka y Nine"');
   });
 
-  it('shows the rating alone before anyone votes, and nothing without either', () => {
-    expect(renderToStaticMarkup(<BroadcastFinalAwards mvp={null} topRated={{ names: ['Saka'], rating: 8 }} />)).not.toContain('MVP');
-    expect(renderToStaticMarkup(<BroadcastFinalAwards mvp={null} topRated={null} />)).toBe('');
+  it('shows nothing without ratings', () => {
+    expect(renderToStaticMarkup(<BroadcastFinalAwards topRated={null} />)).toBe('');
   });
 });

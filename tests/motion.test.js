@@ -1,6 +1,6 @@
 // Exit animations and the leaving-item bookkeeping behind ToastStack. Fake animation objects, no DOM.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { waitForExit, mergeWithLeaving, findRemoved, EXIT_TIMEOUT_MS } from '../utils/motion.js';
+import { waitForExit, mergeWithLeaving, findRemoved, rankShifts, EXIT_TIMEOUT_MS } from '../utils/motion.js';
 
 const animation = ({ finished = Promise.resolve(), endTime = 120 } = {}) => ({
   finished,
@@ -66,5 +66,25 @@ describe('leaving items', () => {
 
   it('puts leaving items past the end at the end', () => {
     expect(mergeWithLeaving([], [{ key: 'b', index: 3 }]).map(item => item.key)).toEqual(['b']);
+  });
+});
+
+describe('rankShifts', () => {
+  const tops = entries => new Map(entries);
+
+  it('gives each moved row the distance back to where it was', () => {
+    const before = tops([['a', 0], ['b', 40], ['c', 80]]);
+    const after = tops([['c', 0], ['a', 40], ['b', 80]]);
+    expect(rankShifts(before, after)).toEqual([
+      { key: 'c', dy: 80 },
+      { key: 'a', dy: -40 },
+      { key: 'b', dy: -40 },
+    ]);
+  });
+
+  it('leaves out rows that stayed, appeared or moved less than half a pixel', () => {
+    const before = tops([['a', 0], ['b', 40], ['gone', 80]]);
+    const after = tops([['a', 0.3], ['b', 40], ['new', 80]]);
+    expect(rankShifts(before, after)).toEqual([]);
   });
 });

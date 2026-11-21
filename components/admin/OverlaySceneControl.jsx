@@ -2,7 +2,8 @@ import React, { memo, useMemo, useState } from 'react';
 import { CircleAlert, CircleCheck, Copy, EyeOff, Keyboard, Users } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
 import { OBS_SCENES } from '../../utils/obsScenes.js';
-import { useLiveMatch, useMvpVotes, usePoll, usePrediction } from '../../hooks/useLeagueData.js';
+import { useLiveMatch, usePoll, usePrediction, useTournament } from '../../hooks/useLeagueData.js';
+import { useManagerRound } from '../../hooks/useManagerRound.js';
 import { useNow } from '../../hooks/useNow.js';
 import { buildOverlayLive, communityCardStatus } from '../../utils/overlayLive.js';
 import { timedRemainingMs } from '../../utils/overlayPopup.js';
@@ -21,7 +22,7 @@ const MACRO_DECK_COMMANDS = [
   { label: 'Popup: tabla y copas (30 s)', body: { action: 'popup', preset: 'tabla', seconds: 30 } },
   { label: 'Popup: seguí la liga (30 s)', body: { action: 'popup', preset: 'liga', seconds: 30 } },
   { label: 'Ocultar popup', body: { action: 'popup', preset: 'off' } },
-  { label: 'Tarjeta: MVP en vivo (20 s)', body: { action: 'card', kind: 'mvp', seconds: 20 } },
+  { label: 'Tarjeta: manager de la fecha (20 s)', body: { action: 'card', kind: 'manager', seconds: 20 } },
   { label: 'Tarjeta: predicción (20 s)', body: { action: 'card', kind: 'prediction', seconds: 20 } },
   { label: 'Tarjeta: ¿quién gana la copa? (20 s)', body: { action: 'card', kind: 'cup', seconds: 20 } },
   { label: 'Ocultar tarjeta', body: { action: 'card', kind: 'off' } },
@@ -33,7 +34,7 @@ const MACRO_DECK_COMMANDS = [
 
 // Tarjetas de la comunidad (components/broadcast/CommunityCard.jsx); sin votos no aparecen.
 const COMMUNITY_CARDS = [
-  { kind: 'mvp', label: 'MVP en vivo', hint: 'Quién va ganando y por cuánto' },
+  { kind: 'manager', label: 'Manager de la fecha', hint: 'Quién va ganando la votación de la última fecha' },
   { kind: 'prediction', label: 'Predicción', hint: 'Local, empate o visitante' },
   { kind: 'cup', label: 'Copa', hint: '¿Quién gana la copa?' },
 ];
@@ -99,13 +100,15 @@ function useCardStatus(overlay) {
   const liveMatchKey = overlay?.liveMatchKey || null;
   const { match } = useLiveMatch(liveMatchKey);
   const { data: prediction } = usePrediction(overlay?.matchId || null);
-  const { data: mvpVotes } = useMvpVotes(liveMatchKey);
+  const { tournament } = useTournament();
+  const { round: managerRound } = useManagerRound(tournament);
   const { data: oroPoll } = usePoll(CUP_POLLS[0].id);
   const { data: plataPoll } = usePoll(CUP_POLLS[1].id);
   return useMemo(() => communityCardStatus(
-    buildOverlayLive({ match: liveMatchKey ? match : null, prediction, mvpVotes, polls: [oroPoll, plataPoll] }),
+    buildOverlayLive({ match: liveMatchKey ? match : null, prediction, managerRound, polls: [oroPoll, plataPoll] }),
     overlay,
-  ), [liveMatchKey, match, prediction, mvpVotes, oroPoll, plataPoll, overlay]);
+    managerRound,
+  ), [liveMatchKey, match, prediction, managerRound, oroPoll, plataPoll, overlay]);
 }
 
 export const CommunityLayerControl = memo(function CommunityLayerControl({ overlay, onPersist }) {

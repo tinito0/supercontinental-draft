@@ -1,0 +1,40 @@
+# Publishes the Supabase Edge Function `overlay-control` (docs/MATCH_FEED.md): the OBS overlay commands from Macro Deck, from GitHub, like deploy-market.
+# Manual: Actions → deploy-overlay-control → Run workflow (works from the phone). Only from master, and only after its tests
+# pass. Uses the repository secret SUPABASE_ACCESS_TOKEN; the function's own secrets (FIREBASE_SERVICE_ACCOUNT, MATCH_FEED_TOKEN, OVERLAY_SITE_URL) live in
+# Supabase and are not touched.
+name: deploy-overlay-control
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-overlay-control
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # The overlay commands, popups and cards.
+      - run: npx vitest run tests/overlayControl.test.js --reporter=default --reporter=github-actions
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy overlay-control
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions)."; exit 1; }
+          # --no-verify-jwt: the bridge is not a Supabase or Firebase user; it signs with MATCH_FEED_TOKEN.
+          supabase functions deploy overlay-control --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy --yes

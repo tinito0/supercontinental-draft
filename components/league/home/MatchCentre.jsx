@@ -20,7 +20,6 @@ function VoteLink({ children }) {
 }
 
 function actionFor(fixture, prediction) {
-  if (fixture.status === 'live') return <VoteLink>Votá el MVP del partido</VoteLink>;
   // La predicción abre cuando el admin pone el partido al aire y cierra cuando arranca (community-vote).
   if (fixture.status === 'scheduled' && fixture.isOnAir && prediction && !prediction.closedAt) return <VoteLink>¿Quién gana? Votá tu predicción</VoteLink>;
   return null;
@@ -38,23 +37,27 @@ function List({ fixtures, clubOf, prediction }) {
 
 /**
  * @param {{ groups: { live, results, upcoming, other }, clubOf: Function, loading: boolean, error: string,
- *   liveError?: string, prediction?: object|null, round?: { title, fixtures } }} props  round: utils/leagueFixtures.currentRound
+ *   liveError?: string, prediction?: object|null, round?: { title, fixtures }, featuredId?: string|null }} props
+ *   round: utils/leagueFixtures.currentRound; featuredId: el partido que la portada ya muestra arriba, que no se repite
  */
-export function MatchCentre({ groups, round, clubOf, loading, error, liveError, prediction }) {
-  const live = [...groups.live, ...groups.other.filter(f => f.status === 'nosignal')];
-  const upcoming = [...groups.upcoming, ...groups.other.filter(f => f.status === 'postponed')];
+export function MatchCentre({ groups, round, clubOf, loading, error, liveError, prediction, featuredId = null }) {
+  const notFeatured = f => f.id !== featuredId;
+  const live = [...groups.live, ...groups.other.filter(f => f.status === 'nosignal')].filter(notFeatured);
+  const upcoming = [...groups.upcoming, ...groups.other.filter(f => f.status === 'postponed')].filter(notFeatured);
   const results = [...groups.results, ...groups.other.filter(f => f.status === 'abandoned')];
-  const preferred = live.length ? 'live' : results.length ? 'results' : 'upcoming';
+  // Con el partido en juego arriba, lo que sigue interesando es qué falta de la fecha.
+  const featuredIsLive = groups.live.some(f => f.id === featuredId);
+  const preferred = live.length ? 'live' : featuredIsLive && upcoming.length ? 'upcoming' : results.length ? 'results' : 'upcoming';
   const [chosen, setChosen] = useState(null);
   const tab = chosen || preferred;
 
   const tabs = [
-    { id: 'live', label: 'En vivo', icon: Radio, count: groups.live.length || null, hidden: !live.length },
+    { id: 'live', label: 'En vivo', icon: Radio, count: live.length || null, hidden: !live.length },
     { id: 'results', label: 'Resultados', icon: Trophy, hidden: !results.length },
-    { id: 'upcoming', label: 'Próximos', icon: CalendarDays, count: groups.upcoming.length || null },
+    { id: 'upcoming', label: 'Próximos', icon: CalendarDays, count: upcoming.length || null },
   ];
   // Sin ningún partido cargado (pretemporada) no hay nada que elegir: una línea en lugar de pestañas vacías.
-  const isEmpty = !error && !loading && !live.length && !results.length && !upcoming.length;
+  const isEmpty = !error && !loading && !featuredId && !live.length && !results.length && !upcoming.length;
 
   let body;
   if (error) body = <div className="p-4"><Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert></div>;
