@@ -46,6 +46,17 @@ describe('buildFixtures', () => {
     expect(official).toMatchObject({ status: 'finished', score: { home: 2, away: 0 }, winner: 'home', liveMatchKey: 'k1' });
   });
 
+  it('links a finished game to the completed fixture loaded by hand, but never a live rematch', () => {
+    const done = league('1', { homeScore: 2, awayScore: 0, status: 'completed' });
+    const finishedGame = live('k1', { status: { kind: 'finished', label: 'Final' } });
+    const [linked] = buildFixtures({ tournament: { matches: [done] }, liveMatches: [finishedGame], teamsById, now: NOW });
+    expect(linked).toMatchObject({ status: 'finished', score: { home: 2, away: 0 }, liveMatchKey: 'k1', liveScore: null });
+    const [rematch] = buildFixtures({ tournament: { matches: [done] }, liveMatches: [live('k2')], teamsById, now: NOW });
+    expect(rematch).toMatchObject({ status: 'finished', liveMatchKey: null });
+    const twice = buildFixtures({ tournament: { matches: [done, league('2', { homeScore: 1, awayScore: 1, status: 'completed' })] }, liveMatches: [finishedGame], teamsById, now: NOW });
+    expect(twice.every(f => f.liveMatchKey === null)).toBe(true);
+  });
+
   it('keeps postponed, abandoned and stale matches out of live', () => {
     const tournament = { matches: [league('1', { status: 'postponed' }), league('2', { homeTeam: 'Racing', awayTeam: 'Indepe' })] };
     const fixtures = buildFixtures({

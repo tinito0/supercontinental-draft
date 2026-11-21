@@ -1,7 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { CalendarDays, Gamepad2 } from 'lucide-react';
-import { Tabs } from '../../components/ui/Tabs.jsx';
+import { CalendarDays } from 'lucide-react';
 import { FixtureRow, makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
 import { FeaturedMatch } from '../../components/league/home/FeaturedMatch.jsx';
 import { LeagueLeaders } from '../../components/league/match/LeagueLeaders.jsx';
@@ -10,7 +8,7 @@ import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
-import { useLeagueTeams, useLiveMatches } from '../../hooks/useLeagueData.js';
+import { useLeagueTeams } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { groupMatchesByDay } from '../../utils/matchCenter.js';
 
@@ -115,73 +113,55 @@ function FixtureList({ teams, teamsById }) {
           </ul>
         </section>
       ))}
+      <OtherGameMatches fixtures={fixtures} liveMatches={liveMatches} teamsById={teamsById} />
     </div>
   );
 }
 
-const VIEWS = [
-  { id: 'fixture', label: 'Fixture y resultados', icon: CalendarDays },
-  { id: 'registro', label: 'Registro del juego', icon: Gamepad2 },
-];
+/**
+ * Game matches the bridge uploaded that belong to no fixture (friendlies, tests): official ones already open their
+ * minute-by-minute from the fixture above, so only the rest is listed, by day. Nothing shows when there are none.
+ */
+function OtherGameMatches({ fixtures, liveMatches, teamsById }) {
+  const others = useMemo(() => {
+    const linked = new Set(fixtures.map(fixture => fixture.liveMatchKey).filter(Boolean));
+    return (liveMatches || []).filter(match => !linked.has(match.key));
+  }, [fixtures, liveMatches]);
+  const groups = useMemo(() => groupMatchesByDay(others), [others]);
+  const clubOf = useMemo(() => gameLogClubs(others, teamsById), [others, teamsById]);
+  if (!others.length) return null;
+  return (
+    <section aria-labelledby="other-matches" className="space-y-4 border-t border-line/10 pt-8">
+      <div>
+        <h2 id="other-matches" className="font-display text-2xl font-bold uppercase leading-none text-ink">Otros partidos del PES</h2>
+        <p className="mt-2 text-sm text-ink-2">Amistosos y pruebas que el juego subió y no son del torneo. No suman en la tabla.</p>
+      </div>
+      {groups.map(group => (
+        <section key={group.label} aria-label={group.label}>
+          <h3 className="mb-2 text-sm font-semibold text-ink-2 first-letter:uppercase">{group.label}</h3>
+          <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
+            {group.matches.map(match => <FixtureRow key={match.key} fixture={gameLogFixture(match)} clubOf={clubOf} />)}
+          </ul>
+        </section>
+      ))}
+    </section>
+  );
+}
 
-/** Partidos: el fixture del torneo y el registro de todo lo que subió el bridge del PES. */
+/** Partidos: el fixture del torneo con sus resultados y, si los hay, los partidos del PES que no son del torneo. */
 export default function LeagueMatchesScreen() {
   useDocumentTitle('Partidos');
-  const [searchParams, setSearchParams] = useSearchParams();
-  const view = searchParams.get('vista') === 'registro' ? 'registro' : 'fixture';
   const { teams, teamsById } = useLeagueTeams();
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 md:py-16">
       <Reveal>
         <SectionHeading as="h1" title="Partidos">
-          El fixture con los resultados oficiales del torneo, y el minuto a minuto de cada partido jugado en el juego.
+          El fixture del torneo con los resultados oficiales. Cada partido jugado abre su minuto a minuto.
         </SectionHeading>
       </Reveal>
       <LeagueLeaders />
-      <div className="mb-6">
-        <Tabs label="Vista" value={view} onChange={id => setSearchParams(id === 'registro' ? { vista: 'registro' } : {}, { replace: true })} tabs={VIEWS} />
-      </div>
-      {view === 'fixture' ? <FixtureList teams={teams} teamsById={teamsById} /> : <GameLog teamsById={teamsById} />}
+      <FixtureList teams={teams} teamsById={teamsById} />
     </section>
   );
-}
-
-/** Registro de partidos: todo lo que subió el bridge del PES, en vivo y terminados. */
-function GameLog({ teamsById }) {
-  const { matches, loading, error } = useLiveMatches();
-  const groups = useMemo(() => groupMatchesByDay(matches), [matches]);
-  const clubOf = useMemo(() => gameLogClubs(matches, teamsById), [matches, teamsById]);
-
-  let content;
-  if (error) {
-    content = <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
-  } else if (loading) {
-    content = (
-      <div className="panel divide-y divide-line/10" aria-busy="true">
-        {[0, 1, 2].map(i => <div key={i} className="m-3 h-16 skeleton" />)}
-      </div>
-    );
-  } else if (!matches.length) {
-    content = <EmptyState icon={CalendarDays} title="Todavía no hay partidos" description="Cada partido que se juega aparece acá en vivo, con el minuto a minuto y las estadísticas." />;
-  } else {
-    content = (
-      <div className="space-y-8">
-        {groups.map(group => (
-          <section key={group.label} aria-label={group.label}>
-            {group.label === 'En vivo' ? (
-              <h2 className="mb-3 font-display text-2xl font-bold uppercase leading-none text-danger-soft">En vivo</h2>
-            ) : (
-              <h2 className="mb-3 font-display text-2xl font-bold uppercase leading-none text-ink first-letter:uppercase">{group.label}</h2>
-            )}
-            <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
-              {group.matches.map(match => <FixtureRow key={match.key} fixture={gameLogFixture(match)} clubOf={clubOf} />)}
-            </ul>
-          </section>
-        ))}
-      </div>
-    );
-  }
-
-  return content;
 }
