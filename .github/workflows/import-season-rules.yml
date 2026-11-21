@@ -10,6 +10,10 @@ on:
         description: Archivo del reglamento
         type: string
         default: content/reglamento-temporada-3.json
+      force:
+        description: Reemplazar aunque se haya editado desde Administración
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -35,9 +39,10 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FILE: ${{ inputs.file }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
         run: |
           test -n "$FIREBASE_SERVICE_ACCOUNT" || { echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT."; exit 1; }
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
-          node scripts/import-season-rules.mjs "$FILE" --apply
+          node scripts/import-season-rules.mjs "$FILE" --apply $FORCE
           rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
