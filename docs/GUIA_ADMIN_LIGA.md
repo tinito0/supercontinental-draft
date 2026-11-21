@@ -84,8 +84,8 @@ Un equipo del draft **es una cuenta**: el id del club es el id de Firebase del m
    una cuenta de email y contraseña solo existe si la creás vos en la consola de Firebase (Authentication).
    (Hasta el 2026-10-30 un Gmail nuevo era rechazado; `hooks/useAuth.js` ahora lo deja entrar como pendiente.)
 2. **Vos lo aprobás**: Administración → Equipos y usuarios → **Aprobar** en su tarjeta.
-3. **Editás el club** (botón Editar): nombre, escudo (subís la imagen; se achica y se guarda en Firebase Storage,
-   `team_logos/`), país y presupuesto (en pesos, sin puntos).
+3. **Editás el club** (botón Editar): nombre, escudo (subís la imagen; se achica y se guarda en Supabase Storage,
+   bucket `league-media`, por la función `league-media`), país y presupuesto (en pesos, sin puntos).
 4. **(Opcional) Acceso anticipado**: «Dar acceso anticipado» le deja usar el mercado aunque esté cerrado o programado.
 5. **Web pública**: la historia y la ficha del club se escriben en Administración → Web pública (documento
    `club-{id}`). Su página es `/equipos/{id}`.
@@ -174,9 +174,9 @@ de la web (los mismos que escriben las historias):
 - **Administración → Web pública → Clubes → Camisetas:** «Subir imagen» (PNG, JPG o WEBP, hasta 12 MB) o pegar un
   link https. Después **Guardar**.
 
-Las imágenes van a Firebase Storage (`league_kits/`). La primera vez hay que publicar `storage.rules`
-(`firebase deploy --only storage`); antes, mirá en la consola de Firebase que esas reglas no se pierdan nada de las
-que hay ahora (el archivo cubre `team_logos/` y `league_kits/`).
+Las imágenes van a Supabase Storage (bucket público `league-media`) por la función `league-media`, que revisa
+la sesión: camisetas, el admin o un editor de la web; escudos, solo el admin. El bucket se crea solo con la primera
+subida.
 
 ## 5. Eliminar un club
 
@@ -204,6 +204,7 @@ test falla, no publica nada.
 | Votos del público (predicción, manager de la fecha, encuestas de copa) o la forma de las copas | `supabase/functions/_shared/communityVote.js` y `community-vote/index.ts` | **deploy-community-vote** |
 | Colector de partidos en vivo: lo que sube el puente, `match_lines`, cierre de la predicción, popups y tarjetas automáticas de OBS | `supabase/functions/match-feed/`, `_shared/matchFeed.js`, `matchLines.js`, `overlayControl.js` | **deploy-match-feed** |
 | Comandos del overlay de OBS (Macro Deck) | `supabase/functions/overlay-control/`, `_shared/overlayControl.js` | **deploy-overlay-control** |
+| Subida de camisetas y escudos | `supabase/functions/league-media/`, `_shared/leagueMedia.js` | **deploy-league-media** |
 
 Paso a paso desde el celular:
 

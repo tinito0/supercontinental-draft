@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { RefreshCw, Search, X, Users, Edit2, Crown, Trash2, Upload, Save, KeyRound, UserCheck, UserCog } from 'lucide-react';
 import { getDocs, query, collection, getDoc, writeBatch, doc, setDoc, where, runTransaction } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { DEFAULT_LOGO, APP_ID } from '../../utils/constants.js';
 import { formatPriceShort } from '../../utils/helpers.js';
 import { filterAdminTeams, mergeAdminTeamProfile, parseBudgetInput, sortByTeamName, validateLogoFile } from '../../utils/adminTeams.js';
@@ -11,6 +10,7 @@ import { resizeImageFile } from '../../utils/resizeImage.js';
 import { renameTeamInTournament } from '../../utils/tournamentRename.js';
 import { confirmAction } from '../ui/ConfirmDialog.jsx';
 import { ClubTransferDialog } from './ClubTransferDialog.jsx';
+import { uploadClubCrest } from '../../services/leagueMediaService.js';
 
 const ACCESS_FILTERS = [
   { id: 'all', label: 'Todos' },
@@ -26,7 +26,6 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
   getPublicTeamsCollectionRef,
   getPublicTeamRef,
   getPrivateProfileRef,
-  storage,
   db,
   showStatusMessage,
 }) {
@@ -167,15 +166,12 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
       return;
     }
     try {
-      const uid = editingTeam.uid;
-      const storageRef = ref(storage, `team_logos/${uid}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
+      const url = await uploadClubCrest(editingTeam.uid, file);
       setFormData(prev => ({ ...prev, logoUrl: url }));
-      showStatusMessage('success', 'Escudo subido.');
+      showStatusMessage('success', 'Escudo subido. Guardá para publicarlo.');
     } catch (err) {
       console.error(err);
-      showStatusMessage('error', 'Error al subir el escudo.');
+      showStatusMessage('error', err?.message || 'No se pudo subir el escudo.');
     }
     setIsUploading(false);
   };

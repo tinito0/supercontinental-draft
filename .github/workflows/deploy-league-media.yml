@@ -1,0 +1,39 @@
+# Publishes the Supabase Edge Function `league-media` (kit and crest uploads, docs/GUIA_ADMIN_LIGA.md) from GitHub,
+# like deploy-market. Manual: Actions → deploy-league-media → Run workflow (works from the phone). Only from master,
+# and only after its tests pass. Uses the repository secret SUPABASE_ACCESS_TOKEN; FIREBASE_SERVICE_ACCOUNT already
+# lives in Supabase and is not touched.
+name: deploy-league-media
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-league-media
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx vitest run tests/leagueMedia.test.js --reporter=default --reporter=github-actions
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy league-media
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions)."; exit 1; }
+          # --no-verify-jwt: the caller sends a Firebase ID token, which the function verifies itself.
+          supabase functions deploy league-media --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy --yes

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ImageOff, Loader2, Shirt, Trash2, Upload } from 'lucide-react';
 import { KIT_SLOTS, MAX_PHOTO_URL_LENGTH, cleanPhotoUrl } from '../../utils/leagueContent.js';
-import { uploadClubKitImage } from '../../services/clubKitService.js';
+import { uploadClubKitImage } from '../../services/leagueMediaService.js';
 
 /* Administración → Web pública → Clubes: las camisetas que muestra la página del club (titular, suplente y
    alternativa). Cada una es una imagen: se sube desde la compu o el celular, o se pega un link. */
@@ -39,7 +39,7 @@ function KitSlot({ teamId, slot, label, url, onChange }) {
       setState({ busy: false, error: '', note: 'Imagen subida. Guardá para publicarla.' });
     } catch (error) {
       console.error('[ClubKitsEditor] upload', error);
-      setState({ busy: false, error: error?.code === 'storage/unauthorized' ? 'No tenés permiso para subir imágenes (o falta publicar storage.rules).' : (error?.message || 'No se pudo subir la imagen.'), note: '' });
+      setState({ busy: false, error: error?.message || 'No se pudo subir la imagen.', note: '' });
     } finally {
       if (inputRef.current) inputRef.current.value = '';
     }

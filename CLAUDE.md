@@ -105,7 +105,7 @@ shared by app and function) and both exports (`services/draftTeamsService.js`) r
 - Firestore emulator REST quirk: a transactional single-document `GET ?transaction=` never answers; the REST
   client uses `documents:batchGet`.
 
-**Supabase** is used only for PES texture and source files in Storage. There is no Supabase login: the client
+**Supabase** Storage holds the PES texture and source files and the league site's kits and crests (`league-media`). There is no Supabase login: the client
 passes the Firebase ID token (Third-Party Auth). Call `refreshFirebaseClaims()` after claims change.
 
 **PES working copy** = original sources (IndexedDB, keyed by SHA-256, never modified) + saved operations
@@ -137,8 +137,8 @@ per browser). Never store binaries in Firestore or localStorage.
 
 - `vendor/` holds game files, an `EDIT00000000` that contains a Steam ID, and third-party tools. It is gitignored. Never commit it.
 - On Windows, a shell whose cwd is inside `dist/` locks it and `npm run build` fails with EBUSY.
-- `storage.rules` (Firebase Storage: `team_logos/`, `league_kits/`) replaced rules that lived only in the console; deploy with
-  `firebase deploy --only storage` after checking the console has nothing else.
+- Firebase Storage is not enabled in the project. Club kits and crests go to the public Supabase bucket `league-media`
+  through the Edge Function `league-media` (`services/leagueMediaService.js`), which checks the Firebase session.
 - `firestore.rules` changes need `npm run test:rules` and an explicit deploy. The catch-all
   `match /{document=**}` gives the app admin unrestricted writes on purpose. Don't widen other rules to "fix" access.
 - `app.jsx`, `components/FormationModal.jsx` and `components/PlayerModal.jsx` are over 800 lines. Prefer extracting
