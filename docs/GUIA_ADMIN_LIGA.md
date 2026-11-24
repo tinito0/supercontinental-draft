@@ -168,9 +168,9 @@ Administración → Equipos y usuarios → **Editar**: nombre, escudo, país, pr
 
 ### Socios de un club
 
-La pestaña «Socios» de la página del club muestra cuántos socios tiene. Se carga en **Administración → Web pública →
-Clubes**, campo **Socios** de la ficha (un número entero; «1.250» o «1250» valen igual), y **Guardar**. Vacío, la
-pestaña dice que el club todavía no cargó sus socios.
+La cabecera de la página del club muestra cuántos socios tiene, al lado del año de fundación. Se carga en
+**Administración → Web pública → Clubes**, campo **Socios** de la ficha (un número entero; «1.250» o «1250» valen
+igual), y **Guardar**. Vacío, no se muestra nada.
 
 ### Camisetas en la página del club
 

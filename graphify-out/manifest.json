@@ -265080,9 +265080,9 @@
     "semantic_hash": ""
   },
   "screens/league/LeagueClubScreen.jsx": {
-    "mtime": 1795547595.5346754,
-    "seen": 1795548023.5538244,
-    "ast_hash": "a4de4035e6bc1dbf160d9ad59690db4b",
+    "mtime": 1795556137.9554863,
+    "seen": 1795556806.7251816,
+    "ast_hash": "01a41b0b49a7a471d18f61bba3d813eb",
     "semantic_hash": ""
   },
   "screens/league/LeagueHistoryScreen.jsx": {
@@ -265896,9 +265896,9 @@
     "semantic_hash": ""
   },
   "components/admin/ClubProfileEditor.jsx": {
-    "mtime": 1795547577.5934906,
-    "seen": 1795548023.5005088,
-    "ast_hash": "616b7850bd827e59e4061c750517d438",
+    "mtime": 1795556141.1059096,
+    "seen": 1795556806.655261,
+    "ast_hash": "3fa8748b80ce493b79cde02cf8b005c8",
     "semantic_hash": ""
   },
   "components/admin/CommunityAdminSection.jsx": {
@@ -265920,9 +265920,9 @@
     "semantic_hash": ""
   },
   "components/league/club/ClubHero.jsx": {
-    "mtime": 1793308653.635018,
-    "seen": 1793845429.798438,
-    "ast_hash": "4dd4dd4db25b1a57ab735e16e890cbfa",
+    "mtime": 1795556124.9622102,
+    "seen": 1795556806.6688745,
+    "ast_hash": "ee7449477939e6e5b08dbed514c13f7b",
     "semantic_hash": ""
   },
   "components/league/club/ClubHonours.jsx": {
@@ -266766,9 +266766,9 @@
     "semantic_hash": ""
   },
   "docs/GUIA_ADMIN_LIGA.md": {
-    "mtime": 1795547609.8093195,
-    "seen": 1795548023.631253,
-    "ast_hash": "6c4f164f02aad05c0a74408bc57b5876",
+    "mtime": 1795556154.9373972,
+    "seen": 1795556806.8232353,
+    "ast_hash": "321c585ea02c88b4edabc0b3508a5776",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/matchLines.js": {
@@ -267033,12 +267033,6 @@
     "mtime": 1795547097.752057,
     "seen": 1795548023.508971,
     "ast_hash": "9acc33a7a6596577915fea674c2e4550",
-    "semantic_hash": ""
-  },
-  "components/league/club/ClubMembers.jsx": {
-    "mtime": 1795547591.061905,
-    "seen": 1795548023.5089734,
-    "ast_hash": "79138418c793a4160ffad4be51852aa1",
     "semantic_hash": ""
   },
   "components/league/home/HomeCompact.jsx": {

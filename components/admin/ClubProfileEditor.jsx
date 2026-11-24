@@ -119,7 +119,7 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
               <input className="input" value={profile[key]} maxLength={max} placeholder={placeholder} onChange={event => setField(key, event.target.value)} />
             </Field>
           ))}
-          <Field label="Socios" help="Cuántos socios tiene el club. Se muestra en la pestaña «Socios» de su página.">
+          <Field label="Socios" help="Cuántos socios tiene el club. Se muestra arriba de su página, junto al año de fundación.">
             <input className="input num" inputMode="numeric" value={profile.members} maxLength={12} placeholder="Ej.: 1.250" onChange={event => setField('members', event.target.value)} />
           </Field>
         </div>
