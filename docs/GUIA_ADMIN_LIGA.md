@@ -166,6 +166,12 @@ Administración → Equipos y usuarios → **Editar**: nombre, escudo, país, pr
 - La tabla del torneo y el overlay identifican a los clubes por nombre: al renombrar, el formulario los actualiza en
   la misma transacción y te dice dónde («También se renombró en el torneo y el overlay»).
 
+### Socios de un club
+
+La pestaña «Socios» de la página del club muestra cuántos socios tiene. Se carga en **Administración → Web pública →
+Clubes**, campo **Socios** de la ficha (un número entero; «1.250» o «1250» valen igual), y **Guardar**. Vacío, la
+pestaña dice que el club todavía no cargó sus socios.
+
 ### Camisetas en la página del club
 
 La página de cada club muestra su camiseta titular, suplente y alternativa. Las pueden cargar el admin y los editores

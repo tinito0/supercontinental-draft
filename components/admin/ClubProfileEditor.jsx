@@ -6,15 +6,15 @@ import { PhotoFramer } from './PhotoFramer.jsx';
 import { ClubKitsEditor } from './ClubKitsEditor.jsx';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import {
-  CLUB_PROFILE_FIELDS, DEFAULT_PHOTO_FRAME, HONOUR_SCOPES, MAX_CHAPTERS, MAX_CLUB_SEASONS, MAX_ERA_LENGTH, MAX_HONOURS, MAX_PHOTO_URL_LENGTH,
-  MAX_STORY_LENGTH, MAX_TITLE_LENGTH, SEASON_STATS, cleanPhotoFrame, cleanPhotoUrl, clubChapters, clubStoryDocId, moveChapter, newClubChapter,
-  newClubSeason, newHonour,
+  CLUB_PROFILE_FIELDS, DEFAULT_PHOTO_FRAME, HONOUR_SCOPES, MAX_CHAPTERS, MAX_CLUB_SEASONS, MAX_ERA_LENGTH, MAX_HONOURS,
+  MAX_PHOTO_URL_LENGTH, MAX_STORY_LENGTH, MAX_TITLE_LENGTH, SEASON_STATS, cleanPhotoFrame, cleanPhotoUrl, clubChapters,
+  clubStoryDocId, formatClubMembers, moveChapter, newClubChapter, newClubSeason, newHonour,
 } from '../../utils/leagueContent.js';
 
-/* Administración → Web pública → Clubes: la ficha (estadio, autoridades, títulos, campañas) y la historia de un club.
-   Se guardan juntas porque viven en el mismo documento (utils/leagueContent.js normalizeClub). */
+/* Administración → Web pública → Clubes: la ficha (estadio, autoridades, socios, títulos, campañas) y la historia de un
+   club. Se guardan juntas porque viven en el mismo documento (utils/leagueContent.js normalizeClub). */
 
-const emptyProfile = () => ({ ...Object.fromEntries(CLUB_PROFILE_FIELDS.map(([key]) => [key, ''])), stadiumPhotoUrl: '', stadiumPhotoFrame: { ...DEFAULT_PHOTO_FRAME }, kits: {}, honours: [], seasons: [] });
+const emptyProfile = () => ({ ...Object.fromEntries(CLUB_PROFILE_FIELDS.map(([key]) => [key, ''])), members: '', stadiumPhotoUrl: '', stadiumPhotoFrame: { ...DEFAULT_PHOTO_FRAME }, kits: {}, honours: [], seasons: [] });
 
 function fromSaved(content) {
   const saved = content?.profile || {};
@@ -31,6 +31,8 @@ function fromSaved(content) {
       kits: { ...(saved.kits || {}) },
       honours: (saved.honours || []).map(item => ({ ...newHonour(), ...item, count: String(item.count ?? 1) })),
       seasons: (saved.seasons || []).map(item => ({ ...newClubSeason(), ...item })),
+      // saved as a number, edited as text with thousands dots («1.250»)
+      members: formatClubMembers(saved.members),
     },
   };
 }
@@ -117,6 +119,9 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
               <input className="input" value={profile[key]} maxLength={max} placeholder={placeholder} onChange={event => setField(key, event.target.value)} />
             </Field>
           ))}
+          <Field label="Socios" help="Cuántos socios tiene el club. Se muestra en la pestaña «Socios» de su página.">
+            <input className="input num" inputMode="numeric" value={profile.members} maxLength={12} placeholder="Ej.: 1.250" onChange={event => setField('members', event.target.value)} />
+          </Field>
         </div>
         <Field label="Foto del estadio" help="Pegá el link directo a una foto (https://…). Se muestra grande en la cabecera del club; abajo elegís qué parte se ve.">
           <input className="input" type="url" inputMode="url" value={profile.stadiumPhotoUrl} maxLength={MAX_PHOTO_URL_LENGTH}

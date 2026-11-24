@@ -134,6 +134,7 @@ export const MAX_PHOTO_URL_LENGTH = 500;
 export const KIT_SLOTS = [['home', 'Titular'], ['away', 'Suplente'], ['third', 'Alternativa']];
 export const MAX_HONOURS = 30;
 export const MAX_CLUB_SEASONS = 40;
+export const MAX_CLUB_MEMBERS = 9_999_999; // how many members (socios) a club can say it has; same limit in firestore.rules
 const HONOUR_NAME_LENGTH = 80;
 const HONOUR_YEARS_LENGTH = 160;
 const SEASON_LABEL_LENGTH = 40;
@@ -245,6 +246,25 @@ function normalizeClubSeasons(rows) {
 }
 
 /**
+ * How many members (socios) a club has, as typed in the admin («1.250», «1250», «1 250»).
+ * @returns {{ ok: true, value: number|null } | { ok: false, error: string }} null when left empty
+ */
+export function parseClubMembers(value) {
+  if (typeof value === 'number') value = String(value);
+  const digits = String(value ?? '').trim().replace(/[.\s]/g, '');
+  if (!digits) return { ok: true, value: null };
+  if (!/^\d+$/.test(digits) || Number(digits) > MAX_CLUB_MEMBERS) {
+    return { ok: false, error: `Socios: tiene que ser un número entero, sin decimales (hasta ${MAX_CLUB_MEMBERS.toLocaleString('es-AR')}).` };
+  }
+  return { ok: true, value: Number(digits) };
+}
+
+/** The member count as the public page shows it («1.250»), or '' when the club has none saved. */
+export function formatClubMembers(value) {
+  return Number.isInteger(value) && value >= 0 ? value.toLocaleString('es-AR') : '';
+}
+
+/**
  * The club card ready to save: trimmed, limits applied, empty rows dropped.
  * @returns {{ ok: true, value: object } | { ok: false, error: string }}
  */
@@ -266,7 +286,10 @@ export function normalizeClubProfile(profile = {}) {
   if (!honours.ok) return honours;
   const seasons = normalizeClubSeasons(profile?.seasons);
   if (!seasons.ok) return seasons;
-  return { ok: true, value: { ...value, honours: honours.value, seasons: seasons.value } };
+  const members = parseClubMembers(profile?.members);
+  if (!members.ok) return members;
+  // left out when empty: firestore.rules accepts `members` only as a whole number
+  return { ok: true, value: { ...value, honours: honours.value, seasons: seasons.value, ...(members.value === null ? {} : { members: members.value }) } };
 }
 
 export const MAX_ERA_LENGTH = 40;

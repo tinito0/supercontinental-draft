@@ -282,11 +282,11 @@ service cloud.firestore {
           && (!('away' in k) || isHttpsLink(k.away))
           && (!('third' in k) || isHttpsLink(k.third));
       }
-      // Ficha del club (utils/leagueContent.js CLUB_PROFILE_FIELDS): textos cortos, una foto https y dos listas acotadas.
+      // Ficha del club (utils/leagueContent.js CLUB_PROFILE_FIELDS): textos cortos, una foto https dos listas acotadas (títulos, campañas) y la cantidad de socios.
       function isValidClubProfile(p) {
         return p is map
           && p.keys().hasOnly(['nickname', 'founded', 'city', 'country', 'stadium', 'capacity', 'coach', 'president',
-            'manager', 'captain', 'colors', 'stadiumPhotoUrl', 'stadiumPhotoFrame', 'honours', 'seasons', 'kits'])
+            'manager', 'captain', 'colors', 'stadiumPhotoUrl', 'stadiumPhotoFrame', 'honours', 'seasons', 'kits', 'members'])
           && (!('nickname' in p) || isShortText(p.nickname, 60))
           && (!('founded' in p) || isShortText(p.founded, 40))
           && (!('city' in p) || isShortText(p.city, 60))
@@ -303,7 +303,8 @@ service cloud.firestore {
           && (!('stadiumPhotoFrame' in p) || isValidPhotoFrame(p.stadiumPhotoFrame))
           && (!('kits' in p) || isValidClubKits(p.kits))
           && (!('honours' in p) || (p.honours is list && p.honours.size() <= 30))
-          && (!('seasons' in p) || (p.seasons is list && p.seasons.size() <= 40));
+          && (!('seasons' in p) || (p.seasons is list && p.seasons.size() <= 40))
+          && (!('members' in p) || (p.members is int && p.members >= 0 && p.members <= 9999999));
       }
       match /public/data/league_content/{docId} {
         allow read: if true;

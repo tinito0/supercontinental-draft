@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   cleanPhotoFrame, cleanPhotoUrl, clubChapters, clubKits, DEFAULT_PHOTO_FRAME, groupHonours, hasClubProfile, MAX_HONOURS, MAX_PHOTO_ZOOM,
-  normalizeClub, normalizeClubProfile, photoFrameStyle,
+  MAX_CLUB_MEMBERS, formatClubMembers, normalizeClub, normalizeClubProfile, parseClubMembers, photoFrameStyle,
 } from '../utils/leagueContent.js';
 
 describe('normalizeClubProfile', () => {
@@ -118,5 +118,26 @@ describe('club kits', () => {
     expect(clubKits(profile).map(kit => kit.label)).toEqual(['Titular', 'Alternativa']);
     expect(hasClubProfile({ kits: { home: 'https://e.com/1.png' } })).toBe(true);
     expect(clubKits(null)).toEqual([]);
+  });
+});
+
+describe('club members (socios)', () => {
+  it('saves how many members a club has as a whole number, written with or without thousands dots', () => {
+    expect(normalizeClubProfile({ members: '1.250' }).value.members).toBe(1250);
+    expect(normalizeClubProfile({ members: ' 1 250 ' }).value.members).toBe(1250);
+    expect(normalizeClubProfile({ members: 0 }).value.members).toBe(0);
+    expect(normalizeClubProfile({ members: '' }).value).not.toHaveProperty('members');
+  });
+
+  it('rejects anything that is not a whole number within the limit', () => {
+    for (const bad of ['12,5', '-3', 'muchos', String(MAX_CLUB_MEMBERS + 1)]) {
+      expect(normalizeClubProfile({ members: bad }).error, bad).toMatch(/Socios/);
+    }
+    expect(parseClubMembers(String(MAX_CLUB_MEMBERS))).toEqual({ ok: true, value: MAX_CLUB_MEMBERS });
+  });
+
+  it('shows the count with thousands dots, and nothing when it was never saved', () => {
+    expect(formatClubMembers(1250)).toBe('1.250');
+    expect(formatClubMembers(undefined)).toBe('');
   });
 });

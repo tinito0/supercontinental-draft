@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { BarChart3, BarChartHorizontal, BookOpen, Shield, Trophy, Users } from 'lucide-react';
+import { BarChart3, BarChartHorizontal, BookOpen, Contact, Shield, Trophy, Users } from 'lucide-react';
 import { ClubSeasonStats } from '../../components/league/season/ClubSeasonStats.jsx';
 import { ClubStatsTab } from '../../components/league/season/ClubStatsTab.jsx';
 import TeamScreen from '../TeamScreen.jsx';
@@ -14,14 +14,15 @@ import { ClubHonours } from '../../components/league/club/ClubHonours.jsx';
 import { ClubSeasonCard, clubStanding } from '../../components/league/club/ClubSeasonCard.jsx';
 import { ClubFranchise } from '../../components/league/club/ClubFranchise.jsx';
 import { ClubKits } from '../../components/league/club/ClubKits.jsx';
+import { ClubMembers } from '../../components/league/club/ClubMembers.jsx';
 import { useFranchisePlayers, useLeagueContent, useLeagueTeams, useTournament } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { clubChapters, clubStoryDocId, hasClubProfile } from '../../utils/leagueContent.js';
 
-/* Un club en la web de la liga: cabecera con su estadio, la ficha (estadio, DT, presidente, mánager) y cinco pestañas:
+/* Un club en la web de la liga: cabecera con su estadio, la ficha (estadio, DT, presidente, mánager) y seis pestañas:
    el club (historia), temporada (resultados y goleadores con datos del juego), estadísticas (números del equipo y
-   sus mejores jugadores), palmarés (títulos y campañas anteriores) y plantel (el plantel y la campaña del draft).
-   La pestaña vive en la URL (?tab=), así se puede compartir. */
+   sus mejores jugadores), palmarés (títulos y campañas anteriores), plantel (el plantel y la campaña del draft) y
+   socios (cuántos tiene, cargado por el admin). La pestaña vive en la URL (?tab=), así se puede compartir. */
 
 const TABS = [
   { id: 'club', label: 'El club', icon: BookOpen },
@@ -29,6 +30,7 @@ const TABS = [
   { id: 'estadisticas', label: 'Estadísticas', icon: BarChartHorizontal },
   { id: 'palmares', label: 'Palmarés', icon: Trophy },
   { id: 'plantel', label: 'Plantel', icon: Users },
+  { id: 'socios', label: 'Socios', icon: Contact },
 ];
 
 export default function LeagueClubScreen() {
@@ -107,6 +109,11 @@ export default function LeagueClubScreen() {
         {tab === 'plantel' && (
           <div role="tabpanel" aria-label="Plantel" className="-mx-4 sm:-mx-6">
             <TeamScreen isLeagueSite hideHeader />
+          </div>
+        )}
+        {tab === 'socios' && (
+          <div role="tabpanel" aria-label="Socios">
+            <ClubMembers members={profile?.members} teamName={team?.teamName} loading={loading} />
           </div>
         )}
       </div>
