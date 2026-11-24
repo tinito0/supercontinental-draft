@@ -1,7 +1,8 @@
 import React from 'react';
-import { FolderOpen, Download, CloudUpload, CheckCircle2, AlertTriangle, XCircle, Info, CircleDashed } from 'lucide-react';
+import { FolderOpen, Download, CloudUpload, CheckCircle2, AlertTriangle, XCircle, Info, CircleDashed, Save } from 'lucide-react';
 import { Button, Disclosure } from '../PesUi.jsx';
 import { LIGHT_PRESETS } from './kitRenderer.js';
+import { FABRICS, FABRIC_RANGES } from '../../../pes/kits/fabricMaps.js';
 import { describeAsset } from '../../../pes/kits/kitAssetResolver.js';
 
 // Side panels of the 3D kit viewer (PesKit3DViewer). Presentational: state lives in the viewer.
@@ -149,6 +150,67 @@ export function LetteringPanel({ opts, set, sample, setSample, players, nameOff,
         <ul className="space-y-1.5">{fonts.map(a => <AssetRow key={a.slot} asset={a} compact />)}</ul>
         <p className="text-[11px] text-ink-3">Las letras y números salen de las hojas del kit (NameFontFile, BackNumbersFile, LegNumbersFile, ChestNumbersFile). La posición es una aproximación de la del juego.</p>
       </Section>
+    </div>
+  );
+}
+
+/** A range control with its value shown as text (Rebuilt's sliders: 48×, 50 %). */
+function Slider({ label, value, min, max, step, format, onChange }) {
+  return (
+    <Row label={label}>
+      <span className="flex items-center gap-2 w-full sm:w-52">
+        <input type="range" className="min-h-11 sm:min-h-8 flex-1" min={min} max={max} step={step} value={value} aria-label={label}
+          aria-valuetext={format(value)} onChange={e => onChange(Number(e.target.value))} />
+        <span className="num w-11 text-right text-xs text-ink">{format(value)}</span>
+      </span>
+    </Row>
+  );
+}
+const percent = v => `${Math.round(v * 100)} %`;
+
+/**
+ * «Tela»: relief and shine like PES Editor Rebuilt's «Tela y relieve» — the kit's own _nrm or a fabric preset
+ * (same 8 fabrics, ranges and defaults), what the drawings' relief is taken from, how strong it looks on screen,
+ * and saving the generated maps into the kit.
+ */
+export function FabricPanel({ fabric, setFabric, source, setSource, hasNrm, hasGloss, opts, set, onSave, saving }) {
+  const [repeat, strength, emboss] = [FABRIC_RANGES.repeat, FABRIC_RANGES.fabricStrength, FABRIC_RANGES.emboss];
+  return (
+    <div className="space-y-4">
+      <Section>
+        <Row label="Normal map" hint={hasNrm ? null : 'Este kit no tiene normal map propio (_nrm).'}>
+          <Segmented label="Normal map" value={source} onChange={setSource}
+            options={[{ value: 'gen', label: 'De la tela' }, { value: 'kit', label: 'Del kit', disabled: !hasNrm }]} />
+        </Row>
+      </Section>
+      <Section title="Tela y relieve">
+        <Row label="Tela">
+          <select className={SELECT} value={fabric.fabric} onChange={e => setFabric({ fabric: e.target.value })}>
+            {FABRICS.map(f => <option key={f.k} value={f.k} title={f.d}>{f.n}</option>)}
+          </select>
+        </Row>
+        <Slider label="Tamaño de la trama" value={fabric.repeat} min={repeat[0]} max={repeat[1]} step={repeat[2]} format={v => `${v}×`} onChange={v => setFabric({ repeat: v })} />
+        <Slider label="Fuerza de la trama" value={fabric.fabricStrength} min={strength[0]} max={strength[1]} step={strength[2]} format={percent} onChange={v => setFabric({ fabricStrength: v })} />
+        <Slider label="Relieve de los dibujos" value={fabric.emboss} min={emboss[0]} max={emboss[1]} step={emboss[2]} format={percent} onChange={v => setFabric({ emboss: v })} />
+        <Row label="Relieve de los dibujos sacado de">
+          <Segmented label="Relieve de los dibujos sacado de" value={fabric.src} onChange={v => setFabric({ src: v })}
+            options={[{ value: 'color', label: 'Los colores' }, { value: 'gloss', label: 'El brillo (alfa)', disabled: !hasGloss }]} />
+        </Row>
+        {onSave && (
+          <Button variant="primary" disabled={saving?.busy || source !== 'gen'} onClick={onSave}
+            title={source !== 'gen' ? 'Elegí «De la tela» para guardar un relieve nuevo' : undefined}>
+            <Save className="w-3.5 h-3.5" aria-hidden="true" />{saving?.busy ? `Armando el normal map a ${saving.size} px…` : 'Guardar este relieve en el kit'}
+          </Button>
+        )}
+        {saving?.done && <p className="text-[11px] text-success-soft">{saving.done}</p>}
+        {saving?.error && <p className="text-[11px] text-danger-soft" role="alert">No se pudo guardar el relieve: {saving.error.message}</p>}
+      </Section>
+      <Section title="En pantalla">
+        <Slider label="Relieve en pantalla" value={opts.bump} min={0} max={2.5} step={0.05} format={percent} onChange={v => set({ bump: v })} />
+        <Slider label="Brillo de la tela" value={opts.spec} min={0} max={2.5} step={0.05} format={percent} onChange={v => set({ spec: v })} />
+        <Toggle checked={opts.useNrm} onChange={v => set({ useNrm: v })}>Usar normal map</Toggle>
+      </Section>
+      <p className="text-[11px] text-ink-3">El juego usa el normal map del kit (_nrm) para el relieve de la tela y de los dibujos que tengan relieve en él. Lo de «En pantalla» solo cambia esta vista.</p>
     </div>
   );
 }

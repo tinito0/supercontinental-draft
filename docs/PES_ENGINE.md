@@ -112,7 +112,7 @@ When the Super Admin creates a workspace, each source is packed (`pes/storage/so
 Supabase Storage at `<workspaceId>/sources/<contentSha256>.pesdb|edit|kits`; other users download it automatically,
 the content hash is verified and the copy is cached in IndexedDB. Upload is Super Admin only (bucket policy).
 
-## 4d. Kits: 3D preview, new kits
+## 4d. Kits: 3D preview, fabric maps, new kits
 
 Where things live in the UML patch: **values** (models, colours, name/number placement, which texture files a kit
 uses) are in Sider's `content/kit-server/<league>/<team>/<kit>/config.txt`; the **texture files** themselves
@@ -141,8 +141,8 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
 - **3D preview** (`components/pes/PesKit3DViewer.jsx`): garment models of the CometKIT previewer (via PES Editor
   Rebuilt, `public/kit3d/kitpack.bin`, downloaded on first use), parts chosen from config.txt (TightKit, Collar,
   ShortsModel, ShortSleevesModel, goalkeeper sleeves), WebGL fabric shader with stadium lights. Panels in tabs
-  (Vista · Camiseta · Letras · Diagnóstico). Relief and shine come only from the kit's own `_nrm` / `_srm`; the
-  generated fabric maps were removed (2026-11-18).
+  (Vista · Camiseta · Letras · Tela · Diagnóstico). Textures are decoded at full size (kit and `_nrm` up to 4096) and the
+  kit is composed at its own size up to 4096 and the GPU limit (2048 while a name or number is being dragged).
 - **Display quality** (`pes/kits/kitRefine.js`): the pack's meshes are low-poly (shirt ~2,300 triangles), so the
   selected parts get ambient occlusion baked per vertex (BVH ray casting, 12 rays per hemisphere on the outside of
   the garment), then Phong tessellation (1 level, collars 2) and normals welded again. The outside of each vertex
@@ -198,6 +198,13 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
   throwing; context loss/restoration is handled (re-upload on restore); `draw` disables its vertex attributes after
   each pass; collar thumbnails share one offscreen context (`sharedThumbRenderer`) instead of one per render, which
   was making the browser drop the main viewer's context.
+- **Fabric maps** (`pes/kits/fabricMaps.js`, «Tela» tab, `useFabricMaps.js`): PES Editor Rebuilt's KMAT presets as they
+  are: 8 fabrics with their SRM shine/roughness, the same weave formulas (its honeycomb does not tile seamlessly; kept to
+  match), defaults (malla, 48×, 50 %, 50 %) and ranges. Normal map = weave + relief of the drawings from the kit colours
+  or its gloss (alpha). Uses the kit's `_nrm` when it has one, until a fabric is chosen. Preview 2048 (Rebuilt: 1024); «Guardar este
+  relieve en el kit» writes `<KitFile>_nrm.ftex` (DXT5, 4096 for a 4096 kit texture, else 2048) and `_srm.ftex`
+  (DXT1 512) through the texture import.
+  «En pantalla» (relief strength, fabric shine, normal map on/off) changes only the preview.
 - **New kits** (`kit.add`): copies a kit's config.txt into the next free `p<n>`/`g<n>` folder and appends it to
   the chosen `[section]` of order.ini / gk_order.ini, keeping every other line and the line endings. Allowed to the
   Super Admin and to Kit Managers for league teams. Not tested in game.

@@ -11,7 +11,8 @@ import { KitGL, lightState } from './kit3d/kitRenderer.js';
 import { composeKitTexture, fallbackKitTexture } from './kit3d/kitDecals.js';
 import { useKitGL } from './kit3d/useKitGL.js';
 import { useKitAssets } from './kit3d/useKitAssets.js';
-import { ViewPanel, ShirtPanel, LetteringPanel, DiagnosticsPanel, KitImageBar } from './kit3d/KitViewerPanels.jsx';
+import { useFabricMaps } from './kit3d/useFabricMaps.js';
+import { ViewPanel, ShirtPanel, LetteringPanel, FabricPanel, DiagnosticsPanel, KitImageBar } from './kit3d/KitViewerPanels.jsx';
 import { DEFAULT_VIEW, useKitCamera } from './kit3d/useKitCamera.js';
 import { LETTERING, applyDraft, decalCenter, hitLettering, nudgeSize, stepsForTarget, stepsOf } from './kit3d/letteringEdit.js';
 
@@ -31,6 +32,8 @@ const REFINED_CACHE_SIZE = 6;  // refining takes ~250 ms: toggling sleeves or so
 const SUPERSAMPLE = [2, 2.5];  // canvas pixels per CSS pixel (min, max): 2× even on 1× screens, smoother edges
 const EXPORT_HEIGHT = 2000;    // PNG height in pixels; width follows the 4:5 canvas
 const TYPING_PAUSE_MS = 150;   // name/number typed in Letras: redraw the kit texture after this pause
+const MAX_KIT_TEXTURE = 4096;  // the kit texture is composed at its own size up to this (PES 2021 kits are 4096)
+const EDITING_TEXTURE = 2048;  // while a name or number is being moved: recomposed on every drag frame
 
 /** `value`, updated only after it stops changing for `ms`. */
 function useDebounced(value, ms) {
@@ -47,11 +50,13 @@ function useDebounced(value, ms) {
  * numbers drawn with the kit's font sheets, config.txt values applied, with a diagnostics tab.
  * @param {{ kits: object, teamId: number, kit: string, cfg: object, version: number, players?: object[],
  *   workspaceId?: string, uid?: string, canShare?: boolean,
+ *   onImportTexture?: (slot: object, file: string, tex: object) => Promise<void>,
  *   onSetValues?: (values: Record<string, string>) => Promise<void> }} props
+ *   onImportTexture: saves a generated texture into the kit (same path as PesKitTextures import); omitted = read only.
  *   onSetValues: writes config.txt values (kit.set operations); omitted = collars can be previewed but not saved.
  *   canShare: the user may share the kit-server textures found locally (Super Admin, Kit Manager of the team).
  */
-export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], workspaceId, uid, canShare, onSetValues }) {
+export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], workspaceId, uid, canShare, onImportTexture, onSetValues }) {
   const canvasRef = useRef(null);
   const viewRef = useRef({ ...DEFAULT_VIEW });
   const fitRef = useRef(null);
@@ -60,7 +65,8 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
   const [pack, setPack] = useState(null);
   const [packError, setPackError] = useState(null);
   const [tab, setTab] = useState('view');
-  const [opts, setOpts] = useState({ sleeve: 'short', socks: 'long', tuck: 'out', captain: false, light: 'estadio-noche', decals: true });
+  // bump and spec: «Relieve en pantalla» and «Brillo de la tela» (display only); useNrm: «Usar normal map».
+  const [opts, setOpts] = useState({ sleeve: 'short', socks: 'long', tuck: 'out', captain: false, light: 'estadio-noche', decals: true, bump: 1, spec: 1, useNrm: true });
   const [sample, setSample] = useState({ name: 'JUGADOR', number: '10' });
   const [collarPreview, setCollarPreview] = useState(null);
   const [image, setImage] = useState({ transparent: false, busy: false, error: null });
@@ -74,6 +80,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
   const tex = assets.textures;
 
   const value = useMemo(() => k => getKitValue(cfg, k), [cfg]);
+  const fabricMaps = useFabricMaps({ tex, kitFile: String(value('KitFile') || '').trim(), onImportTexture });
   const goalkeeper = /^g\d/i.test(String(kit || '').split('/').pop());
   const shownCfg = useMemo(() => (cfg ? applyDraft(cfg, draft) : cfg), [cfg, draft]);
   const render = useMemo(() => resolveKitRender(shownCfg, { sleeve: opts.sleeve, goalkeeper, collarPreview }), [shownCfg, opts.sleeve, goalkeeper, collarPreview]);
@@ -86,7 +93,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
   const scene = useMemo(() => ({ light: opts.light, textured: TEXTURED, colors }), [opts.light, colors]);
 
   // A previewed collar belongs to the kit on screen.
-  useEffect(() => { setCollarPreview(null); setDraft({}); setSelected(null); setLetterSave(null); }, [teamId, kit]);
+  useEffect(() => { setCollarPreview(null); setDraft({}); setSelected(null); setLetterSave(null); fabricMaps.setSource(null); }, [teamId, kit]);
 
   // Garment models: downloaded once per session, independent of the WebGL context.
   useEffect(() => {
@@ -96,10 +103,10 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
   }, []);
 
   const sceneArgs = (bg = true) => {
-    const L = lightState(opts.light), V = viewRef.current, fit = fitRef.current;
+    const L = { ...lightState(opts.light), spec: opts.spec }, V = viewRef.current, fit = fitRef.current;
     return {
       fit, yaw: fit.yaw0 + V.yaw, pitch: V.pitch, dist: V.dist, panX: V.panX, panY: V.panY, fov: 48, ortho: false, bg, bgBlur: 2,
-      bump: 1, nrm: true, glossK: 1, debug: 0, defSpec: 0.3, defRough: 0.6, L, textured: TEXTURED, colors,
+      bump: opts.bump, nrm: opts.useNrm, glossK: 1, debug: 0, defSpec: 0.3, defRough: 0.6, L, textured: TEXTURED, colors,
     };
   };
   /**
@@ -162,32 +169,39 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     draw();
   }, [pack, cfg, render, opts.socks, opts.tuck, opts.captain, goalkeeper, epoch]);
 
-  // Kit texture (2048) with name/numbers drawn with the kit's font sheets where config.txt puts them. It is
-  // recomposed only when the lettering changes: not on a collar preview (a new `render` with the same placement),
-  // and once typing pauses. Moving a letter changes the placement, so a drag recomposes it.
+  // Kit texture at its own resolution (up to 4096, and the GPU's limit) with name/numbers drawn with the kit's font
+  // sheets where config.txt puts them. It is recomposed only when the lettering changes: not on a collar preview (a new
+  // `render` with the same placement), and once typing pauses. Moving a letter recomposes it on every drag frame, so
+  // while one is selected it is drawn at 2048.
   const typed = useDebounced(sample, TYPING_PAUSE_MS);
   const decalKey = JSON.stringify([render.name, render.back, render.chest, render.shorts]);
   const lettering = opts.decals ? typed : { name: '', number: '' };
   const fonts = useMemo(() => ({ name: tex.name?.canvas, name_ex: tex.name_ex?.canvas, back: tex.back?.canvas, chest: tex.chest?.canvas, leg: tex.leg?.canvas }), [tex]);
+  const textureSize = (editing = false) => {
+    const R = glRef.current, gpuMax = R ? R.gl.getParameter(R.gl.MAX_TEXTURE_SIZE) || MAX_KIT_TEXTURE : MAX_KIT_TEXTURE;
+    const own = tex.kit?.canvas?.width || EDITING_TEXTURE;
+    return Math.min(own, MAX_KIT_TEXTURE, gpuMax, editing ? EDITING_TEXTURE : Infinity);
+  };
   const composed = useMemo(() => {
     if (!cfg || typeof document === 'undefined') return { canvas: null, notes: [] };
-    return composeKitTexture(tex.kit?.canvas || null, value, fonts, lettering, render, undefined, { highlight: selected });
-  }, [tex, fonts, cfg, value, typed, opts.decals, decalKey, selected]);
+    return composeKitTexture(tex.kit?.canvas || null, value, fonts, lettering, render, textureSize(Boolean(selected)), { highlight: selected });
+  }, [tex, fonts, cfg, value, typed, opts.decals, decalKey, selected, epoch]);
   // Collar thumbnails only need the shirt: a texture that does not change while typing a name.
   const plainTexture = useMemo(() => (typeof document === 'undefined' || !cfg ? null : tex.kit?.canvas || fallbackKitTexture(value)), [tex, cfg, value]);
 
-  // Relief and shine come only from the kit's own _nrm / _srm (PES 2021 kits usually ship _srm alone).
+  // Relief and shine: the kit's own _nrm / _srm, or the fabric preset's (useFabricMaps, «Tela» tab).
+  const { nrm: nrmMap, srm: srmMap } = fabricMaps.maps;
   useEffect(() => {
     const R = glRef.current;
     if (!R || !composed.canvas) return;
     KitGL.setTex(R, 0, composed.canvas);
-    KitGL.setTex(R, 1, tex.nrm?.canvas || null);
-    KitGL.setTex(R, 2, tex.srm?.canvas || null);
+    KitGL.setTex(R, 1, nrmMap);
+    KitGL.setTex(R, 2, srmMap);
     KitGL.setTex(R, 3, tex.kit?.gloss || null);
     draw();
-  }, [composed, tex, pack, epoch]);
+  }, [composed, tex, pack, nrmMap, srmMap, epoch]);
 
-  useEffect(() => { draw(); }, [opts.light]);
+  useEffect(() => { draw(); }, [opts.light, opts.bump, opts.spec, opts.useNrm]);
 
   // Lettering on the model: with the «Letras» tab open, a left drag that starts on the name or a number moves it
   // (texture coordinate under the pointer → closest config.txt steps); the wheel over the selected one resizes it.
@@ -272,7 +286,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     // the dashed outline of a letter being moved is an editing aid, not part of the kit
     const outlined = selected;
     try {
-      if (outlined) KitGL.setTex(R, 0, composeKitTexture(tex.kit?.canvas || null, value, fonts, lettering, render).canvas);
+      if (outlined) KitGL.setTex(R, 0, composeKitTexture(tex.kit?.canvas || null, value, fonts, lettering, render, textureSize()).canvas);
       const gl = R.gl, limit = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) || 4096, gl.getParameter(gl.MAX_VIEWPORT_DIMS)?.[1] || 4096);
       const H = Math.min(EXPORT_HEIGHT, limit), W = Math.round(H * 0.8);
       c.width = W; c.height = H;
@@ -310,6 +324,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     { id: 'view', label: 'Vista' },
     { id: 'shirt', label: 'Camiseta' },
     { id: 'letters', label: 'Letras' },
+    { id: 'fabric', label: 'Tela' },
     { id: 'diag', label: 'Diagnóstico', count: warnCount || null },
   ];
 
@@ -370,6 +385,10 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
           {tab === 'letters' && (
             <LetteringPanel opts={opts} set={set} sample={sample} setSample={setSample} players={players}
               nameOff={value('Name') === '1'} assets={assets.assets} />
+          )}
+          {tab === 'fabric' && (
+            <FabricPanel fabric={fabricMaps.fabric} setFabric={fabricMaps.setFabric} source={fabricMaps.source} setSource={fabricMaps.setSource}
+              hasNrm={fabricMaps.hasNrm} hasGloss={Boolean(tex.kit?.gloss)} opts={opts} set={set} onSave={fabricMaps.save} saving={fabricMaps.saving} />
           )}
           {tab === 'diag' && (
             <DiagnosticsPanel assets={assets.assets} notes={configNotes} local={assets.local} cloud={assets.cloud} share={assets.share}

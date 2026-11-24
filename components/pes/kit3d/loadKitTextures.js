@@ -10,7 +10,8 @@ import { downloadTexture } from '../../../services/pesTextureStorage.js';
 import { getAsset, putAsset } from '../../../pes/storage/localStore.js';
 import { pixelsToCanvas, glossFromAlpha } from './kitDecals.js';
 
-const MAX_WIDTH = { kit: 2048, nrm: 1024, srm: 512, name: 2048, name_ex: 2048, back: 2048, chest: 2048, leg: 2048 };
+// Kit, normal and shine maps at their full resolution (kit textures are 4096), as PES Editor Rebuilt shows them.
+const MAX_WIDTH = { kit: 4096, nrm: 4096, srm: 4096, name: 2048, name_ex: 2048, back: 2048, chest: 2048, leg: 2048 };
 /** One cache for the session: the same file is read or downloaded once, also across kits and remounts. */
 export const assetCache = new AssetCache();
 const decoded = new WeakMap(); // bytes → Map(slot → decoded entry)
