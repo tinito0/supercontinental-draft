@@ -27,7 +27,7 @@ function XiPlayer({ player, delayMs }) {
   // Se recuerda qué foto falló: con otro jugador en el mismo lugar se vuelve a intentar.
   const [failedId, setFailedId] = useState(null);
   return (
-    <div className="scl-xi-player" style={{ '--d': `${delayMs}ms`, left: player.x, top: player.y }}>
+    <div className="scl-xi-player" style={{ '--d': `${delayMs}ms`, '--line': player.line, left: player.x, top: player.y }}>
       <div className="scl-xi-photo">
         <Silhouette />
         {failedId !== player.id && (
