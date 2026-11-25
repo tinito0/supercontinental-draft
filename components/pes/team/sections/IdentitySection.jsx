@@ -52,7 +52,7 @@ function ColourGroup({ ws, teamId, access, isModified, apply, onPreviewColour })
   const fromKit = () => apply(() => [...colourOps(ws, teamId, 1, kit.c1), ...colourOps(ws, teamId, 2, kit.c2)]);
   const help = access.colours
     ? 'El EDIT guarda cada canal en 6 bits: el color se redondea al más cercano.'
-    : access.outOfLeague ? 'Fuera de la liga: solo lectura para tu rol.' : 'Tu rol no puede editar los colores.';
+    : 'Tu rol no puede editar los colores.';
   return (
     <Group title="Colores" aside={kit && access.colours && (
       <button type="button" className="btn btn-ghost btn-sm" onClick={fromKit}>

@@ -163,7 +163,7 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
   `pes_workspaces/{ws}/kit_textures/{teamId}` manifest (`files[encoded path] = { path, sha256, ext, size }`) + Supabase
   `<ws>/<sha256>.ftex`, hash-verified, cached in IndexedDB, (3) the game folder or the kit-server folder opened in the
   browser (read only). Lookups are cached per provider and path for the session; concurrent requests share one promise.
-  "Compartir texturas" (Super Admin / Kit Manager of a league team, explicit click) uploads the .ftex found locally.
+  "Compartir texturas" (Super Admin / Kit Manager, explicit click) uploads the .ftex found locally.
   Slots: kit, `_srm`, `_nrm` (optional, not used by the game), name, name `_ex`, back, chest, leg.
 - **Decoding / lettering**: `pes/kits/textureDecode.js` (DXT1/3/5, BC7, RGBA8; verified on PSG's BC7 kit 2048²,
   name 2048×512 and back/leg 4096×512 sheets). Glyph cells of the name/number sheets match PSG's sheets; accented
@@ -207,7 +207,7 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
   «En pantalla» (relief strength, fabric shine, normal map on/off) changes only the preview.
 - **New kits** (`kit.add`): copies a kit's config.txt into the next free `p<n>`/`g<n>` folder and appends it to
   the chosen `[section]` of order.ini / gk_order.ini, keeping every other line and the line endings. Allowed to the
-  Super Admin and to Kit Managers for league teams. Not tested in game.
+  Super Admin and to Kit Managers. Not tested in game.
 
 ## 5. Authorization
 
@@ -215,7 +215,7 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
 |---|---|
 | Super Admin (`pes_roles/<uid>.role = super_admin`, or the existing app admin) | everything: sources, teams, players, replacement, kits, export, roles |
 | Admin del Draft | read only |
-| Kit Manager (Lusitano, Talleres de Balvanera) | kit-server config keys, kit textures/fonts, UniColors and the team's own fields in Team.bin and the EDIT (not players, squads, coaches or tactics), for league teams (`leagueTeamIds`, empty = all) |
+| Kit Manager (Lusitano, Talleres de Balvanera) | kit-server config keys, kit textures/fonts, UniColors and the team's own fields in Team.bin and the EDIT (not players, squads, coaches or tactics), for every team. `leagueTeamIds` only filters the team list (since 2026-11-25) |
 | no role | no access; never sees the editor |
 
 Enforced three times: `authorize()` before applying; `firestore.rules` on every persisted operation (type +

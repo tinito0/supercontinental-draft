@@ -6,7 +6,7 @@ import { KIT_EDITABLE_KEYS } from './kits/kitConfig.js';
 import { TEXTURE_SLOT_IDS } from './kits/kitTextures.js';
 
 /**
- * Database operations a Kit Manager may run on a league team: the team's own fields in Team.bin and the EDIT
+ * Database operations a Kit Manager may run on any team: the team's own fields in Team.bin and the EDIT
  * (name, abbreviation, colours, country, stadium, flags). Players, squads, coaches and tactics stay Super Admin only.
  * Which fields are writable at all (verified bits only) is still decided by the format layer.
  */
@@ -86,12 +86,8 @@ export function authorize(actor, op, ctx = {}) {
   if (!needed) throw new PesPermissionError('UNKNOWN_OP', `Operación desconocida: ${op.type}.`);
   if (!actor?.role) throw new PesPermissionError('NO_ROLE', 'Tu usuario no tiene un rol en el editor PES.');
 
+  // A Kit Manager edits any team (2026-11-25): the league list only filters the team list.
   if (actor.role === ROLES.KIT_MANAGER) {
-    const teamId = op.target?.teamId;
-    const league = ctx.leagueTeamIds || [];
-    if (league.length && !league.includes(teamId)) {
-      throw new PesPermissionError('TEAM_NOT_IN_LEAGUE', `El equipo ${teamId} no es de la liga: no podés editarlo.`, { teamId });
-    }
     if (op.type === 'kit.texture.set') {
       if (!TEXTURE_SLOT_IDS.includes(op.slot)) throw new PesPermissionError('FIELD_FORBIDDEN', `Kit Manager: "${op.slot}" no es una ranura de textura.`, { slot: op.slot });
       return;
@@ -103,7 +99,7 @@ export function authorize(actor, op, ctx = {}) {
     }
     if (KIT_MANAGER_TEAM_OPS.includes(op.type)) return;
     // Players, squads, coaches and tactics are Super Admin only.
-    throw new PesPermissionError('FORBIDDEN', 'Kit Manager: solo se pueden editar kits y los datos de los equipos de la liga.', { type: op.type, field: op.field });
+    throw new PesPermissionError('FORBIDDEN', 'Kit Manager: solo se pueden editar los kits y los datos de los equipos.', { type: op.type, field: op.field });
   }
 
   if (!can(actor, needed)) {

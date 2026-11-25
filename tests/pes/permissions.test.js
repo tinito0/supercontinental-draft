@@ -55,13 +55,12 @@ describe('PES permissions', () => {
     expect(can(lusitano, 'team.replace')).toBe(false);
   });
 
-  it('restricts Kit Managers to league teams when the workspace defines them', () => {
+  it('lets Kit Managers edit teams outside the league list too (it only filters the team list)', () => {
     const ctx = { leagueTeamIds: [5, 6] };
     expect(allowed(lusitano, { ...ops.kitCollar, target: { teamId: 5, kit: 'p1' } }, ctx)).toBe(true);
-    expect(allowed(lusitano, ops.kitCollar, ctx)).toBe(false);
-    expect(allowed(lusitano, { ...ops.teamName, target: { teamId: 5 } }, ctx)).toBe(true);
-    expect(allowed(lusitano, ops.teamName, ctx)).toBe(false);
-    expect(allowed(lusitano, ops.binTeam, ctx)).toBe(false);
+    expect(allowed(lusitano, ops.kitCollar, ctx)).toBe(true);
+    expect(allowed(lusitano, ops.teamName, ctx)).toBe(true);
+    expect(allowed(lusitano, ops.binPlayer, ctx)).toBe(false);
     expect(allowed(superAdmin, ops.kitCollar, ctx)).toBe(true);
   });
 

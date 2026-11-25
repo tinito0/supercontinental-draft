@@ -33,7 +33,6 @@ function headerMeta(ws, teamId, identity, countries, draftTeamName) {
 }
 
 function accessNote(access) {
-  if (access.outOfLeague) return 'Fuera de la liga: solo lectura para tu rol.';
   if (!access.data && !access.colours) return 'Solo lectura para tu rol.';
   if (!access.squad) return 'Tu rol edita los datos y los kits de este equipo; el plantel no.';
   return null;
@@ -59,7 +58,6 @@ export function PesTeamWorkspace({ pes, teamId, onTeamChange, section, onSection
 
   const leagueIds = useMemo(() => wsDoc?.leagueTeamIds || [], [wsDoc?.leagueTeamIds]);
   const rows = useMemo(() => listTeams(ws, { leagueTeamIds: leagueIds, drafts, savedOps }), [ws, version, drafts, savedOps, leagueIds]);
-  const kitManager = caps.has('kit.edit') && !caps.has('team.edit');
   const row = rows.find(r => r.id === teamId) || null;
 
   const select = id => {
@@ -84,8 +82,7 @@ export function PesTeamWorkspace({ pes, teamId, onTeamChange, section, onSection
 
   const list = (
     <TeamList rows={rows} loading={pes.loading && !ws} selectedId={teamId} onSelect={select}
-      hasLeague={leagueIds.length > 0} kitManager={kitManager}
-      query={query} onQuery={setQuery} filter={filter} onFilter={setFilter} sort={sort} onSort={setSort} />
+      hasLeague={leagueIds.length > 0} query={query} onQuery={setQuery} filter={filter} onFilter={setFilter} sort={sort} onSort={setSort} />
   );
   const showList = isDesktop || mobileList || !row;
   const showTeam = Boolean(row) && (isDesktop || !mobileList);
@@ -119,7 +116,7 @@ function TeamDetail({
   const [error, setError] = useState(null);
   // Bumped when a commit changes nothing or fails: remounts the section so inputs show the stored values again.
   const [resetKey, setResetKey] = useState(0);
-  const access = teamAccess(caps, leagueIds, teamId);
+  const access = teamAccess(caps);
   const identity = teamIdentity(ws, teamId);
   const base = teamColours(ws, teamId);
   const colours = base && (preview[1] || preview[2]) ? { ...base, c1: preview[1] || base.c1, c2: preview[2] || base.c2 } : base;

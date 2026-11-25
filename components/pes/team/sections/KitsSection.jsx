@@ -197,7 +197,7 @@ export function KitsSection({ pes, teamId, access, onApply }) {
         </div>
         {editable
           ? <div className="mt-3"><PesAddKit kits={kits} teamId={teamId} version={version} onApply={onApply} onCreated={setKit} /></div>
-          : <p className="mt-3 field-help">{access.outOfLeague ? 'Fuera de la liga: solo lectura para tu rol.' : 'Solo lectura para tu rol.'}</p>}
+          : <p className="mt-3 field-help">Solo lectura para tu rol.</p>}
       </Card>
       {error && <Alert tone="danger">{error.message || String(error)}</Alert>}
       {cfg && (

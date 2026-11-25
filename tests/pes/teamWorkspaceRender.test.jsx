@@ -10,13 +10,13 @@ import { TeamSaveBar } from '../../components/pes/team/TeamSaveBar.jsx';
 import { kitLabel } from '../../components/pes/team/sections/KitsSection.jsx';
 
 const row = (id, extra = {}) => ({ id, name: `Equipo ${id}`, abbr: 'EQU', national: false, colours: null, players: 23, inLeague: false, unsaved: 0, modified: false, hasBin: true, hasEdit: true, hasKits: true, ...extra });
-const listProps = { loading: false, selectedId: null, onSelect: () => {}, hasLeague: true, kitManager: false, query: '', onQuery: () => {}, filter: 'all', onFilter: () => {}, sort: 'name', onSort: () => {} };
+const listProps = { loading: false, selectedId: null, onSelect: () => {}, hasLeague: true, query: '', onQuery: () => {}, filter: 'all', onFilter: () => {}, sort: 'name', onSort: () => {} };
 
 describe('TeamList markup', () => {
-  it('shows one state per row: unsaved wins over out of league', () => {
-    const html = renderToStaticMarkup(<TeamList {...listProps} kitManager rows={[row(1, { unsaved: 2 }), row(2), row(3, { inLeague: true })]} />);
+  it('marks unsaved rows and never locks a team out of the league', () => {
+    const html = renderToStaticMarkup(<TeamList {...listProps} rows={[row(1, { unsaved: 2 }), row(2), row(3, { inLeague: true })]} />);
     expect(html.match(/sin guardar<\/span>/g)).toHaveLength(1);
-    expect(html.match(/solo lectura/g)).toHaveLength(1);
+    expect(html).not.toContain('solo lectura');
   });
 
   it('says when the list is capped instead of cutting it silently', () => {

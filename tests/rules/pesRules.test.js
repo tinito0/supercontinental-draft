@@ -67,12 +67,10 @@ describe('Kit Managers (Lusitano and Talleres de Balvanera)', () => {
     });
   }
 
-  it('cannot persist player, squad or non-kit fields, nor team data of teams outside the league', async () => {
+  it('cannot persist player, squad or non-kit fields', async () => {
     const db = as('lusitano');
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.player.set', target: { playerId: 1 }, field: 'speed', value: 99 })));
-    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.team.set', target: { teamId: 999 }, field: 'nameEnglish', value: 'X' })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.assignment.add', target: { teamId: 101 }, value: {} })));
-    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'edit.team.set', target: { teamId: 999 }, field: 'name', value: 'X' })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.team.tactics', target: { teamId: 101 }, valueJson: '{}' })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'edit.player.set', target: { playerId: 1 }, field: 'height', value: 190 })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'kit.set', key: 'Unk_Offset0x1C_Bits0to1', value: '1' })));
@@ -82,17 +80,19 @@ describe('Kit Managers (Lusitano and Talleres de Balvanera)', () => {
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'edit.roster.remove', target: { teamId: 101 }, valueJson: '1' })));
   });
 
-  it('may add kits to league teams but not change coaches', async () => {
+  it('may add kits to any team but not change coaches', async () => {
     const db = as('lusitano');
     await assertSucceeds(addDoc(opsOf(db), op('lusitano', { type: 'kit.add', target: { teamId: 101 }, valueJson: '{"kit":"p5","from":"p1"}' })));
-    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'kit.add', target: { teamId: 999 }, valueJson: '{"kit":"p5","from":"p1"}' })));
+    await assertSucceeds(addDoc(opsOf(db), op('lusitano', { type: 'kit.add', target: { teamId: 999 }, valueJson: '{"kit":"p5","from":"p1"}' })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.coach.set', target: { coachId: 47, teamId: 101 }, field: 'name', value: 'X' })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'edit.coach.set', target: { coachId: 47, teamId: 101 }, field: 'name', value: 'X' })));
   });
 
-  it('cannot edit kits of teams outside the league list', async () => {
+  it('edits kits and team data of teams outside the league list too (2026-11-25)', async () => {
     const db = as('lusitano');
-    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'kit.set', target: { teamId: 999, kit: 'p1' }, key: 'Collar', value: '3' })));
+    await assertSucceeds(addDoc(opsOf(db), op('lusitano', { type: 'kit.set', target: { teamId: 999, kit: 'p1' }, key: 'Collar', value: '3' })));
+    await assertSucceeds(addDoc(opsOf(db), op('lusitano', { type: 'bin.team.set', target: { teamId: 999 }, field: 'nameEnglish', value: 'X' })));
+    await assertSucceeds(addDoc(opsOf(db), op('lusitano', { type: 'edit.team.set', target: { teamId: 999 }, field: 'name', value: 'X' })));
     await assertSucceeds(addDoc(opsOf(db, 'open'), op('lusitano', { type: 'kit.set', target: { teamId: 999, kit: 'p1' }, key: 'Collar', value: '3' })));
   });
 
@@ -212,10 +212,10 @@ describe('shared kit-server textures (kit_textures/{teamId})', () => {
     await assertSucceeds(setDoc(ref(as('super'), 'league', 114), manifest('super', 114)));
   });
 
-  it('a Kit Manager shares textures of league teams only, signed with their own uid', async () => {
+  it('a Kit Manager shares textures of any team, signed with their own uid', async () => {
     const db = as('lusitano');
     await assertSucceeds(setDoc(ref(db, 'league', 101), manifest('lusitano', 101)));
-    await assertFails(setDoc(ref(db, 'league', 114), manifest('lusitano', 114)));
+    await assertSucceeds(setDoc(ref(db, 'league', 114), manifest('lusitano', 114)));
     await assertFails(setDoc(ref(db, 'league', 102), manifest('super', 102)));
     await assertSucceeds(setDoc(ref(db, 'open', 114), manifest('lusitano', 114)));
   });

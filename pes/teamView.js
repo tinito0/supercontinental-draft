@@ -273,14 +273,11 @@ export const stadiumOps = (ws, teamId, stadium) => sharedFieldOps(ws, teamId, { 
 
 /**
  * Who may edit what for one team. Mirrors pes/permissions.js authorize(): the Super Admin edits all;
- * a Kit Manager only kits and EDIT colours, and only of league teams when a league is set.
+ * a Kit Manager the kits and the team data of every team, not squads.
  */
-export function teamAccess(caps, leagueTeamIds, teamId) {
-  const league = leagueTeamIds || [];
-  const kitManagerOnly = caps.has('kit.edit') && !caps.has('team.edit');
-  const inLeague = !league.length || league.includes(teamId) || caps.has('workspace.manage');
-  const kits = caps.has('kit.edit') && (!kitManagerOnly || inLeague);
-  // data: the team's own fields (a Kit Manager edits them for league teams); squad: dorsals and players, Super Admin only.
+export function teamAccess(caps) {
+  const kits = caps.has('kit.edit');
+  // data: the team's own fields (a Kit Manager edits them for every team); squad: dorsals and players, Super Admin only.
   const data = caps.has('team.edit') || kits;
-  return { data, squad: caps.has('team.edit'), colours: data, kits, outOfLeague: kitManagerOnly && !inLeague };
+  return { data, squad: caps.has('team.edit'), colours: data, kits };
 }

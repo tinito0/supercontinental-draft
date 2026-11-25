@@ -63,11 +63,11 @@ describe('new kits', () => {
       .toThrow(expect.objectContaining({ code: 'INVALID_KIT_NAME' }));
   });
 
-  it('lets a Kit Manager add kits only to league teams', () => {
+  it('lets a Kit Manager add kits to any team, league or not', () => {
     const km = { uid: 'k', role: 'kit_manager' };
     const op = { type: 'kit.add', target: { teamId: 9999 }, value: { kit: 'p2', from: 'p1' } };
     expect(() => authorize(km, op, { leagueTeamIds: [9999] })).not.toThrow();
-    expect(() => authorize(km, op, { leagueTeamIds: [8888] })).toThrow(expect.objectContaining({ code: 'TEAM_NOT_IN_LEAGUE' }));
+    expect(() => authorize(km, op, { leagueTeamIds: [8888] })).not.toThrow();
     expect(() => authorize({ uid: 'd', role: 'draft_admin' }, op)).toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
   });
 });

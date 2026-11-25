@@ -714,9 +714,9 @@
     "semantic_hash": "6170f682af10af9e2e7af67de8f82557"
   },
   "pes/permissions.js": {
-    "mtime": 1795618040.436026,
-    "seen": 1795618839.935101,
-    "ast_hash": "8eea6916754412c446561c832bfd1d12",
+    "mtime": 1795638986.1895547,
+    "seen": 1795639549.3661857,
+    "ast_hash": "f3af2816690fe8a401f6a207b85005d6",
     "semantic_hash": ""
   },
   "pes/session.js": {
@@ -990,9 +990,9 @@
     "semantic_hash": ""
   },
   "tests/pes/kitAdd.test.js": {
-    "mtime": 1795028875.3532312,
-    "seen": 1795029751.5654595,
-    "ast_hash": "6cf632c0b598569b19d02c42303914d7",
+    "mtime": 1795639080.0440755,
+    "seen": 1795639549.416355,
+    "ast_hash": "b081e67a34a23ac550f21afe2c7856c5",
     "semantic_hash": ""
   },
   "tests/pes/kits.test.js": {
@@ -1002,9 +1002,9 @@
     "semantic_hash": ""
   },
   "tests/pes/permissions.test.js": {
-    "mtime": 1795618040.438577,
-    "seen": 1795618839.9697452,
-    "ast_hash": "7f8f52033178c76013a9359410e43b12",
+    "mtime": 1795639084.8209445,
+    "seen": 1795639549.4188123,
+    "ast_hash": "345b8ea1a6dc98c130684b934b262888",
     "semantic_hash": ""
   },
   "tests/pes/rulesSync.test.js": {
@@ -1038,9 +1038,9 @@
     "semantic_hash": ""
   },
   "tests/rules/pesRules.test.js": {
-    "mtime": 1795618040.438577,
-    "seen": 1795618839.9725304,
-    "ast_hash": "476da323d4f7105b0e1dacfcfa2df5ea",
+    "mtime": 1795639123.366851,
+    "seen": 1795639549.422201,
+    "ast_hash": "21c1344437f79f0e27643f9156d11006",
     "semantic_hash": ""
   },
   "tests/scoutEngine.test.js": {
@@ -1452,9 +1452,9 @@
     "semantic_hash": ""
   },
   "docs/PES_ENGINE.md": {
-    "mtime": 1795618040.4411561,
-    "seen": 1795618840.0319932,
-    "ast_hash": "cc2254db3878b8c4a0a62eff8a0002ea",
+    "mtime": 1795639305.7692058,
+    "seen": 1795639549.5058696,
+    "ast_hash": "81d778f68c3f5ed3e9b71fb6d3326c0f",
     "semantic_hash": ""
   },
   "index.html": {
@@ -264516,9 +264516,9 @@
     "semantic_hash": ""
   },
   "components/pes/team/PesTeamWorkspace.jsx": {
-    "mtime": 1795618040.4406452,
-    "seen": 1795618839.9087498,
-    "ast_hash": "d456c66cec49b392be6713812d503680",
+    "mtime": 1795639076.616121,
+    "seen": 1795639549.3333104,
+    "ast_hash": "6d5e44717a39845e39e7ccd8eebc24f7",
     "semantic_hash": ""
   },
   "components/pes/team/ReplacementWizard.jsx": {
@@ -264540,9 +264540,9 @@
     "semantic_hash": ""
   },
   "components/pes/team/TeamList.jsx": {
-    "mtime": 1793308653.748432,
-    "seen": 1793845429.7991452,
-    "ast_hash": "b02edf303a33c76fba21af95b35e87d6",
+    "mtime": 1795639025.6715195,
+    "seen": 1795639549.3343258,
+    "ast_hash": "c130c4b60d3dca207ab124fa8e72f7b5",
     "semantic_hash": ""
   },
   "components/pes/team/TeamPicker.jsx": {
@@ -264570,15 +264570,15 @@
     "semantic_hash": ""
   },
   "components/pes/team/sections/IdentitySection.jsx": {
-    "mtime": 1793308653.7541924,
-    "seen": 1793845429.7991548,
-    "ast_hash": "5e9c0bd1be1c282fe3bf0646f3cae9cf",
+    "mtime": 1795639030.8791225,
+    "seen": 1795639549.335291,
+    "ast_hash": "b06735789ee00805eaef401482b482d2",
     "semantic_hash": ""
   },
   "components/pes/team/sections/KitsSection.jsx": {
-    "mtime": 1795617937.9102194,
-    "seen": 1795618839.9105306,
-    "ast_hash": "b7e980913006af4d6b08a6811f71f736",
+    "mtime": 1795639035.9363928,
+    "seen": 1795639549.335296,
+    "ast_hash": "44ae76f7e3ce0dcb98f42a2b0f7c8a29",
     "semantic_hash": ""
   },
   "components/pes/team/sections/SquadSection.jsx": {
@@ -264600,9 +264600,9 @@
     "semantic_hash": ""
   },
   "pes/teamView.js": {
-    "mtime": 1795618040.438577,
-    "seen": 1795618839.9359255,
-    "ast_hash": "69d44a3811af7e67c6120958a3c8eef7",
+    "mtime": 1795638986.1885476,
+    "seen": 1795639549.367554,
+    "ast_hash": "c65d777a8090778630d176174c32b0d0",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/franchise.js": {
@@ -264624,9 +264624,9 @@
     "semantic_hash": ""
   },
   "tests/pes/teamView.test.js": {
-    "mtime": 1795618069.359699,
-    "seen": 1795618839.9701064,
-    "ast_hash": "8f31244d945c332ea8af2146ced2ce10",
+    "mtime": 1795639088.4082844,
+    "seen": 1795639549.4194734,
+    "ast_hash": "a2aa448f9456893d75eccae90c054968",
     "semantic_hash": ""
   },
   "utils/motion.js": {
@@ -264642,9 +264642,9 @@
     "semantic_hash": ""
   },
   "tests/pes/teamWorkspaceRender.test.jsx": {
-    "mtime": 1793308655.5510104,
-    "seen": 1793845429.8113854,
-    "ast_hash": "d8003673c68d5a3b5be1422226af4084",
+    "mtime": 1795639096.0033565,
+    "seen": 1795639549.4194782,
+    "ast_hash": "1875935a7ca8c9933689fc616452e52f",
     "semantic_hash": ""
   },
   "components/MarketClosedBanner.jsx": {
@@ -267663,30 +267663,6 @@
     "mtime": 1795627358.6952488,
     "seen": 1795627842.3467906,
     "ast_hash": "d14521b3fee07c523f10844545f68d30",
-    "semantic_hash": ""
-  },
-  "qa-xi/data.json": {
-    "mtime": 1795633216.5012484,
-    "seen": 1795633784.916223,
-    "ast_hash": "7842017dfd605d6319b4edb9419090a9",
-    "semantic_hash": ""
-  },
-  "qa-xi/main.jsx": {
-    "mtime": 1795633216.5860524,
-    "seen": 1795633784.9162264,
-    "ast_hash": "d03b0cbce8e53c5cefff9c328546665c",
-    "semantic_hash": ""
-  },
-  "qa-xi/vite.qa.config.mjs": {
-    "mtime": 1795633216.6374254,
-    "seen": 1795633784.916228,
-    "ast_hash": "18b95f145adb42d58e9740fe3eea64bc",
-    "semantic_hash": ""
-  },
-  "qa-xi/index.html": {
-    "mtime": 1795633216.5135527,
-    "seen": 1795633785.2328546,
-    "ast_hash": "2530e30d4af3bee5363c4884ed555332",
     "semantic_hash": ""
   }
 }

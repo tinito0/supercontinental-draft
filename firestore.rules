@@ -411,8 +411,8 @@ service cloud.firestore {
       }
 
       // ── EDITOR PES 2021 ───────────────────────────────────────
-      // Roles: super_admin (todo), draft_admin (solo lectura), kit_manager (kits y datos de los
-      // equipos de la liga; no jugadores, planteles, DT ni tácticas). Sin rol = sin acceso. Las listas de campos deben coincidir con
+      // Roles: super_admin (todo), draft_admin (solo lectura), kit_manager (kits y datos de
+      // cualquier equipo; no jugadores, planteles, DT ni tácticas). Sin rol = sin acceso. Las listas de campos deben coincidir con
       // pes/kits/kitConfig.js, pes/kits/kitFonts.js y pes/permissions.js (tests/pes/rulesSync.test.js).
       function pesRoleIs(roles) {
         return isAuth()
@@ -449,12 +449,10 @@ service cloud.firestore {
           'edit.team.set', 'edit.player.set', 'edit.coach.set', 'edit.roster.number', 'edit.roster.player', 'edit.team.squad', 'edit.roster.remove',
           'kit.set', 'kit.texture.set', 'kit.add'];
       }
-      function pesInLeague(wsId, op) {
-        let league = get(/databases/$(database)/documents/artifacts/$(appId)/pes_workspaces/$(wsId)).data.get('leagueTeamIds', []);
-        return league.size() == 0 || op.target.teamId in league;
-      }
-      function pesKitOpAllowed(wsId, op) {
-        return isKitManager() && pesInLeague(wsId, op) && (
+      // Un Kit Manager edita kits y datos de cualquier equipo (2026-11-25: antes solo los de leagueTeamIds, que ahora
+      // es solo un filtro de la lista).
+      function pesKitOpAllowed(op) {
+        return isKitManager() && (
           (op.type == 'kit.set' && op.key in pesKitKeys()) ||
           op.type == 'kit.add' ||
           (op.type == 'kit.texture.set' && op.slot in pesTextureSlots() && op.ext in ['.ftex', '.dds']) ||
@@ -479,7 +477,7 @@ service cloud.firestore {
             && request.resource.data.actorUid == request.auth.uid
             && request.resource.data.state == 'saved'
             && request.resource.data.type in pesOpTypes()
-            && (isPesSuper() || pesKitOpAllowed(wsId, request.resource.data));
+            && (isPesSuper() || pesKitOpAllowed(request.resource.data));
           allow update: if isAuth()
             && (isPesSuper() || resource.data.actorUid == request.auth.uid)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'discardedBy', 'discardedAt'])
@@ -505,7 +503,7 @@ service cloud.firestore {
             && request.resource.data.keys().hasOnly(['teamId', 'files', 'updatedBy', 'updatedAt'])
             && request.resource.data.files is map
             && request.resource.data.teamId == int(teamId)
-            && (isPesSuper() || (isKitManager() && pesInLeague(wsId, { 'target': { 'teamId': int(teamId) } })));
+            && (isPesSuper() || isKitManager());
           allow delete: if isPesSuper();
         }
 

@@ -138,14 +138,12 @@ describe('teamView: access mirrors authorize()', () => {
   const sa = new Set(['workspace.read', 'workspace.manage', 'team.edit', 'kit.read', 'kit.edit']);
   const draftAdmin = new Set(['workspace.read']);
 
-  it('limits a Kit Manager to league teams when a league is set', () => {
-    expect(teamAccess(km, [9999], 9999)).toEqual({ data: true, squad: false, colours: true, kits: true, outOfLeague: false });
-    expect(teamAccess(km, [9999], 8888)).toEqual({ data: false, squad: false, colours: false, kits: false, outOfLeague: true });
-    expect(teamAccess(km, [], 8888).kits).toBe(true);
+  it('lets a Kit Manager edit the data and kits of every team, but not squads', () => {
+    expect(teamAccess(km)).toEqual({ data: true, squad: false, colours: true, kits: true });
   });
 
   it('lets the Super Admin edit everything and keeps the Draft Admin read-only', () => {
-    expect(teamAccess(sa, [9999], 8888)).toEqual({ data: true, squad: true, colours: true, kits: true, outOfLeague: false });
-    expect(teamAccess(draftAdmin, [], 9999)).toEqual({ data: false, squad: false, colours: false, kits: false, outOfLeague: false });
+    expect(teamAccess(sa)).toEqual({ data: true, squad: true, colours: true, kits: true });
+    expect(teamAccess(draftAdmin)).toEqual({ data: false, squad: false, colours: false, kits: false });
   });
 });

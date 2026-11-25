@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Lock } from 'lucide-react';
 import { Tabs } from '../../ui/Tabs.jsx';
 import { SearchInput, Pill } from '../PesUi.jsx';
 import { filterTeams, TEAM_SORTS } from '../../../pes/teamView.js';
@@ -38,16 +37,13 @@ function SkeletonRows() {
   );
 }
 
-function RowState({ row, kitManager }) {
+function RowState({ row }) {
   if (row.unsaved > 0) return <Pill tone="amber">sin guardar</Pill>;
-  if (kitManager && !row.inLeague) {
-    return <span className="inline-flex items-center gap-1 text-xs text-ink-3"><Lock className="w-3 h-3" aria-hidden="true" />solo lectura</span>;
-  }
   return null;
 }
 
 /** Master list of the team workspace: search, filter, sort and one row per team. */
-export function TeamList({ rows, loading, selectedId, onSelect, hasLeague, kitManager, query, onQuery, filter, onFilter, sort, onSort }) {
+export function TeamList({ rows, loading, selectedId, onSelect, hasLeague, query, onQuery, filter, onFilter, sort, onSort }) {
   const selectedRef = useRef(null);
   const counts = useMemo(() => Object.fromEntries(Object.entries(FILTERS).map(([k, fn]) => [k, rows.filter(fn).length])), [rows]);
   const visible = useMemo(
@@ -111,7 +107,7 @@ export function TeamList({ rows, loading, selectedId, onSelect, hasLeague, kitMa
                         <span className="num">{r.id}</span> · {r.national ? 'Selección' : 'Club'} · <span className="num">{r.players}</span> jug.
                       </span>
                     </span>
-                    <RowState row={r} kitManager={kitManager} />
+                    <RowState row={r} />
                   </button>
                 </li>
               );
