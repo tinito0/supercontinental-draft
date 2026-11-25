@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shirt, FolderX } from 'lucide-react';
+import { Shirt, FolderX, Pipette } from 'lucide-react';
 import { Card, Pill, ModifiedDot } from '../../PesUi.jsx';
 import { Alert } from '../../../ui/Alert.jsx';
 import { EmptyState } from '../../../ui/EmptyState.jsx';
@@ -45,7 +45,10 @@ function KitSchematic({ model }) {
   );
 }
 
-function KitValueInput({ line, readOnly, modified, onCommit }) {
+// Colours the eyedropper can take straight from the kit on the 3D preview.
+const PICKABLE = { UniColor_Color1: 'UniColor 1', UniColor_Color2: 'UniColor 2' };
+
+function KitValueInput({ line, readOnly, modified, onCommit, picking, onPick }) {
   const [draft, setDraft] = useState(line.value);
   React.useEffect(() => setDraft(line.value), [line.value]);
   const editable = !readOnly && KIT_EDITABLE_KEYS.includes(line.key);
@@ -71,6 +74,13 @@ function KitValueInput({ line, readOnly, modified, onCommit }) {
           className="w-11 h-10 shrink-0 rounded-lg border border-line/[0.16] bg-raised p-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60" />
         <input value={draft} disabled={!editable} onChange={e => setDraft(e.target.value)} onBlur={() => commit(draft)}
           onKeyDown={e => { if (e.key === 'Enter') commit(draft); if (e.key === 'Escape') setDraft(line.value); }} aria-label={`${line.key}: valor`} className={`${base} num uppercase`} />
+        {editable && onPick && (
+          <button type="button" onClick={e => { e.preventDefault(); onPick(); }} aria-pressed={picking}
+            aria-label={`Tomar ${line.key} de la camiseta`} title="Tomar el color de la camiseta"
+            className={`w-11 h-10 shrink-0 grid place-items-center rounded-lg border transition-colors ${picking ? 'border-accent bg-accent-deep text-ink' : 'border-line/[0.16] bg-raised text-ink-2 hover:text-ink hover:bg-overlay'}`}>
+            <Pipette className="w-4 h-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
     );
   } else if (line.constraint?.type === 'enum') {
@@ -134,6 +144,15 @@ export function KitsSection({ pes, teamId, access, onApply }) {
   // A kit added and then discarded disappears from the list: fall back instead of showing nothing.
   const kit = kitList.some(k => k.kit === picked) ? picked : firstKit(kitList);
   const [error, setError] = useState(null);
+  // Colour key waiting for a click on the 3D kit (eyedropper); Esc or another kit cancels it.
+  const [pickKey, setPickKey] = useState(null);
+  React.useEffect(() => setPickKey(null), [kit]);
+  React.useEffect(() => {
+    if (!pickKey) return undefined;
+    const onKey = e => { if (e.key === 'Escape') setPickKey(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pickKey]);
 
   if (!kits) {
     return <EmptyState icon={Shirt} title="Sin kit-server" description="Cargá la carpeta kit-server del Parche en «Fuentes» para ver y editar los kits." />;
@@ -185,27 +204,28 @@ export function KitsSection({ pes, teamId, access, onApply }) {
         <Card title={`Vista 3D · ${kitLabel(kit, kitList.find(k => k.kit === kit)?.category)}`}>
           <PesKit3DViewer kits={kits} teamId={teamId} kit={kit} cfg={cfg} version={version} players={squadOf(ws, teamId)}
             workspaceId={pes.activeId} uid={pes.actor?.uid} canShare={editable}
-            onImportTexture={editable ? importTexture : undefined} onSetValues={editable ? setValues : undefined} />
+            onImportTexture={editable ? importTexture : undefined} onSetValues={editable ? setValues : undefined}
+            pickColor={pickKey ? { key: pickKey, label: PICKABLE[pickKey] } : null}
+            onPickColor={(key, hex) => { setPickKey(null); apply([{ type: 'kit.set', target: { teamId, kit }, key, value: hex }]); }}
+            aside={(
+              <div className="space-y-4">
+                {sections(cfg).filter(s => !s.lines.every(l => TEXTURE_KEYS.includes(l.key))).map(s => (
+                  <Card key={s.title} title={s.title}>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {s.lines.filter(l => !TEXTURE_KEYS.includes(l.key)).map(l => (
+                        <KitValueInput key={l.key} line={l} readOnly={!editable}
+                          modified={modified.has(opKey({ type: 'kit.set', target: { teamId, kit }, key: l.key }))}
+                          picking={pickKey === l.key} onPick={PICKABLE[l.key] ? () => setPickKey(k => (k === l.key ? null : l.key)) : undefined}
+                          onCommit={value => apply([{ type: 'kit.set', target: { teamId, kit }, key: l.key, value }])} />
+                      ))}
+                    </div>
+                  </Card>
+                ))}
+                <PesKitTextures pes={pes} teamId={teamId} kit={kit} cfg={cfg} editable={editable} onApply={apply} />
+                <Card title="Colores"><KitSchematic model={kitPreviewModel(cfg)} /></Card>
+              </div>
+            )} />
         </Card>
-      )}
-      {cfg && (
-        <div className="grid gap-4 xl:grid-cols-[1fr_14rem]">
-          <div className="space-y-4">
-            {sections(cfg).filter(s => !s.lines.every(l => TEXTURE_KEYS.includes(l.key))).map(s => (
-              <Card key={s.title} title={s.title}>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {s.lines.filter(l => !TEXTURE_KEYS.includes(l.key)).map(l => (
-                    <KitValueInput key={l.key} line={l} readOnly={!editable}
-                      modified={modified.has(opKey({ type: 'kit.set', target: { teamId, kit }, key: l.key }))}
-                      onCommit={value => apply([{ type: 'kit.set', target: { teamId, kit }, key: l.key, value }])} />
-                  ))}
-                </div>
-              </Card>
-            ))}
-            <PesKitTextures pes={pes} teamId={teamId} kit={kit} cfg={cfg} editable={editable} onApply={apply} />
-          </div>
-          <Card title="Colores"><KitSchematic model={kitPreviewModel(cfg)} /></Card>
-        </div>
       )}
     </div>
   );

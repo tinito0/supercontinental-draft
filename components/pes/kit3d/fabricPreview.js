@@ -2,6 +2,7 @@
 // matches the kit texture (4096 for a 4096 kit, else Rebuilt's 2048; DXT5) and the shine is Rebuilt's 512 (DXT1). The
 // preview normal map is 2048 (Rebuilt previews at 1024, where the weave blurs away; 4096 would stall every slider move).
 import { normalMapPixels, srmPixels } from '../../../pes/kits/fabricMaps.js';
+import { normalFromSrm } from '../../../pes/kits/nrmFromSrm.js';
 import { textureFromPixels } from '../../../pes/kits/kitTextures.js';
 import { pixelsToCanvas } from './kitDecals.js';
 
@@ -45,4 +46,26 @@ export function fabricTextures(relief, opts, nrmSize = SAVED_NRM_SIZES[0]) {
     nrm: textureFromPixels('nrm', nrm, nrmSize, nrmSize),
     srm: textureFromPixels('srm', srmPixels(opts.fabric, SAVED_SRM_SIZE), SAVED_SRM_SIZE, SAVED_SRM_SIZE),
   };
+}
+
+/**
+ * Normal map from the kit's _srm (and, with opts.useColor, its colour texture) at S × S. blur and flatten are pixels
+ * of the srm, so they are scaled with the size: the preview looks like the full-size file.
+ */
+function srmNormalPixels(srmCanvas, kitCanvas, opts, S) {
+  const k = S / (srmCanvas.width || S);
+  const color = opts.useColor && kitCanvas ? kitPixels(kitCanvas, S) : null;
+  return normalFromSrm(kitPixels(srmCanvas, S), { ...opts, blur: opts.blur * k, flatten: opts.flatten * k, color });
+}
+
+/** Preview normal map from the _srm, as a canvas (at most PREVIEW_NRM_SIZE). */
+export function srmNormalPreview(srmCanvas, kitCanvas, opts) {
+  if (!srmCanvas) return null;
+  const S = Math.min(srmCanvas.width, PREVIEW_NRM_SIZE);
+  return pixelsToCanvas(srmNormalPixels(srmCanvas, kitCanvas, opts, S), S, S, { opaque: true });
+}
+
+/** Full-size normal map from the _srm, encoded as a verified FTEX for the nrm slot (DXT5). */
+export function srmNormalTexture(srmCanvas, kitCanvas, opts, size) {
+  return textureFromPixels('nrm', srmNormalPixels(srmCanvas, kitCanvas, opts, size), size, size);
 }

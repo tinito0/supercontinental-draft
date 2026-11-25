@@ -3,6 +3,7 @@ import { FolderOpen, Download, CloudUpload, CheckCircle2, AlertTriangle, XCircle
 import { Button, Disclosure } from '../PesUi.jsx';
 import { LIGHT_PRESETS } from './kitRenderer.js';
 import { FABRICS, FABRIC_RANGES } from '../../../pes/kits/fabricMaps.js';
+import { NRM_FROM_SRM_RANGES } from '../../../pes/kits/nrmFromSrm.js';
 import { describeAsset } from '../../../pes/kits/kitAssetResolver.js';
 
 // Side panels of the 3D kit viewer (PesKit3DViewer). Presentational: state lives in the viewer.
@@ -173,35 +174,49 @@ const percent = v => `${Math.round(v * 100)} %`;
  * (same 8 fabrics, ranges and defaults), what the drawings' relief is taken from, how strong it looks on screen,
  * and saving the generated maps into the kit.
  */
-export function FabricPanel({ fabric, setFabric, source, setSource, hasNrm, hasGloss, opts, set, onSave, saving }) {
+export function FabricPanel({ fabric, setFabric, srmOpts, setSrmOpts, source, setSource, hasNrm, hasGloss, hasSrm, opts, set, onSave, saving, onDownload, downloading }) {
   const [repeat, strength, emboss] = [FABRIC_RANGES.repeat, FABRIC_RANGES.fabricStrength, FABRIC_RANGES.emboss];
+  const generated = source !== 'kit';
+  const hint = [!hasNrm && 'Este kit no tiene normal map propio (_nrm).', !hasSrm && 'Sin _srm no se puede sacar el relieve de él.'].filter(Boolean).join(' ') || null;
   return (
     <div className="space-y-4">
       <Section>
-        <Row label="Normal map" hint={hasNrm ? null : 'Este kit no tiene normal map propio (_nrm).'}>
+        <Row label="Normal map" hint={hint}>
           <Segmented label="Normal map" value={source} onChange={setSource}
-            options={[{ value: 'gen', label: 'De la tela' }, { value: 'kit', label: 'Del kit', disabled: !hasNrm }]} />
+            options={[{ value: 'gen', label: 'De la tela' }, { value: 'srm', label: 'Del _srm', disabled: !hasSrm }, { value: 'kit', label: 'Del kit', disabled: !hasNrm }]} />
         </Row>
       </Section>
-      <Section title="Tela y relieve">
-        <Row label="Tela">
-          <select className={SELECT} value={fabric.fabric} onChange={e => setFabric({ fabric: e.target.value })}>
-            {FABRICS.map(f => <option key={f.k} value={f.k} title={f.d}>{f.n}</option>)}
-          </select>
-        </Row>
-        <Slider label="Tamaño de la trama" value={fabric.repeat} min={repeat[0]} max={repeat[1]} step={repeat[2]} format={v => `${v}×`} onChange={v => setFabric({ repeat: v })} />
-        <Slider label="Fuerza de la trama" value={fabric.fabricStrength} min={strength[0]} max={strength[1]} step={strength[2]} format={percent} onChange={v => setFabric({ fabricStrength: v })} />
-        <Slider label="Relieve de los dibujos" value={fabric.emboss} min={emboss[0]} max={emboss[1]} step={emboss[2]} format={percent} onChange={v => setFabric({ emboss: v })} />
-        <Row label="Relieve de los dibujos sacado de">
-          <Segmented label="Relieve de los dibujos sacado de" value={fabric.src} onChange={v => setFabric({ src: v })}
-            options={[{ value: 'color', label: 'Los colores' }, { value: 'gloss', label: 'El brillo (alfa)', disabled: !hasGloss }]} />
-        </Row>
+      {source === 'srm'
+        ? <SrmReliefSection o={srmOpts} set={setSrmOpts} />
+        : (
+          <Section title="Tela y relieve">
+            <Row label="Tela">
+              <select className={SELECT} value={fabric.fabric} onChange={e => setFabric({ fabric: e.target.value })}>
+                {FABRICS.map(f => <option key={f.k} value={f.k} title={f.d}>{f.n}</option>)}
+              </select>
+            </Row>
+            <Slider label="Tamaño de la trama" value={fabric.repeat} min={repeat[0]} max={repeat[1]} step={repeat[2]} format={v => `${v}×`} onChange={v => setFabric({ repeat: v })} />
+            <Slider label="Fuerza de la trama" value={fabric.fabricStrength} min={strength[0]} max={strength[1]} step={strength[2]} format={percent} onChange={v => setFabric({ fabricStrength: v })} />
+            <Slider label="Relieve de los dibujos" value={fabric.emboss} min={emboss[0]} max={emboss[1]} step={emboss[2]} format={percent} onChange={v => setFabric({ emboss: v })} />
+            <Row label="Relieve de los dibujos sacado de">
+              <Segmented label="Relieve de los dibujos sacado de" value={fabric.src} onChange={v => setFabric({ src: v })}
+                options={[{ value: 'color', label: 'Los colores' }, { value: 'gloss', label: 'El brillo (alfa)', disabled: !hasGloss }]} />
+            </Row>
+          </Section>
+        )}
+      <Section>
         {onSave && (
-          <Button variant="primary" disabled={saving?.busy || source !== 'gen'} onClick={onSave}
-            title={source !== 'gen' ? 'Elegí «De la tela» para guardar un relieve nuevo' : undefined}>
+          <Button variant="primary" disabled={saving?.busy || !generated} onClick={onSave}
+            title={generated ? undefined : 'Elegí «De la tela» o «Del _srm» para guardar un relieve nuevo'}>
             <Save className="w-3.5 h-3.5" aria-hidden="true" />{saving?.busy ? `Armando el normal map a ${saving.size} px…` : 'Guardar este relieve en el kit'}
           </Button>
         )}
+        <Button disabled={downloading?.busy || !generated} onClick={onDownload}
+          title={generated ? undefined : 'Elegí «De la tela» o «Del _srm» para descargar un relieve nuevo'}>
+          <Download className="w-3.5 h-3.5" aria-hidden="true" />{downloading?.busy ? `Armando el normal map a ${downloading.size} px…` : 'Descargar _nrm.ftex'}
+        </Button>
+        {downloading?.done && <p className="text-[11px] text-success-soft">{downloading.done}</p>}
+        {downloading?.error && <p className="text-[11px] text-danger-soft" role="alert">No se pudo descargar el normal map: {downloading.error.message}</p>}
         {saving?.done && <p className="text-[11px] text-success-soft">{saving.done}</p>}
         {saving?.error && <p className="text-[11px] text-danger-soft" role="alert">No se pudo guardar el relieve: {saving.error.message}</p>}
       </Section>
@@ -210,8 +225,28 @@ export function FabricPanel({ fabric, setFabric, source, setSource, hasNrm, hasG
         <Slider label="Brillo de la tela" value={opts.spec} min={0} max={2.5} step={0.05} format={percent} onChange={v => set({ spec: v })} />
         <Toggle checked={opts.useNrm} onChange={v => set({ useNrm: v })}>Usar normal map</Toggle>
       </Section>
-      <p className="text-[11px] text-ink-3">El juego usa el normal map del kit (_nrm) para el relieve de la tela y de los dibujos que tengan relieve en él. Lo de «En pantalla» solo cambia esta vista.</p>
+      <p className="text-[11px] text-ink-3">El kit-server no carga un _nrm por kit: kserv.lua solo cambia la textura y el _srm. Lo de «En pantalla» solo cambia esta vista.</p>
     </div>
+  );
+}
+
+/** Controls of the normal map made from the kit's _srm (nrm_from_srm.py options). */
+function SrmReliefSection({ o, set }) {
+  const R = NRM_FROM_SRM_RANGES;
+  return (
+    <Section title="Relieve desde el _srm">
+      <p className="text-[11px] text-ink-3">Lo que cambia en el _srm (escudo, sponsor, rayas, costuras) sale en relieve. Lo liso y brillante queda alto.</p>
+      <Slider label="Intensidad" value={o.strength} min={R.strength[0]} max={R.strength[1]} step={R.strength[2]} format={v => v.toFixed(2)} onChange={v => set({ strength: v })} />
+      <Slider label="Suavizado" value={o.blur} min={R.blur[0]} max={R.blur[1]} step={R.blur[2]} format={v => `${v.toFixed(1)} px`} onChange={v => set({ blur: v })} />
+      <Slider label="Quitar inclinación" value={o.flatten} min={R.flatten[0]} max={R.flatten[1]} step={R.flatten[2]} format={v => `${v} px`} onChange={v => set({ flatten: v })} />
+      <Slider label="Grano de tela" value={o.grain} min={R.grain[0]} max={R.grain[1]} step={R.grain[2]} format={v => v.toFixed(2)} onChange={v => set({ grain: v })} />
+      <Toggle checked={o.useColor} onChange={v => set({ useColor: v })}>Sumar el relieve de la textura del kit</Toggle>
+      {o.useColor && (
+        <Slider label="Peso de la textura" value={o.colorWeight} min={R.colorWeight[0]} max={R.colorWeight[1]} step={R.colorWeight[2]} format={percent} onChange={v => set({ colorWeight: v })} />
+      )}
+      <Toggle checked={o.invert} onChange={v => set({ invert: v })}>Invertir (lo liso queda hundido)</Toggle>
+      <Toggle checked={o.flipY} onChange={v => set({ flipY: v })}>Invertir el eje Y</Toggle>
+    </Section>
   );
 }
 

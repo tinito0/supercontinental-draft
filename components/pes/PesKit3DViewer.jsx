@@ -51,12 +51,16 @@ function useDebounced(value, ms) {
  * @param {{ kits: object, teamId: number, kit: string, cfg: object, version: number, players?: object[],
  *   workspaceId?: string, uid?: string, canShare?: boolean,
  *   onImportTexture?: (slot: object, file: string, tex: object) => Promise<void>,
- *   onSetValues?: (values: Record<string, string>) => Promise<void> }} props
+ *   onSetValues?: (values: Record<string, string>) => Promise<void>,
+ *   pickColor?: { key: string, label: string }|null, onPickColor?: (key: string, hex: string) => void,
+ *   aside?: React.ReactNode }} props
+ *   pickColor: while set, a click on the kit takes the texture's colour there (eyedropper) and calls onPickColor.
+ *   aside: shown in the right column under the tabs (the kit's config.txt values), so the preview stays on the left.
  *   onImportTexture: saves a generated texture into the kit (same path as PesKitTextures import); omitted = read only.
  *   onSetValues: writes config.txt values (kit.set operations); omitted = collars can be previewed but not saved.
  *   canShare: the user may share the kit-server textures found locally (Super Admin, Kit Manager of the team).
  */
-export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], workspaceId, uid, canShare, onImportTexture, onSetValues }) {
+export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], workspaceId, uid, canShare, onImportTexture, onSetValues, pickColor = null, onPickColor, aside }) {
   const canvasRef = useRef(null);
   const viewRef = useRef({ ...DEFAULT_VIEW });
   const fitRef = useRef(null);
@@ -217,8 +221,15 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     return next;
   });
   const resize = (group, dir) => mergeDraft(nudgeSize(shownSteps, group, dir));
+  // Eyedropper: the colour of the kit texture itself under the pointer (not the lit pixel on screen).
+  const pickMode = Boolean(pickColor && onPickColor);
   const intercept = {
     down: e => {
+      if (pickMode) {
+        const hex = sampleTexture(plainTexture, pickAt(e));
+        if (hex) onPickColor(pickColor.key, hex);
+        return true;
+      }
       if (!letterMode) return false;
       const uv = pickAt(e), group = hitLettering(composed.regions, uv);
       if (!group) return false;
@@ -246,6 +257,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
       return true;
     },
     hover: e => {
+      if (pickMode) { if (canvasRef.current) canvasRef.current.style.cursor = 'crosshair'; return; }
       if (!letterMode || frameRef.current) return;
       frameRef.current = requestAnimationFrame(() => {
         frameRef.current = 0;
@@ -255,7 +267,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
     },
   };
   const camera = useKitCamera(canvasRef, { viewRef, fitRef, draw, intercept });
-  useEffect(() => { if (!letterMode && canvasRef.current) canvasRef.current.style.cursor = ''; }, [letterMode]);
+  useEffect(() => { if (!letterMode && canvasRef.current) canvasRef.current.style.cursor = pickMode ? 'crosshair' : ''; }, [letterMode, pickMode]);
   useEffect(() => () => cancelAnimationFrame(frameRef.current), []);
 
   const VIEWS = [
@@ -329,7 +341,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
   ];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_25rem]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_30rem]">
       <div className="space-y-2 lg:sticky lg:top-4 self-start">
         <div className="relative">
           <canvas ref={canvasRef} tabIndex={0}
@@ -362,8 +374,10 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
             onResize={dir => selected && resize(selected, dir)} onDiscard={() => { setDraft({}); setSelected(null); setLetterSave(null); }}
             onSave={onSetValues ? saveLettering : undefined} saving={letterSave} />
         )}
-        <p className="text-[11px] text-ink-3">
-          {letterMode
+        <p className={`text-[11px] ${pickMode ? 'text-accent-soft' : 'text-ink-3'}`} aria-live="polite">
+          {pickMode
+            ? `Hacé clic en la camiseta para tomar el color de ${pickColor.label}. Esc para cancelar.`
+            : letterMode
             ? 'Arrastrá el nombre o un número sobre la camiseta para moverlo; con la rueda encima, o con − y +, cambiás el tamaño.'
             : 'Clic izquierdo: girar · Clic derecho: mover · Rueda: acercar donde apuntás · Doble clic: frente'}
         </p>
@@ -387,17 +401,34 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
               nameOff={value('Name') === '1'} assets={assets.assets} />
           )}
           {tab === 'fabric' && (
-            <FabricPanel fabric={fabricMaps.fabric} setFabric={fabricMaps.setFabric} source={fabricMaps.source} setSource={fabricMaps.setSource}
-              hasNrm={fabricMaps.hasNrm} hasGloss={Boolean(tex.kit?.gloss)} opts={opts} set={set} onSave={fabricMaps.save} saving={fabricMaps.saving} />
+            <FabricPanel fabric={fabricMaps.fabric} setFabric={fabricMaps.setFabric} srmOpts={fabricMaps.srmOpts} setSrmOpts={fabricMaps.setSrmOpts} source={fabricMaps.source} setSource={fabricMaps.setSource}
+              hasNrm={fabricMaps.hasNrm} hasGloss={Boolean(tex.kit?.gloss)} hasSrm={fabricMaps.hasSrm} opts={opts} set={set} onSave={fabricMaps.save} saving={fabricMaps.saving}
+              onDownload={fabricMaps.download} downloading={fabricMaps.downloading} />
           )}
           {tab === 'diag' && (
             <DiagnosticsPanel assets={assets.assets} notes={configNotes} local={assets.local} cloud={assets.cloud} share={assets.share}
               canShare={assets.canShare} pendingShare={assets.pendingShare} onShare={assets.shareKit} error={assets.error} />
           )}
         </div>
+        {aside}
       </div>
     </div>
   );
+}
+
+const PICK_AREA = 5; // texture pixels averaged around the clicked point, so a dither or an edge does not decide it
+
+/** #RRGGBB of the kit texture around a texture coordinate, or null off the kit. */
+function sampleTexture(texture, uv) {
+  if (!texture || !uv) return null;
+  const c = document.createElement('canvas');
+  c.width = 1; c.height = 1;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.imageSmoothingQuality = 'high';
+  const x = uv[0] * texture.width - PICK_AREA / 2, y = uv[1] * texture.height - PICK_AREA / 2;
+  g.drawImage(texture, x, y, PICK_AREA, PICK_AREA, 0, 0, 1, 1);
+  const [r, gr, b] = g.getImageData(0, 0, 1, 1).data;
+  return `#${[r, gr, b].map(v => v.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
 }
 
 /**
