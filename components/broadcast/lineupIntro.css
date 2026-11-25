@@ -1,0 +1,116 @@
+/* Once inicial animado (LineupIntro.jsx), sobre el juego mientras carga el partido. Estética de la transmisión
+   (broadcast.css: degradé azul marino → lavanda, franja clara, Barlow Condensed). Va arriba y termina antes de los
+   ~330 px de abajo, donde están las cámaras. Cancha horizontal: el arco propio a la izquierda, cada línea una columna,
+   la banda izquierda arriba. Solo se animan transform, opacity y clip-path. */
+
+.scl-xi {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  translate: -50% 0;
+  width: 1560px;
+  border-radius: 0 0 36px 36px;
+  overflow: hidden;
+  box-shadow: 0 26px 80px rgba(2, 10, 30, 0.55);
+  animation: scl-xi-in 560ms var(--scl-ease) backwards;
+}
+.scl-xi.is-leaving { animation: scl-xi-out 280ms var(--scl-ease) forwards; }
+
+.scl-xi-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-height: 116px;
+  padding: 20px 28px 16px;
+  background: var(--scl-frame);
+  overflow: hidden;
+}
+.scl-xi-edge { position: absolute; inset: 0 0 auto 0; height: 8px; background: var(--scl-stripe); transform-origin: left; animation: scl-popup-stripe 640ms 80ms var(--scl-ease) backwards; }
+.scl-xi .scl-frame-ball { right: 120px; bottom: -200px; width: 380px; height: 380px; }
+.scl-xi-crest {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(2, 10, 30, 0.3);
+  animation: scl-pop-rise 520ms 160ms var(--scl-ease) backwards;
+}
+.scl-xi-crest-img { width: 66px; height: 66px; object-fit: contain; font-size: 26px; }
+.scl-xi-titles { position: relative; z-index: 1; flex: 1; min-width: 0; display: grid; color: #ffffff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); animation: scl-pop-rise 520ms 220ms var(--scl-ease) backwards; }
+.scl-xi-kicker { font-size: 20px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--scl-lilac); }
+.scl-xi-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 60px; line-height: 1; font-weight: 800; text-transform: uppercase; }
+.scl-xi-formation {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: end;
+  color: #ffffff;
+  animation: scl-pop-rise 520ms 320ms var(--scl-ease) backwards;
+}
+.scl-xi-formation span { font-size: 18px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--scl-lilac); }
+.scl-xi-formation strong { font-size: 58px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
+.scl-xi-head > .scl-badge { position: relative; z-index: 1; animation: scl-pop-rise 520ms 380ms var(--scl-ease) backwards; }
+
+/* La cancha: franjas de pasto muy claras y las líneas en azul marino suave, para que mande la gente. */
+.scl-xi-pitch {
+  position: relative;
+  display: flex;
+  justify-content: space-around;
+  gap: 12px;
+  height: 540px;
+  padding: 22px 28px;
+  background: repeating-linear-gradient(90deg, #f4f6fb 0 130px, #eaedf5 130px 260px);
+}
+.scl-xi-field { position: absolute; inset: 14px 18px; border: 3px solid rgba(2, 42, 94, 0.12); pointer-events: none; }
+.scl-xi-box { position: absolute; left: -3px; top: 26%; width: 150px; height: 48%; border: 3px solid rgba(2, 42, 94, 0.12); }
+.scl-xi-half { position: absolute; right: -3px; top: 50%; width: 150px; height: 150px; translate: 50% -50%; border: 3px solid rgba(2, 42, 94, 0.12); border-radius: 50%; }
+
+.scl-xi-line { position: relative; display: flex; flex-direction: column; justify-content: space-evenly; gap: 10px; min-width: 0; flex: 1; max-width: 300px; }
+
+.scl-xi-player {
+  display: flex;
+  align-items: stretch;
+  height: 88px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(2, 10, 30, 0.16);
+  overflow: hidden;
+  animation: scl-xi-player-in 480ms var(--d, 0ms) var(--scl-ease) backwards;
+}
+.scl-xi-photo { position: relative; flex: none; width: 76px; background: var(--scl-bar); overflow: hidden; }
+.scl-xi-silhouette { position: absolute; inset: 10px 8px 0; width: calc(100% - 16px); height: calc(100% - 10px); fill: rgba(182, 182, 236, 0.55); }
+/* La foto aparece sobre la silueta un momento después del jugador. */
+.scl-xi-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  background: #ffffff;
+  animation: scl-xi-photo-in 420ms calc(var(--d, 0ms) + 300ms) var(--scl-ease) backwards;
+}
+.scl-xi-plate { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; padding: 0 10px; }
+.scl-xi-number { flex: none; min-width: 30px; font-size: 32px; line-height: 1; font-weight: 800; color: var(--scl-periwinkle); font-variant-numeric: tabular-nums; text-align: center; }
+.scl-xi-copy { display: grid; min-width: 0; }
+/* Nombres largos («Bruno Fernandes») pasan a dos renglones en vez de cortarse. */
+.scl-xi-copy strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-size: 24px; line-height: 1; font-weight: 800; color: var(--scl-ink); text-transform: uppercase; }
+.scl-xi-copy small { font-size: 17px; font-weight: 700; letter-spacing: 0.08em; color: var(--scl-muted); text-transform: uppercase; }
+
+@keyframes scl-xi-in {
+  from { opacity: 0; transform: translateY(-18px); clip-path: inset(0 0 14% 0); }
+  to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
+}
+@keyframes scl-xi-out { to { opacity: 0; transform: translateY(-12px); filter: blur(4px); } }
+@keyframes scl-xi-player-in { from { opacity: 0; transform: translateX(-26px); } }
+@keyframes scl-xi-photo-in { from { opacity: 0; transform: scale(1.08); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .scl-xi, .scl-xi *, .scl-xi-photo img { animation: scl-fade-in 200ms ease-out backwards !important; }
+  .scl-xi.is-leaving { animation: scl-fade-out 200ms ease-out forwards !important; }
+}

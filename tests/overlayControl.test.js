@@ -45,6 +45,32 @@ describe('buildOverlayCommand', () => {
   });
 });
 
+describe('lineup (once inicial)', () => {
+  const player = i => ({ id: 1000 + i, name: `J${i}`, number: i + 1, role: i ? 5 : 0, depth: 10 + i, lateral: 50 });
+  const team = (name, count = 11) => ({ name, draftTeamId: 'uid_1', players: Array.from({ length: count }, (_, i) => player(i)) });
+  const command = extra => ({ action: 'lineup', key: '20261115T224820Z_101-202', teams: [team('A'), team('B')], ...extra });
+
+  it('stores both XIs with the server time', () => {
+    const { data, mask, summary } = buildOverlayCommand(command(), ctx);
+    expect(mask).toEqual(['lineupIntro']);
+    expect(summary).toMatch(/A vs B/);
+    expect(data.lineupIntro).toMatchObject({ visible: true, key: '20261115T224820Z_101-202', teamSec: 9, shownAt: 1_000 });
+    expect(data.lineupIntro.teams[0].players[0]).toEqual(player(0));
+  });
+
+  it('hides it touching only its visibility', () => {
+    expect(buildOverlayCommand({ action: 'lineup', key: 'off' }, ctx)).toMatchObject({ data: { lineupIntro: { visible: false } }, mask: ['lineupIntro.visible'] });
+  });
+
+  it('rejects incomplete XIs, bad ids and bad keys', () => {
+    expect(() => buildOverlayCommand(command({ teams: [team('A', 10), team('B')] }), ctx)).toThrow();
+    const badId = team('A');
+    badId.players[3] = { ...badId.players[3], id: -1 };
+    expect(() => buildOverlayCommand(command({ teams: [badId, team('B')] }), ctx)).toThrow();
+    expect(() => buildOverlayCommand(command({ key: 'a b/c' }), ctx)).toThrow();
+  });
+});
+
 describe('liveOverlayUpdate (match-feed → overlay)', () => {
   const key = '20261022T200000Z_101-1230';
   const live = (period, minute) => ({ matchKey: key, status: 'live', clock: { period, minute, second: 0 } });

@@ -191,6 +191,13 @@ watch / ptr / anchors). Step-by-step log of the session: `E:\eFootball PES 2021\
   each variant (0 in every case seen); whether `mis` keeps its address across a game restart (it did across two
   probe sessions of one run).
 
+## Pre-match XI (probe v7: implemented in the repo, not yet run in a match)
+
+- Between the `session` event (after_set_conditions) and `stats_appeared`, which comes 38–58 s later in sessions 20261115_224820 and 230949, `match.stats()` is nil. Over that window `ctx.mis` already holds both plans (+0xE98 / +0x10F0), their orders and squads (S12).
+- v7 samples them every tick until the first `stats_appeared`. Per side it emits `{"t":"prematch","side":s,"plan":hex,"order":[…],"squad":[…]}` when the bytes change, after the same range checks as `formation` and with every XI index inside the squad.
+- This is the plan the match was loaded with. Edits on the pre-match screen reach `mis` only at kick-off (S12), so they are missing from the OBS animation (docs/MATCH_FEED.md, «Once inicial animado en OBS»).
+- To validate: that both sides appear before kick-off in a real match, in the league and in the Konami Cup, and the first sample time relative to `session`.
+
 ## Player positions (S15, 2026-10-29, live, sessions 20261029_001439 and an unrecorded one)
 
 Tool: `pes-collector/tools/pitch_scan.py` (read-only). Scans in metres with (x, height, z) found nothing per frame

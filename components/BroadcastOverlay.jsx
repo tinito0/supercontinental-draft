@@ -10,6 +10,7 @@ import { BroadcastCrest, isLongName } from './broadcast/BroadcastCrest.jsx';
 import { BroadcastFixtures } from './broadcast/BroadcastFixtures.jsx';
 import { BroadcastLeagueTable } from './broadcast/BroadcastLeagueTable.jsx';
 import { OverlayPopup } from './broadcast/OverlayPopup.jsx';
+import { LineupIntro } from './broadcast/LineupIntro.jsx';
 import { CommunityCard } from './broadcast/CommunityCard.jsx';
 import { BroadcastBracket } from './tournament/BroadcastBracket.jsx';
 import { OverlayErrorBoundary } from './broadcast/OverlayErrorBoundary.jsx';
@@ -127,6 +128,8 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
     return map;
   }, [allTeams]);
   const getTeamLogo = useCallback(name => logoByKey.get(teamKey(name)) || null, [logoByKey]);
+  // Once inicial: el escudo del club del draft que mandó el bridge, o el que coincide por nombre.
+  const lineupLogo = useCallback(team => (team.draftTeamId && allTeams?.[team.draftTeamId]?.logoUrl) || getTeamLogo(team.name), [allTeams, getTeamLogo]);
 
   const { matchId, liveMatchKey } = data;
   const fixtures = useMemo(
@@ -203,6 +206,10 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
           );
         }}
       </Presence>
+
+      <OverlayErrorBoundary name="once inicial" resetKey={overlayData?.lineupIntro}>
+        <LineupIntro intro={overlayData?.lineupIntro} loaded={overlayLoaded} logoOf={lineupLogo} />
+      </OverlayErrorBoundary>
 
       <OverlayErrorBoundary name="comunidad" resetKey={overlayData}>
         <CommunityCard card={overlayData?.card} live={live} homeName={home.name} awayName={away.name} side={cardSide} loaded={overlayLoaded} />

@@ -16,7 +16,8 @@ const serviceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT') ?? '{
 const projectId: string = serviceAccount.project_id;
 const bridgeToken = Deno.env.get('MATCH_FEED_TOKEN') ?? '';
 const siteUrl = Deno.env.get('OVERLAY_SITE_URL') || DEFAULT_SITE_URL;
-const MAX_BODY_BYTES = 4096;
+// The starting-XI command (22 players with names) is about 3 KB.
+const MAX_BODY_BYTES = 8192;
 
 const firestore = createFirestore({
   projectId,

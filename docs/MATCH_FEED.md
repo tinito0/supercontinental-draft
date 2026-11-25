@@ -138,6 +138,27 @@ El camino es Macro Deck → `pes-collector/bridge/scl-obs.cmd` → `obs.mjs` →
 - **Mismas acciones desde la web:** Admin → Overlay, en «Escena en OBS» y en «Popup para la comunidad».
 - **Escenas de OBS** (cámaras, fuentes): se siguen cambiando con el plugin OBS WebSocket de Macro Deck.
 
+## Once inicial animado en OBS
+
+Mientras carga el partido (pantalla de carga, previa y salida de los equipos) el overlay muestra el once de cada
+equipo, unos 9 segundos cada uno: escudo, dibujo («4-3-3») y las líneas del arquero hacia adelante, con foto, número
+y puesto. Va arriba y termina antes de las cámaras.
+
+- **De dónde sale:**
+  - el probe (v7) emite `prematch` por lado entre el `session` y el inicio del partido: el plan y el orden con que se cargó el partido, más el plantel;
+  - el bridge lo arma (`collector/prematch.js`, `bridge/lineupCommand.js`) con los nombres de la base y del save y los números del save;
+  - el bridge lo manda una sola vez por partido a `overlay-control` con `{"action":"lineup", …}`;
+  - queda como `lineupIntro` en el doc del overlay (`components/broadcast/LineupIntro.jsx`).
+- **Qué muestra:** el once y el dibujo con que se cargó el partido (el plan guardado). Los cambios hechos en la
+  pantalla previa del juego no aparecen: recién llegan a la memoria del partido en el saque inicial.
+- **Cuándo no sale:**
+  - un partido con un equipo que no es de la liga (fuera del `teamMap`);
+  - una sesión de hace más de 10 minutos;
+  - un partido ya mostrado: la clave queda en `_bridge\lineup.json`.
+- **Ocultarlo a mano:** `{"action":"lineup","key":"off"}`.
+- **Requiere** `overlay-control` desplegada con esta versión: el cuerpo admite hasta 8 KB porque el comando trae 22
+  jugadores.
+
 ## Fuentes de navegador en OBS
 
 Una fuente por escena de OBS, 1920×1080 (Admin → Torneo y transmisión → Conectar OBS las lista para copiar).

@@ -27,6 +27,11 @@ What it records (see docs/PES_MATCH_DATA_RESEARCH.md):
   - shot (v6): the game's shot observer (S16): where each shot was struck and where it ended (metres from the centre
     spot, x toward the goal attacked), the game's distance to goal, the attacking team's shot count, a shooter
     index and the raw 0x60 bytes. Emitted at the strike and again when the shot ends.
+  - prematch (v7): the same plan and order as `formation`, plus the MATCH_INFO squad, read between the match setup
+    (after_set_conditions) and kick-off: loading, the pre-match screen and the walk-out (38–58 s in the recordings
+    of 2026-11-15). It is the plan the match was loaded with (S12): changes made on the pre-match screen only reach
+    MATCH_INFO at kick-off. Emitted when it changes, never once the match has started. The bridge uses it for the
+    OBS starting-XI animation.
 
 Requires in sider.ini: lua.enabled = 1, luajit.ext.enabled = 1, match-stats.enabled = 1.
 --]]
@@ -136,6 +141,8 @@ local stats_cur, stats_prev = {}, {}
 local team_cache, lineups = {}, {}
 local last_possession = {}
 local last_formation = {}
+local last_prematch = {}
+local match_seen = false -- this session already reached kick-off: no more prematch events
 
 local C
 local NTDLL
@@ -574,6 +581,27 @@ local function sample_formation(side)
     emit("formation", { side = side, plan = plan_hex, order = slots })
 end
 
+-- Before kick-off (v7): the plan the match was loaded with and the squad it indexes. Same validation as
+-- sample_formation, and the 11 XI slots must exist in the squad.
+local function sample_prematch(side)
+    local mis = mis_address()
+    if not mis then return end
+    local base = mis + MIS_PLAN_OFFSET + side * MIS_PLAN_STRIDE
+    local plan, order = read(base, PLAN_BYTES), read(base + ORDER_OFFSET, ORDER_BYTES)
+    if not plan or not order or not plan_is_valid(plan, order) then return end
+    local squad = read_squad(side)
+    local slots = {}
+    for i = 1, ORDER_BYTES do slots[i] = order:byte(i) end
+    for i = 1, 11 do
+        if slots[i] >= #squad then return end
+    end
+    local key = plan .. order .. table.concat(squad, ",")
+    if key == last_prematch[side] then return end
+    last_prematch[side] = key
+    local plan_hex = plan:gsub(".", function(c) return string.format("%02x", c:byte()) end)
+    emit("prematch", { side = side, plan = plan_hex, order = slots, squad = squad })
+end
+
 local function sample()
     local st = match.stats()
     if not st then
@@ -584,11 +612,16 @@ local function sample()
             emit("stats_gone", {})
             flush_events(true)
         end
+        if not match_seen then
+            sample_prematch(0)
+            sample_prematch(1)
+        end
         return
     end
     local t = now_ms()
     if not in_match then
         in_match = true
+        match_seen = true
         squads = { [0] = read_squad(0), [1] = read_squad(1) }
         emit("stats_appeared", { sci = hex(stats_ptr()), squad_home = squads[0], squad_away = squads[1] })
         stats_region, lineups, team_cache, last_formation = nil, {}, {}, {}
@@ -666,13 +699,14 @@ local function open_session(ctx)
     ev_file = io.open(session_dir .. "\\events.ndjson", "a")
     seq, last_state, in_match, squads = 0, {}, false, {}
     stats_region, lineups, team_cache, last_possession, last_formation = nil, {}, {}, {}, {}
+    last_prematch, match_seen = {}, false
     pos_region, last_pos, last_pos_search_ms = nil, nil, 0
     shoot_obj, last_shot = nil, nil
     emit("session", {
         home_team = ctx.home_team, away_team = ctx.away_team, tournament_id = ctx.tournament_id,
         match_time = ctx.match_time, extra_time = ctx.extra_time, penalties = ctx.penalties,
         substitutions = ctx.substitutions, difficulty = ctx.difficulty, mis = hex(mis_address()),
-        probe_version = 6,
+        probe_version = 7,
     })
 end
 
@@ -739,7 +773,7 @@ function m.init(ctx)
         m[handler_name] = guarded(m[event])
         ctx.register(event, m[handler_name])
     end
-    log("scl_probe ready (v6), output: " .. out_dir)
+    log("scl_probe ready (v7), output: " .. out_dir)
 end
 
 return m

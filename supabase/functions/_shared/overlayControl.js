@@ -36,6 +36,37 @@ export class OverlayCommandError extends Error {
 
 const fail = message => { throw new OverlayCommandError(message); };
 
+// Once inicial animado (components/broadcast/LineupIntro.jsx): lo manda el bridge mientras carga el partido.
+export const LINEUP_TEAM_SECONDS = 9;
+const LINEUP_KEY = /^[0-9A-Za-z_:.-]{1,80}$/;
+const MAX_LINEUP_NAME = 60;
+const MAX_PLAYER_ID = 0x3ffff;
+const isIntIn = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
+const cleanText = (value, max) => (typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null);
+
+function lineupPlayer(player) {
+  if (!player || typeof player !== 'object') fail('Jugador inválido en el once.');
+  const { id, number, role, depth, lateral } = player;
+  if (!isIntIn(id, 1, MAX_PLAYER_ID) || !isIntIn(role, 0, 20) || !isIntIn(depth, 0, 100) || !isIntIn(lateral, 0, 100)) {
+    fail('Jugador inválido en el once.');
+  }
+  return { id, name: cleanText(player.name, MAX_LINEUP_NAME), number: isIntIn(number, 1, 99) ? number : null, role, depth, lateral };
+}
+
+function lineupTeam(team) {
+  if (!team || typeof team !== 'object' || !Array.isArray(team.players) || team.players.length !== 11) fail('Cada equipo lleva 11 jugadores.');
+  const draftTeamId = typeof team.draftTeamId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(team.draftTeamId) ? team.draftTeamId : null;
+  return { name: cleanText(team.name, MAX_LINEUP_NAME) || 'Equipo', draftTeamId, players: team.players.map(lineupPlayer) };
+}
+
+function lineupCommand(command, now) {
+  if (command.key === 'off') return { data: { lineupIntro: { visible: false } }, mask: ['lineupIntro.visible'], summary: 'once inicial oculto' };
+  if (typeof command.key !== 'string' || !LINEUP_KEY.test(command.key)) fail('Falta la clave del partido.');
+  if (!Array.isArray(command.teams) || command.teams.length < 1 || command.teams.length > 2) fail('El once inicial lleva uno o dos equipos.');
+  const lineupIntro = { visible: true, key: command.key, teamSec: LINEUP_TEAM_SECONDS, teams: command.teams.map(lineupTeam), shownAt: now };
+  return { data: { lineupIntro }, mask: ['lineupIntro'], summary: `once inicial ${lineupIntro.teams.map(team => team.name).join(' vs ')}` };
+}
+
 function popupSeconds(value, fallback = POPUP_DEFAULT_SECONDS) {
   if (value === undefined || value === null || value === '') return fallback;
   const seconds = Number(value);
@@ -96,8 +127,10 @@ export function buildOverlayCommand(command, { siteUrl, now }) {
       const value = onOff(command.value);
       return { data: { [field]: value }, mask: [field], summary: `${command.target} ${value ? 'on' : 'off'}` };
     }
+    case 'lineup':
+      return lineupCommand(command, now);
     default:
-      return fail('Acción desconocida. Opciones: scene, popup, card, toggle.');
+      return fail('Acción desconocida. Opciones: scene, popup, card, toggle, lineup.');
   }
 }
 

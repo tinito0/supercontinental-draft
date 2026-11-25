@@ -33,8 +33,15 @@ import { describeStatus, matchFileName, parseTeamMap, pendingUploads, retryWhile
 import { createUploader } from './uploader.js';
 import { attachNames, buildNameIndex } from './nameIndex.js';
 import { attachTeamPlans, readTeamPlan } from './teamPlans.js';
+import { prematchLineups } from '../collector/prematch.js';
+import { buildLineupCommand } from './lineupCommand.js';
 
 const POLL_MS = 2000;
+// Starting-XI animation (lineupCommand.js): a session older than this is a match that never kicked off, not the
+// one loading now; a failed send is retried after the pause.
+const LINEUP_MAX_AGE_MS = 10 * 60_000;
+const LINEUP_RETRY_MS = 10_000;
+const OVERLAY_TIMEOUT_MS = 8000;
 const SESSION_NAME = /^\d{8}_\d{6}$/;
 const LOG_MAX_BYTES = 1024 * 1024;
 const MIN_TOKEN_LENGTH = 32;
@@ -55,6 +62,7 @@ function parseArgs(argv) {
     pesdbDir: config.pesdbDir || fileURLToPath(new URL('../../vendor/UML_Database/common/etc/pesdb/', import.meta.url)),
     editFile: config.editFile || fileURLToPath(new URL('../../vendor/EDIT00000000', import.meta.url)),
     endpoint: config.endpoint,
+    overlayEndpoint: config.overlayEndpoint || String(config.endpoint || '').replace(/\/match-feed$/, '/overlay-control'),
     token: config.token,
     once: argv.includes('--once'),
     parentPid: Number(value('--parent')) || null,
@@ -110,7 +118,9 @@ function readSession(sessionDir, teamMap, names, state) {
   if (state.file === file && state.size === size) return null;
   state.file = file;
   state.size = size;
-  const summaries = splitMatches(parseEventLines(readFileSync(file, 'utf8'))).map(summarizeMatch);
+  const events = parseEventLines(readFileSync(file, 'utf8'));
+  state.prematch = prematchLineups(events);
+  const summaries = splitMatches(events).map(summarizeMatch);
   const planOf = names?.edit ? teamId => readTeamPlan(names.edit, teamId) : null;
   return summaries.map(s => selectMatch(s, teamMap)).filter(Boolean)
     .map(s => attachTeamPlans(attachNames(s, names), planOf));
@@ -183,6 +193,39 @@ function createUploadSide({ endpoint, token, outDir, log }) {
   return { uploader, outbox };
 }
 
+/**
+ * While a match loads, asks overlay-control once to play the starting-XI animation (components/broadcast/LineupIntro.jsx).
+ * The sent key is kept in lineup.json, so a restarted bridge does not play it again.
+ */
+function createLineupSender({ overlayEndpoint, token, outDir, log, teamMap, names }) {
+  if (!overlayEndpoint?.startsWith('https://') || !token || token.length < MIN_TOKEN_LENGTH) return null;
+  const sentFile = join(outDir, 'lineup.json');
+  let sent = readJson(sentFile, {}).key || null;
+  let lastTryMs = 0;
+  const numbersOf = teamId => (names?.edit ? readTeamPlan(names.edit, teamId)?.numbers ?? null : null);
+  return async prematch => {
+    if (!prematch || Date.now() - Date.parse(prematch.session.ts) > LINEUP_MAX_AGE_MS) return;
+    const command = buildLineupCommand(prematch, { teamMap, names, numbersOf });
+    if (!command || command.key === sent || Date.now() - lastTryMs < LINEUP_RETRY_MS) return;
+    lastTryMs = Date.now();
+    try {
+      const response = await fetch(overlayEndpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(command),
+        signal: AbortSignal.timeout(OVERLAY_TIMEOUT_MS),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(`${response.status} ${body.error || 'sin respuesta'}`);
+      sent = command.key;
+      writeJson(sentFile, { key: sent, sentAt: new Date().toISOString() });
+      log(`once inicial en OBS: ${command.teams.map(team => team.name).join(' vs ')}`);
+    } catch (error) {
+      log(`once inicial: no se pudo mostrar (${error.message}); reintento en ${LINEUP_RETRY_MS / 1000} s`);
+    }
+  };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const { probeDir, outDir, teamsFile, once } = args;
@@ -193,8 +236,9 @@ async function main() {
   const names = loadNames(args, log);
   log(`inicio: leyendo ${probeDir}; ${teamMap ? `${teamMap.size} equipos asignados` : 'sin asignación de equipos'}; ${upload ? `subiendo a ${new URL(args.endpoint).host}` : `solo local (sin ${args.configFile})`}`);
 
+  const sendLineup = upload ? createLineupSender({ ...args, log, teamMap, names }) : null;
   const pausedFile = join(outDir, 'paused');
-  const state = { file: null, size: -1, live: undefined, written: new Map(), current: null };
+  const state = { file: null, size: -1, live: undefined, written: new Map(), current: null, prematch: null };
   let statusText = '';
   if (upload) {
     const backlog = pendingUploads(savedMatches(outDir, names), upload.outbox);
@@ -212,6 +256,7 @@ async function main() {
       if (selected) saveLocally(selected, outDir, state, log);
       const paused = existsSync(pausedFile);
       if (upload && !paused) {
+        if (sendLineup) await sendLineup(state.prematch);
         if (selected) for (const match of selected) await upload.uploader.push(match);
         await upload.uploader.flush();
       }
