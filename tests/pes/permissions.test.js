@@ -37,14 +37,17 @@ describe('PES permissions', () => {
     expect(can(draftAdmin, 'export')).toBe(false);
   });
 
-  it('both Kit Managers edit kits, textures, fonts, team colours and UniColors of any league team', () => {
+  it('both Kit Managers edit kits, textures, fonts, UniColors and team data (Team.bin and EDIT) of league teams', () => {
     for (const km of [lusitano, balvanera]) {
-      for (const op of [ops.kitCollar, ops.uniColor, ops.font, ops.kitTexture, ops.teamColour]) expect(allowed(km, op), `${km.label} ${op.type}`).toBe(true);
+      for (const op of [ops.kitCollar, ops.uniColor, ops.font, ops.kitTexture, ops.teamColour, ops.teamName, ops.binTeam]) expect(allowed(km, op), `${km.label} ${op.type}`).toBe(true);
     }
   });
 
-  it('Kit Managers cannot touch player, team or database fields, replace teams or export', () => {
-    for (const op of [ops.binPlayer, ops.binTeam, ops.replaceRow, ops.editPlayer, ops.teamName, ops.kitUnknown, ops.fontWrongKey]) {
+  it('Kit Managers cannot touch players, squads, coaches or tactics, replace teams or export', () => {
+    const squad = { type: 'edit.roster.number', target: { teamId: 1 }, value: 9 };
+    const coach = { type: 'bin.coach.set', target: { coachId: 1, teamId: 1 }, field: 'name', value: 'X' };
+    const tactics = { type: 'bin.team.tactics', target: { teamId: 1 }, value: {} };
+    for (const op of [ops.binPlayer, ops.replaceRow, ops.editPlayer, ops.kitUnknown, ops.fontWrongKey, squad, coach, tactics]) {
       expect(allowed(lusitano, op), op.type + (op.field || op.key)).toBe(false);
     }
     expect(can(lusitano, 'export')).toBe(false);
@@ -56,6 +59,9 @@ describe('PES permissions', () => {
     const ctx = { leagueTeamIds: [5, 6] };
     expect(allowed(lusitano, { ...ops.kitCollar, target: { teamId: 5, kit: 'p1' } }, ctx)).toBe(true);
     expect(allowed(lusitano, ops.kitCollar, ctx)).toBe(false);
+    expect(allowed(lusitano, { ...ops.teamName, target: { teamId: 5 } }, ctx)).toBe(true);
+    expect(allowed(lusitano, ops.teamName, ctx)).toBe(false);
+    expect(allowed(lusitano, ops.binTeam, ctx)).toBe(false);
     expect(allowed(superAdmin, ops.kitCollar, ctx)).toBe(true);
   });
 

@@ -280,5 +280,7 @@ export function teamAccess(caps, leagueTeamIds, teamId) {
   const kitManagerOnly = caps.has('kit.edit') && !caps.has('team.edit');
   const inLeague = !league.length || league.includes(teamId) || caps.has('workspace.manage');
   const kits = caps.has('kit.edit') && (!kitManagerOnly || inLeague);
-  return { data: caps.has('team.edit'), colours: caps.has('team.edit') || kits, kits, outOfLeague: kitManagerOnly && !inLeague };
+  // data: the team's own fields (a Kit Manager edits them for league teams); squad: dorsals and players, Super Admin only.
+  const data = caps.has('team.edit') || kits;
+  return { data, squad: caps.has('team.edit'), colours: data, kits, outOfLeague: kitManagerOnly && !inLeague };
 }

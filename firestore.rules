@@ -411,8 +411,8 @@ service cloud.firestore {
       }
 
       // ── EDITOR PES 2021 ───────────────────────────────────────
-      // Roles: super_admin (todo), draft_admin (solo lectura), kit_manager (kits, colores de
-      // equipo y UniColors). Sin rol = sin acceso. Las listas de campos deben coincidir con
+      // Roles: super_admin (todo), draft_admin (solo lectura), kit_manager (kits y datos de los
+      // equipos de la liga; no jugadores, planteles, DT ni tácticas). Sin rol = sin acceso. Las listas de campos deben coincidir con
       // pes/kits/kitConfig.js, pes/kits/kitFonts.js y pes/permissions.js (tests/pes/rulesSync.test.js).
       function pesRoleIs(roles) {
         return isAuth()
@@ -441,8 +441,8 @@ service cloud.firestore {
       function pesTextureSlots() {
         return ['kit', 'nrm', 'srm', 'name', 'back', 'chest', 'leg'];
       }
-      function pesTeamColorFields() {
-        return ['c1r', 'c1g', 'c1b', 'c2r', 'c2g', 'c2b'];
+      function pesKitManagerTeamOps() {
+        return ['bin.team.set', 'edit.team.set'];
       }
       function pesOpTypes() {
         return ['bin.team.set', 'bin.player.set', 'bin.coach.set', 'bin.team.tactics', 'bin.assignment.set', 'bin.assignment.add', 'bin.assignment.remove',
@@ -458,7 +458,7 @@ service cloud.firestore {
           (op.type == 'kit.set' && op.key in pesKitKeys()) ||
           op.type == 'kit.add' ||
           (op.type == 'kit.texture.set' && op.slot in pesTextureSlots() && op.ext in ['.ftex', '.dds']) ||
-          (op.type == 'edit.team.set' && op.field in pesTeamColorFields())
+          op.type in pesKitManagerTeamOps()
         );
       }
 

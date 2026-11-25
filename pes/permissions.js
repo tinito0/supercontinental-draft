@@ -6,10 +6,11 @@ import { KIT_EDITABLE_KEYS } from './kits/kitConfig.js';
 import { TEXTURE_SLOT_IDS } from './kits/kitTextures.js';
 
 /**
- * EDIT team-colour fields (6-bit RGB of team colour 1 and 2). The only database fields a
- * Kit Manager may change; every other pesdb/EDIT field is Super Admin only.
+ * Database operations a Kit Manager may run on a league team: the team's own fields in Team.bin and the EDIT
+ * (name, abbreviation, colours, country, stadium, flags). Players, squads, coaches and tactics stay Super Admin only.
+ * Which fields are writable at all (verified bits only) is still decided by the format layer.
  */
-export const EDIT_TEAM_KIT_FIELDS = ['c1r', 'c1g', 'c1b', 'c2r', 'c2g', 'c2b'];
+export const KIT_MANAGER_TEAM_OPS = ['bin.team.set', 'edit.team.set'];
 
 export const ROLES = {
   SUPER_ADMIN: 'super_admin',
@@ -89,7 +90,7 @@ export function authorize(actor, op, ctx = {}) {
     const teamId = op.target?.teamId;
     const league = ctx.leagueTeamIds || [];
     if (league.length && !league.includes(teamId)) {
-      throw new PesPermissionError('TEAM_NOT_IN_LEAGUE', `El equipo ${teamId} no es de la liga: no podés editar sus kits.`, { teamId });
+      throw new PesPermissionError('TEAM_NOT_IN_LEAGUE', `El equipo ${teamId} no es de la liga: no podés editarlo.`, { teamId });
     }
     if (op.type === 'kit.texture.set') {
       if (!TEXTURE_SLOT_IDS.includes(op.slot)) throw new PesPermissionError('FIELD_FORBIDDEN', `Kit Manager: "${op.slot}" no es una ranura de textura.`, { slot: op.slot });
@@ -100,9 +101,9 @@ export function authorize(actor, op, ctx = {}) {
       if (!KIT_EDITABLE_KEYS.includes(op.key)) throw new PesPermissionError('FIELD_FORBIDDEN', `Kit Manager: "${op.key}" no es un campo de kit editable.`, { key: op.key });
       return;
     }
-    if (op.type === 'edit.team.set' && EDIT_TEAM_KIT_FIELDS.includes(op.field)) return;
-    // Everything else in the database files (pesdb BINs, EDIT) is Super Admin only.
-    throw new PesPermissionError('FORBIDDEN', 'Kit Manager: solo se pueden editar kits, colores de equipo y UniColors.', { type: op.type, field: op.field });
+    if (KIT_MANAGER_TEAM_OPS.includes(op.type)) return;
+    // Players, squads, coaches and tactics are Super Admin only.
+    throw new PesPermissionError('FORBIDDEN', 'Kit Manager: solo se pueden editar kits y los datos de los equipos de la liga.', { type: op.type, field: op.field });
   }
 
   if (!can(actor, needed)) {

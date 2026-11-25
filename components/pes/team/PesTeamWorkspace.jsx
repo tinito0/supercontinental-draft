@@ -35,7 +35,7 @@ function headerMeta(ws, teamId, identity, countries, draftTeamName) {
 function accessNote(access) {
   if (access.outOfLeague) return 'Fuera de la liga: solo lectura para tu rol.';
   if (!access.data && !access.colours) return 'Solo lectura para tu rol.';
-  if (!access.data) return 'Tu rol edita los colores y los kits de este equipo.';
+  if (!access.squad) return 'Tu rol edita los datos y los kits de este equipo; el plantel no.';
   return null;
 }
 

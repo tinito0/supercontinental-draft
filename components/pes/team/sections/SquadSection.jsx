@@ -49,7 +49,7 @@ export function SquadSection({ ws, version, teamId, access, modified, apply }) {
   if (!rows.length) return <p className="text-sm text-ink-3">Este equipo no tiene jugadores en los archivos cargados.</p>;
   return (
     <div className="space-y-3">
-      {!access.data && <p className="field-help mt-0">Tu rol no puede editar dorsales.</p>}
+      {!access.squad && <p className="field-help mt-0">Tu rol no puede editar dorsales.</p>}
       {dupBin.length > 0 && <Issue tone="warning">Dorsales repetidos en Team.bin: {dupBin.join(', ')}.</Issue>}
       {dupEdit.length > 0 && <Issue tone="warning">Dorsales repetidos en el EDIT: {dupEdit.join(', ')}.</Issue>}
       <div className="overflow-x-auto max-h-[70vh] -mx-4 sm:-mx-5">
@@ -70,7 +70,7 @@ export function SquadSection({ ws, version, teamId, access, modified, apply }) {
                   {hasBin && (
                     <td className="sticky left-0 bg-surface">
                       {r.bin ? (
-                        <DorsalInput value={r.bin.number} label={`Dorsal de ${name} en Team.bin`} disabled={!access.data}
+                        <DorsalInput value={r.bin.number} label={`Dorsal de ${name} en Team.bin`} disabled={!access.squad}
                           modified={modified.has(opKey({ type: 'bin.assignment.set', target: { assignmentId: r.bin.assignmentId }, field: 'shirtNumber' }))}
                           onCommit={value => apply(() => [{ type: 'bin.assignment.set', target: { assignmentId: r.bin.assignmentId }, field: 'shirtNumber', value }])} />
                       ) : <span className="text-ink-3" title="No figura en este archivo">no figura</span>}
@@ -79,7 +79,7 @@ export function SquadSection({ ws, version, teamId, access, modified, apply }) {
                   {hasEdit && (
                     <td>
                       {r.edit ? (
-                        <DorsalInput value={r.edit.number} label={`Dorsal de ${name} en el EDIT`} disabled={!access.data}
+                        <DorsalInput value={r.edit.number} label={`Dorsal de ${name} en el EDIT`} disabled={!access.squad}
                           modified={modified.has(opKey({ type: 'edit.roster.number', target: { teamId, slot: r.edit.slot } }))}
                           onCommit={value => apply(() => [{ type: 'edit.roster.number', target: { teamId, slot: r.edit.slot }, value }])} />
                       ) : <span className="text-ink-3" title="No figura en este archivo">no figura</span>}

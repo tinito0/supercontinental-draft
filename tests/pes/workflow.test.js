@@ -158,11 +158,13 @@ describe.skipIf(!hasPesdb)('team replacement and export on the real database', (
 });
 
 describe.skipIf(!hasEdit)('EDIT workflow', () => {
-  it('kit manager can change team colours in the EDIT but not names', () => {
+  it('kit manager can change team colours and names in the EDIT but not the squad', () => {
     const ws = { edit: loadEditDatabase(readEdit()), meta: {} };
     applyOperations(ws, [{ type: 'edit.team.set', target: { teamId: 1 }, field: 'c1r', value: 63 }], kitManager);
     expect(ws.edit.readTeam(1).c1r).toBe(63);
-    expect(() => applyOperations(ws, [{ type: 'edit.team.set', target: { teamId: 1 }, field: 'name', value: 'X' }], kitManager)).toThrow();
+    applyOperations(ws, [{ type: 'edit.team.set', target: { teamId: 1 }, field: 'name', value: 'X' }], kitManager);
+    expect(ws.edit.readTeam(1).name).toBe('X');
+    expect(() => applyOperations(ws, [{ type: 'edit.roster.remove', target: { teamId: 1 }, value: 1 }], kitManager)).toThrow();
   });
 
   it('exports the EDIT verified', async () => {

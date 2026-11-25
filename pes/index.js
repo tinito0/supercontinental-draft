@@ -11,7 +11,7 @@ export { parseKitConfig, serializeKitConfig, kitPreviewModel, KIT_EDITABLE_KEYS,
 export { FONT_SLOTS, FONT_WIDTHS, fontLibrary, renderFontSheet, encodeFontSheet, fontFileName, sheetSize, glyphCell } from './kits/kitFonts.js';
 export { encodeFtex, inspectFtex } from './kits/ftex.js';
 export { TEXTURE_SLOTS, textureSlot, textureFromFile, textureFromPixels, targetFileName, inspectDds } from './kits/kitTextures.js';
-export { ROLES, ROLE_LABELS, authorize, can, capabilitiesOf, EDIT_TEAM_KIT_FIELDS } from './permissions.js';
+export { ROLES, ROLE_LABELS, authorize, can, capabilitiesOf, KIT_MANAGER_TEAM_OPS } from './permissions.js';
 export { applyOperations, replayOperations } from './operations.js';
 export { validateWorkspace } from './validator.js';
 export { planTeamReplacement } from './teamReplacement.js';

@@ -55,22 +55,25 @@ describe('users without a PES role', () => {
 
 describe('Kit Managers (Lusitano and Talleres de Balvanera)', () => {
   for (const km of ['lusitano', 'balvanera']) {
-    it(`${km}: may persist kit, texture, team-colour and UniColor operations for league teams`, async () => {
+    it(`${km}: may persist kit, texture, UniColor and team-data operations for league teams`, async () => {
       const db = as(km);
       await assertSucceeds(getDoc(doc(db, `${base}/pes_workspaces/league`)));
       await assertSucceeds(addDoc(opsOf(db), op(km, { type: 'kit.set', key: 'Collar', value: '3' })));
       await assertSucceeds(addDoc(opsOf(db), op(km, { type: 'kit.set', key: 'UniColor_Color1', value: '#FFFFFF' })));
       await assertSucceeds(addDoc(opsOf(db), op(km, { type: 'kit.texture.set', slot: 'name', ext: '.ftex', value: 'club_name', asset: { sha256: 'a' } })));
       await assertSucceeds(addDoc(opsOf(db), op(km, { type: 'edit.team.set', target: { teamId: 102 }, field: 'c1r', value: 10 })));
+      await assertSucceeds(addDoc(opsOf(db), op(km, { type: 'edit.team.set', target: { teamId: 101 }, field: 'name', value: 'X' })));
+      await assertSucceeds(addDoc(opsOf(db), op(km, { type: 'bin.team.set', target: { teamId: 101 }, field: 'nameEnglish', value: 'X' })));
     });
   }
 
-  it('cannot persist database, player or non-kit fields (field-level check)', async () => {
+  it('cannot persist player, squad or non-kit fields, nor team data of teams outside the league', async () => {
     const db = as('lusitano');
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.player.set', target: { playerId: 1 }, field: 'speed', value: 99 })));
-    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.team.set', target: { teamId: 101 }, field: 'nameEnglish', value: 'X' })));
+    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.team.set', target: { teamId: 999 }, field: 'nameEnglish', value: 'X' })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.assignment.add', target: { teamId: 101 }, value: {} })));
-    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'edit.team.set', target: { teamId: 101 }, field: 'name', value: 'X' })));
+    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'edit.team.set', target: { teamId: 999 }, field: 'name', value: 'X' })));
+    await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'bin.team.tactics', target: { teamId: 101 }, valueJson: '{}' })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'edit.player.set', target: { playerId: 1 }, field: 'height', value: 190 })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'kit.set', key: 'Unk_Offset0x1C_Bits0to1', value: '1' })));
     await assertFails(addDoc(opsOf(db), op('lusitano', { type: 'kit.texture.set', slot: 'Collar', ext: '.ftex', value: 'x' })));

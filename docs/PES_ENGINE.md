@@ -215,7 +215,7 @@ by the kit-server, so the editor never writes them. Everything is keyed by team 
 |---|---|
 | Super Admin (`pes_roles/<uid>.role = super_admin`, or the existing app admin) | everything: sources, teams, players, replacement, kits, export, roles |
 | Admin del Draft | read only |
-| Kit Manager (Lusitano, Talleres de Balvanera) | kit-server config keys, kit textures/fonts, EDIT team colours + UniColors, for league teams (`leagueTeamIds`, empty = all) |
+| Kit Manager (Lusitano, Talleres de Balvanera) | kit-server config keys, kit textures/fonts, UniColors and the team's own fields in Team.bin and the EDIT (not players, squads, coaches or tactics), for league teams (`leagueTeamIds`, empty = all) |
 | no role | no access; never sees the editor |
 
 Enforced three times: `authorize()` before applying; `firestore.rules` on every persisted operation (type +
