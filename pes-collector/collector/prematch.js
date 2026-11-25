@@ -16,11 +16,16 @@ function sideOf(event) {
   return { ids, roles: kickoff.roles, pos: kickoff.pos };
 }
 
+/** Probe v8 marks the loading screen (`loading`); before it the players are still on the pre-match menu. */
+const LOADING_SINCE_PROBE = 8;
+
 /**
- * The XI of both teams of the newest session, while its match has not started; null once it kicked off (a
- * `stats_appeared` after the session), or while a side is still unknown.
+ * The XI of both teams of the newest session, while its match is loading: null once it kicked off (a
+ * `stats_appeared` after the session), while a side is still unknown, and with probe v8+ until the loading screen
+ * starts (`loading`). Older probes have no such event: their XI counts from the setup.
  * @param {object[]} events parsed events.ndjson lines
- * @returns {null | { session: { ts: string, homeTeamId: number, awayTeamId: number, tournamentId: number|null },
+ * @returns {null | { session: { ts: string, homeTeamId: number, awayTeamId: number, tournamentId: number|null,
+ *     loadingTs: string|null },
  *   home: { ids: number[], roles: number[], pos: number[][] }, away: object }}
  */
 export function prematchLineups(events) {
@@ -29,6 +34,8 @@ export function prematchLineups(events) {
   const session = events[start];
   const after = events.slice(start + 1);
   if (after.some(event => event.t === 'stats_appeared')) return null;
+  const loading = after.find(event => event.t === 'loading') ?? null;
+  if (!loading && Number(session.probe_version) >= LOADING_SINCE_PROBE) return null;
   const sides = {};
   for (const [index, side] of SIDES.entries()) {
     sides[side] = sideOf(after.filter(event => event.t === 'prematch' && event.side === index).at(-1));
@@ -40,6 +47,7 @@ export function prematchLineups(events) {
       homeTeamId: session.home_team ?? null,
       awayTeamId: session.away_team ?? null,
       tournamentId: session.tournament_id ?? null,
+      loadingTs: loading?.ts ?? null,
     },
     ...sides,
   };

@@ -233,8 +233,11 @@ semifinal → final, sin semis de Plata), además de `utils/bracketModel.js` hay
 - **Escenas**: al arrancar un partido el overlay pasa a «En partido»; al terminar, a «Final» (tira arriba con el
   resultado y el siguiente partido en el lower third), y a los dos minutos a «Tabla» con «Siguiente» abajo. Se apaga en
   Torneo y transmisión → Escenas automáticas.
-- **Popups con QR**: al arrancar, a los 15', 30', 60' y 75' de juego (15 segundos), en el entretiempo y al final (45) y
-  entre partidos al pasar a la tabla (30).
+- **Popups con QR**: a los 15', 30', 60' y 75' de juego (15 segundos, chico arriba a la derecha), en el entretiempo y
+  al final (45) y entre partidos al pasar a la tabla (30). Al arrancar sale solo la tarjeta de predicción, y el QR
+  nunca sale mientras haya una tarjeta en pantalla: espera a que se vaya.
+- **Once inicial**: con el probe v8 aparece cuando arranca la pantalla de carga (después de «Iniciar partido»), no en
+  el menú previo.
 - **OBS a distancia**: una fuente «Navegador» con `/draft/overlay?control=obs` y «Permisos de página» en «Acceso
   avanzado a OBS» cambia la escena real de OBS cuando cambia la del overlay. Los nombres de las escenas se cargan en
   el mismo panel.

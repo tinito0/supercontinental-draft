@@ -32,6 +32,9 @@ What it records (see docs/PES_MATCH_DATA_RESEARCH.md):
     of 2026-11-15). It is the plan the match was loaded with (S12): changes made on the pre-match screen only reach
     MATCH_INFO at kick-off. Emitted when it changes, never once the match has started. The bridge uses it for the
     OBS starting-XI animation.
+  - loading (v8): the first stadium file the game reads after the setup, i.e. the loading screen after «Iniciar
+    partido» (after_set_conditions comes earlier, on the pre-match menu). Carries the file name. The bridge waits
+    for it before playing the starting XI.
 
 Requires in sider.ini: lua.enabled = 1, luajit.ext.enabled = 1, match-stats.enabled = 1.
 --]]
@@ -143,6 +146,7 @@ local last_possession = {}
 local last_formation = {}
 local last_prematch = {}
 local match_seen = false -- this session already reached kick-off: no more prematch events
+local loading_seen = false -- this session already emitted `loading` (v8)
 
 local C
 local NTDLL
@@ -699,19 +703,34 @@ local function open_session(ctx)
     ev_file = io.open(session_dir .. "\\events.ndjson", "a")
     seq, last_state, in_match, squads = 0, {}, false, {}
     stats_region, lineups, team_cache, last_possession, last_formation = nil, {}, {}, {}, {}
-    last_prematch, match_seen = {}, false
+    last_prematch, match_seen, loading_seen = {}, false, false
     pos_region, last_pos, last_pos_search_ms = nil, nil, 0
     shoot_obj, last_shot = nil, nil
     emit("session", {
         home_team = ctx.home_team, away_team = ctx.away_team, tournament_id = ctx.tournament_id,
         match_time = ctx.match_time, extra_time = ctx.extra_time, penalties = ctx.penalties,
         substitutions = ctx.substitutions, difficulty = ctx.difficulty, mis = hex(mis_address()),
-        probe_version = 7,
+        probe_version = 8,
     })
 end
 
 function m.after_set_conditions(ctx)
     open_session(ctx)
+end
+
+-- after_set_conditions comes on the pre-match menu, before «Iniciar partido» (2026-11-25: 2 min before kick-off).
+-- The stadium's own files (stXXX, the folders StadiumServer.lua serves) are read once the loading screen starts,
+-- so the first one after the setup marks it. Not verified for every menu path: the event keeps the file name.
+local STADIUM_FILE = "model\\bg\\st"
+
+function m.livecpk_data_ready(ctx, filename)
+    if not ev_file or loading_seen or match_seen or type(filename) ~= "string" then return end
+    if not filename:find(STADIUM_FILE, 1, true) then return end
+    loading_seen = true
+    sample_prematch(0)
+    sample_prematch(1)
+    emit("loading", { file = filename })
+    flush_events(true)
 end
 
 function m.goal_scored(ctx, gi)
@@ -768,12 +787,12 @@ function m.init(ctx)
     -- Sider keeps registered handlers in a separate lua_State (luaL_newstate + lua_xmove, sider.cpp), which
     -- the main state's GC does not see. A closure referenced only there gets collected and the next call
     -- jumps into freed memory (crash in sider.dll's LuaJIT VM). Keep every wrapper in the module table.
-    for _, event in ipairs({ "after_set_conditions", "goal_scored", "display_frame", "context_reset" }) do
+    for _, event in ipairs({ "after_set_conditions", "livecpk_data_ready", "goal_scored", "display_frame", "context_reset" }) do
         local handler_name = "on_" .. event
         m[handler_name] = guarded(m[event])
         ctx.register(event, m[handler_name])
     end
-    log("scl_probe ready (v7), output: " .. out_dir)
+    log("scl_probe ready (v8), output: " .. out_dir)
 end
 
 return m

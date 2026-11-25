@@ -32,6 +32,74 @@ export function formationLines(players) {
   return lines.map(line => [...line].sort((a, b) => a.lateral - b.lateral));
 }
 
+/** Cancha del once (lineupIntro.css: .scl-xi-pitch sin su relleno) y tarjeta de jugador, en px. */
+export const XI_PITCH = { width: 1504, height: 496, cardWidth: 284, cardHeight: 88, gap: 10 };
+// Lateral del juego: 5 = banda izquierda … 99 = banda derecha.
+const LATERAL_MIN = 5;
+const LATERAL_MAX = 99;
+const SEPARATE_PASSES = 40;
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+/** Separa las tarjetas que se pisan, por el eje en que menos se pisan, sin salir de la cancha. */
+function separate(cards, pitch) {
+  const maxX = pitch.width - pitch.cardWidth;
+  const maxY = pitch.height - pitch.cardHeight;
+  const spanX = pitch.cardWidth + pitch.gap;
+  const spanY = pitch.cardHeight + pitch.gap;
+  let placed = cards.map(card => ({ ...card }));
+  for (let pass = 0; pass < SEPARATE_PASSES; pass += 1) {
+    let moved = false;
+    placed = placed.map((card, i) => {
+      let { x, y } = card;
+      placed.forEach((other, j) => {
+        if (i === j) return;
+        const dx = x - other.x;
+        const dy = y - other.y;
+        const overlapX = spanX - Math.abs(dx);
+        const overlapY = spanY - Math.abs(dy);
+        if (overlapX <= 0 || overlapY <= 0) return;
+        moved = true;
+        // Cada una se corre la mitad; con la misma coordenada decide el orden (la de índice menor, arriba/izquierda).
+        const away = (delta, fallback) => (delta === 0 ? fallback : Math.sign(delta));
+        if (overlapY <= overlapX) y += (away(dy, i < j ? -1 : 1) * overlapY) / 2;
+        else x += (away(dx, i < j ? -1 : 1) * overlapX) / 2;
+      });
+      return { ...card, x: clamp(x, 0, maxX), y: clamp(y, 0, maxY) };
+    });
+    if (!moved) break;
+  }
+  return placed;
+}
+
+/**
+ * Dónde va cada tarjeta en la cancha (arco propio a la izquierda, banda izquierda arriba), con las coordenadas del
+ * juego: el arquero contra su arco, los de campo estirados por profundidad entre la defensa y el ataque, y la altura
+ * por el lateral. Las que se pisan se separan lo justo.
+ * @param {Array<Array<{ depth: number, lateral: number }>>} lines formationLines (arquero en la primera)
+ * @returns {Array<object>} cada jugador con x, y (px, esquina superior izquierda), line y slot (su línea y su lugar
+ *   en ella, de izquierda a derecha: el orden de entrada)
+ */
+export function pitchLayout(lines, pitch = XI_PITCH) {
+  if (!lines?.length) return [];
+  const maxX = pitch.width - pitch.cardWidth;
+  const maxY = pitch.height - pitch.cardHeight;
+  const outfield = lines.slice(1).flat();
+  const depths = outfield.map(player => player.depth);
+  const [minDepth, maxDepth] = [Math.min(...depths), Math.max(...depths)];
+  const firstX = pitch.cardWidth + pitch.gap * 3;
+  const xOf = depth => (maxDepth > minDepth ? firstX + ((depth - minDepth) / (maxDepth - minDepth)) * (maxX - firstX) : (firstX + maxX) / 2);
+  const yOf = lateral => clamp((lateral - LATERAL_MIN) / (LATERAL_MAX - LATERAL_MIN), 0, 1) * maxY;
+  const cards = lines.flatMap((line, lineIndex) => line.map((player, slot) => ({
+    ...player,
+    line: lineIndex,
+    slot,
+    x: lineIndex === 0 ? 0 : xOf(player.depth),
+    y: lineIndex === 0 ? maxY / 2 : yOf(player.lateral),
+  })));
+  return separate(cards, pitch).map(card => ({ ...card, x: Math.round(card.x), y: Math.round(card.y) }));
+}
+
 // Códigos de puesto del juego (ROLE_LABELS de utils/matchAnalysis.js): 1–3 defensa, 4 MCD, 5–8 medio, 9–12 ataque.
 const roleGroup = role => {
   if (role >= 1 && role <= 3) return 'def';
@@ -68,7 +136,7 @@ const validTeams = intro => (Array.isArray(intro?.teams) ? intro.teams.filter(te
 export function introTeams(intro) {
   return validTeams(intro).map(team => {
     const lines = formationLines(team.players.map(player => ({ ...player, roleLabel: roleLabel(player.role) })));
-    return { name: team.name, draftTeamId: team.draftTeamId ?? null, formation: formationLabel(team.players), lines };
+    return { name: team.name, draftTeamId: team.draftTeamId ?? null, formation: formationLabel(team.players), lines, cards: pitchLayout(lines) };
   });
 }
 

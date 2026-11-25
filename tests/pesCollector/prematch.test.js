@@ -19,10 +19,18 @@ const pre = (side, extra = {}) => ({ t: 'prematch', side, plan: ARSENAL_PLAN, or
 describe('prematchLineups', () => {
   it('reads both XIs of the newest session before kick-off', () => {
     const result = prematchLineups([session, pre(0), pre(1)]);
-    expect(result.session).toEqual({ ts: session.ts, homeTeamId: 101, awayTeamId: 202, tournamentId: 7 });
+    expect(result.session).toEqual({ ts: session.ts, homeTeamId: 101, awayTeamId: 202, tournamentId: 7, loadingTs: null });
     expect(result.home.ids).toEqual(XI);
     expect(result.home.roles).toEqual([0, 1, 1, 3, 2, 4, 5, 10, 9, 8, 12]);
     expect(result.away.pos[0]).toEqual([3, 52]);
+  });
+
+  it('with probe v8, waits for the loading screen after «Iniciar partido»', () => {
+    const v8 = { ...session, probe_version: 8 };
+    const loading = { t: 'loading', ts: '2026-11-15T22:50:31Z', file: 'common/bg/model/bg/st001/x.fmdl' };
+    expect(prematchLineups([v8, pre(0), pre(1)])).toBeNull();
+    expect(prematchLineups([v8, pre(0), pre(1), loading]).session.loadingTs).toBe(loading.ts);
+    expect(prematchLineups([v8, pre(0), loading, pre(1)]).home.ids).toEqual(XI);
   });
 
   it('uses the newest event of each side', () => {

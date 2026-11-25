@@ -495,6 +495,21 @@
 /* En partido: las tres cámaras (jugador 1, relator, jugador 2) ocupan los ~330 px de abajo; el QR y las tarjetas van
    por encima de ellas. */
 .broadcast-overlay-root[data-scene=live] .scl-pop { bottom: 356px; }
+/* En partido el QR va chico arriba a la derecha (pedido 2026-11-25: abajo tapaba jugadas de los clips). El marcador
+   y el reloj del juego están arriba a la izquierda. El QR baja de 200 a 170 px (pedido del usuario; menos de lo que
+   OverlayPopup.jsx da como mínimo para escanear desde la tele: probarlo con el stream). */
+.broadcast-overlay-root[data-scene=live] .scl-popup { top: 36px; right: 40px; bottom: auto; left: auto; translate: none; width: 500px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-head { min-height: 0; gap: 12px; padding: 12px 18px 10px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-badge { width: 40px; height: 40px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-badge img { width: 32px; height: 32px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-kicker { font-size: 14px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-title { font-size: 28px; -webkit-line-clamp: 1; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-body { gap: 16px; padding: 14px 18px 16px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-qr { padding: 6px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-qr svg { width: 170px; height: 170px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-text,
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-hint { font-size: 21px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-url { padding: 4px 10px; font-size: 17px; }
 
 .scl-pop-head {
   position: relative;
@@ -590,6 +605,9 @@
    porcentaje que cambia se funde en el lugar. La salida es más corta que la entrada y baja en vez de subir. */
 .scl-pop { animation: scl-pop-in 640ms var(--scl-ease) backwards; }
 .scl-pop.is-leaving { animation: scl-pop-out 280ms var(--scl-ease) forwards; }
+/* Arriba, el QR baja al entrar y vuelve a subir al irse: se mueve desde el borde al que está anclado. */
+.broadcast-overlay-root[data-scene=live] .scl-popup { animation-name: scl-pop-drop-in; }
+.broadcast-overlay-root[data-scene=live] .scl-popup.is-leaving { animation-name: scl-pop-lift-out; }
 .scl-pop-edge { animation: scl-popup-stripe 620ms 80ms var(--scl-ease) backwards; }
 .scl-pop-head > .scl-badge,
 .scl-pop-titles { animation: scl-pop-rise 520ms 180ms var(--scl-ease) backwards; }
@@ -611,6 +629,8 @@
 
 @keyframes scl-pop-in { from { opacity: 0; transform: translateY(20px); filter: blur(6px); } }
 @keyframes scl-pop-out { to { opacity: 0; transform: translateY(10px); filter: blur(4px); } }
+@keyframes scl-pop-drop-in { from { opacity: 0; transform: translateY(-20px); filter: blur(6px); } }
+@keyframes scl-pop-lift-out { to { opacity: 0; transform: translateY(-10px); filter: blur(4px); } }
 @keyframes scl-pop-rise { from { opacity: 0; transform: translateY(8px); filter: blur(3px); } }
 @keyframes scl-pop-qr-in { from { opacity: 0; transform: scale(0.94); filter: blur(4px); } }
 @keyframes scl-pop-swap { from { opacity: 0; filter: blur(3px); } }

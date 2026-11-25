@@ -59,9 +59,6 @@
 /* La cancha: franjas de pasto muy claras y las líneas en azul marino suave, para que mande la gente. */
 .scl-xi-pitch {
   position: relative;
-  display: flex;
-  justify-content: space-around;
-  gap: 12px;
   height: 540px;
   padding: 22px 28px;
   background: repeating-linear-gradient(90deg, #f4f6fb 0 130px, #eaedf5 130px 260px);
@@ -70,11 +67,14 @@
 .scl-xi-box { position: absolute; left: -3px; top: 26%; width: 150px; height: 48%; border: 3px solid rgba(2, 42, 94, 0.12); }
 .scl-xi-half { position: absolute; right: -3px; top: 50%; width: 150px; height: 150px; translate: 50% -50%; border: 3px solid rgba(2, 42, 94, 0.12); border-radius: 50%; }
 
-.scl-xi-line { position: relative; display: flex; flex-direction: column; justify-content: space-evenly; gap: 10px; min-width: 0; flex: 1; max-width: 300px; }
+/* 1504 × 496: XI_PITCH de utils/lineupIntro.js, que ubica cada tarjeta en px. */
+.scl-xi-area { position: relative; width: 1504px; height: 496px; }
 
 .scl-xi-player {
+  position: absolute;
   display: flex;
   align-items: stretch;
+  width: 284px;
   height: 88px;
   background: #ffffff;
   border-radius: 12px;

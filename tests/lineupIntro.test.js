@@ -1,6 +1,6 @@
 // Once inicial animado de OBS (utils/lineupIntro.js). Synthetic data: the Arsenal plan of the real save decoded
 // (tests/pesCollector/formations.test.js), not a recorded match.
-import { formationLabel, formationLines, introStep, introTeams, lineupIntroRemainingMs } from '../utils/lineupIntro.js';
+import { formationLabel, formationLines, introStep, introTeams, lineupIntroRemainingMs, pitchLayout, XI_PITCH } from '../utils/lineupIntro.js';
 
 // Arsenal variant 0: roles and (depth, lateral) per formation slot.
 const ROLES = [0, 1, 1, 3, 2, 4, 5, 10, 9, 8, 12];
@@ -27,6 +27,42 @@ describe('formationLabel', () => {
     expect(formationLabel(players([0, 1, 1, 1, 4, 4, 7, 6, 8, 11, 12]))).toBe('3-5-2');
     expect(formationLabel(players([0, 1, 1, 2, 3, 4, 4, 6, 8, 7, 12]))).toBe('4-2-3-1');
     expect(formationLabel(players([0, 1, 1, 2, 3, 6, 5, 5, 7, 12, 12]))).toBe('4-4-2');
+  });
+});
+
+describe('pitchLayout', () => {
+  // Recorded (probe v7, session 20261125_141509, Panathinaikos vs Sheriff): role, depth, lateral of each XI.
+  const REAL_433 = [[0, 3, 52], [2, 12, 15], [1, 10, 41], [1, 10, 63], [3, 12, 89], [5, 21, 38], [5, 21, 67], [8, 33, 53], [9, 39, 14], [12, 43, 52], [10, 39, 86]];
+  const REAL_442 = [[0, 3, 52], [2, 13, 16], [1, 11, 40], [1, 11, 64], [3, 13, 88], [5, 21, 40], [4, 21, 64], [5, 31, 16], [7, 31, 88], [12, 43, 40], [11, 41, 64]];
+  const fromRows = rows => rows.map(([role, depth, lateral], i) => ({ id: i + 1, role, depth, lateral }));
+  const overlaps = cards => cards.some((a, i) => cards.some((b, j) => i < j
+    && Math.abs(a.x - b.x) < XI_PITCH.cardWidth && Math.abs(a.y - b.y) < XI_PITCH.cardHeight));
+  const inside = cards => cards.every(c => c.x >= 0 && c.y >= 0
+    && c.x <= XI_PITCH.width - XI_PITCH.cardWidth && c.y <= XI_PITCH.height - XI_PITCH.cardHeight);
+
+  it.each([['real 4-3-3', fromRows(REAL_433)], ['real 4-4-2', fromRows(REAL_442)], ['fixture 4-3-3', players()],
+    ['fixture 3-5-2', players([0, 1, 1, 1, 4, 4, 7, 6, 8, 11, 12], [[3, 52], [11, 32], [11, 52], [11, 72], [19, 40], [19, 64], [31, 16], [33, 52], [31, 88], [43, 26], [41, 64]])]])(
+    '%s: every card on the pitch, none on top of another', (_, list) => {
+      const cards = pitchLayout(formationLines(list));
+      expect(cards).toHaveLength(11);
+      expect(inside(cards)).toBe(true);
+      expect(overlaps(cards)).toBe(false);
+    },
+  );
+
+  it('keeps the game shape: keeper on the left, wide midfielders out on the wings, strikers furthest forward', () => {
+    const cards = pitchLayout(formationLines(fromRows(REAL_442)));
+    const byId = id => cards.find(c => c.id === id);
+    expect(byId(1)).toMatchObject({ x: 0, line: 0 });
+    expect(byId(8).y).toBe(Math.min(...cards.map(c => c.y)));
+    expect(byId(9).y).toBe(Math.max(...cards.map(c => c.y)));
+    expect(byId(8).y).toBeLessThan(byId(6).y);
+    expect(Math.max(byId(10).x, byId(11).x)).toBe(XI_PITCH.width - XI_PITCH.cardWidth);
+    expect(byId(6).x).toBeLessThan(byId(8).x);
+  });
+
+  it('returns nothing without lines', () => {
+    expect(pitchLayout([])).toEqual([]);
   });
 });
 

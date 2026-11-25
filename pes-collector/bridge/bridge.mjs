@@ -204,7 +204,8 @@ function createLineupSender({ overlayEndpoint, token, outDir, log, teamMap, name
   let lastTryMs = 0;
   const numbersOf = teamId => (names?.edit ? readTeamPlan(names.edit, teamId)?.numbers ?? null : null);
   return async prematch => {
-    if (!prematch || Date.now() - Date.parse(prematch.session.ts) > LINEUP_MAX_AGE_MS) return;
+    // Probe v8 dates it from the loading screen: the players may sit on the pre-match menu for a while.
+    if (!prematch || Date.now() - Date.parse(prematch.session.loadingTs || prematch.session.ts) > LINEUP_MAX_AGE_MS) return;
     const command = buildLineupCommand(prematch, { teamMap, names, numbersOf });
     if (!command || command.key === sent || Date.now() - lastTryMs < LINEUP_RETRY_MS) return;
     lastTryMs = Date.now();

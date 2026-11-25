@@ -27,7 +27,7 @@ function XiPlayer({ player, delayMs }) {
   // Se recuerda qué foto falló: con otro jugador en el mismo lugar se vuelve a intentar.
   const [failedId, setFailedId] = useState(null);
   return (
-    <div className="scl-xi-player" style={{ '--d': `${delayMs}ms` }}>
+    <div className="scl-xi-player" style={{ '--d': `${delayMs}ms`, left: player.x, top: player.y }}>
       <div className="scl-xi-photo">
         <Silhouette />
         {failedId !== player.id && (
@@ -66,13 +66,12 @@ function XiCard({ team, logo, isLeaving }) {
       </header>
       <div className="scl-xi-pitch">
         <div className="scl-xi-field" aria-hidden="true"><span className="scl-xi-box" /><span className="scl-xi-half" /></div>
-        {team.lines.map((line, lineIndex) => (
-          <div className="scl-xi-line" key={lineIndex}>
-            {line.map((player, index) => (
-              <XiPlayer key={player.id} player={player} delayMs={FIRST_LINE_MS + lineIndex * LINE_STEP_MS + index * PLAYER_STEP_MS} />
-            ))}
-          </div>
-        ))}
+        {/* Cada uno en su lugar del juego (utils/lineupIntro.js pitchLayout); entran por líneas, del arco hacia adelante. */}
+        <div className="scl-xi-area">
+          {team.cards.map(card => (
+            <XiPlayer key={card.id} player={card} delayMs={FIRST_LINE_MS + card.line * LINE_STEP_MS + card.slot * PLAYER_STEP_MS} />
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -115,7 +115,7 @@ describe('liveOverlayUpdate (match-feed → overlay)', () => {
 
   it('shows the prediction card when a new match goes live, and no other card during the match', () => {
     const kickoff = run(live(1, 0), { autoScenes: false });
-    expect(kickoff.mask).toEqual(['liveMatchKey', 'popup', 'autoPopupDone', 'card', 'autoCardDone']);
+    expect(kickoff.mask).toEqual(['liveMatchKey', 'card', 'autoCardDone']);
     expect(kickoff.data.card).toEqual({ visible: true, kind: 'prediction', autoHideSec: AUTO_CARD_SECONDS, shownAt: ctx.now });
     expect(run(live(2, 69), { liveMatchKey: key, autoCardDone: `${key}:kickoff`, autoPopupDone: `${key}:m60` })).toBeNull();
     // El manager de la fecha se vota cuando termina la fecha: ya no hay tarjeta automática desde el minuto 70.
@@ -123,7 +123,16 @@ describe('liveOverlayUpdate (match-feed → overlay)', () => {
     expect(run(live(1, 0), { autoPopup: false, autoScenes: false }).mask).toEqual(['liveMatchKey']);
   });
 
-  it('shows the QR at kickoff and every 15 game minutes, briefly, once each', () => {
+  it('never shows the QR together with a card: not at kickoff, and later only once the card is gone', () => {
+    const card = { visible: true, kind: 'prediction', autoHideSec: AUTO_CARD_SECONDS, shownAt: ctx.now };
+    expect(run(live(1, 16), { autoScenes: false }).mask).toEqual(['liveMatchKey', 'card', 'autoCardDone']);
+    expect(run(live(1, 16), { liveMatchKey: key, autoScenes: false, autoCardDone: `${key}:kickoff`, card })).toBeNull();
+    const after = liveOverlayUpdate({ doc: live(1, 16), overlay: { liveMatchKey: key, autoScenes: false, autoCardDone: `${key}:kickoff`, card }, siteUrl: ctx.siteUrl, now: ctx.now + AUTO_CARD_SECONDS * 1000 });
+    expect(after.data.autoPopupDone).toBe(`${key}:m15`);
+    expect(run(live(1, 5), { liveMatchKey: key, autoScenes: false, autoCardDone: `${key}:kickoff` })).toBeNull();
+  });
+
+  it('shows the QR every 15 game minutes, briefly, once each', () => {
     const at = (period, minute, done) => run(live(period, minute), { liveMatchKey: key, autoScenes: false, autoPopupDone: done && `${key}:${done}` });
     expect(at(1, 16, 'kickoff').data).toMatchObject({ autoPopupDone: `${key}:m15`, popup: { autoHideSec: AUTO_POPUP_IN_PLAY_SECONDS } });
     expect(at(1, 31, 'm15').data.autoPopupDone).toBe(`${key}:m30`);
