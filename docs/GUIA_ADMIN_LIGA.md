@@ -52,6 +52,9 @@ jugadores fichados (`player_locks`) entre el catálogo viejo y el nuevo.
    cd ..
    node scripts/build-market-catalog.mjs
    ```
+   Si cambió la base del juego (clubes, plantillas o ligas), regenerá también los filtros «Liga» y «Club» del
+   mercado: `node scripts/build-player-clubs.mjs` lee `vendor/UML_Database/common/etc/pesdb` (o la carpeta pesdb que
+   le pases) y escribe `public/clubes.json`, que sí va en el commit.
 5. **Corré los tests**: `npm test`. Los que suelen fallar después de un mercado nuevo:
    - `tests/marketFunction.test.js` → el catálogo no coincide: te salteaste el paso 4.
    - `tests/landingSampleData.test.js` → los jugadores de ejemplo de la portada cambiaron de OVR, precio o posición,

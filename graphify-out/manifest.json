@@ -6,9 +6,9 @@
     "semantic_hash": "d19519173a07fb61cf804a1984b537c5"
   },
   "app.jsx": {
-    "mtime": 1795724116.601194,
-    "seen": 1795724675.687862,
-    "ast_hash": "6012e4474e3ea31cfb8e2a09ed5f4e6f",
+    "mtime": 1795725834.5145578,
+    "seen": 1795726372.8938868,
+    "ast_hash": "ee21f5c0079f65f2a9bf193906d3ae0a",
     "semantic_hash": ""
   },
   "components/AdminModal.jsx": {
@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "components/FiltrosModal.jsx": {
-    "mtime": 1793991881.0686908,
-    "seen": 1795029751.4940436,
-    "ast_hash": "7373db80dabea8c5bd720b58984cc4c4",
+    "mtime": 1795725834.5160787,
+    "seen": 1795726372.8953776,
+    "ast_hash": "4ef5fac8df9385b848ec3aae2dc75bd6",
     "semantic_hash": ""
   },
   "components/FormationModal.jsx": {
@@ -264468,9 +264468,9 @@
     "semantic_hash": ""
   },
   "utils/marketFilters.js": {
-    "mtime": 1793843723.2589774,
-    "seen": 1793845429.8125527,
-    "ast_hash": "4c06adbabfd8326d09e012be67640e62",
+    "mtime": 1795725834.5160787,
+    "seen": 1795726373.013471,
+    "ast_hash": "0e5656f216db41d938fcaaa9823f3c3d",
     "semantic_hash": ""
   },
   "utils/marketGrid.js": {
@@ -266766,9 +266766,9 @@
     "semantic_hash": ""
   },
   "docs/GUIA_ADMIN_LIGA.md": {
-    "mtime": 1795724732.451077,
-    "seen": 1795725410.940311,
-    "ast_hash": "dac93b7511feba1907490bb760db5e0c",
+    "mtime": 1795726233.8874795,
+    "seen": 1795726373.0629086,
+    "ast_hash": "1ee886f8145f9c036248de566c778afe",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/matchLines.js": {
@@ -267735,6 +267735,30 @@
     "mtime": 1795723739.4082558,
     "seen": 1795724675.8143675,
     "ast_hash": "6b6f90a9cb1e94826aa9fd5915a17b80",
+    "semantic_hash": ""
+  },
+  "public/clubes.json": {
+    "mtime": 1795725787.9383023,
+    "seen": 1795726372.960323,
+    "ast_hash": "e9135f0e2bbacaec43e026f6dc06e3fc",
+    "semantic_hash": ""
+  },
+  "scripts/build-player-clubs.mjs": {
+    "mtime": 1795725784.3512812,
+    "seen": 1795726372.9671402,
+    "ast_hash": "5763edcd21ff8d7ffde9d90895c3f74b",
+    "semantic_hash": ""
+  },
+  "tests/playerClubs.test.js": {
+    "mtime": 1795725853.495652,
+    "seen": 1795726372.99882,
+    "ast_hash": "cc9ff0da1239b08fe52f225b7a8824e2",
+    "semantic_hash": ""
+  },
+  "utils/playerClubs.js": {
+    "mtime": 1795725828.1652718,
+    "seen": 1795726373.0169468,
+    "ast_hash": "076f439740b753f5c016b54b859c119d",
     "semantic_hash": ""
   }
 }

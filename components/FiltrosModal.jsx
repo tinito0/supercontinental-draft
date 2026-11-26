@@ -116,6 +116,44 @@ function GlossaryLink({ label, isOpen, onToggle }) {
   );
 }
 
+/** Liga and Club from the league's PES database (utils/playerClubs.js). Picking a league narrows the club list. */
+function ClubFilters({ clubIndex, filters, setFilters }) {
+  const league = filters.league || '';
+  const club = filters.club || '';
+  const clubOptions = useMemo(
+    () => (league ? clubIndex.clubs.filter(c => c.league === league) : clubIndex.clubs),
+    [clubIndex, league],
+  );
+  return (
+    <>
+      <label>
+        <span className="field-label">Liga</span>
+        <select value={league} onChange={e => setFilters(p => ({ ...p, league: e.target.value, club: '' }))} className="select">
+          <option value="">Todas</option>
+          {clubIndex.leagues.map(name => <option key={name} value={name}>{name}</option>)}
+        </select>
+      </label>
+      <label>
+        <span className="field-label">Club</span>
+        <span className="relative block">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none" aria-hidden="true" />
+          <input type="text" list="clubs-datalist" placeholder="Buscar o elegir club…" value={club}
+            onChange={e => setFilters(p => ({ ...p, club: e.target.value }))} className="input pl-9 pr-10" />
+          {club && (
+            <button type="button" onClick={() => setFilters(p => ({ ...p, club: '' }))} aria-label="Borrar club" title="Borrar club"
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md flex items-center justify-center text-ink-3 hover:text-ink hover:bg-white/10">
+              <X className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          <datalist id="clubs-datalist">
+            {clubOptions.map(c => <option key={c.name} value={c.name} />)}
+          </datalist>
+        </span>
+      </label>
+    </>
+  );
+}
+
 export const FiltrosModal = memo(function FiltrosModal({
   isVisible,
   onClose,
@@ -124,6 +162,7 @@ export const FiltrosModal = memo(function FiltrosModal({
   resetFilters,
   uniquePositions,
   sortedCountries,
+  clubIndex,
   uniquePlayingStyles,
   userId,
   getSavedFiltersCollectionRef,
@@ -295,6 +334,7 @@ export const FiltrosModal = memo(function FiltrosModal({
                   {REGIONES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </label>
+              {clubIndex && <ClubFilters clubIndex={clubIndex} filters={filters} setFilters={setFilters} />}
               {/* The «¿Qué es?» button stays outside the <label>: inside it, it would become the labelled control. */}
               <div className="sm:col-span-2">
                 <div className="flex items-center justify-between gap-2">

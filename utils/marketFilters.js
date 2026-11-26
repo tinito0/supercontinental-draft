@@ -11,7 +11,8 @@ const RANGE_CHIPS = [
 ];
 
 const VALUE_CHIPS = [
-  ['pos', 'Posición'], ['foot', 'Pie'], ['country', 'País'], ['region', 'Región'], ['playingStyle', 'Estilo'],
+  ['pos', 'Posición'], ['foot', 'Pie'], ['country', 'País'], ['region', 'Región'], ['league', 'Liga'], ['club', 'Club'],
+  ['playingStyle', 'Estilo'],
 ];
 
 // «Juega de»: aptitude per position (AptitudeXX in jugadores.json: 0 cannot play it, 1 copes, 2 masters it).

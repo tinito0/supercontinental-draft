@@ -30,6 +30,7 @@ import { useLeagueEditorAccess } from './hooks/useLeagueEditorAccess.js';
 import { useBudget } from './hooks/useBudget.js';
 import { useYouthDraft } from './hooks/useYouthDraft.js';
 import { applyYouthDraft, unpickedPoolIds } from './utils/youthDraft.js';
+import { fetchPlayerClubs, withClubs } from './utils/playerClubs.js';
 import { useSquadSync } from './hooks/useSquadSync.js';
 import { isMarketOpen as isMarketOpenFor } from './supabase/functions/_shared/market.js';
 import { parseOpenTime } from './supabase/functions/_shared/marketTime.js';
@@ -139,7 +140,7 @@ const initialDetailedStats = Object.values(DETAILED_STAT_KEYS).flat().reduce((ac
 }, {});
 
 const initialFilters = {
-  id: '', name: '', pos: '', country: '', region: '',
+  id: '', name: '', pos: '', country: '', region: '', league: '', club: '',
   ovrMin: '', ovrMax: '', ageMin: '', ageMax: '',
   priceMin: '', priceMax: '',
   grupos: {
@@ -342,6 +343,8 @@ function App() {
   const [isCatalogRequested, setIsCatalogRequested] = useState(false);
   const requestPlayerCatalog = useCallback(() => setIsCatalogRequested(true), []);
   const [playersLoadError, setPlayersLoadError] = useState('');
+  // Club and league of each player (public/clubes.json); null without that file.
+  const [clubIndex, setClubIndex] = useState(null);
   const [countriesLoadError, setCountriesLoadError] = useState('');
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -862,14 +865,15 @@ function App() {
 
     // Catálogo compacto (utils/playerCatalog.js): ~9 MB en vez de ~60 MB y una sola pasada para filtrar
     // glitcheados y normalizar (mismo filtro que el catálogo del servidor, scripts/build-market-catalog.mjs).
-    fetchRawPlayers()
-      .then((data) => {
+    Promise.all([fetchRawPlayers(), fetchPlayerClubs()])
+      .then(([data, clubs]) => {
         if (isCancelled) return;
         if (!Array.isArray(data) || data.length === 0) {
           throw new Error('El catálogo no contiene jugadores.');
         }
         setPlayersLoadError('');
-        setAllPlayers(buildMarketPlayers(data));
+        setClubIndex(clubs);
+        setAllPlayers(withClubs(buildMarketPlayers(data), clubs));
         setHasLoadedPlayerDatabase(true);
       })
       .catch((err) => {
@@ -1013,6 +1017,11 @@ function App() {
     if (marketStatus.status === 'FranchiseMarket') checks.push(isFranchiseEligible);
     if (draftBlockedIds.size) checks.push(p => !draftBlockedIds.has(String(p.Id)));
     if (f.region) checks.push(p => getRegionById(p.Country1) === f.region);
+    if (f.league) checks.push(p => p.Liga === f.league);
+    if (f.club) {
+      const club = normalizarString(f.club);
+      checks.push(p => Boolean(p.Club) && normalizarString(p.Club).includes(club));
+    }
     [['OVR_CALCULADO', 'ovr'], ['Age', 'age'], ['Precio', 'price']].forEach(([field, name]) => {
       if (isSet(f[`${name}Min`])) { const min = parseInt(f[`${name}Min`], 10); checks.push(p => p[field] >= min); }
       if (isSet(f[`${name}Max`])) { const max = parseInt(f[`${name}Max`], 10); checks.push(p => p[field] <= max); }
@@ -2061,6 +2070,7 @@ function App() {
         resetFilters={resetFilters}
         uniquePositions={uniquePositions}
         sortedCountries={sortedCountries}
+        clubIndex={clubIndex}
         uniquePlayingStyles={uniquePlayingStyles}
         // PROPS NUEVAS:
         userId={userId}
