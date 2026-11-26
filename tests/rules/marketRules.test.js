@@ -239,6 +239,13 @@ describe('transfer offers', () => {
     await assertFails(updateDoc(offer(as('buyer')), { status: 'pending', offerAmount: -1000000000000, history: [] }));
   });
 
+  it('nobody makes an offer for a youth-draft pick', async () => {
+    await env.withSecurityRulesDisabled(ctx => setDoc(lock(ctx.firestore(), 7000), { lockedBy: 'seller', teamName: 'seller', lockedAt: 'x', isFranchise: false, isDraftee: true }));
+    await assertFails(setDoc(doc(as('mallory'), `${base}/public/data/offers/prospect`), {
+      playerId: 7000, senderId: 'mallory', targetTeamId: 'seller', offerAmount: 10500000, status: 'pending', history: [], expiresAtMs: turn(),
+    }));
+  });
+
   it('accepting from the browser is rejected for everyone: the server executes transfers', async () => {
     await assertFails(updateDoc(offer(as('seller')), { status: 'accepted' }));
     await assertFails(acceptBatch(as('seller'), 'seller').commit());

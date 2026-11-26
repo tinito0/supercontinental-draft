@@ -42,6 +42,16 @@ describe('utils/scoutEngine.js', () => {
       expect(playerIds).not.toContain('1');
     });
 
+    it('skips youth-draft prospects, also when it widens to the whole pool', () => {
+      const players = mockPlayers.map(p => (p.Id === '6' || p.Id === '7' ? { ...p, isYouthProspect: true } : p));
+      const strict = buildResults({ allPlayers: players, criteria: { maxAge: 19 }, scout: { quality: 98 }, playerLocks: {} });
+      const widened = buildResults({ allPlayers: players, criteria: { minOvr: 99 }, scout: { quality: 98 }, playerLocks: {} });
+      for (const results of [strict, widened]) {
+        expect(results.map(p => p.Id)).not.toContain('6');
+        expect(results.map(p => p.Id)).not.toContain('7');
+      }
+    });
+
     it('filters players by position criteria and returns top candidates', () => {
       const results = buildResults({
         allPlayers: mockPlayers,

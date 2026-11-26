@@ -28,6 +28,8 @@ import { useAuth } from './hooks/useAuth.js';
 import { usePesAccess } from './hooks/usePesAccess.js';
 import { useLeagueEditorAccess } from './hooks/useLeagueEditorAccess.js';
 import { useBudget } from './hooks/useBudget.js';
+import { useYouthDraft } from './hooks/useYouthDraft.js';
+import { applyYouthDraft, unpickedPoolIds } from './utils/youthDraft.js';
 import { useSquadSync } from './hooks/useSquadSync.js';
 import { isMarketOpen as isMarketOpenFor } from './supabase/functions/_shared/market.js';
 import { parseOpenTime } from './supabase/functions/_shared/marketTime.js';
@@ -41,6 +43,7 @@ import { KeyboardShortcutsHelp } from './components/ui/KeyboardShortcutsHelp.jsx
 import { Alert } from './components/ui/Alert.jsx';
 import { ConfirmHost, confirmAction } from './components/ui/ConfirmDialog.jsx';
 import { MarketplaceView } from './components/marketplace/MarketplaceView.jsx';
+import { YouthDraftPanel } from './components/marketplace/YouthDraftPanel.jsx';
 import { playerPlaceholder } from './utils/playerPlaceholder.js';
 
 // Lazy loading modals and heavy screens
@@ -326,7 +329,12 @@ function App() {
     navigate('/modal/tutorial', { replace: true, state: { from: path } });
   }, [modalRoute, currentTabPath, navigate]);
 
-  const [allPlayers, setAllPlayers] = useState([]);
+  const [rawPlayers, setAllPlayers] = useState([]);
+  // Draft de promesas (utils/youthDraft.js): pool players show their edited sheet everywhere, and the ones nobody
+  // picked yet stay out of the regular market (the server refuses them too).
+  const { draft: youthDraft } = useYouthDraft();
+  const allPlayers = useMemo(() => applyYouthDraft(rawPlayers, youthDraft), [rawPlayers, youthDraft]);
+  const draftBlockedIds = useMemo(() => unpickedPoolIds(youthDraft), [youthDraft]);
   const [countryMap, setCountryMap] = useState({});
   const [hasLoadedPlayerDatabase, setHasLoadedPlayerDatabase] = useState(false);
   const [catalogReloadKey, setCatalogReloadKey] = useState(0);
@@ -1003,6 +1011,7 @@ function App() {
     const isSet = v => v !== '' && v !== undefined && v !== null;
     const checks = [];
     if (marketStatus.status === 'FranchiseMarket') checks.push(isFranchiseEligible);
+    if (draftBlockedIds.size) checks.push(p => !draftBlockedIds.has(String(p.Id)));
     if (f.region) checks.push(p => getRegionById(p.Country1) === f.region);
     [['OVR_CALCULADO', 'ovr'], ['Age', 'age'], ['Precio', 'price']].forEach(([field, name]) => {
       if (isSet(f[`${name}Min`])) { const min = parseInt(f[`${name}Min`], 10); checks.push(p => p[field] >= min); }
@@ -1038,7 +1047,7 @@ function App() {
       for (let i = 0; i < checks.length; i++) if (!checks[i](p)) return false;
       return true;
     });
-  }, [sortedPlayers, deferredFilters, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName]);
+  }, [sortedPlayers, deferredFilters, normalizedCountryNamesById, userProfile?.wishlist, marketStatus, debouncedName, draftBlockedIds]);
 
   const resetFilters = useCallback(() => {
     setFilters(prev => ({ ...initialFilters, name: prev.name }));
@@ -1493,6 +1502,10 @@ function App() {
       showStatusMessage('error', 'Este jugador ya está bloqueado por otro equipo.');
       return false;
     }
+    if (draftBlockedIds.has(String(player.Id))) {
+      showStatusMessage('error', 'Este jugador está en el draft de promesas: no se ficha en el mercado.');
+      return false;
+    }
 
     showStatusMessage('loading', `Fichando a ${player.Name}...`);
 
@@ -1509,7 +1522,7 @@ function App() {
     // sin lock un instante y la sincronización la borraría.
     showStatusMessage('success', `¡${player.Name} fichado exitosamente!`);
     return true;
-  }, [userId, userProfile, remainingBudget, playerLocks, marketStatus, isMarketOpen, showStatusMessage]);
+  }, [userId, userProfile, remainingBudget, playerLocks, marketStatus, isMarketOpen, showStatusMessage, draftBlockedIds]);
 
   const handleRemoveFromCart = useCallback(async (player, { confirmed: alreadyConfirmed = false } = {}) => {
     if (!userId || !player) return;
@@ -1582,7 +1595,7 @@ function App() {
     // Schedule calculation in idle time so main render thread is not blocked
     const calculate = () => {
       const recs = calculateSmartRecommendations({
-        allPlayers,
+        allPlayers: draftBlockedIds.size ? allPlayers.filter(p => !draftBlockedIds.has(String(p.Id))) : allPlayers,
         cart,
         playerLocks,
         remainingBudget,
@@ -1598,7 +1611,7 @@ function App() {
       const timerId = setTimeout(calculate, 50);
       return () => clearTimeout(timerId);
     }
-  }, [activeTab, allPlayers, cart, playerLocks, remainingBudget, userProfile]);
+  }, [activeTab, allPlayers, cart, playerLocks, remainingBudget, userProfile, draftBlockedIds]);
 
   // Las fuentes de OBS (/overlay, ?mode=obs|table|bracket) no llegan acá: main.jsx las monta en screens/ObsScreen.jsx.
   if (location.pathname.startsWith('/torneo')) {
@@ -1792,6 +1805,11 @@ function App() {
                     isLoading={isLoading || tournamentData === null}
                   />
                 </div>
+              )}
+
+              {activeTab === 'Marketplace' && (
+                <YouthDraftPanel draft={youthDraft} playerById={playerById} userId={userId}
+                  allTeams={allTeams} onSelectPlayer={handleOpenPlayerModal} showStatusMessage={showStatusMessage} />
               )}
 
               <MarketplaceView
@@ -2074,6 +2092,7 @@ function App() {
         remainingBudget={remainingBudget}
         isInMyCart={selectedPlayer && ownedCart.some(p => p.Id === selectedPlayer.Id)}
         isFranchisePlayer={selectedPlayer && playerLocks[selectedPlayer.Id]?.isFranchise}
+        isYouthDraftPick={Boolean(selectedPlayer && playerLocks[selectedPlayer.Id]?.isDraftee)}
         isWishlisted={Boolean(selectedPlayer && wishlistSet.has(selectedPlayer.Id))}
         onToggleWishlist={toggleWishlist}
         onRemoveFromCart={handleRemoveFromCart}

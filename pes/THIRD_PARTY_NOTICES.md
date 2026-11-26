@@ -61,6 +61,10 @@ from the decompiled assembly (`PES2020Editor.exe`, sha256 `51e967a1…e367`) for
 database files, and every field used was verified against real data (see `docs/PES_ENGINE.md`). String
 obfuscation in that assembly was not circumvented.
 
+`pes/rating.js` reimplements its overall-rating function (weight tables, curve and rounding read from the same
+assembly) to show edited players' ratings in the draft. It was checked against the OverallStats export of all 27 437
+players and against the real Player.bin (`tests/pes/rating.test.js`).
+
 ## bcdec (Sergii Kudlai) — MIT / public domain
 
 The BC7 block decoder in `pes/kits/textureDecode.js` comes, through PES Editor Rebuilt, from bcdec

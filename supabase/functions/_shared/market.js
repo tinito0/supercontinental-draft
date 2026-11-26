@@ -10,6 +10,7 @@ import { toUnits, spentOnLocks, committedInOffers } from './budget.js';
 import { parseOpenTime } from './marketTime.js';
 import { isOfferExpired } from './offerExpiry.js';
 import { isTeamApproved, PENDING_APPROVAL_MESSAGE } from './membership.js';
+import { isYouthDraftEligible, isYouthDraftLock, youthDraftPath, youthDraftPoolIds, YOUTH_DRAFT_RULE_TEXT } from './youthDraft.js';
 
 export class MarketError extends Error {
   constructor(message, status = 400) {
@@ -35,6 +36,7 @@ export function marketPaths(appId) {
     cartCollection: uid => `${base}/users/${uid}/cart`,
     transfers: `${base}/public/data/transfers`,
     transfer: transferId => `${base}/public/data/transfers/${transferId}`,
+    youthDraft: youthDraftPath(appId),
   };
 }
 
@@ -84,8 +86,9 @@ export async function signPlayer({ tx, appId, catalog, user, playerId, isFranchi
   if (!player) throw new MarketError('Jugador no encontrado en la base de datos.', 404);
   const lockId = String(player.Id);
 
-  const [market, team, profile, lock] = await Promise.all([
+  const [market, team, profile, lock, youthDraft] = await Promise.all([
     tx.get(paths.market), tx.get(paths.team(user.uid)), tx.get(paths.profile(user.uid)), tx.get(paths.lock(lockId)),
+    tx.get(paths.youthDraft),
   ]);
   if (!team || !profile) throw new MarketError('Tu equipo no está configurado. Volvé a iniciar sesión.', 409);
   if (!user.isAdmin && !isTeamApproved(team.data)) throw new MarketError(PENDING_APPROVAL_MESSAGE, 403);
@@ -96,6 +99,10 @@ export async function signPlayer({ tx, appId, catalog, user, playerId, isFranchi
   }
   if (!isFranchise && marketStatus.status === 'FranchiseMarket') {
     throw new MarketError('Solo se permiten fichajes de Jugadores Franquicia en este momento.', 403);
+  }
+  // Picked or not, a prospect of the published pool only joins a club through the youth draft.
+  if (youthDraftPoolIds(youthDraft?.data).has(lockId)) {
+    throw new MarketError('Este jugador está en el draft de promesas: no se ficha en el mercado.', 409);
   }
   if (lock) {
     throw new MarketError(lock.data.lockedBy === user.uid
@@ -179,6 +186,7 @@ export async function acceptOffer({ tx, appId, catalog, user, offerId, now = new
   }
   if (!lock || lock.data.lockedBy !== sellerId) throw new MarketError('El jugador ya no pertenece al equipo vendedor.', 409);
   if (lock.data.isFranchise) throw new MarketError('Los jugadores franquicia no son transferibles.', 409);
+  if (isYouthDraftLock(lock.data)) throw new MarketError('Las promesas no son transferibles.', 409);
 
   const amount = Number(offerAmount(offer));
   const baseCost = toUnits(player.Precio);
@@ -290,6 +298,9 @@ export async function releasePlayer({ tx, appId, user, playerId, now = new Date(
   if (lock.data.isFranchise) {
     throw new MarketError('Los Jugadores Franquicia no se pueden liberar. Pedile al administrador que resetee la franquicia.', 409);
   }
+  if (isYouthDraftLock(lock.data)) {
+    throw new MarketError('Las promesas no se pueden liberar. Si el pick fue un error, el administrador puede deshacerlo.', 409);
+  }
   // A release refunds the player's price, so with the market closed it would let squads change while no one can buy.
   if (!isMarketOpen(market?.data || { status: 'closed' }, team?.data, user.isAdmin, now)) {
     throw new MarketError('El mercado está cerrado.', 403);
@@ -320,6 +331,82 @@ export async function releasePlayer({ tx, appId, user, playerId, now = new Date(
     }));
 
   return { playerId: numericId };
+}
+
+/**
+ * Youth draft pick (reglamento T3): the club whose turn the admin opened takes one prospect of the published
+ * pool, for free. Works with the market closed: the draft runs on a call, outside the market windows.
+ */
+export async function pickYouthDraft({ tx, appId, catalog, user, playerId, now = new Date() }) {
+  const paths = marketPaths(appId);
+  const lockId = String(playerId);
+  const [draft, team, profile, lock] = await Promise.all([
+    tx.get(paths.youthDraft), tx.get(paths.team(user.uid)), tx.get(paths.profile(user.uid)), tx.get(paths.lock(lockId)),
+  ]);
+  if (!draft) throw new MarketError('El draft de promesas todavía no se publicó.', 409);
+  if (!team || !profile) throw new MarketError('Tu equipo no está configurado. Volvé a iniciar sesión.', 409);
+  if (!isTeamApproved(team.data)) throw new MarketError(PENDING_APPROVAL_MESSAGE, 403);
+  const picks = draftPicks(draft.data);
+  if (draft.data.turnTeamId !== user.uid) throw new MarketError('Todavía no es tu turno en el draft de promesas.', 403);
+  if (picks[user.uid] !== undefined) throw new MarketError('Tu club ya eligió su promesa.', 409);
+  if (!youthDraftPoolIds(draft.data).has(lockId)) throw new MarketError('Ese jugador no está en el draft de promesas.', 409);
+  const takenByPick = Object.values(picks).some(id => String(id) === lockId);
+  if (lock || takenByPick) throw new MarketError('Esa promesa ya fue elegida por otro club.', 409);
+  const player = getCatalogPlayer(catalog, lockId);
+  if (!player) throw new MarketError('Jugador no encontrado en la base de datos.', 404);
+  if (!isYouthDraftEligible(player)) {
+    throw new MarketError(`El jugador no cumple los requisitos del draft de promesas (${YOUTH_DRAFT_RULE_TEXT}).`);
+  }
+
+  const at = now.toISOString();
+  const teamName = profile.data.teamName || team.data.teamName || 'Equipo';
+  tx.create(paths.lock(lockId), { lockedBy: user.uid, teamName, lockedAt: at, isFranchise: false, isDraftee: true });
+  // The REST update masks top-level fields, so the whole `picks` map is replaced, not merged.
+  tx.update(paths.youthDraft, { picks: { ...picks, [user.uid]: player.Id }, turnTeamId: null, updatedAt: at });
+  tx.update(paths.team(user.uid), { marketUpdatedAt: at });
+  tx.create(paths.transfer(tx.newId()), {
+    playerId: player.Id,
+    playerName: player.Name,
+    teamId: user.uid,
+    teamName,
+    price: 0,
+    isFranchise: false,
+    isDraftee: true,
+  }, { serverTimestamps: ['timestamp'] });
+
+  return { playerId: player.Id, playerName: player.Name, teamId: user.uid };
+}
+
+/** Admin: undoes a club's youth-draft pick (a mistake on the call) and gives that club the turn again. */
+export async function undoYouthDraftPick({ tx, appId, user, teamId, now = new Date() }) {
+  if (!user?.isAdmin) throw new MarketError('Solo el administrador puede deshacer un pick del draft.', 403);
+  const paths = marketPaths(appId);
+  const draft = await tx.get(paths.youthDraft);
+  const picks = draftPicks(draft?.data);
+  if (picks[teamId] === undefined) throw new MarketError('Ese club no eligió ninguna promesa.', 409);
+  const lockId = String(picks[teamId]);
+  const numericId = Number(lockId);
+  const [lock, team, feed] = await Promise.all([
+    tx.get(paths.lock(lockId)), tx.get(paths.team(teamId)),
+    tx.query(paths.transfers, [['playerId', '==', numericId], ['teamId', '==', teamId]]),
+  ]);
+
+  const at = now.toISOString();
+  if (lock && isYouthDraftLock(lock.data) && lock.data.lockedBy === teamId) tx.delete(paths.lock(lockId));
+  tx.delete(paths.cart(teamId, lockId));
+  if (team) {
+    const roster = (Array.isArray(team.data.roster) ? team.data.roster : []).filter(p => String(p.Id) !== lockId);
+    tx.update(paths.team(teamId), { roster, rosterUpdatedAt: at });
+  }
+  feed.filter(entry => entry.data.isDraftee === true).forEach(entry => tx.delete(paths.transfer(entry.id)));
+  const remaining = Object.fromEntries(Object.entries(picks).filter(([key]) => key !== teamId));
+  tx.update(paths.youthDraft, { picks: remaining, turnTeamId: teamId, updatedAt: at });
+
+  return { teamId, playerId: numericId };
+}
+
+function draftPicks(draft) {
+  return draft?.picks && typeof draft.picks === 'object' ? draft.picks : {};
 }
 
 /**
@@ -514,6 +601,18 @@ export async function handleMarketAction({ firestore, appId, catalog, user, body
       throw new MarketError('Jugador inválido.');
     }
     return firestore.runTransaction(tx => releasePlayer({ tx, appId, user, playerId, now }));
+  }
+  if (action === 'pickYouthDraft') {
+    const playerId = body.playerId;
+    if (playerId === undefined || playerId === null || !/^\d+$/.test(String(playerId))) {
+      throw new MarketError('Jugador inválido.');
+    }
+    return firestore.runTransaction(tx => pickYouthDraft({ tx, appId, catalog, user, playerId, now }));
+  }
+  if (action === 'undoYouthDraftPick') {
+    if (!user?.isAdmin) throw new MarketError('Solo el administrador puede deshacer un pick del draft.', 403);
+    if (!UID_PATTERN.test(String(body.teamId || ''))) throw new MarketError('Club inválido.');
+    return firestore.runTransaction(tx => undoYouthDraftPick({ tx, appId, user, teamId: body.teamId, now }));
   }
   if (action === 'acceptOffer') {
     const offerId = body.offerId;

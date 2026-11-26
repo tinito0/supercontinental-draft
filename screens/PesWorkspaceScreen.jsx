@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Database, Users, Shield, ListChecks, KeyRound, LayoutGrid, Lock, ArrowRightLeft, FolderOpen } from 'lucide-react';
+import { Database, Users, Shield, ListChecks, KeyRound, LayoutGrid, Lock, ArrowRightLeft, FolderOpen, Sprout } from 'lucide-react';
 import { usePesWorkspace } from '../hooks/usePesWorkspace.js';
 import { Card, Pill, StatePill, ErrorText, plural } from '../components/pes/PesUi.jsx';
 import { SoftValue } from '../components/ui/SoftValue.jsx';
@@ -15,6 +15,7 @@ import { PesPlayersPanel } from '../components/pes/PesPlayersPanel.jsx';
 import { PesChangesPanel } from '../components/pes/PesChangesPanel.jsx';
 import { PesRolesPanel } from '../components/pes/PesRolesPanel.jsx';
 import { PesDraftPanel } from '../components/pes/PesDraftPanel.jsx';
+import { PesYouthDraftPanel } from '../components/pes/PesYouthDraftPanel.jsx';
 import { modifiedKeys } from '../components/pes/opKeys.js';
 import { ROLE_LABELS } from '../pes/permissions.js';
 
@@ -25,6 +26,8 @@ const TABS = [
   // One workspace per team (data, squad, kits): the former «Kits» tab is its «Kits» section.
   { id: 'teams', label: 'Equipos', icon: Shield, show: c => c.has('team.edit') || c.has('kit.edit') || c.has('kit.read') || c.has('workspace.read') },
   { id: 'players', label: 'Jugadores', icon: Users, show: c => c.has('workspace.read') && !c.has('kit.edit') || c.has('player.edit') },
+  // Draft de promesas: publishing writes config/youthDraft, which only the Super Admin may write.
+  { id: 'prospects', label: 'Promesas', icon: Sprout, show: c => c.has('roles.manage') },
   { id: 'changes', label: 'Cambios y exportación', icon: ListChecks, show: () => true },
   { id: 'roles', label: 'Roles', icon: KeyRound, show: c => c.has('roles.manage') },
 ];
@@ -143,7 +146,7 @@ export default function PesWorkspaceScreen({ userId, isAdmin, allTeams, appPlaye
   const tab = tabs.some(t => t.id === requestedTab) ? requestedTab : 'sources';
   const roleLabel = ROLE_LABELS[pes.role.role];
   const roleText = pes.role.label && pes.role.label !== roleLabel ? `${roleLabel} (${pes.role.label})` : roleLabel;
-  const needsWorkspace = ['draft', 'teams', 'players'].includes(tab) && !pes.ws;
+  const needsWorkspace = ['draft', 'teams', 'players', 'prospects'].includes(tab) && !pes.ws;
 
   return (
     <Page className="pes-editor">
@@ -165,6 +168,7 @@ export default function PesWorkspaceScreen({ userId, isAdmin, allTeams, appPlaye
             onSectionChange={id => setParam({ section: id, tab: 'teams' })} />
         )}
         {tab === 'players' && pes.ws && <PesPlayersPanel pes={view} onApply={safeApply} appPlayers={appPlayers} />}
+        {tab === 'prospects' && pes.ws && <PesYouthDraftPanel pes={view} appPlayers={appPlayers} allTeams={allTeams} />}
         {tab === 'changes' && pes.wsDoc && <PesChangesPanel pes={view} />}
         {tab === 'roles' && <PesRolesPanel actorUid={userId} allTeams={allTeams} />}
         {needsWorkspace && (

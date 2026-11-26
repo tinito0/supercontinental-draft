@@ -19,6 +19,11 @@ describe('reconcileCart', () => {
     expect(plan.toRemove).toEqual([]);
   });
 
+  it('adds a youth-draft pick with the draftee flag of the lock', () => {
+    const plan = reconcileCart({ playerLocks: { 1: { lockedBy: 'me' }, 3: { lockedBy: 'me', isDraftee: true } }, cart: [cartRow(1)], uid: 'me', playerById: catalog });
+    expect(plan.toAdd).toEqual([{ playerId: '3', data: { ...catalog.get('3'), isFranchise: false, isDraftee: true } }]);
+  });
+
   it('removes a player sold to another team', () => {
     const plan = reconcileCart({ playerLocks: { 1: { lockedBy: 'other' } }, cart: [cartRow(1)], uid: 'me', playerById: catalog });
     expect(plan.toRemove).toEqual(['1']);

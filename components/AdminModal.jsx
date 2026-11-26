@@ -1,5 +1,5 @@
 import React, { useState, memo, lazy, Suspense } from 'react';
-import { Settings, Users, Trophy, FileText, MessageSquarePlus, Globe, Vote, ListChecks } from 'lucide-react';
+import { Settings, Users, Trophy, FileText, MessageSquarePlus, Globe, Vote, ListChecks, Sprout } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
@@ -29,11 +29,14 @@ const LeagueContentAdminSection = lazy(() => import('./admin/LeagueContentAdminS
 const CommunityAdminSection = lazy(() => import('./admin/CommunityAdminSection.jsx'));
 // Squad rules of every club (banco, plantel mínimo, locales).
 const SquadRulesAdminSection = lazy(() => import('./admin/SquadRulesAdminSection.jsx'));
+// Draft de promesas: pick order and turns.
+const YouthDraftAdminSection = lazy(() => import('./admin/YouthDraftAdminSection.jsx'));
 
 const ADMIN_TABS = [
   { id: 'general', label: 'Configuración', icon: Settings },
   { id: 'equipos', label: 'Equipos y usuarios', icon: Users },
   { id: 'reglas', label: 'Reglas', icon: ListChecks },
+  { id: 'promesas', label: 'Draft de promesas', icon: Sprout },
   { id: 'torneo', label: 'Torneo y transmisión', icon: Trophy },
   { id: 'comunidad', label: 'Comunidad', icon: Vote },
   { id: 'web', label: 'Web pública', icon: Globe },
@@ -74,6 +77,11 @@ export const AdminModal = memo(function AdminModal({
         <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>
           <SquadRulesAdminSection allTeams={props.allTeams} playerLocks={props.playerLocks} allPlayers={props.allPlayers}
             onRequestCatalog={props.onRequestCatalog} loadError={props.playersLoadError} onRetry={props.onRetryCatalog} />
+        </Suspense>
+      )}
+      {activeTab === 'promesas' && (
+        <Suspense fallback={<div className="skeleton h-64 rounded-2xl" aria-label="Cargando" />}>
+          <YouthDraftAdminSection allTeams={props.allTeams} showStatusMessage={props.showStatusMessage} />
         </Suspense>
       )}
       {activeTab === 'torneo' && (

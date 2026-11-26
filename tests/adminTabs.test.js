@@ -4,7 +4,7 @@ import { filterAdminTeams } from '../utils/adminTeams.js';
 
 describe('admin tabs', () => {
   it('lists the sections and maps the merged legacy ones', () => {
-    expect(ADMIN_TAB_IDS).toEqual(['general', 'equipos', 'reglas', 'torneo', 'comunidad', 'web', 'templates', 'suggestions']);
+    expect(ADMIN_TAB_IDS).toEqual(['general', 'equipos', 'reglas', 'promesas', 'torneo', 'comunidad', 'web', 'templates', 'suggestions']);
     expect(normalizeAdminTab('users')).toBe('equipos');
     expect(normalizeAdminTab('overlay')).toBe('torneo');
     expect(normalizeAdminTab('torneo')).toBe('torneo');

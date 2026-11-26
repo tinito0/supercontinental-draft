@@ -98,6 +98,7 @@ service cloud.firestore {
             && request.resource.data.status == 'pending'
             && isMoney(request.resource.data.offerAmount)
             && isFreshExpiry(request.resource.data.expiresAtMs)
+            && !isYouthDraftPick(request.resource.data.playerId)
           )
         );
         allow update: if isAuth() && (
@@ -109,6 +110,12 @@ service cloud.firestore {
           )
         );
         allow delete: if isAdmin();
+
+        // Las promesas del draft juvenil no se venden (supabase/functions/_shared/youthDraft.js); el servidor
+        // también rechaza aceptarlas.
+        function isYouthDraftPick(playerId) {
+          return exists(lockPath(string(playerId))) && get(lockPath(string(playerId))).data.get('isDraftee', false) == true;
+        }
 
         // Montos: enteros positivos. Las ofertas pendientes retienen fondos del comprador; un monto
         // negativo o no numérico liberaría presupuesto (supabase/functions/_shared/budget.js).

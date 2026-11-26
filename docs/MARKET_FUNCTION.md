@@ -38,6 +38,18 @@ Qué hace el servidor y qué sigue en el navegador:
     club entero a un equipo pendiente y vacío, también su página de la web, el overlay, las formaciones
     compartidas, el scouting y la asignación de Draft → PES; bloquea la cuenta anterior (`clubTransferredTo`). Se
     niega con cuentas de administrador. Flujo para el admin: `docs/GUIA_ADMIN_LIGA.md` §3.
+  - draft de promesas (`_shared/youthDraft.js`, documento `config/youthDraft`):
+    - `pickYouthDraft`: el club con el turno abierto (`turnTeamId`) elige una promesa del grupo publicado
+      (`pool`). Crea el lock con `isDraftee: true`, anota `picks[uid]`, cierra el turno y escribe el feed con
+      precio 0. Se niega si no es su turno, si el club ya eligió, si la promesa no está en el grupo o ya fue
+      elegida, o si no cumple edad/OVR originales.
+    - `undoYouthDraftPick` (**solo admin**): borra el lock, el carrito, la plantilla pública y el feed de esa
+      promesa, saca el pick y le devuelve el turno al club.
+    - Los jugadores del grupo no se fichan en el mercado común (`signPlayer` responde 409), los elegidos no se
+      liberan ni se aceptan ofertas por ellos, y no descuentan presupuesto (`_shared/budget.js`). Las reglas
+      tampoco dejan crear ofertas por un lock con `isDraftee`.
+    - El orden, el turno y el grupo los escribe el admin desde el navegador (`services/youthDraftService.js`;
+      `config/*` solo lo escribe el admin). `picks` lo escribe solo el servidor.
 - **Navegador (validado por reglas):** enviar/rechazar/contraofertar/retirar ofertas por turnos (montos enteros
   positivos), formación, carrito privado. El carrito es una copia: `hooks/useSquadSync.js` lo alinea con los
   locks, y el presupuesto y las exportaciones salen de los locks (`_shared/budget.js`, compartido con la app).

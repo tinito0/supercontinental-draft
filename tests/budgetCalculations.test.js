@@ -22,6 +22,10 @@ describe('budget.js', () => {
     expect(spentOnLocks([['10', {}], ['11', {}]], priceOf, { franchisePlayerId: '10' })).toBe(15000000);
   });
 
+  it('charges nothing for a youth-draft pick', () => {
+    expect(spentOnLocks([['10', { isDraftee: true, isFranchise: false }], ['11', {}]], priceOf)).toBe(15000000);
+  });
+
   it('rounds each price to whole units like the server', () => {
     expect(spentOnLocks([['13', {}]], priceOf)).toBe(7350000);
   });
@@ -85,6 +89,11 @@ describe('app and market function agree', () => {
       locks: { 10: { lockedBy: 'u' }, 13: { lockedBy: 'u' } },
       offers: {},
       franchisePlayerId: 10,
+    },
+    'youth-draft pick': {
+      locks: { 10: { lockedBy: 'u', isDraftee: true, isFranchise: false }, 11: { lockedBy: 'u' } },
+      offers: {},
+      franchisePlayerId: undefined,
     },
     'forged negative offer': {
       locks: { 11: { lockedBy: 'u' } },

@@ -15,5 +15,6 @@ export { ROLES, ROLE_LABELS, authorize, can, capabilitiesOf, KIT_MANAGER_TEAM_OP
 export { applyOperations, replayOperations } from './operations.js';
 export { validateWorkspace } from './validator.js';
 export { planTeamReplacement } from './teamReplacement.js';
+export { playerRating, RATING_FIELDS } from './rating.js';
 export { buildExport } from './exportService.js';
 export { classifyFiles, readSources, buildWorkspace, restoreWorkingCopy } from './session.js';

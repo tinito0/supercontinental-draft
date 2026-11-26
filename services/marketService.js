@@ -44,3 +44,7 @@ export const releasePlayer = ({ playerId }) => callMarket('release', { playerId 
 export const migrateAccount = ({ newIdToken }) => callMarket('migrateAccount', { newIdToken });
 /** Admin only: moves the club of `fromUid` to the pending, empty team of `toUid` (market.js transferClub). */
 export const transferClub = ({ fromUid, toUid, managerName }) => callMarket('transferClub', { fromUid, toUid, managerName });
+/** Youth draft: the club whose turn is open takes one prospect of the published pool (market.js pickYouthDraft). */
+export const pickYouthDraft = ({ playerId }) => callMarket('pickYouthDraft', { playerId });
+/** Admin only: undoes a club's youth-draft pick and gives that club the turn again. */
+export const undoYouthDraftPick = ({ teamId }) => callMarket('undoYouthDraftPick', { teamId });

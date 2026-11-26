@@ -13,9 +13,9 @@ import { PLAYING_STYLE_GROUPS, PLAYING_STYLE_POSITIONS } from '../utils/playerGl
 const MONTHLY_SEARCH_LIMIT = 5;
 
 const DEFAULT_SCOUTS = [
-  { id: 'scout-rapido', name: 'Tomás Ibarra', quality: 58, durationHours: 1, specialty: 'Respuesta rápida', description: 'Vuelve rápido, pero puede traer jugadores con más variación respecto a lo pedido.' },
-  { id: 'scout-equilibrado', name: 'Martín Sosa', quality: 74, durationHours: 2, specialty: 'Búsqueda confiable', description: 'Buen balance entre tiempo y precisión. Ideal para búsquedas normales.' },
-  { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 4, imageUrl: '/scouts/fefe-farfan.webp', specialty: 'Élite total', description: 'El mejor ojeador de todos. Tarda más porque filtra fino y prioriza coincidencias premium.' },
+  { id: 'scout-rapido', name: 'Tomás Ibarra', quality: 58, durationHours: 1 / 6, specialty: 'Respuesta rápida', description: 'Vuelve rápido, pero puede traer jugadores con más variación respecto a lo pedido.' },
+  { id: 'scout-equilibrado', name: 'Martín Sosa', quality: 74, durationHours: 1 / 3, specialty: 'Búsqueda confiable', description: 'Buen balance entre tiempo y precisión. Ideal para búsquedas normales.' },
+  { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 0.5, imageUrl: '/scouts/fefe-farfan.webp', specialty: 'Élite total', description: 'El mejor ojeador de todos. Tarda más porque filtra fino y prioriza coincidencias premium.' },
   { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantánea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para probar resultados. Solo lo ve el admin.' },
 ];
 
@@ -120,6 +120,15 @@ function toMillis(value) {
   if (typeof value.toMillis === 'function') return value.toMillis();
   if (typeof value.toDate === 'function') return value.toDate().getTime();
   return new Date(value).getTime();
+}
+
+/** How long a scout takes, as text: «30 min», «1 hora», «2 horas» (short: «30 min», «1 h»). */
+function scoutDurationLabel(scout, isShort = false) {
+  const minutes = Math.round(Number(scout?.durationHours || 12) * 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = minutes / 60;
+  if (isShort) return `${hours} h`;
+  return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
 }
 
 function getTimeLeft(resolvesAt) {
@@ -482,7 +491,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         }
       });
       setCriteria(initialCriteria);
-      showStatusMessage?.('success', scout.testDurationSeconds ? 'Busqueda scout de prueba creada. Vuelve en 1 segundo.' : `Busqueda scout creada. Vuelve en ${scout.durationHours || 12} horas.`);
+      showStatusMessage?.('success', scout.testDurationSeconds ? 'Busqueda scout de prueba creada. Vuelve en 1 segundo.' : `Busqueda scout creada. Vuelve en ${scoutDurationLabel(scout)}.`);
     } catch (error) {
       console.error('Error creando busqueda scout:', error);
       if (error.message === 'scout-limit-reached') {
@@ -537,7 +546,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         <div>
           <h2 id="scout-form-title" className="section-title">Nueva búsqueda</h2>
           <p className="text-xs text-ink-3 mt-1">
-            {selectedScout?.testDurationSeconds ? 'Este ojeador de prueba vuelve en 1 segundo.' : `El resultado llega cuando termina el trabajo de ${selectedScout?.durationHours || 12} horas.`}
+            {selectedScout?.testDurationSeconds ? 'Este ojeador de prueba vuelve en 1 segundo.' : `El resultado llega cuando termina el trabajo de ${scoutDurationLabel(selectedScout)}.`}
           </p>
         </div>
 
@@ -572,7 +581,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-ink truncate">{scout.name}</span>
-                    <span className="block text-xs text-ink-3 mt-0.5">Calidad <span className="num text-ink-2">{scout.quality}</span> · {scout.testDurationSeconds ? '1 seg' : `${scout.durationHours} h`}</span>
+                    <span className="block text-xs text-ink-3 mt-0.5">Calidad <span className="num text-ink-2">{scout.quality}</span> · {scout.testDurationSeconds ? '1 seg' : scoutDurationLabel(scout, true)}</span>
                     <span className="block text-xs text-ink-3 line-clamp-2 mt-0.5">{scout.specialty}</span>
                   </span>
                 </button>

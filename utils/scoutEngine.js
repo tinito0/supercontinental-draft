@@ -28,6 +28,8 @@ export function buildResults({ allPlayers, criteria, scout, playerLocks }) {
   const quality = Number(scout?.quality) || 65;
   const variance = Math.max(0, Math.round((100 - quality) / 9));
   const lockedIds = new Set(Object.keys(playerLocks || {}).map(String));
+  // Youth-draft prospects (utils/youthDraft.js applyYouthDraft) are picked in the draft, never signed, so a scout skips them.
+  const isAvailable = player => !lockedIds.has(String(player.Id)) && player.isYouthProspect !== true;
   const wantedStats = criteria.stats || [];
   const wantedTraits = criteria.traits || [];
   const wantedPositions = criteria.positions || [];
@@ -51,7 +53,7 @@ export function buildResults({ allPlayers, criteria, scout, playerLocks }) {
   const hasStyle = player => Boolean(wantedStyle) && player.PlayingStyle === wantedStyle;
 
   const strict = allPlayers.filter(player => {
-    if (lockedIds.has(String(player.Id))) return false;
+    if (!isAvailable(player)) return false;
     if (!matchesPosition(player)) return false;
     if (considerBudget && budgetMax != null && Number(player.Precio || 0) > budgetMax + variance) return false;
     if (criteria.countryId && String(player.Country1) !== String(criteria.countryId) && String(player.Country2) !== String(criteria.countryId)) return false;
@@ -68,7 +70,7 @@ export function buildResults({ allPlayers, criteria, scout, playerLocks }) {
     ? strictStyled
     : strict.length >= RESULT_COUNT_MIN
       ? strict
-      : allPlayers.filter(player => !lockedIds.has(String(player.Id)));
+      : allPlayers.filter(isAvailable);
 
   const scored = pool.map(player => {
     let score = 0;

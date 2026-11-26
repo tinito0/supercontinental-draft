@@ -22,7 +22,7 @@ export function reconcileCart({ playerLocks, cart, uid, playerById }) {
   for (const [playerId, lock] of ownedLockEntries(playerLocks, uid)) {
     if (cartIds.has(String(playerId))) continue;
     const player = playerById?.get(String(playerId));
-    if (player) toAdd.push({ playerId: String(playerId), data: { ...player, isFranchise: Boolean(lock.isFranchise) } });
+    if (player) toAdd.push({ playerId: String(playerId), data: { ...player, isFranchise: Boolean(lock.isFranchise), ...(lock.isDraftee === true ? { isDraftee: true } : {}) } });
     else missingCatalog.push(String(playerId));
   }
   const toRemove = [];

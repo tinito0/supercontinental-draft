@@ -194,7 +194,7 @@ aprobación.
 ## 6. Nueva temporada
 
 Administración → General → reinicio de temporada (`utils/seasonReset.js`): vacía planteles, ofertas, traspasos,
-noticias, formaciones compartidas, carritos y scouting, y devuelve el cupo de jugador franquicia. Mantiene
+noticias, formaciones compartidas, carritos, scouting y el draft de promesas, y devuelve el cupo de jugador franquicia. Mantiene
 presupuesto base, nombre, escudo y permisos. Es el mejor momento para actualizar el mercado (sección 1).
 
 El reglamento de `/reglamento` se edita en Administración → Web pública → Reglamento. Para cargarlo entero desde un
@@ -277,6 +277,26 @@ y MVP en el desplegable **Goleadores, asistencias y MVP a mano**. Estado **Final
 una fecha que el suizo ya había armado, al guardar no se vuelve a generar sola: usá **Rehacer Fecha N**.
 
 ---
+
+## 9. Draft de promesas
+
+Una ronda, una promesa por club, sin costo de presupuesto. Las promesas no se venden, no se liberan y no se
+pueden ofertar. Las que nadie elige quedan fuera del mercado común toda la temporada.
+
+1. **Editar las fichas.** En Editor PES → Jugadores, editá cada promesa (tiene que tener 17 a 21 años y OVR 50 a
+   60 en el juego original). El reglamento pide una media editada de 84 a 86.
+2. **Marcar.** En la ficha de cada una, tocá **Marcar como promesa** (solo Super Admin).
+3. **Publicar.** En Editor PES → Promesas revisá la lista (12 a 40 jugadores, al menos uno por club) y tocá
+   **Publicar al draft**. Desde ese momento el mercado las muestra con la ficha editada y no se pueden fichar.
+   Si cambiás una ficha, volvé a publicar. Cuando un club ya eligió, el grupo queda fijo.
+4. **Orden.** En Administración → Draft de promesas cargá el orden (inverso a la tabla de la temporada pasada):
+   **Agregar los N aprobados** y después subí o bajá cada club.
+5. **Turnos.** En la llamada, tocá **Dar turno** en el club que elige. Ese mánager ve **Elegir** en el mercado
+   y el turno se cierra solo al elegir. **Cerrar turno** lo corta sin pick.
+6. **Errores.** **Deshacer pick** devuelve la promesa al grupo y el turno a ese club. **Borrar draft** borra
+   grupo, orden y turnos; los ya elegidos siguen en sus planteles hasta el reinicio de temporada.
+
+Antes de usarlo por primera vez hay que publicar la función `market` y las reglas de Firestore (sección 7).
 
 ## Para las sesiones de código
 

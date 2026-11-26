@@ -49,15 +49,18 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
           {/* The franchise player costs nothing from the budget (hooks/useBudget.js), so no price for him. */}
           {player.isFranchise
             ? <span className="font-semibold text-accent-soft">Franquicia</span>
-            : <span className="num text-ink-3">{formatPriceShort(precio)}</span>}
+            : player.isDraftee
+              ? <span className="font-semibold text-accent-soft">Promesa</span>
+              : <span className="num text-ink-3">{formatPriceShort(precio)}</span>}
         </p>
       </div>
       <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 pointer-events-none ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
       {/* Un Jugador Franquicia no se libera (el servidor lo rechaza; el admin resetea la franquicia). */}
-      {player.isFranchise ? (
-        <span className="relative w-8 h-8 shrink-0 flex items-center justify-center text-accent-soft" title="El Jugador Franquicia no se puede liberar">
+      {player.isFranchise || player.isDraftee ? (
+        <span className="relative w-8 h-8 shrink-0 flex items-center justify-center text-accent-soft"
+          title={player.isDraftee ? 'Las promesas del draft no se pueden liberar' : 'El Jugador Franquicia no se puede liberar'}>
           <Lock className="w-4 h-4" aria-hidden="true" />
-          <span className="sr-only">Jugador Franquicia: no se puede liberar</span>
+          <span className="sr-only">{player.isDraftee ? 'Promesa del draft' : 'Jugador Franquicia'}: no se puede liberar</span>
         </span>
       ) : (
         <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}

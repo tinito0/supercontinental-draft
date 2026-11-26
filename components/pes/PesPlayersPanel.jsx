@@ -8,6 +8,8 @@ import { useCountries } from './useCountries.js';
 import { PesPlayerList } from './players/PesPlayerList.jsx';
 import { ProfileHeader, IdentityForm, PositionMap, StatGroups } from './players/PesPlayerProfile.jsx';
 import { POSITION_FIELDS, IDENTITY_FIELDS, FIELD_LABELS, positionName, statGroups, statLabel } from './players/playerFields.js';
+import { YouthDraftToggle } from './players/YouthDraftToggle.jsx';
+import { useYouthDraft } from '../../hooks/useYouthDraft.js';
 
 const MAX_RESULTS = 100;
 const DEFAULT_RESULTS = 50;
@@ -24,6 +26,9 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
   const profileRef = useRef(null);
   const countries = useCountries();
   const canEdit = caps.has('player.edit');
+  // Marking prospects writes config/youthDraft, which only the Super Admin (and the app admin) may write.
+  const canMarkProspects = caps.has('roles.manage');
+  const { draft: youthDraft } = useYouthDraft(canMarkProspects);
   const table = ws?.bin?.tables.player;
 
   const appById = useMemo(() => new Map(appPlayers.map(p => [Number(p.Id), p])), [appPlayers]);
@@ -83,7 +88,8 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
           <div key={playerId} className="animate-in fade-in space-y-4 lg:space-y-6">
             {inBin && (
               <BinPlayer table={table} playerId={playerId} fieldOf={fieldOf} canEdit={canEdit} modified={modified} onApply={onApply}
-                appPlayer={appById.get(playerId)} countries={countries} countryName={countryName} />
+                appPlayer={appById.get(playerId)} countries={countries} countryName={countryName}
+                youthDraft={canMarkProspects ? youthDraft : undefined} />
             )}
             {inEdit && <EditPlayer ws={ws} playerId={playerId} canEdit={canEdit} modified={modified} onApply={onApply} bare={!inBin} />}
           </div>
@@ -93,7 +99,7 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
   );
 }
 
-function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, appPlayer, countries, countryName }) {
+function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, appPlayer, countries, countryName, youthDraft }) {
   const get = name => table.get(playerId, name);
   const isModified = field => modified.has(opKey({ type: 'bin.player.set', target: { playerId }, field }));
   const commit = (field, value) => onApply([{ type: 'bin.player.set', target: { playerId }, field, value }]);
@@ -116,6 +122,8 @@ function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, appPl
           </Group>
         </div>
       </Card>
+
+      {youthDraft !== undefined && <YouthDraftToggle playerId={playerId} get={get} appPlayer={appPlayer} draft={youthDraft} />}
 
       <Card title="Atributos" description={goalkeeper ? 'Ficha de arquero. Los atributos de arquero están sin verificar en Player.bin: se muestran, no se editan.' : 'Valores 40–99 como en el juego. Enter o salir del campo para aplicar.'}>
         <StatGroups {...shared} fields={table.fields} goalkeeper={goalkeeper} />

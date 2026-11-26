@@ -94,6 +94,7 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
   }
 
   const isFranchise = transfer.isFranchise === true;
+  const isDraftee = transfer.isDraftee === true;
   const isTransfer = transfer.type === 'transfer';
   const time = getTransferTime(transfer.timestamp);
 
@@ -136,7 +137,7 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
               <span className={`text-[11px] font-bold uppercase tracking-wider ${
                 isTransfer ? ' text-accent-soft' : isFranchise ? ' text-warning-soft' : ' text-accent-soft'
               }`}>
-                {isTransfer ? 'Traspaso' : isFranchise ? 'Franquicia' : 'Fichaje'}
+                {isTransfer ? 'Traspaso' : isFranchise ? 'Franquicia' : isDraftee ? 'Draft de promesas' : 'Fichaje'}
               </span>
               <span className="inline-flex items-center gap-1 text-[11px] text-ink-3 font-medium">
                 <Clock className="w-3 h-3" /> {time}
@@ -149,7 +150,7 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
           <span className="shrink-0 rounded px-2 py-0.5 text-[11px] font-bold bg-danger/10 text-danger-soft border border-danger/20">
             Liberado
           </span>
-        ) : isFranchise ? (
+        ) : isFranchise || isDraftee ? (
           <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-bold bg-warning/10 text-warning-soft border border-warning/20">
             <Star className="w-3 h-3" fill="currentColor" /> Gratis
           </span>

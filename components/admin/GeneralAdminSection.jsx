@@ -6,6 +6,7 @@ import { profileResetData, teamResetData, canResetSeason } from '../../utils/sea
 import { commitBatchOperations } from './commitBatchOperations.js';
 import { toLocalDateTimeInput } from '../../utils/helpers.js';
 import { parseOpenTime } from '../../supabase/functions/_shared/marketTime.js';
+import { youthDraftPath } from '../../supabase/functions/_shared/youthDraft.js';
 import { BaseModal } from '../ui/BaseModal.jsx';
 
 export const GeneralAdminSection = memo(function GeneralAdminSection({
@@ -98,6 +99,8 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
       [locks, legacyLocks, offers, transfers, sharedFormations, news].forEach(snapshot => {
         snapshot.forEach(d => operations.push({ type: 'delete', ref: d.ref }));
       });
+      // El draft de promesas es de una temporada: grupo, orden y picks se van con los locks.
+      operations.push({ type: 'delete', ref: doc(db, youthDraftPath(APP_ID)) });
 
       // Borrar subcolecciones de mensajes de cada oferta
       const offerMessagesPromises = offers.docs.map(offerDoc =>

@@ -392,6 +392,7 @@ export const PlayerModal = memo(function PlayerModal({
   marketStatus,
   isMarketOpen = true,
   isFranchisePlayer,
+  isYouthDraftPick = false,
   isWishlisted = false,
   onToggleWishlist,
 }) {
@@ -503,6 +504,33 @@ export const PlayerModal = memo(function PlayerModal({
       );
     }
 
+
+    // Draft de promesas: a prospect of the pool is picked in the draft, and a pick is neither released nor sold
+    // (supabase/functions/_shared/market.js refuses both).
+    if (player.isYouthProspect && cartStatus !== 'IN_MY_CART' && cartStatus !== 'LOCKED_BY_OTHER') {
+      return (
+        <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
+          <div className="btn btn-secondary btn-lg w-full sm:w-auto cursor-not-allowed opacity-70" aria-disabled="true">
+            <Lock className="w-4 h-4" aria-hidden="true" />
+            Draft de promesas
+          </div>
+          <span className="text-xs text-ink-3 text-center max-w-[240px]">Se elige en el draft de promesas, no se ficha en el mercado.</span>
+        </div>
+      );
+    }
+    if (isYouthDraftPick) {
+      return (
+        <div className="flex flex-col items-center gap-1.5 w-full sm:w-auto">
+          <div className="btn btn-secondary btn-lg w-full sm:w-auto cursor-not-allowed opacity-70" aria-disabled="true">
+            <Lock className="w-4 h-4" aria-hidden="true" />
+            Promesa del draft
+          </div>
+          <span className="text-xs text-ink-3 text-center max-w-[240px]">
+            {cartStatus === 'LOCKED_BY_OTHER' ? `Elegida por ${lockedTeamName || 'otro equipo'}. ` : ''}Las promesas no se venden ni se liberan.
+          </span>
+        </div>
+      );
+    }
 
     // Signed by current user -> show release button
     // In my cart

@@ -1,7 +1,9 @@
 // Budget arithmetic shared by the market function (market.js) and the app (hooks/useBudget.js), so the
 // remaining budget the app shows is the one the server enforces. Pure: no Firestore, no React.
-// Budget = team base budget − base price of the team's non-franchise locks − its pending offers.
+// Budget = team base budget − base price of the team's locks that are neither franchise nor youth-draft picks
+// − its pending offers.
 import { isOfferExpired } from './offerExpiry.js';
+import { isYouthDraftLock } from './youthDraft.js';
 
 /** Millions (catalog `Precio`) → money units, rounded like every stored amount. */
 export const toUnits = millions => Math.round((Number(millions) || 0) * 1000000);
@@ -16,13 +18,13 @@ export function isFranchiseLock(playerId, lock, franchisePlayerId) {
 }
 
 /**
- * Money spent on the squad: base price of every owned non-franchise player.
+ * Money spent on the squad: base price of every owned player, except franchise players and youth-draft picks.
  * @param {Array<[string, object]>} ownedLocks [playerId, lock data] pairs of the team's locks
  * @param {(playerId: string) => number} priceOf catalog price in millions (0 when unknown)
  */
 export function spentOnLocks(ownedLocks, priceOf, { franchisePlayerId } = {}) {
   return ownedLocks.reduce((sum, [playerId, lock]) => (
-    isFranchiseLock(playerId, lock, franchisePlayerId) ? sum : sum + toUnits(priceOf(String(playerId)))
+    isFranchiseLock(playerId, lock, franchisePlayerId) || isYouthDraftLock(lock) ? sum : sum + toUnits(priceOf(String(playerId)))
   ), 0);
 }
 

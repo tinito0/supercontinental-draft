@@ -17,6 +17,9 @@ const catalog = {
   8000: [50, 31, 85, 'Veterano', 'MC', 2],
   9000: [150, 25, 80, 'Caro', 'DC', 3],
   9100: [60, 25, 80, 'Medio', 'MC', 4],
+  7000: [0.3, 19, 56, 'Promesa', 'DC', 1],
+  7001: [0.3, 20, 58, 'Promesa B', 'MC', 1],
+  7002: [0.4, 25, 55, 'Mayor', 'DC', 1],
 };
 
 let env;
@@ -336,6 +339,71 @@ describe('transferClub («Cambiar manager», admin only)', () => {
     await expectMarketError(transfer({ fromUid: 'seller', toUid: 'buyer' }), /pendiente/);
     expect(await read(`${base}/public/data/teams/seller`)).toMatchObject({ teamName: 'Team seller' });
     expect(await read(`${base}/public/data/player_locks/7511`)).toMatchObject({ lockedBy: 'seller' });
+  });
+});
+
+describe('youth draft', () => {
+  const draftPath = `${base}/public/data/config/youthDraft`;
+  const setDraft = (data = {}) => seed(db => setDoc(doc(db, draftPath), {
+    pool: [{ id: 7000, ovr: 85 }, { id: 7001, ovr: 84 }, { id: 7002, ovr: 86 }],
+    order: ['seller', 'buyer', 'mallory'],
+    turnTeamId: 'buyer',
+    picks: {},
+    ...data,
+  }));
+  const pick = (uid, playerId) => call(uid, { action: 'pickYouthDraft', playerId });
+  const undo = (uid, teamId, isAdmin = true) => call(uid, { action: 'undoYouthDraftPick', teamId }, { isAdmin });
+
+  it('the team with the turn takes a prospect for free, even with the market closed, and the turn closes', async () => {
+    await setDraft();
+    await setMarket('closed');
+    await expect(pick('buyer', 7000)).resolves.toMatchObject({ playerId: 7000 });
+    expect(await read(`${base}/public/data/player_locks/7000`)).toMatchObject({ lockedBy: 'buyer', isDraftee: true, isFranchise: false });
+    expect(await read(draftPath)).toMatchObject({ turnTeamId: null, picks: { buyer: 7000 } });
+    const feed = await readAll(`${base}/public/data/transfers`);
+    expect(feed).toHaveLength(1);
+    expect(feed[0]).toMatchObject({ playerId: 7000, teamId: 'buyer', price: 0, isDraftee: true });
+  });
+
+  it('refuses without the turn, outside the pool, a taken prospect, a second pick and an ineligible player', async () => {
+    await setDraft();
+    await expectMarketError(pick('mallory', 7000), /turno/);
+    await expectMarketError(pick('buyer', 9100), /no está en el draft/);
+    await setDraft({ picks: { seller: 7001 } });
+    await seed(db => setDoc(doc(db, `${base}/public/data/player_locks/7001`), { lockedBy: 'seller', isDraftee: true }));
+    await expectMarketError(pick('buyer', 7001), /ya fue elegida/);
+    await setDraft({ turnTeamId: 'seller', picks: { seller: 7001 } });
+    await expectMarketError(pick('seller', 7000), /ya eligió/);
+    await setDraft();
+    await expectMarketError(pick('buyer', 7002), /requisitos/);
+    expect(await read(`${base}/public/data/player_locks/7000`)).toBeNull();
+  });
+
+  it('keeps every prospect of the pool out of the regular market, picked or not', async () => {
+    await setDraft();
+    await expectMarketError(sign('mallory', 7000), /draft de promesas/);
+    await expectMarketError(sign('mallory', 7001, true), /draft de promesas/);
+  });
+
+  it('a pick cannot be released or sold', async () => {
+    await setDraft();
+    await pick('buyer', 7000);
+    await expectMarketError(call('buyer', { action: 'release', playerId: 7000 }), /promesas no se pueden liberar/);
+    await seed(db => setDoc(doc(db, `${base}/public/data/offers/o2`), { playerId: 7000, senderId: 'seller', targetTeamId: 'buyer', offerAmount: 1000000, status: 'pending', history: [] }));
+    await expectMarketError(accept('buyer', 'o2'), /promesas no son transferibles/);
+  });
+
+  it('the admin undoes a pick: lock, feed and roster entry go, and the turn goes back to that team', async () => {
+    await setDraft();
+    await pick('buyer', 7000);
+    await seed(db => setDoc(doc(db, `${base}/public/data/teams/buyer`), { roster: [{ Id: '7000' }] }, { merge: true }));
+    await expectMarketError(undo('buyer', 'buyer', false), /administrador/);
+    await expect(undo('admin', 'buyer')).resolves.toMatchObject({ teamId: 'buyer', playerId: 7000 });
+    expect(await read(`${base}/public/data/player_locks/7000`)).toBeNull();
+    expect(await read(draftPath)).toMatchObject({ turnTeamId: 'buyer', picks: {} });
+    expect(await readAll(`${base}/public/data/transfers`)).toHaveLength(0);
+    expect((await read(`${base}/public/data/teams/buyer`)).roster).toEqual([]);
+    await expectMarketError(undo('admin', 'buyer'), /no eligió/);
   });
 });
 
