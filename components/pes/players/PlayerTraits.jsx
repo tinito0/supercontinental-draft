@@ -4,7 +4,7 @@ import { EDIT_PLAYER_FIELDS, isModCelebration } from '../../../pes/formats/pes20
 import { opKey } from '../opKeys.js';
 import { fieldRange } from '../../../pes/core/fields.js';
 import { SKILL_INFO } from '../../../utils/playerGlossary.js';
-import { traitLabel, MOTION_LABELS } from './playerFields.js';
+import { traitLabel, MOTION_LABELS, SKILL_GROUPS } from './playerFields.js';
 
 /** Skills or COM styles of Player.bin as toggles: pressed = the player has it. */
 export function TraitToggles({ fields, get, canEdit, isModified, commit, label }) {
@@ -28,7 +28,30 @@ export function TraitToggles({ fields, get, canEdit, isModified, commit, label }
   );
 }
 
-/** Motion types (1…n as the game numbers them) and the celebration id. */
+/** Skills split by type (SKILL_GROUPS), each group with how many the player has. */
+export function SkillGroups({ fields, get, ...rest }) {
+  const byCsv = new Map(fields.map(f => [f.csv, f]));
+  return (
+    <div className="space-y-5">
+      {SKILL_GROUPS.map(([title, keys]) => {
+        const list = keys.map(k => byCsv.get(k)).filter(Boolean);
+        if (!list.length) return null;
+        const owned = list.filter(f => get(f.name)).length;
+        return (
+          <section key={title} aria-label={title}>
+            <h3 className="flex items-baseline justify-between gap-2 pb-2 mb-2.5 border-b border-line/[0.08]">
+              <span className="text-sm font-semibold text-ink">{title}</span>
+              <span className="num text-xs text-ink-3">{owned} de {list.length}</span>
+            </h3>
+            <TraitToggles fields={list} get={get} label={title} {...rest} />
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Motion types (1…n as the game numbers them). */
 export function MotionForm({ fields, get, canEdit, isModified, commit }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

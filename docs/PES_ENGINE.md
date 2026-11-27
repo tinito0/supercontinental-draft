@@ -59,12 +59,16 @@ Legend / left hand / Golden Ball flags. Found by trying every bit of the record 
 Players export of the same Player.bin (owner's file, 2026-11-27): each field equals the export for all 27 437
 players, each boolean at exactly one position, and no bit is shared with `binLayout.js` or another field. Motions
 accept only the values the data uses (`min`/`max`). With that export every `binLayout.js` field also matches 100 %,
-playing style included; the generated confidences were not re-run. Matching the export is not an in-game test.
+playing style included (one player has style 22, past the 0–21 list). The generator writes those checks to
+`PLAYER_FIELD_CHECKS` and `pes/formats/pes2021/playerEvidence.js` raises the «structural» fields to verified; form,
+injury resistance and reputation become verified because the EDIT (4ccEditor names) agrees on 17/17 players. The 5
+goalkeeper attributes stay read-only (label conflict between EJOGC and Rebuilt). Matching the export is not an
+in-game test.
 
 **Player.bin ↔ EDIT** (`pes/formats/pes2021/playerFieldSync.js`): a Player.bin edit of a player who is also in the
 EDIT writes the EDIT field too (`playerEditOps`), because the game reads the EDIT value of edited players. Checked
 on the 17 players of the owner's EDIT: stats, body, positions 0–8, COM styles and the 28 skills those players have
-agree; EDIT keeps weak foot, attitude and motions as value − 1; the EDIT skill bits follow the Player.bin order, so
+agree; EDIT keeps weak foot, attitude, form, injury resistance, reputation and motions as value − 1; the EDIT skill bits follow the Player.bin order, so
 the 13 skills none of them has are linked by position. Playing style uses another numbering in the EDIT (game menu
 order); 7 of 22 values are confirmed on those players. Not linked: positions pos9–pos12 (order of CB/LB/RB/GK
 unknown). Celebrations: the game takes them from the EDIT only (owner), so the player editor hides the Player.bin
