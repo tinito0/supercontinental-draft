@@ -57,7 +57,7 @@ export function pageFile(path) {
 
 // utils/constants.js DEFAULT_LOGO: the web's placeholder for a club without a crest.
 const DEFAULT_LOGO_PATH = '/logo.webp';
-const isDefaultLogo = value => {
+export const isDefaultLogo = value => {
   const raw = String(value ?? '').trim();
   if (!raw) return false;
   try { return new URL(raw, SITE_URL).pathname === DEFAULT_LOGO_PATH; } catch { return false; }
@@ -65,7 +65,8 @@ const isDefaultLogo = value => {
 
 /**
  * Datos de la vista previa de un club: el apodo, el estadio y de dónde es; si no hay ficha, el comienzo de su historia.
- * Imagen: la tarjeta del club (public/og/clubs/{id}.png, 1200x630, escudo y nombre), que WhatsApp muestra grande;
+ * Imagen: la tarjeta del club (og/clubs/{id}.png, 1200x630, escudo y nombre, scripts/clubCards.mjs la genera en cada
+ * build), que WhatsApp muestra grande;
  * si no hay, la foto del estadio; si tampoco, el escudo en tarjeta chica. Un club sin escudo propio (el logo genérico
  * de la web, como uno recién sumado) no lleva imagen: queda la de la liga, grande.
  * @param {{ id: string, teamName: string, logoUrl?: string }} team

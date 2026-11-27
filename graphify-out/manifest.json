@@ -6,9 +6,9 @@
     "semantic_hash": "d19519173a07fb61cf804a1984b537c5"
   },
   "app.jsx": {
-    "mtime": 1795725834.5145578,
-    "seen": 1795726372.8938868,
-    "ast_hash": "ee21f5c0079f65f2a9bf193906d3ae0a",
+    "mtime": 1795744065.1589253,
+    "seen": 1795744303.5280454,
+    "ast_hash": "ed1af4edf40b8444e28066b1231e7485",
     "semantic_hash": ""
   },
   "components/AdminModal.jsx": {
@@ -564,9 +564,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1793308654.0502994,
-    "seen": 1793845429.8027878,
-    "ast_hash": "5c6534e4a818460bf960e4c894451b6d",
+    "mtime": 1795744042.9706397,
+    "seen": 1795744303.5923986,
+    "ast_hash": "7d724830cd7975971dc1f42bc92e1985",
     "semantic_hash": ""
   },
   "pes/core/errors.js": {
@@ -1553,12 +1553,6 @@
     "ast_hash": "2536788d970579933788e80d8d839b9e",
     "semantic_hash": ""
   },
-  "public/Logos_equipos/red_bull_lusail.webp": {
-    "mtime": 1793308654.1767552,
-    "seen": 1793845429.8224602,
-    "ast_hash": "b4a5aae1abc8c990226e4ed91d733d76",
-    "semantic_hash": ""
-  },
   "public/Logos_equipos/sendai_ryu.webp": {
     "mtime": 1793308654.1809564,
     "seen": 1793845429.8224618,
@@ -1578,9 +1572,9 @@
     "semantic_hash": ""
   },
   "public/Logos_equipos/talleres.webp": {
-    "mtime": 1795742345.288478,
-    "seen": 1795743166.6382613,
-    "ast_hash": "4e7f6ea7c22bc80e45dccfd5405e313b",
+    "mtime": 1795743167.5467098,
+    "seen": 1795744303.729053,
+    "ast_hash": "6956a5400769b3215bb182802de31657",
     "semantic_hash": ""
   },
   "public/android-chrome-192x192.png": {
@@ -264924,9 +264918,9 @@
     "semantic_hash": ""
   },
   "hooks/useLeagueData.js": {
-    "mtime": 1795547098.0423076,
-    "seen": 1795548023.5316942,
-    "ast_hash": "f665b97548811b7fd415ef0d69c4fef4",
+    "mtime": 1795744131.9825852,
+    "seen": 1795744303.5872855,
+    "ast_hash": "a32aed72d804ae0c083214cce3cefd47",
     "semantic_hash": ""
   },
   "pes-collector/bridge/install-shortcut.ps1": {
@@ -264954,9 +264948,9 @@
     "semantic_hash": ""
   },
   "screens/league/LeagueHomeScreen.jsx": {
-    "mtime": 1795547098.1891403,
-    "seen": 1795548023.5540268,
-    "ast_hash": "270596fe499954a2ba9617ef04a1ef14",
+    "mtime": 1795744141.7097073,
+    "seen": 1795744303.6147003,
+    "ast_hash": "c40acb0424fd2d5064b61f8ed00bfc3a",
     "semantic_hash": ""
   },
   "screens/league/LeagueNotFoundScreen.jsx": {
@@ -264978,9 +264972,9 @@
     "semantic_hash": ""
   },
   "screens/league/LeagueTeamsScreen.jsx": {
-    "mtime": 1793308654.9062934,
-    "seen": 1793845429.808045,
-    "ast_hash": "8ca605c59dbe3c09a6e4e0aabbf6eb70",
+    "mtime": 1795744141.711239,
+    "seen": 1795744303.6160414,
+    "ast_hash": "6092198e330e23f5227bb2aedd5419f6",
     "semantic_hash": ""
   },
   "screens/league/LeagueTournamentScreen.jsx": {
@@ -265080,9 +265074,9 @@
     "semantic_hash": ""
   },
   "screens/league/LeagueClubScreen.jsx": {
-    "mtime": 1795556137.9554863,
-    "seen": 1795556806.7251816,
-    "ast_hash": "01a41b0b49a7a471d18f61bba3d813eb",
+    "mtime": 1795744048.8310976,
+    "seen": 1795744303.6145048,
+    "ast_hash": "ef25df37449d16078928c4b6387b3c3f",
     "semantic_hash": ""
   },
   "screens/league/LeagueHistoryScreen.jsx": {
@@ -265266,9 +265260,9 @@
     "semantic_hash": ""
   },
   "screens/league/LeagueLiveScreen.jsx": {
-    "mtime": 1795547098.2046301,
-    "seen": 1795548023.5540302,
-    "ast_hash": "e230394cdfb904213b91668f76a38639",
+    "mtime": 1795744058.8217332,
+    "seen": 1795744303.6147034,
+    "ast_hash": "7a4ce7fbc16f322657f230700cf57b7d",
     "semantic_hash": ""
   },
   "services/communityService.js": {
@@ -265986,9 +265980,9 @@
     "semantic_hash": ""
   },
   "scripts/build-share-pages.mjs": {
-    "mtime": 1793308654.9108803,
-    "seen": 1793845429.8082316,
-    "ast_hash": "31517dc1d664d37239101e0e7dfe1765",
+    "mtime": 1795744245.2427764,
+    "seen": 1795744303.6171374,
+    "ast_hash": "1069e616263409dce7bc8c621b9c049e",
     "semantic_hash": ""
   },
   "tests/sharePages.test.js": {
@@ -266010,75 +266004,9 @@
     "semantic_hash": ""
   },
   "utils/sharePages.js": {
-    "mtime": 1795028436.1776874,
-    "seen": 1795029751.5809639,
-    "ast_hash": "e089ce81f364d2827fbc29a076dcafd8",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/2Qn5j9a9ABW66iPyFL6ZfqwXBqG3.png": {
-    "mtime": 1793308654.7877383,
-    "seen": 1793845437.3995955,
-    "ast_hash": "ac8c32eeb93f0d18c24d5c4304583ada",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/6ehaz5xYI9eh3UPCUrR94ETmR0v1.png": {
-    "mtime": 1793308654.7924647,
-    "seen": 1793845437.399598,
-    "ast_hash": "8ea3ba1bf719337a174deee2b87af3bd",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/AEoJdYWnXSbMuuCff0byaIF8NbF3.png": {
-    "mtime": 1793308654.7965686,
-    "seen": 1793845437.3996,
-    "ast_hash": "a6a391929fe948878f4b53ffc635de81",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/CiOCGdzMbZejsxgwgjNpvZpuqDp1.png": {
-    "mtime": 1793308654.7986174,
-    "seen": 1793845437.3996027,
-    "ast_hash": "b56b50abfa15bafd466105731f75bcda",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/JeB3Bo9CuXNj8kCvz84zKW6eq752.png": {
-    "mtime": 1793308654.800249,
-    "seen": 1793845437.3996046,
-    "ast_hash": "9dbb91596f708030a9723ae349c396fb",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/SuSiU6bGEqd1c3EiR2SKPUcZaP03.png": {
-    "mtime": 1793308654.804364,
-    "seen": 1793845437.3996067,
-    "ast_hash": "3b5170757f4beb284a72a5b43e87d732",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/eo721XGuijW1wOdP2bCBjH49QPu1.png": {
-    "mtime": 1793308654.807428,
-    "seen": 1793845437.3996086,
-    "ast_hash": "5c6e406c354decc540703cf91fcb89b7",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/hIVVz4uZUYXnkkpqDjUnBGfRlVl2.png": {
-    "mtime": 1793308654.809011,
-    "seen": 1793845437.399611,
-    "ast_hash": "d5dad75b90f9649ca72df7dfe43ea266",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/sA3ovwKBUFchRKQzDXX7VoMyc2d2.png": {
-    "mtime": 1793308654.8132722,
-    "seen": 1793845437.3996131,
-    "ast_hash": "a003795d49f147d97e84903774dd3c87",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/u5PlKNAZmhfoTFiRoZjRJnq0Zmg1.png": {
-    "mtime": 1795028436.1699245,
-    "seen": 1795029759.1877646,
-    "ast_hash": "92d1d89c8a402a3582238306b307b06f",
-    "semantic_hash": ""
-  },
-  "public/og/clubs/yWKmcsXuHBRjHsqA8zDUTNzR5672.png": {
-    "mtime": 1793308654.8201742,
-    "seen": 1793845437.3996232,
-    "ast_hash": "e19bf445793d982b08820cb117fbaa97",
+    "mtime": 1795744228.6234286,
+    "seen": 1795744303.6689367,
+    "ast_hash": "53df250eac454333329ca023dc1b920d",
     "semantic_hash": ""
   },
   "public/og/liga.png": {
@@ -266490,9 +266418,9 @@
     "semantic_hash": ""
   },
   "components/league/club/ClubFranchise.jsx": {
-    "mtime": 1793308653.633492,
-    "seen": 1793845429.7984364,
-    "ast_hash": "281102d6d2359730d964f0c05a9e270d",
+    "mtime": 1795744048.8331566,
+    "seen": 1795744303.5542116,
+    "ast_hash": "8d278fa02a415c8cf3160e1694d8708f",
     "semantic_hash": ""
   },
   "tests/franchiseCards.test.jsx": {
@@ -267036,9 +266964,9 @@
     "semantic_hash": ""
   },
   "components/league/home/HomeCompact.jsx": {
-    "mtime": 1795547097.7784755,
-    "seen": 1795548023.5096524,
-    "ast_hash": "03fd71d8ccd44de7f9bdad52e91de4c2",
+    "mtime": 1795744365.4768484,
+    "seen": 1795744487.7273073,
+    "ast_hash": "9a4e7c74702ae6ced84911047c7475d8",
     "semantic_hash": ""
   },
   "components/league/match/LiveScore.jsx": {
@@ -267765,6 +267693,60 @@
     "mtime": 1795738318.4920185,
     "seen": 1795739076.1630344,
     "ast_hash": "15fad61780e7cbf160292f49a73ff9a2",
+    "semantic_hash": ""
+  },
+  "components/tournament/TournamentPublicState.jsx": {
+    "mtime": 1795744058.2381542,
+    "seen": 1795744303.5794442,
+    "ast_hash": "fa843a7bbd5c9748f2a9bde1ccadceab",
+    "semantic_hash": ""
+  },
+  "tests/league/clubErrorStates.test.jsx": {
+    "mtime": 1795744048.9540346,
+    "seen": 1795744303.6339347,
+    "ast_hash": "c03f5f573239befc8e54ee9b32212c13",
+    "semantic_hash": ""
+  },
+  "tests/league/homeErrorStates.test.jsx": {
+    "mtime": 1795744116.1533403,
+    "seen": 1795744303.6339378,
+    "ast_hash": "79c51600eec3ed03871bd2f277375dab",
+    "semantic_hash": ""
+  },
+  "tests/league/liveErrorStates.test.jsx": {
+    "mtime": 1795744058.9175727,
+    "seen": 1795744303.6339402,
+    "ast_hash": "05be7ad2935ea3ae772ae9d0063c604b",
+    "semantic_hash": ""
+  },
+  "tests/tournamentPublicState.test.jsx": {
+    "mtime": 1795744058.1913142,
+    "seen": 1795744303.6546347,
+    "ast_hash": "1f829cf29a6b852761698e85e8ea2eb2",
+    "semantic_hash": ""
+  },
+  "tests/useLeagueDataOffline.test.js": {
+    "mtime": 1795744113.315845,
+    "seen": 1795744303.6553931,
+    "ast_hash": "13a7b6bd8ce90b1a8c84820a0cb1295e",
+    "semantic_hash": ""
+  },
+  "anti-slop/audit-005-2026-11-26.md": {
+    "mtime": 1795743728.2238543,
+    "seen": 1795744303.7180903,
+    "ast_hash": "5bcefb6aeec360999944b2862b7c47f9",
+    "semantic_hash": ""
+  },
+  "scripts/clubCards.mjs": {
+    "mtime": 1795744343.8245208,
+    "seen": 1795744487.8017676,
+    "ast_hash": "ba02c9a1580b9def2b879f22a2332ad5",
+    "semantic_hash": ""
+  },
+  "tests/clubCards.test.js": {
+    "mtime": 1795744379.4474509,
+    "seen": 1795744691.5970802,
+    "ast_hash": "20fe91459415d2207c5983df554cf76e",
     "semantic_hash": ""
   }
 }

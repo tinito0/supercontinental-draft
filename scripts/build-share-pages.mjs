@@ -1,11 +1,13 @@
 // Después de `vite build`: un HTML por página de la web de la liga con su propia vista previa de links (título,
 // descripción e imagen), para WhatsApp, Telegram y X, que no ejecutan JavaScript. Las etiquetas salen de
-// utils/sharePages.js; firebase.json `cleanUrls` sirve dist/torneo.html en /torneo y dist/equipos/{id}.html en
+// utils/sharePages.js; vercel.json `cleanUrls` sirve dist/torneo.html en /torneo y dist/equipos/{id}.html en
 // /equipos/{id}. Los clubes se leen de Firestore por REST (lectura pública); si eso falla, se escriben solo las
-// páginas fijas y el build sigue. Las vistas previas de un club cambian recién con el próximo deploy.
+// páginas fijas y el build sigue. La tarjeta de cada club (scripts/clubCards.mjs) se genera acá con su nombre y su
+// escudo de ese momento: un cambio de escudo o de nombre se ve en las vistas previas desde el próximo deploy.
 import fs from 'node:fs';
 import path from 'node:path';
-import { STATIC_PAGES, clubPage, pageFile, renderSharePage } from '../utils/sharePages.js';
+import { STATIC_PAGES, clubPage, isDefaultLogo, pageFile, renderSharePage } from '../utils/sharePages.js';
+import { writeClubCard } from './clubCards.mjs';
 
 const DIST = path.resolve('dist');
 const PROJECT_ID = 'supercont-d62df';
@@ -66,14 +68,21 @@ async function clubPages() {
   const [teams, content] = await Promise.all([listCollection(`${base}/teams`, apiKey), listCollection(`${base}/league_content`, apiKey)]);
   const contentById = new Map(content.map(doc => [doc.id, doc]));
   // Los mismos clubes que muestra la web (hooks/useLeagueData.js useLeagueTeams): aprobados y con nombre.
-  return teams
-    .filter(team => team.approved !== false && String(team.teamName || '').trim())
-    .map(team => {
-      // Tarjetas 1200x630 por club (escudo y nombre) en public/og/clubs/, copiadas a dist/ por Vite. Un club nuevo sin
-      // tarjeta usa su escudo.
-      const card = `/og/clubs/${team.id}.png`;
-      return clubPage(team, contentById.get(`club-${team.id}`) || null, undefined, { card: fs.existsSync(path.join(DIST, card)) ? card : null });
-    });
+  const shown = teams.filter(team => team.approved !== false && String(team.teamName || '').trim());
+  const pages = [];
+  for (const team of shown) pages.push(clubPage(team, contentById.get(`club-${team.id}`) || null, undefined, { card: await clubCard(team) }));
+  return pages;
+}
+
+/** La tarjeta del club, o null (sin escudo propio, o el escudo no se pudo leer: queda la foto del estadio o el escudo). */
+async function clubCard(team) {
+  if (isDefaultLogo(team.logoUrl)) return null;
+  try {
+    return await writeClubCard(team, DIST);
+  } catch (error) {
+    console.warn(`[share-pages] Sin tarjeta para ${team.teamName} (${error.message}).`);
+    return null;
+  }
 }
 
 function writePage(html, page) {
