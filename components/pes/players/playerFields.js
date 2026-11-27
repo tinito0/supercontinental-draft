@@ -88,3 +88,31 @@ export function statTone(field, value, statColor) {
   }
   return statColor(value);
 }
+
+/** Skills by type, as CSV keys (PLAYER_SKILLS_MAP). Every skill of Player.bin is in exactly one group. */
+export const SKILL_GROUPS = [
+  ['Gambeta', ['ScissorsFeint', 'DoubleTouch', 'FlipFlap', 'MarseilleTurn', 'Sombrero', 'CrossOverTurn', 'CutBehindAndTurn', 'ScotchMove', 'StepOnSkillcontrol']],
+  ['Disparo', ['HeadingSpecial', 'LongRangeDrive', 'Chipshotcontrol', 'LongRangeShot', 'KnuckleShot', 'DippingShots', 'RisingShots', 'AcrobaticFinishing', 'FirstTimeShot']],
+  ['Pase', ['OneTouchPass', 'ThroughPassing', 'WeightedPass', 'PinpointCrossing', 'OutsideCurler', 'Rabona', 'NoLookPass', 'LowLoftedPass', 'HeelTrick']],
+  ['Defensa', ['ManMarking', 'TrackBack', 'Interception', 'AcrobaticClear']],
+  ['Arquero', ['GKLowPunt', 'GKHighPunt', 'GKLongThrow', 'GKPenaltySaver']],
+  ['Pelota parada y actitud', ['LongThrow', 'PenaltySpecialist', 'Gamesmanship', 'Captaincy', 'SuperSub', 'FightingSpirit']],
+];
+
+/** EDIT fields with no Player.bin counterpart, in Spanish, by group (the rest are edited through the Player.bin field). */
+export const EDIT_ONLY_GROUPS = [
+  ['Arquero', { gk: 'Actitud de arquero', catching: 'Atajada', clearing: 'Despeje', reflex: 'Reflejos', cover: 'Cobertura' }],
+  ['Posiciones sin identificar', { pos9: 'Posición 9', pos10: 'Posición 10', pos11: 'Posición 11', pos12: 'Posición 12' }],
+  ['Cuerpo', {
+    head_len: 'Cabeza: largo', head_wid: 'Cabeza: ancho', head_dep: 'Cabeza: profundidad',
+    neck_len: 'Cuello: largo', neck_size: 'Cuello: grosor', shldr_hi: 'Hombros: altura', shldr_wid: 'Hombros: ancho',
+    chest: 'Pecho', waist: 'Cintura', arm_size: 'Brazos: grosor', arm_len: 'Brazos: largo', thigh: 'Muslos', calf: 'Pantorrillas',
+    leg_len: 'Piernas: largo', skin_col: 'Color de piel', iris_col: 'Color de ojos',
+  }],
+  ['Equipamiento', {
+    boot_id: 'Botines (id)', glove_id: 'Guantes (id)', gloves: 'Usa guantes', gloves_col: 'Color de guantes', sleeve: 'Mangas',
+    inners: 'Camiseta interior', socks: 'Medias', undershorts: 'Calzas', untucked: 'Camiseta afuera', ankle_tape: 'Tobillera',
+    wrist_tape: 'Muñequeras', wrist_col_l: 'Muñequera izquierda', wrist_col_r: 'Muñequera derecha', spec_col: 'Anteojos: color', spec_style: 'Anteojos: modelo',
+  }],
+  ['Otros', { strong_hand: 'Mano hábil (EDIT)' }],
+];

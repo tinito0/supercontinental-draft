@@ -655,3 +655,292 @@ export const PLAYER_EXTRA_FIELDS = [
     "confidence": "verified"
   }
 ];
+
+// binLayout.js fields compared with the same export: equal rows per field.
+export const PLAYER_FIELD_CHECKS = {
+  "id": {
+    "column": "Id",
+    "equal": 27437,
+    "total": 27437
+  },
+  "name": {
+    "column": "Name",
+    "equal": 27437,
+    "total": 27437
+  },
+  "japName": {
+    "column": "JapName",
+    "equal": 27437,
+    "total": 27437
+  },
+  "shirt": {
+    "column": "Shirt",
+    "equal": 27437,
+    "total": 27437
+  },
+  "shirtNational": {
+    "column": "ShirtNational",
+    "equal": 27437,
+    "total": 27437
+  },
+  "country": {
+    "column": "Country",
+    "equal": 27437,
+    "total": 27437
+  },
+  "country2": {
+    "column": "Country2",
+    "equal": 27437,
+    "total": 27437
+  },
+  "height": {
+    "column": "Height",
+    "equal": 27437,
+    "total": 27437
+  },
+  "weight": {
+    "column": "Weight",
+    "equal": 27437,
+    "total": 27437
+  },
+  "age": {
+    "column": "Age",
+    "equal": 27437,
+    "total": 27437
+  },
+  "strongFootLeft": {
+    "column": "Foot",
+    "equal": 27437,
+    "total": 27437
+  },
+  "playingStyle": {
+    "column": "PlayingStyle",
+    "equal": 27436,
+    "total": 27437
+  },
+  "registeredPosition": {
+    "column": "POS",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posGK": {
+    "column": "GK",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posCB": {
+    "column": "CB",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posLB": {
+    "column": "LB",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posRB": {
+    "column": "RB",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posDMF": {
+    "column": "DMF",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posCMF": {
+    "column": "CMF",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posLMF": {
+    "column": "LMF",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posRMF": {
+    "column": "RMF",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posAMF": {
+    "column": "AMF",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posLWF": {
+    "column": "LWF",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posRWF": {
+    "column": "RWF",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posSS": {
+    "column": "SS",
+    "equal": 27437,
+    "total": 27437
+  },
+  "posCF": {
+    "column": "CF",
+    "equal": 27437,
+    "total": 27437
+  },
+  "offensiveAwareness": {
+    "column": "OffensiveAwareness",
+    "equal": 27437,
+    "total": 27437
+  },
+  "ballControl": {
+    "column": "BallControl",
+    "equal": 27437,
+    "total": 27437
+  },
+  "dribbling": {
+    "column": "Dribbling",
+    "equal": 27437,
+    "total": 27437
+  },
+  "tightPossession": {
+    "column": "TightPossession",
+    "equal": 27437,
+    "total": 27437
+  },
+  "lowPass": {
+    "column": "LowPass",
+    "equal": 27437,
+    "total": 27437
+  },
+  "loftedPass": {
+    "column": "LoftedPass",
+    "equal": 27437,
+    "total": 27437
+  },
+  "finishing": {
+    "column": "Finishing",
+    "equal": 27437,
+    "total": 27437
+  },
+  "heading": {
+    "column": "Heading",
+    "equal": 27437,
+    "total": 27437
+  },
+  "placeKicking": {
+    "column": "PlaceKicking",
+    "equal": 27437,
+    "total": 27437
+  },
+  "curl": {
+    "column": "Curl",
+    "equal": 27437,
+    "total": 27437
+  },
+  "speed": {
+    "column": "Speed",
+    "equal": 27437,
+    "total": 27437
+  },
+  "acceleration": {
+    "column": "Acceleration",
+    "equal": 27437,
+    "total": 27437
+  },
+  "kickingPower": {
+    "column": "KickingPower",
+    "equal": 27437,
+    "total": 27437
+  },
+  "jump": {
+    "column": "Jump",
+    "equal": 27437,
+    "total": 27437
+  },
+  "physicalContact": {
+    "column": "PhysicalContact",
+    "equal": 27437,
+    "total": 27437
+  },
+  "balance": {
+    "column": "Balance",
+    "equal": 27437,
+    "total": 27437
+  },
+  "stamina": {
+    "column": "Stamina",
+    "equal": 27437,
+    "total": 27437
+  },
+  "defensiveAwareness": {
+    "column": "DefensiveAwareness",
+    "equal": 27437,
+    "total": 27437
+  },
+  "ballWinning": {
+    "column": "BallWinning",
+    "equal": 27437,
+    "total": 27437
+  },
+  "aggression": {
+    "column": "Aggression",
+    "equal": 27437,
+    "total": 27437
+  },
+  "gkAwareness": {
+    "column": "GKAwareness",
+    "equal": 27437,
+    "total": 27437
+  },
+  "gkCatching": {
+    "column": "GKCatching",
+    "equal": 27437,
+    "total": 27437
+  },
+  "gkClearing": {
+    "column": "GKClearing",
+    "equal": 27437,
+    "total": 27437
+  },
+  "gkReflexes": {
+    "column": "GKReflexes",
+    "equal": 27437,
+    "total": 27437
+  },
+  "gkReach": {
+    "column": "GKReach",
+    "equal": 27437,
+    "total": 27437
+  },
+  "weakFootUsage": {
+    "column": "WeakFootUsage",
+    "equal": 27437,
+    "total": 27437
+  },
+  "weakFootAcc": {
+    "column": "WeakFootAcc",
+    "equal": 27437,
+    "total": 27437
+  },
+  "form": {
+    "column": "Form",
+    "equal": 27437,
+    "total": 27437
+  },
+  "injuryResistance": {
+    "column": "InjuryResistance",
+    "equal": 27437,
+    "total": 27437
+  },
+  "reputation": {
+    "column": "Reputation",
+    "equal": 27437,
+    "total": 27437
+  },
+  "playingAttitude": {
+    "column": "PlayingAttitude",
+    "equal": 27437,
+    "total": 27437
+  }
+};

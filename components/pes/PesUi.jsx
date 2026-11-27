@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useId, useRef } from 'react';
-import { ShieldCheck, AlertTriangle, Lock, Search, XCircle, CheckCircle2, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Lock, Search, XCircle, CheckCircle2, ChevronDown } from 'lucide-react';
 import { fieldRange } from '../../pes/core/fields.js';
 import { Alert } from '../ui/Alert.jsx';
 import { useStatusSwap } from '../../hooks/useStatusSwap.js';
@@ -167,7 +167,8 @@ export function Issue({ tone = 'error', children, as: Tag = 'p' }) {
 }
 
 export function ConfidenceBadge({ confidence }) {
-  if (confidence === 'verified') return <span title="Verificado con datos reales"><ShieldCheck className="w-3.5 h-3.5 text-success" aria-label="Verificado" /></span>;
+  // Verified is the normal case: only the exceptions carry a mark.
+  if (confidence === 'verified') return null;
   if (confidence === 'structural') return <span title="Evidencia estructural: revisá el resultado en el juego"><AlertTriangle className="w-3.5 h-3.5 text-warning" aria-label="Sin verificar del todo" /></span>;
   return <span title="Significado sin verificar: solo lectura"><Lock className="w-3.5 h-3.5 text-ink-3" aria-label="Solo lectura" /></span>;
 }

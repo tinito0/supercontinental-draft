@@ -50,6 +50,7 @@ export const BIN_TO_EDIT = {
   posCF: same('pos0'), posSS: same('pos1'), posLWF: same('pos2'), posRWF: same('pos3'), posAMF: same('pos4'),
   posDMF: same('pos5'), posCMF: same('pos6'), posLMF: same('pos7'), posRMF: same('pos8'),
   weakFootUsage: minusOne('weak_use'), weakFootAcc: minusOne('weak_acc'), playingAttitude: minusOne('play_attit'),
+  form: minusOne('form'), injuryResistance: minusOne('injury'), reputation: minusOne('star'),
   dribblingArmMovement: minusOne('mo_armd'), runningArmMovement: minusOne('mo_armr'), dribblingHunching: minusOne('mo_hunchd'),
   runningHunching: minusOne('mo_hunchr'), cornerKicks: minusOne('mo_ck'), freeKicks: minusOne('mo_fk'),
   penaltyKick: minusOne('mo_pk'), dribbleMotion: minusOne('mo_drib'),
