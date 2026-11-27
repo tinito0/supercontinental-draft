@@ -25,7 +25,13 @@ export const LEAVE_MS = 300;
  * Milisegundos que le quedan en pantalla (ver timedRemainingMs); re-renderiza hasta que vence. Lo que llega con la
  * fuente abierta se cuenta desde que llegó, no por la hora del servidor (utils/overlayPopup.js nextArrival).
  */
-export function useRemaining(item, remainingMs = timedRemainingMs, loaded = true) {
+/** Next wake-up: when the exit starts, then when it ends; at least once a second meanwhile. */
+export function wakeBeforeLeave(remaining) {
+  const untilLeave = remaining - LEAVE_MS;
+  return untilLeave > 0 ? Math.min(untilLeave, 1000) : remaining;
+}
+
+export function useRemaining(item, remainingMs = timedRemainingMs, loaded = true, nextWakeMs = wakeBeforeLeave) {
   const [now, setNow] = useState(() => Date.now());
   const key = item ? String(shownKey(item)) : null;
   const [arrival, setArrival] = useState({ key: null, at: null, seen: false });
@@ -36,11 +42,9 @@ export function useRemaining(item, remainingMs = timedRemainingMs, loaded = true
   useEffect(() => {
     if (!remaining) return undefined;
     // Despierta justo al empezar la salida y otra vez al terminar, además de cada segundo.
-    const untilLeave = remaining - LEAVE_MS;
-    const delay = untilLeave > 0 ? Math.min(untilLeave, 1000) : remaining;
-    const timer = setTimeout(() => setNow(Date.now()), delay);
+    const timer = setTimeout(() => setNow(Date.now()), nextWakeMs(remaining));
     return () => clearTimeout(timer);
-  }, [remaining, now]);
+  }, [remaining, now, nextWakeMs]);
   return remaining;
 }
 

@@ -1,5 +1,5 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
-import { introStep, introTeams, lineupIntroRemainingMs } from '../../utils/lineupIntro.js';
+import React, { memo, useCallback, useMemo, useState } from 'react';
+import { introStep, introTeams, introWakeMs, lineupIntroRemainingMs } from '../../utils/lineupIntro.js';
 import { BroadcastBadge } from './BroadcastFrame.jsx';
 import { BroadcastCrest } from './BroadcastCrest.jsx';
 import { LEAVE_MS, shownKey, useRemaining } from './OverlayPopup.jsx';
@@ -82,18 +82,11 @@ function XiCard({ team, logo, isLeaving }) {
  *   loaded: false mientras la fuente espera el doc del overlay (una animación que ya pasó no vuelve a salir)
  */
 export const LineupIntro = memo(function LineupIntro({ intro, loaded = true, logoOf }) {
-  const remaining = useRemaining(intro, lineupIntroRemainingMs, loaded);
+  // El reloj despierta al empezar y al terminar la salida de cada equipo, no solo al final de toda la animación.
+  const nextWakeMs = useCallback(left => introWakeMs(intro, left, LEAVE_MS), [intro]);
+  const remaining = useRemaining(intro, lineupIntroRemainingMs, loaded, nextWakeMs);
   const teams = useMemo(() => introTeams(intro), [intro]);
   const step = introStep(intro, remaining);
-  // useRemaining despierta cada segundo; el cambio de equipo y su salida necesitan su momento exacto.
-  const [, setTick] = useState(0);
-  const teamLeft = step?.remainingMs ?? 0;
-  useEffect(() => {
-    if (!teamLeft) return undefined;
-    const delay = teamLeft > LEAVE_MS ? teamLeft - LEAVE_MS : teamLeft;
-    const timer = setTimeout(() => setTick(n => n + 1), delay + 10);
-    return () => clearTimeout(timer);
-  }, [teamLeft]);
   if (!step || !teams[step.index]) return null;
   const team = teams[step.index];
   return (

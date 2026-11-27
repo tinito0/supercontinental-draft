@@ -1,6 +1,6 @@
 // Once inicial animado de OBS (utils/lineupIntro.js). Synthetic data: the Arsenal plan of the real save decoded
 // (tests/pesCollector/formations.test.js), not a recorded match.
-import { formationLabel, formationLines, introStep, introTeams, lineupIntroRemainingMs, pitchLayout, XI_PITCH } from '../utils/lineupIntro.js';
+import { formationLabel, formationLines, introStep, introTeams, introWakeMs, lineupIntroRemainingMs, pitchLayout, XI_PITCH } from '../utils/lineupIntro.js';
 
 // Arsenal variant 0: roles and (depth, lateral) per formation slot.
 const ROLES = [0, 1, 1, 3, 2, 4, 5, 10, 9, 8, 12];
@@ -91,5 +91,15 @@ describe('timing', () => {
     expect(introStep(doc, 9_000)).toEqual({ index: 1, remainingMs: 9_000 });
     expect(introStep(doc, 1_000)).toEqual({ index: 1, remainingMs: 1_000 });
     expect(introStep(doc, 0)).toBeNull();
+  });
+
+  it('wakes the clock right when each team starts leaving and when it is gone, not only once a second', () => {
+    // 18 s in total, 9 s per team, 300 ms exit: the home team starts leaving with 9 300 ms left.
+    expect(introWakeMs(doc, 18_000, 300)).toBe(1_000);
+    expect(introWakeMs(doc, 9_800, 300)).toBe(500);
+    expect(introStep(doc, 9_300)).toEqual({ index: 0, remainingMs: 300 });
+    expect(introWakeMs(doc, 9_300, 300)).toBe(300);
+    expect(introWakeMs(doc, 500, 300)).toBe(200);
+    expect(introWakeMs(doc, 200, 300)).toBe(200);
   });
 });

@@ -148,6 +148,19 @@ export function lineupIntroRemainingMs(intro, nowMs) {
 }
 
 /**
+ * Cuándo tiene que volver a mirar el reloj la animación: al empezar la salida del equipo en pantalla (leaveMs antes
+ * del cambio) y al terminarla, y al menos una vez por segundo. Sin esto el reloj avanzaba de a un segundo y la
+ * salida de 300 ms casi nunca caía en un tick: el equipo se cortaba sin swipe (2026-11-26).
+ * @returns {number} ms hasta el próximo tick
+ */
+export function introWakeMs(intro, remainingMs, leaveMs) {
+  const step = introStep(intro, remainingMs);
+  if (!step) return remainingMs;
+  const untilLeave = step.remainingMs - leaveMs;
+  return untilLeave > 0 ? Math.min(untilLeave, 1000) : step.remainingMs;
+}
+
+/**
  * Qué equipo va en pantalla según lo que le queda a la animación: su índice y cuánto le queda a ese equipo.
  * @returns {null | { index: number, remainingMs: number }}
  */
