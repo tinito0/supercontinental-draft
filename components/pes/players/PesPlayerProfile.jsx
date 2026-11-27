@@ -4,7 +4,7 @@ import { FieldInput, ConfidenceBadge, ModifiedDot } from '../PesUi.jsx';
 import { fieldRange } from '../../../pes/core/fields.js';
 import { getStatAndOvrColorClass, getPosColor, getPosColorClass, getFlagUrl } from '../../../utils/helpers.js';
 import {
-  POSITION_FIELDS, APTITUDE_LABEL, POSITION_OPTIONS, IDENTITY_FIELDS, FIELD_LABELS,
+  POSITION_FIELDS, APTITUDE_LABEL, POSITION_OPTIONS, PLAYING_STYLE_OPTIONS, IDENTITY_FIELDS, FIELD_LABELS,
   positionName, statGroups, statLabel, statTone,
 } from './playerFields.js';
 
@@ -93,6 +93,7 @@ export function IdentityForm({ fieldOf, get, canEdit, isModified, commit, countr
     country2: [{ id: 0, label: 'Ninguna' }, ...countryOptions],
     strongFootLeft: [{ id: 0, label: 'Derecho' }, { id: 1, label: 'Izquierdo' }],
     registeredPosition: POSITION_OPTIONS,
+    playingStyle: PLAYING_STYLE_OPTIONS,
   };
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

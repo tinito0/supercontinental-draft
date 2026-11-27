@@ -6,6 +6,7 @@ export { loadBinDatabase, serializeBinDatabase, BIN_TABLES, PASSTHROUGH_FILES } 
 export { loadEditDatabase, EditDatabase } from './formats/pes2021/editDatabase.js';
 export { EDIT_PLAYER_FIELDS, EDIT_TEAM_FIELDS, EDIT_LOCKED_FIELDS, to6bit, from6bit } from './formats/pes2021/editLayout.js';
 export { TEAM_FIELDS, PLAYER_FIELDS, ASSIGNMENT_FIELDS } from './formats/pes2021/binLayout.js';
+export { PLAYER_EXTRA_FIELDS } from './formats/pes2021/playerExtraLayout.js';
 export { KitWorkspace, kitCategory } from './kits/kitWorkspace.js';
 export { parseKitConfig, serializeKitConfig, kitPreviewModel, KIT_EDITABLE_KEYS, COLOR_KEYS, TEXTURE_KEYS } from './kits/kitConfig.js';
 export { FONT_SLOTS, FONT_WIDTHS, fontLibrary, renderFontSheet, encodeFontSheet, fontFileName, sheetSize, glyphCell } from './kits/kitFonts.js';

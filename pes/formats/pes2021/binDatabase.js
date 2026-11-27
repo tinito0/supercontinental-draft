@@ -11,6 +11,7 @@ import {
   TEAM_RECORD_SIZE, PLAYER_RECORD_SIZE, ASSIGNMENT_RECORD_SIZE,
   TEAM_FIELDS, PLAYER_FIELDS, ASSIGNMENT_FIELDS,
 } from './binLayout.js';
+import { PLAYER_EXTRA_FIELDS } from './playerExtraLayout.js';
 import { COACH_RECORD_SIZE, COACH_FIELDS } from './coachLayout.js';
 import { TACTICS_RECORD_SIZE, TACTICS_FIELDS, TACTICS_FORMATION_RECORD_SIZE, TACTICS_FORMATION_FIELDS, formationRowKey } from './tacticsLayout.js';
 
@@ -19,7 +20,7 @@ export const FORMAT_ID = 'pes2021-pesdb';
 /** Table definitions for the supported files. */
 export const BIN_TABLES = {
   team: { file: 'Team.bin', recordSize: TEAM_RECORD_SIZE, fields: TEAM_FIELDS },
-  player: { file: 'Player.bin', recordSize: PLAYER_RECORD_SIZE, fields: PLAYER_FIELDS },
+  player: { file: 'Player.bin', recordSize: PLAYER_RECORD_SIZE, fields: [...PLAYER_FIELDS, ...PLAYER_EXTRA_FIELDS] },
   assignment: { file: 'PlayerAssignment.bin', recordSize: ASSIGNMENT_RECORD_SIZE, fields: ASSIGNMENT_FIELDS },
   coach: { file: 'Coach.bin', recordSize: COACH_RECORD_SIZE, fields: COACH_FIELDS },
   tactics: { file: 'Tactics.bin', recordSize: TACTICS_RECORD_SIZE, fields: TACTICS_FIELDS },

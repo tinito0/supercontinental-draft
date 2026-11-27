@@ -4,10 +4,12 @@ import { Card, Group, FieldInput } from './PesUi.jsx';
 import { EmptyState } from '../ui/EmptyState.jsx';
 import { EDIT_PLAYER_FIELDS, EDIT_LOCKED_FIELDS } from '../../pes/formats/pes2021/editLayout.js';
 import { opKey } from './opKeys.js';
+import { playerEditOps } from '../../pes/formats/pes2021/playerFieldSync.js';
 import { useCountries } from './useCountries.js';
 import { PesPlayerList } from './players/PesPlayerList.jsx';
 import { ProfileHeader, IdentityForm, PositionMap, StatGroups } from './players/PesPlayerProfile.jsx';
-import { POSITION_FIELDS, IDENTITY_FIELDS, FIELD_LABELS, positionName, statGroups, statLabel } from './players/playerFields.js';
+import { POSITION_FIELDS, IDENTITY_FIELDS, FIELD_LABELS, TRAIT_GROUPS, fieldsInGroup, positionName, statGroups, statLabel } from './players/playerFields.js';
+import { TraitToggles, MotionForm } from './players/PlayerTraits.jsx';
 import { YouthDraftToggle } from './players/YouthDraftToggle.jsx';
 import { useYouthDraft } from '../../hooks/useYouthDraft.js';
 import { scrollBehavior } from '../../utils/scrollBehavior.js';
@@ -88,7 +90,7 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
           // Keyed by player: the profile fades in, so picking another player reads as a new record, not an edit.
           <div key={playerId} className="animate-in fade-in space-y-4 lg:space-y-6">
             {inBin && (
-              <BinPlayer table={table} playerId={playerId} fieldOf={fieldOf} canEdit={canEdit} modified={modified} onApply={onApply}
+              <BinPlayer table={table} playerId={playerId} fieldOf={fieldOf} canEdit={canEdit} modified={modified} onApply={onApply} inEdit={inEdit}
                 appPlayer={appById.get(playerId)} countries={countries} countryName={countryName}
                 youthDraft={canMarkProspects ? youthDraft : undefined} />
             )}
@@ -100,20 +102,26 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
   );
 }
 
-function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, appPlayer, countries, countryName, youthDraft }) {
+function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, inEdit, appPlayer, countries, countryName, youthDraft }) {
   const get = name => table.get(playerId, name);
   const isModified = field => modified.has(opKey({ type: 'bin.player.set', target: { playerId }, field }));
-  const commit = (field, value) => onApply([{ type: 'bin.player.set', target: { playerId }, field, value }]);
+  // A player that is also in the EDIT gets the same change there: the game reads the EDIT value of edited players.
+  const commit = (field, value) => onApply(playerEditOps(playerId, field, value, { inEdit }));
   const goalkeeper = positionName(get('registeredPosition')) === 'PT';
   const shared = { fieldOf, get, canEdit, isModified, commit };
 
   const used = new Set(['id', ...IDENTITY_FIELDS, ...POSITION_FIELDS.map(p => p.field), ...statGroups(table.fields, goalkeeper).flatMap(([, l]) => l.map(f => f.name))]);
-  const others = table.fields.filter(f => !used.has(f.name));
+  const others = table.fields.filter(f => !used.has(f.name) && !TRAIT_GROUPS.includes(f.group));
+  const skills = fieldsInGroup(table.fields, 'skill');
+  const comStyles = fieldsInGroup(table.fields, 'comStyle');
+  const motions = fieldsInGroup(table.fields, 'motion');
+  const count = list => list.filter(f => get(f.name)).length;
 
   return (
     <>
       <Card>
         <ProfileHeader playerId={playerId} get={get} appPlayer={appPlayer} countryName={countryName} />
+        {inEdit && <p className="mt-4 text-xs text-ink-2 max-w-[65ch]">También está en el EDIT: cada cambio se guarda en Player.bin y en el EDIT, salvo el festejo y las posiciones de defensa y arquero, que van solo a Player.bin.</p>}
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_17rem]">
           <Group title="Identidad">
             <IdentityForm {...shared} countries={countries} />
@@ -129,6 +137,24 @@ function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, appPl
       <Card title="Atributos" description={goalkeeper ? 'Ficha de arquero. Los atributos de arquero están sin verificar en Player.bin: se muestran, no se editan.' : 'Valores 40–99 como en el juego. Enter o salir del campo para aplicar.'}>
         <StatGroups {...shared} fields={table.fields} goalkeeper={goalkeeper} />
       </Card>
+
+      {skills.length > 0 && (
+        <Card title="Habilidades" description={`Tiene ${count(skills)} de ${skills.length}. Tocá una para agregarla o sacarla.`}>
+          <TraitToggles {...shared} fields={skills} label="Habilidades" />
+        </Card>
+      )}
+
+      {comStyles.length > 0 && (
+        <Card title="Estilos de juego COM" description={`Tiene ${count(comStyles)}. Cambian cómo juega cuando lo maneja la máquina.`}>
+          <TraitToggles {...shared} fields={comStyles} label="Estilos de juego COM" />
+        </Card>
+      )}
+
+      {motions.length > 0 && (
+        <Card title="Movimientos y festejo" description="Tipos que usa el juego. El festejo va por número.">
+          <MotionForm {...shared} fields={motions} />
+        </Card>
+      )}
 
       {others.length > 0 && (
         <Card title="Otros datos" description="Campos con el candado tienen significado sin verificar: solo lectura.">
