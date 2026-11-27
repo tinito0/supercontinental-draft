@@ -71,7 +71,7 @@ export function PesYouthDraftPanel({ pes, appPlayers = [], allTeams }) {
       message: publishedCount
         ? 'Reemplaza el grupo publicado. Las promesas que saques vuelven al mercado común.'
         : 'Desde ahora el mercado las muestra con estas fichas y no se pueden fichar fuera del draft.',
-      details: outOfRange.map(row => `${row.name}: media ${row.rating}, fuera de ${YOUTH_DRAFT_EDITED_MIN_OVR}–${YOUTH_DRAFT_EDITED_MAX_OVR}`),
+      details: outOfRange.map(row => `${row.name}: media ${row.rating}, por debajo de ${YOUTH_DRAFT_EDITED_MIN_OVR}`),
       confirmLabel: 'Publicar al draft',
       tone: 'primary',
     });
@@ -90,7 +90,7 @@ export function PesYouthDraftPanel({ pes, appPlayers = [], allTeams }) {
   if (!rows.length && !publishedCount) {
     return (
       <EmptyState icon={Sprout} title="Ninguna promesa marcada"
-        description="Abrí la ficha de cada jugador en «Jugadores» y tocá «Marcar como promesa». Tienen que tener 17 a 21 años y media de 50 a 60 en el juego original." />
+        description="Abrí la ficha de cada jugador en «Jugadores» y tocá «Marcar como promesa». Tienen que tener 17 a 21 años y media de 50 o más en el juego original." />
     );
   }
 
@@ -124,7 +124,7 @@ export function PesYouthDraftPanel({ pes, appPlayers = [], allTeams }) {
                 <span className="block font-semibold text-ink truncate">{row.name}</span>
                 <span className={`block text-xs ${row.problem ? 'text-danger-soft' : 'text-ink-3'}`}>
                   {row.problem || <>id <span className="num">{row.id}</span> · <span className="num">{row.age}</span> años · media original <span className="num">{row.originalOvr}</span>
-                    {!isEditedOvrInRange(row.rating) && <> · fuera de {YOUTH_DRAFT_EDITED_MIN_OVR}–{YOUTH_DRAFT_EDITED_MAX_OVR}</>}</>}
+                    {!isEditedOvrInRange(row.rating) && <> · por debajo de {YOUTH_DRAFT_EDITED_MIN_OVR}</>}</>}
                 </span>
               </span>
               {row.rating != null && (

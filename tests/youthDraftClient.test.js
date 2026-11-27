@@ -14,13 +14,13 @@ const sheet = (overrides = {}) => {
 const getter = values => field => values[field];
 
 describe('candidateCheck', () => {
-  it('accepts a 17–21 year old rated 50–60 in the original game', () => {
+  it('accepts a 17–21 year old rated 50 or more in the original game', () => {
     expect(candidateCheck({ Age: 19, OVR_CALCULADO: 56 })).toEqual({ eligible: true, reason: '' });
   });
 
   it('judges a published prospect by its original rating, not the edited one', () => {
     expect(candidateCheck({ Age: 19, OVR_CALCULADO: 85, OVR_ORIGINAL: 56 }).eligible).toBe(true);
-    expect(candidateCheck({ Age: 19, OVR_CALCULADO: 85 }).eligible).toBe(false);
+    expect(candidateCheck({ Age: 19, OVR_CALCULADO: 85, OVR_ORIGINAL: 45 }).eligible).toBe(false);
   });
 
   it('says why a player is refused', () => {
@@ -44,8 +44,8 @@ describe('editedRating and poolEntryFromSheet', () => {
     expect(entry.stats).not.toHaveProperty('RegisteredPosition');
   });
 
-  it('marks the 84–86 band', () => {
-    expect([83, 84, 86, 87].map(isEditedOvrInRange)).toEqual([false, true, true, false]);
+  it('marks 84 to 99 as in range', () => {
+    expect([83, 84, 86, 87, 99].map(isEditedOvrInRange)).toEqual([false, true, true, true, true]);
   });
 });
 

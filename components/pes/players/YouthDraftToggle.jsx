@@ -34,7 +34,7 @@ export function YouthDraftToggle({ playerId, get, appPlayer, draft }) {
     ? 'No se pudo calcular la media de esta ficha.'
     : isEditedOvrInRange(rating)
       ? `Media con la ficha editada: ${rating}.`
-      : `Media con la ficha editada: ${rating}. El reglamento pide ${YOUTH_DRAFT_EDITED_MIN_OVR}–${YOUTH_DRAFT_EDITED_MAX_OVR}.`;
+      : `Media con la ficha editada: ${rating}. El reglamento pide ${YOUTH_DRAFT_EDITED_MIN_OVR} o más.`;
 
   return (
     <Card title="Promesa del draft"
