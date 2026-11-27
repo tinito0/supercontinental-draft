@@ -21,28 +21,14 @@ export const DEFAULT_OBS_SCENE_NAMES = {
 };
 
 // Cameras: «Jugador 1» is the home side of the game match, «Jugador 2» the away side.
-export const GOAL_CAMERA_DELAY_MS = 5_000;
-export const GOAL_CAMERA_MS = 8_000;
 export const CAMERA_TOUR_STEP_MS = 12_000;
-// Previa and Final go through the cameras once, then stay on the commentator.
+// Final goes through the cameras once, then stays on the commentator. The Previa tour and the scorer's camera after
+// a goal were removed on 2026-11-26 (the user switches those by hand).
 const CAMERA_TOUR = ['jugador1', 'jugador2', 'relator'];
-const TOUR_SCENES = new Set(['previa', 'final']);
-
-/** Which side scored between two scores of the same match: 'home', 'away' or null (no goal, a reset or both). */
-export function goalSide(previous, next) {
-  if (!previous || !next) return null;
-  const home = Number(next.home) - Number(previous.home);
-  const away = Number(next.away) - Number(previous.away);
-  if (home === 1 && away === 0) return 'home';
-  if (away === 1 && home === 0) return 'away';
-  return null;
-}
-
-/** The camera to show for a goal by that side. */
-export const goalCamera = side => (side === 'home' ? 'jugador1' : side === 'away' ? 'jugador2' : null);
+const TOUR_SCENES = new Set(['final']);
 
 /**
- * The camera of the Previa/Final tour at `elapsed` ms since the scene went on air, or null for scenes without one.
+ * The camera of the Final tour at `elapsed` ms since the scene went on air, or null for scenes without one.
  * One pass, 12 s each, ending on the commentator.
  */
 export function tourCamera(scene, elapsed) {

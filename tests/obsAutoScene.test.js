@@ -1,6 +1,6 @@
 // Synthetic overlay docs: the automatic move to the table after a final, and the OBS scene each overlay scene maps to.
 import { AUTO_TABLE_AFTER_MS } from '../supabase/functions/_shared/overlayControl.js';
-import { autoTableActive, BETWEEN_MATCHES_POPUP_SECONDS, CAMERA_TOUR_STEP_MS, effectiveOverlay, goalCamera, goalSide, obsSceneName, tourCamera } from '../utils/obsAutoScene.js';
+import { autoTableActive, BETWEEN_MATCHES_POPUP_SECONDS, CAMERA_TOUR_STEP_MS, effectiveOverlay, obsSceneName, tourCamera } from '../utils/obsAutoScene.js';
 import { resolveObsRequest } from '../utils/obsScenes.js';
 
 const at = 1_000_000;
@@ -40,22 +40,14 @@ it('reads the control source from the overlay URL', () => {
 });
 
 describe('cameras', () => {
-  it('tells which side scored, and ignores resets and double changes', () => {
-    expect(goalSide({ home: 0, away: 0 }, { home: 1, away: 0 })).toBe('home');
-    expect(goalSide({ home: 1, away: 0 }, { home: 1, away: 1 })).toBe('away');
-    expect(goalSide({ home: 2, away: 1 }, { home: 0, away: 0 })).toBeNull();
-    expect(goalSide({ home: 0, away: 0 }, { home: 1, away: 1 })).toBeNull();
-    expect(goalSide(null, { home: 1, away: 0 })).toBeNull();
-    expect(goalCamera('home')).toBe('jugador1');
-    expect(goalCamera('away')).toBe('jugador2');
-  });
-
-  it('tours Previa and Final once, 12 s per camera, and stays on the commentator', () => {
-    expect(tourCamera('previa', 0)).toBe('jugador1');
+  it('tours Final once, 12 s per camera, and stays on the commentator; Previa and live keep their own scene', () => {
+    expect(tourCamera('final', 0)).toBe('jugador1');
     expect(tourCamera('final', CAMERA_TOUR_STEP_MS)).toBe('jugador2');
     expect(tourCamera('final', CAMERA_TOUR_STEP_MS * 2)).toBe('relator');
-    expect(tourCamera('previa', CAMERA_TOUR_STEP_MS * 20)).toBe('relator');
+    expect(tourCamera('final', CAMERA_TOUR_STEP_MS * 20)).toBe('relator');
+    expect(tourCamera('previa', 0)).toBeNull();
     expect(tourCamera('live', 0)).toBeNull();
+    expect(obsSceneName('previa')).toBe('SCL Partido');
     expect(obsSceneName('relator', { relator: 'Cam Relator' })).toBe('Cam Relator');
     expect(obsSceneName('jugador1')).toBe('SCL Jugador 1');
   });

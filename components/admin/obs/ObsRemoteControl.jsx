@@ -14,9 +14,9 @@ const SCENE_FIELDS = [
   ['bracket', 'Copa de Oro', ''],
   ['repechaje', 'Copa de Plata', ''],
   ['goleadores', 'Goleadores', ''],
-  ['jugador1', 'Cámara Jugador 1', 'El local del partido: 5 s después de su gol, 8 s'],
+  ['jugador1', 'Cámara Jugador 1', 'El local del partido'],
   ['jugador2', 'Cámara Jugador 2', 'El visitante'],
-  ['relator', 'Cámara Relator', 'Previa y Final: Jugador 1, Jugador 2 y queda el relator (12 s cada una)'],
+  ['relator', 'Cámara Relator', 'En el Final: Jugador 1, Jugador 2 y queda el relator (12 s cada una)'],
 ];
 
 const STEPS = [

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { BroadcastStage } from '../components/broadcast/BroadcastStage.jsx';
 import { BroadcastOverlayLive } from '../components/broadcast/BroadcastOverlayLive.jsx';
 import { OverlayErrorBoundary } from '../components/broadcast/OverlayErrorBoundary.jsx';
-import { useBroadcastOverlay, useLeagueTeams, useLiveMatch, useTournament } from '../hooks/useLeagueData.js';
+import { useBroadcastOverlay, useLeagueTeams, useTournament } from '../hooks/useLeagueData.js';
 import { useNow } from '../hooks/useNow.js';
 import { useObsSceneControl } from '../hooks/useObsSceneControl.js';
 import { useObsDirector } from '../hooks/useObsDirector.js';
@@ -18,12 +18,11 @@ const CONTROL_STATUS = {
 };
 
 /**
- * ?control=obs: draws nothing on air; switches the real OBS scene with the overlay, plus the cameras: the Previa and
- * Final tour and the scorer's camera after a goal (hooks/useObsDirector.js).
+ * ?control=obs: draws nothing on air; switches the real OBS scene with the overlay, plus the Final camera tour
+ * (hooks/useObsDirector.js).
  */
 function ObsSceneControl({ overlay }) {
-  const { match } = useLiveMatch(overlay?.liveMatchKey || null);
-  const shot = useObsDirector(overlay?.scene || 'live', overlay?.liveMatchKey ? match : null);
+  const shot = useObsDirector(overlay?.scene || 'live');
   const status = useObsSceneControl(obsSceneName(shot, overlay?.obsScenes));
   // Text only outside OBS or while the permission is missing, so the source stays empty on air.
   if (status === 'ready' || status === 'switched') return null;
