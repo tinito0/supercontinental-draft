@@ -1,6 +1,6 @@
 // Field codec for fixed-size records. A field descriptor is one of:
 //   { kind: 'uint',   offset, size: 1|2|4, signed? }
-//   { kind: 'bits',   offset, shift, bits, addend }   value = raw + addend
+//   { kind: 'bits',   offset, shift, bits, addend, min?, max? }   value = raw + addend; min/max narrow the range
 //   { kind: 'bool',   offset, bit }
 //   { kind: 'string', offset, length }               UTF-8, NUL-terminated, NUL-padded
 // Writes touch only the bits that belong to the field, so every other byte of the
@@ -16,7 +16,7 @@ export function fieldRange(f) {
       if (f.signed) return { min: -(2 ** (f.size * 8 - 1)), max: 2 ** (f.size * 8 - 1) - 1 };
       return { min: 0, max: 2 ** (f.size * 8) - 1 };
     case 'bits':
-      return { min: f.addend, max: f.addend + 2 ** f.bits - 1 };
+      return { min: Math.max(f.addend, f.min ?? f.addend), max: Math.min(f.addend + 2 ** f.bits - 1, f.max ?? Infinity) };
     case 'bool':
       return { min: 0, max: 1 };
     case 'string':

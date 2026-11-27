@@ -65,6 +65,16 @@ export const PLAYER_SKILLS_MAP = {
   'FightingSpirit': 'Espíritu de lucha'
 };
 
+// PlayingStyle number of Player.bin and of the EJOGC export → name. Same map as MAPEO_PLAYING_STYLE in
+// scripts/main.py, which writes the names into jugadores.json; tests/playingStyleMap.test.js fails if they drift.
+export const PLAYING_STYLE_BY_ID = {
+  0: 'Ninguno', 1: 'Cazagoles', 2: 'Señuelo', 3: 'Hombre de Área', 4: 'Extremo Prolífico', 5: 'El Diez Clásico',
+  6: 'Jugador de Huecos', 7: 'Omnipresente', 8: 'El Protector', 9: 'El Destructor', 10: 'Atacante Extra',
+  11: 'Lateral Ofensivo', 12: 'Lateral Defensivo', 13: 'Referente', 14: 'Creador de Jugadas', 15: 'Creación',
+  16: 'Portero Ofensivo', 17: 'Portero Defensivo', 18: 'Extremo Móvil', 19: 'Especialista en Centros',
+  20: 'Organizador', 21: 'Lateral Finalizador',
+};
+
 // COM playing styles: the game sets them on the player's card, but they do not change how he plays when the user
 // controls the team (owner, 2026-10-30), so the market filters and the glossary leave them out. The player card still
 // lists them.

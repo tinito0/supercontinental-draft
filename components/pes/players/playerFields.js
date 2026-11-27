@@ -1,7 +1,7 @@
 // Maps Player.bin fields (pes/formats/pes2021/binLayout.js, camelCase EJOGC names) to the app's football
 // vocabulary: Spanish stat names (STAT_NAMES_MAP uses the EJOGC CSV column names, PascalCase), the
 // position map of PlayerModal and the stat groups of the player card.
-import { STAT_NAMES_MAP, STATS_JUGADOR_CAMPO, STATS_PORTERO, MAPEO_POS_ID } from '../../../utils/constants.js';
+import { STAT_NAMES_MAP, STATS_JUGADOR_CAMPO, STATS_PORTERO, MAPEO_POS_ID, PLAYING_STYLE_BY_ID, PLAYER_SKILLS_MAP } from '../../../utils/constants.js';
 
 /** offensiveAwareness → OffensiveAwareness, gkReach → GKReach (CSV column names). */
 export function csvName(field) {
@@ -40,6 +40,20 @@ export const APTITUDE_LABEL = ['C', 'B', 'A'];
 /** registeredPosition index (0 GK … 12 CF) → Spanish label, same order as MAPEO_POS_ID. */
 export const positionName = index => MAPEO_POS_ID[index] ?? `#${index}`;
 export const POSITION_OPTIONS = Object.entries(MAPEO_POS_ID).map(([id, label]) => ({ id: Number(id), label }));
+export const PLAYING_STYLE_OPTIONS = Object.entries(PLAYING_STYLE_BY_ID).map(([id, label]) => ({ id: Number(id), label }));
+
+/** Fields of pes/formats/pes2021/playerExtraLayout.js shown in their own sections instead of «Otros datos». */
+export const TRAIT_GROUPS = ['skill', 'comStyle', 'motion'];
+export const fieldsInGroup = (fields, group) => fields.filter(f => f.group === group);
+
+/** Skill and COM style names as the game shows them (PLAYER_SKILLS_MAP is keyed by the CSV column). */
+export const traitLabel = field => PLAYER_SKILLS_MAP[field.csv] || field.name;
+
+export const MOTION_LABELS = {
+  celebration: 'Festejo', dribblingHunching: 'Gambeta: inclinación', dribblingArmMovement: 'Gambeta: brazos',
+  runningHunching: 'Carrera: inclinación', runningArmMovement: 'Carrera: brazos', dribbleMotion: 'Forma de gambetear',
+  cornerKicks: 'Córners', freeKicks: 'Tiros libres', penaltyKick: 'Penales',
+};
 
 /**
  * Stat groups of the player card, limited to the fields present in Player.bin.
@@ -61,8 +75,9 @@ export const IDENTITY_FIELDS = ['name', 'shirt', 'shirtNational', 'japName', 'co
 export const FIELD_LABELS = {
   name: 'Nombre', shirt: 'Nombre en la camiseta', shirtNational: 'Camiseta de selección', japName: 'Nombre japonés',
   country: 'Nacionalidad', country2: 'Segunda nacionalidad', age: 'Edad', height: 'Altura (cm)', weight: 'Peso (kg)',
-  strongFootLeft: 'Pie hábil', registeredPosition: 'Posición registrada', playingStyle: 'Estilo de juego (n.º)',
+  strongFootLeft: 'Pie hábil', registeredPosition: 'Posición registrada', playingStyle: 'Estilo de juego',
   form: 'Forma', injuryResistance: 'Resistencia a lesiones', reputation: 'Reputación', playingAttitude: 'Actitud',
+  nationalCaps: 'Partidos con la selección', legend: 'Leyenda', leftHanded: 'Mano izquierda', goldenBallWinner: 'Ganó el Balón de Oro',
 };
 
 /** Colour class of a stat (same scale as PlayerModal; weak-foot values use their 1–4 scale). */
