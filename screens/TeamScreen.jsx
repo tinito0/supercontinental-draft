@@ -40,8 +40,10 @@ const isOfflineLoadError = (err) => err?.code === 'unavailable' || (typeof navig
 /**
  * Public page of a club. Shared by the draft (/draft/team/:id) and the league site (/equipos/:id), which passes
  * `isLeagueSite` (no draft badge, no own footer) and the club's history as `afterHeader`.
+ * `onPlayerClick(player)` makes the squad rows open the player's sheet; only a signed-in manager gets it (app.jsx),
+ * so the public page stays read-only.
  */
-export default function TeamScreen({ isLeagueSite = false, afterHeader = null, hideHeader = false, embedded = false }) {
+export default function TeamScreen({ isLeagueSite = false, afterHeader = null, hideHeader = false, embedded = false, onPlayerClick }) {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -258,7 +260,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
         <EmptyState
           icon={isNetworkError ? WifiOff : error ? Shield : Users}
           title={error || 'No se encontraron datos del equipo'}
-          description={error ? 'No se pudieron recuperar los registros oficiales del club.' : 'El club todavía no configuró su plantilla pública.'}
+          description={error ? 'No se pudieron recuperar los registros oficiales del club.' : 'El club todavía no configuró su plantel público.'}
           className="w-full max-w-md"
         >
           <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -321,6 +323,9 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
   const recentForm = teamRecord.form.slice(-5);
   const isFranchise = player => franchiseIds.has(String(player.Id));
   const franchisePlayers = cartPlayers.filter(isFranchise);
+  const openSheetProps = player => (onPlayerClick && player
+    ? { onSelect: () => onPlayerClick(player), selectLabel: `Ver ficha de ${player.Name}` }
+    : {});
 
   return (
     <div className={`${hideHeader ? '' : 'min-h-screen '}bg-canvas text-ink-2 flex flex-col selection:bg-accent/30`}>
@@ -458,6 +463,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
                       number={player ? dorsalOf(player) : ''}
                       isUnavailable={player ? isUnavailable(player) : false}
                       isFranchise={player ? isFranchise(player) : false}
+                      {...openSheetProps(player)}
                     />
                   ))}
                 </SquadSection>
@@ -470,6 +476,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
                       number={dorsalOf(player)}
                       isUnavailable={isUnavailable(player)}
                       isFranchise={isFranchise(player)}
+                      {...openSheetProps(player)}
                     />
                   ))}
                 </SquadSection>

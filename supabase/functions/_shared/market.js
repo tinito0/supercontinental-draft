@@ -13,10 +13,13 @@ import { isTeamApproved, PENDING_APPROVAL_MESSAGE } from './membership.js';
 import { isYouthDraftEligible, isYouthDraftLock, youthDraftPath, youthDraftPoolIds, YOUTH_DRAFT_RULE_TEXT } from './youthDraft.js';
 
 export class MarketError extends Error {
-  constructor(message, status = 400) {
+  /** `code` and `details` reach the client next to the message, for errors the app reacts to (lineup.js). */
+  constructor(message, status = 400, { code, details } = {}) {
     super(message);
     this.name = 'MarketError';
     this.status = status;
+    if (code) this.code = code;
+    if (details) this.details = details;
   }
 }
 

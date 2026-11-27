@@ -23,6 +23,7 @@ const plainText = (options) => [options.title, options.message, ...(options.deta
  * @param {{Id, Name, POS_NOMBRE?, OVR_CALCULADO?}} [options.player]  shown with photo, position and OVR
  * @param {string} [options.amount]  shown next to the player in the display face («$18.00M»)
  * @param {string} [options.confirmLabel]  names the action: «Aceptar oferta», never «Sí»
+ * @param {string} [options.cancelLabel]  when «Cancelar» could be read as cancelling the very thing asked («Seguir editando»)
  * @param {'danger'|'primary'} [options.tone]
  * @param {boolean} [options.irreversible]  adds «No se puede deshacer.»
  * @returns {Promise<boolean>}
@@ -68,7 +69,7 @@ function PlayerLine({ player, amount }) {
 export function ConfirmHost() {
   const { request, isOpen } = useSyncExternalStore(subscribe, getSnapshot);
   if (!request) return null;
-  const { title, message, details, player, amount, confirmLabel = 'Confirmar', tone = 'danger', irreversible } = request;
+  const { title, message, details, player, amount, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', tone = 'danger', irreversible } = request;
 
   // Portal: the dialog is appended after every other modal, so it sits on top of the sheet that asked.
   return createPortal(
@@ -81,7 +82,7 @@ export function ConfirmHost() {
       footer={(
         <>
           {/* First in the dialog, so it takes the focus: a reflex Enter cancels. */}
-          <button type="button" className="btn btn-secondary" onClick={() => settle(false)}>Cancelar</button>
+          <button type="button" className="btn btn-secondary" onClick={() => settle(false)}>{cancelLabel}</button>
           <button type="button" className={`btn ${tone === 'primary' ? 'btn-primary' : 'btn-danger'}`} onClick={() => settle(true)}>{confirmLabel}</button>
         </>
       )}

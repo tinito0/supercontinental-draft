@@ -13,13 +13,13 @@ describe('AdminModal for a public-site editor', () => {
     const html = renderToStaticMarkup(<AdminModal isPage isVisible allowedTabs={['web']} initialTab="general" allTeams={{}} />);
     expect(html).toContain('Web pública');
     expect(html).not.toContain('Configuración');
-    expect(html).not.toContain('Torneo y transmisión');
+    expect(html).not.toContain('Transmisión');
     expect(html).not.toContain('Equipos y usuarios');
   });
 
   it('an admin still gets every section', () => {
     const html = renderToStaticMarkup(<AdminModal isPage isVisible initialTab="web" allTeams={{}} />);
-    for (const label of ['Configuración', 'Equipos y usuarios', 'Torneo y transmisión', 'Web pública', 'Plantillas', 'Buzón']) {
+    for (const label of ['Configuración', 'Equipos y usuarios', 'Transmisión', 'Web pública', 'Exportar (PES y PDF)', 'Buzón']) {
       expect(html).toContain(label);
     }
   });

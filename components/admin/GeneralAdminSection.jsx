@@ -76,11 +76,11 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
   const handleConfirmResetDraft = async () => {
     if (resetConfirmInput.trim().toUpperCase() !== 'RESETEAR') return;
     if (!canResetSeason(marketStatus)) {
-      showStatusMessage('error', 'Cerrá el mercado antes de resetear: con el mercado abierto un fichaje podía quedar a medias.');
+      showStatusMessage('error', 'Cerrá el mercado antes de reiniciar: con el mercado abierto un fichaje podía quedar a medias.');
       return;
     }
     setIsSaving(true);
-    showStatusMessage('loading', 'Iniciando el reseteo de temporada...');
+    showStatusMessage('loading', 'Iniciando el reinicio de temporada...');
     setResetProgress({ active: true, current: 0, total: 100, stage: 'Consultando colecciones de clubes, ofertas y mercado...' });
     try {
       const [locks, legacyLocks, teams, offers, transfers, sharedFormations, news] = await Promise.all([
@@ -156,14 +156,14 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
       await commitBatchOperations(db, operations, (current, total) => {
         setResetProgress({ active: true, current, total, stage: `Purgando registros en Firestore: ${current} de ${total}...` });
       });
-      showStatusMessage('success', `Reset completado con éxito. Se purgaron ${operations.length} registros (plantillas, carritos, scouts, locks y ofertas).`);
+      showStatusMessage('success', `Reset completado con éxito. Se purgaron ${operations.length} registros (planteles, carritos, ojeadores, locks y ofertas).`);
       setIsResetModalOpen(false);
       setResetConfirmInput('');
     } catch (e) {
       console.error(e);
       // Each batch is committed on its own: a failure leaves part of the season deleted. Running it again is safe,
       // it reads what is left and finishes it.
-      showStatusMessage('error', 'El reseteo se cortó a mitad de camino. Volvé a ejecutarlo: borra lo que quedó y termina.');
+      showStatusMessage('error', 'El reinicio se cortó a mitad de camino. Volvé a ejecutarlo: elimina lo que quedó y termina.');
     } finally {
       setIsSaving(false);
       setResetProgress({ active: false, current: 0, total: 0, stage: '' });
@@ -242,11 +242,11 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
             <AlertTriangle className="w-4 h-4" aria-hidden="true" />
           </span>
           <h2 className="text-danger-soft text-base font-bold">
-            Zona de peligro: reseteo de temporada
+            Zona de peligro: reinicio de temporada
           </h2>
         </div>
         <p className="text-sm text-ink-2 mb-4 leading-relaxed max-w-2xl">
-          Vacía todos los planteles (carritos y plantilla pública), plantillas y formaciones (alineación, tácticas, dorsales y banco), borra los usos y búsquedas del scout, y elimina bloqueos de mercado, ofertas, noticias, formaciones compartidas y transferencias. Conserva los presupuestos, el acceso anticipado, el torneo, el chat y las sugerencias.
+          Vacía todos los planteles (carritos y plantel público), formaciones (alineación, tácticas, dorsales y banco), quita los usos y búsquedas de Scouting, y elimina bloqueos de mercado, ofertas, noticias, formaciones compartidas y transferencias. Conserva los presupuestos, el acceso anticipado, el torneo, el chat y las sugerencias.
         </p>
         {!canResetSeason(marketStatus) && (
           <p className="text-xs text-warning-soft mb-3 font-semibold">Primero poné el mercado en «Cerrado» y guardá: con el mercado abierto un fichaje podía quedar a medias.</p>
@@ -258,7 +258,7 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
           className="btn btn-danger"
         >
           <RefreshCw className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} aria-hidden="true" />
-          Resetear temporada…
+          Reiniciar temporada…
         </button>
       </div>
 
@@ -267,7 +267,7 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
         isOpen={isResetModalOpen}
         onClose={() => { if (!isSaving) { setIsResetModalOpen(false); setResetConfirmInput(''); } }}
         size="md"
-        title="¿Resetear la temporada?"
+        title="¿Reiniciar la temporada?"
         subtitle="Vacía los planteles de todos los clubes"
         icon={AlertTriangle}
         showClose={false}
@@ -288,23 +288,23 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
               className="btn btn-danger"
             >
               <RefreshCw className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} aria-hidden="true" />
-              {isSaving ? 'Reseteando…' : 'Resetear temporada'}
+              {isSaving ? 'Reiniciando…' : 'Reiniciar temporada'}
             </button>
           </>
         )}
       >
         <div className="space-y-4">
           <div className="text-sm text-ink-2 space-y-2">
-            <p className="font-semibold text-ink">Se borra, en todos los equipos:</p>
+            <p className="font-semibold text-ink">Se elimina, en todos los equipos:</p>
             <ul className="list-disc list-inside space-y-1 text-ink-2 pl-1">
-              <li>Planteles: carritos y plantilla pública de cada club</li>
+              <li>Planteles: carritos y plantel público de cada club</li>
               <li>Alineaciones, tácticas, dorsales y suplentes</li>
               <li>Historial y créditos mensuales de Scouting</li>
               <li>Bloqueos de mercado, ofertas (con su chat), noticias, formaciones compartidas y transferencias</li>
               <li>Draft de promesas: grupo, orden y turnos</li>
             </ul>
             <p className="pt-1">Se conservan los presupuestos, el acceso anticipado, el torneo, el chat de mánagers y las sugerencias.</p>
-            <p className="text-warning-soft font-semibold pt-1">Si necesitás los planteles de esta temporada en el PES (Draft → PES o CSV), exportalos antes: después del reseteo ya no existen.</p>
+            <p className="text-warning-soft font-semibold pt-1">Si necesitás los planteles de esta temporada en el PES (Draft → PES o CSV), exportalos antes: después del reinicio ya no existen.</p>
             <p className="font-semibold text-danger-soft">No se puede deshacer.</p>
           </div>
 
@@ -345,7 +345,7 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
                   />
                 </div>
               )}
-              <p className="text-xs text-ink-3">No cierres esta ventana mientras se resetea.</p>
+              <p className="text-xs text-ink-3">No cierres esta ventana mientras se reinicia.</p>
             </div>
           )}
         </div>

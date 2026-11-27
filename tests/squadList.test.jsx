@@ -22,10 +22,19 @@ describe('SquadRow', () => {
   it('is static without onSelect and a button with it', () => {
     expect(renderToStaticMarkup(<ul><SquadRow role="MC" player={player} /></ul>)).not.toContain('<button');
 
-    const html = renderToStaticMarkup(<ul><SquadRow role="MC" player={player} onSelect={() => {}} selectLabel="Mover a Jugador de Prueba" isSelected /></ul>);
+    const html = renderToStaticMarkup(<ul><SquadRow role="MC" player={player} onSelect={() => {}} selectLabel="Mover a Jugador de Prueba" isSelected isToggle /></ul>);
     expect(html).toContain('<button type="button"');
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('aria-label="Mover a Jugador de Prueba"');
+  });
+
+  it('only reports aria-pressed when the row is a pick toggle (the board), not when it opens something', () => {
+    const opener = renderToStaticMarkup(<ul><SquadRow role="MC" player={player} onSelect={() => {}} selectLabel="Ver a Jugador de Prueba" /></ul>);
+    expect(opener).toContain('<button type="button"');
+    expect(opener).not.toContain('aria-pressed');
+
+    const toggle = renderToStaticMarkup(<ul><SquadRow role="MC" player={player} onSelect={() => {}} isToggle /></ul>);
+    expect(toggle).toContain('aria-pressed="false"');
   });
 
   it('marks an empty slot without a position colour and explains a disabled pick', () => {

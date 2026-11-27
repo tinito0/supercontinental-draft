@@ -1,10 +1,11 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, BookOpen, ExternalLink, History, Plus, Save, Shield, Trash2 } from 'lucide-react';
 import { auth } from '../../config/firebase.js';
-import { Tabs } from '../ui/Tabs.jsx';
+import { Tabs, tabPanelProps } from '../ui/Tabs.jsx';
 import { Field } from '../ui/Field.jsx';
 import { Alert } from '../ui/Alert.jsx';
 import { EmptyState } from '../ui/EmptyState.jsx';
+import { useConfirmLeave, useReportDirty } from '../../hooks/useUnsavedGuard.js';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import { isTeamApproved } from '../../supabase/functions/_shared/membership.js';
 import { saveClub, saveLeagueHistory, saveSeasonRules } from '../../services/leagueContentService.js';
@@ -48,6 +49,7 @@ async function runSave(action, showStatusMessage, successMessage) {
 }
 
 function SaveBar({ isDirty, isSaving, onSave, publicHref }) {
+  useReportDirty(isDirty); // every editor here ends in a SaveBar, so one report covers them all
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line/10 pt-4">
       <a href={publicHref} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm min-h-11">
@@ -97,6 +99,7 @@ function ClubStories({ allTeams, showStatusMessage }) {
     .filter(team => isTeamApproved(team) && String(team.teamName || '').trim())
     .sort((a, b) => a.teamName.localeCompare(b.teamName, 'es')), [allTeams]);
   const [teamId, setTeamId] = useState('');
+  const confirmLeave = useConfirmLeave();
   const selectedId = teamId || teams[0]?.id || '';
 
   if (teams.length === 0) return <EmptyState icon={Shield} title="No hay equipos aprobados" description="Los clubes aparecen acá cuando se aprueban en Equipos y usuarios." />;
@@ -104,7 +107,7 @@ function ClubStories({ allTeams, showStatusMessage }) {
   return (
     <div className="space-y-4">
       <Field label="Club">
-        <select className="select" value={selectedId} onChange={event => setTeamId(event.target.value)}>
+        <select className="select" value={selectedId} onChange={async event => { const next = event.target.value; if (await confirmLeave()) setTeamId(next); }}>
           {teams.map(team => <option key={team.id} value={team.id}>{team.teamName}</option>)}
         </select>
       </Field>
@@ -176,7 +179,7 @@ function SeasonRulesEditor({ showStatusMessage }) {
               <input className="input" value={chapter.title} maxLength={MAX_TITLE_LENGTH} placeholder="Ej.: Formato de la competencia"
                 onChange={event => updateChapter(chapter.id, { title: event.target.value })} />
             </Field>
-            <Field label="Texto" help={`${PARAGRAPH_HELP} Listas: empezá la línea con «• » o «1. ». Subtítulo: una línea corta sin punto, arriba del texto. «Nombre: texto» resalta el nombre.`}>
+            <Field label="Texto" help={`${PARAGRAPH_HELP} Listas: empezá la línea con «• » o «1. ». Subtítulo: una línea corta sin punto, arriba del texto. «Nombre: texto» resalta el nombre. Cifras vigentes: {plantelMinimo}, {bancoMinimo} y {localesMinimo} se reemplazan solas; una cifra escrita a mano no se actualiza.`}>
               <textarea className="input min-h-[10rem] py-2 leading-relaxed" value={chapter.body} maxLength={MAX_STORY_LENGTH}
                 onChange={event => updateChapter(chapter.id, { body: event.target.value })} />
             </Field>
@@ -195,6 +198,10 @@ function SeasonRulesEditor({ showStatusMessage }) {
 
 export const LeagueContentAdminSection = memo(function LeagueContentAdminSection({ allTeams, showStatusMessage, canManageEditors = false }) {
   const [section, setSection] = useState('liga');
+  const confirmLeave = useConfirmLeave();
+  const changeSection = async (next) => {
+    if (next !== section && await confirmLeave()) setSection(next);
+  };
 
   return (
     <section className="panel space-y-5 p-5" aria-labelledby="league-content-title">
@@ -204,7 +211,8 @@ export const LeagueContentAdminSection = memo(function LeagueContentAdminSection
           Lo que se ve en la portada del sitio. Cada texto se publica al guardarlo; si queda vacío, la web muestra que todavía no se cargó.
         </p>
       </div>
-      <Tabs tabs={SECTIONS} value={section} onChange={setSection} label="Textos de la web pública" />
+      <Tabs tabs={SECTIONS} value={section} onChange={changeSection} label="Textos de la web pública" idPrefix="league-content" />
+      <div {...tabPanelProps('league-content', section)}>
       {section === 'liga' && (
         <StoryEditor
           docId={LEAGUE_HISTORY_DOC}
@@ -217,6 +225,7 @@ export const LeagueContentAdminSection = memo(function LeagueContentAdminSection
       )}
       {section === 'clubes' && <ClubStories allTeams={allTeams} showStatusMessage={showStatusMessage} />}
       {section === 'reglamento' && <SeasonRulesEditor showStatusMessage={showStatusMessage} />}
+      </div>
       {canManageEditors && <LeagueEditorsPanel allTeams={allTeams} showStatusMessage={showStatusMessage} />}
     </section>
   );

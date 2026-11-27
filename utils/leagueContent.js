@@ -4,6 +4,8 @@
 // Plain text only, split into paragraphs on blank lines, so nothing is ever rendered as HTML.
 // Pure; tests/leagueContent.test.js.
 
+import { SQUAD_MIN_PLAYERS, LOCAL_MIN_PLAYERS } from './squadRules.js';
+
 export const LEAGUE_CONTENT_COLLECTION = 'league_content';
 export const LEAGUE_HISTORY_DOC = 'history';
 export const SEASON_RULES_DOC = 'rules';
@@ -12,6 +14,23 @@ export const MAX_STORY_LENGTH = 20000;
 export const MAX_TITLE_LENGTH = 120;
 export const MAX_SEASON_LENGTH = 40;
 export const MAX_CHAPTERS = 40;
+
+/** Names an admin can write in a rules chapter to get the live squad figure instead of a typed number. */
+export const RULE_FIGURE_NAMES = Object.freeze(['plantelMinimo', 'bancoMinimo', 'localesMinimo']);
+
+/**
+ * Replaces {plantelMinimo}, {bancoMinimo} and {localesMinimo} with the figures the app enforces, so a chapter never
+ * contradicts the rules. `benchMin` is the live bench minimum (admin-editable); null shows a dash until it loads.
+ * Any other {text} stays as written.
+ */
+export function fillRuleFigures(text, benchMin) {
+  const figures = {
+    plantelMinimo: SQUAD_MIN_PLAYERS,
+    bancoMinimo: benchMin == null ? '–' : benchMin,
+    localesMinimo: LOCAL_MIN_PLAYERS,
+  };
+  return String(text || '').replace(/\{(plantelMinimo|bancoMinimo|localesMinimo)\}/g, (_, name) => String(figures[name]));
+}
 
 /** Document id of a club's history: one per draft team. */
 export function clubStoryDocId(teamId) {

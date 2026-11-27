@@ -1,6 +1,4 @@
 import React, { useRef, useState, useEffect, useMemo, memo } from 'react';
-import { Bar, Doughnut } from 'react-chartjs-2';
-import '../utils/chartSetup.js';
 import { X, ShoppingCart, DollarSign, ArrowRight, History, ClipboardList, Lock } from 'lucide-react';
 import { formatPriceShort, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
 import { DEFAULT_BUDGET, TRANSFER_FEE_RATE } from '../utils/constants.js';
@@ -15,12 +13,13 @@ import { BaseModal } from './ui/BaseModal.jsx';
 import { confirmAction } from './ui/ConfirmDialog.jsx';
 import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
-import { Tabs } from './ui/Tabs.jsx';
-import { Stat } from './ui/Stat.jsx';
-import { Alert } from './ui/Alert.jsx';
+import { Tabs, tabPanelProps } from './ui/Tabs.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
 import { SquadRulesStats } from './SquadRulesStats.jsx';
-import { evaluateSquadRules } from '../utils/squadRules.js';
+import { FinancesPanel } from './squad/FinancesPanel.jsx';
+import { evaluateSquadRules, squadFromLocks } from '../utils/squadRules.js';
+import { useSquadRulesConfig } from '../hooks/useSquadRulesConfig.js';
+import { useUrlParam } from '../hooks/useUrlParam.js';
 import {
   acceptTransferOffer,
   rejectTransferOffer,
@@ -75,6 +74,9 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
     </div>
   );
 });
+
+const TAB_IDS = ['players', 'offers', 'sent', 'history', 'stats'];
+const TAB_PREFIX = 'squad';
 
 const CLOSED_STATUSES = new Set(['accepted', 'rejected', 'withdrawn']);
 
@@ -257,8 +259,15 @@ const NegotiationCard = memo(function NegotiationCard({
   );
 });
 
-export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, isSquadLoading = false, onRemoveFromCart, releasingIds, onGoToMarket, userProfile, userId, budgetBase, budgetPercent, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage, isMarketOpen = true, budgetStatus = 'ready', onRetryBudget }) {
-  const [activeTab, setActiveTab] = useState(initialTab);
+export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, isSquadLoading = false, onRemoveFromCart, releasingIds, onGoToMarket, userProfile, userId, budgetBase, budgetPercent, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, playerLocks, initialTab = 'players', onOpenTactics, showStatusMessage, isMarketOpen = true, budgetStatus = 'ready', onRetryBudget }) {
+  // On the page the active tab lives in ?tab= (Atrás and shared links restore it); in the modal it stays local.
+  const [urlTab, setUrlTab] = useUrlParam('tab');
+  const [localTab, setActiveTab] = useState(initialTab);
+  const activeTab = isPage && TAB_IDS.includes(urlTab) ? urlTab : localTab;
+  const changeTab = (id) => {
+    setActiveTab(id);
+    if (isPage) setUrlTab(id);
+  };
   const [isProcessing, setIsProcessing] = useState(false);
   const processingOfferRef = useRef(null);
   const [counteringOfferId, setCounteringOfferId] = useState(null);
@@ -284,11 +293,19 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
   // The saved lineup and the club country live on the public team doc (the board writes both copies).
   const ownTeam = allTeams?.[userId || userProfile?.uid];
-  const squadRules = useMemo(() => evaluateSquadRules({
-    squad: cart.map(player => ({ ...playerMap.get(String(player.Id)), ...player })),
-    lineup: ownTeam?.lineup || userProfile?.lineup,
-    teamCountry: ownTeam?.country ?? userProfile?.country,
-  }), [cart, playerMap, ownTeam?.lineup, ownTeam?.country, userProfile?.lineup, userProfile?.country]);
+  const { benchMin } = useSquadRulesConfig();
+  // Same squad as the admin board (player_locks) once the locks load, so both count missing catalog players alike.
+  const ownerId = userId || userProfile?.uid;
+  const squadRules = useMemo(() => {
+    const fromLocks = playerLocks && playerMap.size > 0 ? squadFromLocks(playerLocks, ownerId, playerMap) : null;
+    return evaluateSquadRules({
+      squad: fromLocks ? fromLocks.players : cart.map(player => ({ ...playerMap.get(String(player.Id)), ...player })),
+      lineup: ownTeam?.lineup || userProfile?.lineup,
+      teamCountry: ownTeam?.country ?? userProfile?.country,
+      benchMin,
+      missingCount: fromLocks?.missingCount ?? 0,
+    });
+  }, [benchMin, cart, playerLocks, ownerId, playerMap, ownTeam?.lineup, ownTeam?.country, userProfile?.lineup, userProfile?.country]);
 
   const offerPlayer = (offer) => playerMap.get(String(offer.playerId)) || { Id: offer.playerId, Name: offer.playerName };
 
@@ -418,85 +435,6 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     [cart, offerHistory, userId, userProfile?.uid, playerMap],
   );
 
-  const statsData = useMemo(() => {
-    const totalPlayers = cart.length;
-    const avgOvr = totalPlayers > 0 ? Math.round(cart.reduce((acc, p) => acc + p.OVR_CALCULADO, 0) / totalPlayers) : 0;
-    const avgAge = totalPlayers > 0 ? Math.round(cart.reduce((acc, p) => acc + p.Age, 0) / totalPlayers) : 0;
-
-    // Distribución por posición
-    const posCounts = { Arqueros: 0, Defensores: 0, Medios: 0, Delanteros: 0 };
-    cart.forEach(p => {
-      if (p.Grupo === 'Arqueros') posCounts.Arqueros++;
-      else if (p.Grupo === 'Defensores') posCounts.Defensores++;
-      else if (p.Grupo === 'Mediocampistas') posCounts.Medios++;
-      else posCounts.Delanteros++;
-    });
-
-    const positionChartData = {
-      labels: [
-        `Porteros (${posCounts.Arqueros})`,
-        `Defensas (${posCounts.Defensores})`,
-        `Medios (${posCounts.Medios})`,
-        `Delanteros (${posCounts.Delanteros})`,
-      ],
-      datasets: [{
-        data: [posCounts.Arqueros, posCounts.Defensores, posCounts.Medios, posCounts.Delanteros],
-        backgroundColor: ['#eab308', '#3b82f6', '#22c55e', '#ef4444'],
-        borderColor: '#0e1320',
-        borderWidth: 2,
-        hoverOffset: 4
-      }],
-    };
-
-    // Top Nacionalidades
-    const countryCounts = {};
-    cart.forEach(p => {
-      const c = p.Country1;
-      countryCounts[c] = (countryCounts[c] || 0) + 1;
-    });
-
-    const sortedCountries = Object.entries(countryCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5);
-
-    const countryChartData = {
-      labels: sortedCountries.map(([code, count]) => {
-        const name = countryMap && countryMap[code] ? countryMap[code].substring(0, 10) : code;
-        return `${name} (${count})`;
-      }),
-      datasets: [{
-        label: 'Jugadores',
-        data: sortedCountries.map(([, count]) => count),
-        backgroundColor: '#3a66c4',
-        borderRadius: 6,
-        barThickness: 20,
-      }]
-    };
-
-    return { totalPlayers, avgOvr, avgAge, positionChartData, countryChartData };
-  }, [cart, countryMap]);
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { color: '#b8c2d6', font: { size: 11, family: 'Barlow' }, boxWidth: 10, padding: 15 } },
-      title: { display: false }
-    },
-    scales: {
-      y: { ticks: { color: '#8692ab', stepSize: 1 }, grid: { color: 'rgba(150, 166, 200, 0.12)', drawBorder: false } },
-      x: { ticks: { color: '#b8c2d6' }, grid: { display: false } }
-    }
-  };
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'right', labels: { color: '#b8c2d6', font: { size: 11 }, boxWidth: 12, padding: 15 } }
-    }
-  };
-
   if (!isVisible && !isPage) return null;
 
   // Same base as "Disponible" (useBudget): the profile copy of the budget goes stale after a transfer.
@@ -506,17 +444,6 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const activeCommitted = committedInOffers !== undefined
     ? committedInOffers
     : (sentOffers || []).filter(o => o.senderId === userId && o.status === 'pending').reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
-  // One tone for the "Disponible" figure and its meter: accent, warning from 20% down (the budget alert's
-  // threshold, hooks/useBudget.js), danger once nothing is left.
-  const budgetReady = budgetStatus === 'ready';
-  const availableTone = !budgetReady ? 'default' : remainingBudget <= 0 ? 'danger' : budgetPct <= 20 ? 'warning' : 'accent';
-  const meterTone = { danger: 'bg-danger', warning: 'bg-warning', accent: 'bg-accent' }[availableTone];
-  // Same format as every other price in the app ($12.50M). Keeps the sign: an overdrawn budget reads -$3.20M.
-  const fmtM = (val) => {
-    const v = Number(val) || 0;
-    return v < 0 ? `-${formatPriceShort(-v / 1000000)}` : formatPriceShort(v / 1000000);
-  };
-
   const tabs = [
     { id: 'players', label: 'Plantel', count: cart.length },
     { id: 'offers', label: 'Recibidas', count: incomingOffers?.length || 0 },
@@ -529,30 +456,6 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     allTeams, playerMap, allPlayers, userId, userProfile, isProcessing, counteringOfferId, counterAmount, setCounterAmount, setCounteringOfferId,
     onAccept: handleAcceptOffer, onReject: handleRejectOffer, onCounter: handleCounterOffer, onWithdraw: handleWithdrawOffer,
   };
-
-  const finances = (
-    <section aria-label="Balance financiero" className="border-b border-line/[0.08] pb-5">
-      {/* «Disponible» is the figure a manager acts on, so it leads; the other three explain it. */}
-      {budgetStatus === 'error' && (
-        <Alert tone="danger" title="No pudimos cargar tus contratos" className="mb-4"
-          action={onRetryBudget && <button type="button" onClick={onRetryBudget} className="btn btn-secondary min-h-11">Reintentar</button>}>
-          Sin ellos no podemos calcular tu presupuesto.
-        </Alert>
-      )}
-      <Stat label="Disponible" value={budgetReady ? fmtM(remainingBudget) : '—'} size="lg" tone={availableTone} hint={budgetReady ? `${budgetPct.toFixed(0)}% del presupuesto` : undefined} />
-      {budgetReady && (
-        <div className="mt-3 h-2 rounded-full bg-white/[0.06] overflow-hidden" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(budgetPct)} aria-label="Presupuesto disponible">
-          <div className={`h-full rounded-full transition-[width] duration-move ${meterTone}`} style={{ width: `${budgetPct}%` }} />
-        </div>
-      )}
-      <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-        {/* Short labels: each fits one line at 360px; the detail goes in the hint. */}
-        <Stat label="Presupuesto" value={budgetReady ? fmtM(initialBudget) : '—'} size="sm" hint="Cambia con los traspasos" />
-        <Stat label="Gastado" value={budgetReady ? fmtM(totalCartCost) : '—'} size="sm" hint="En el plantel" />
-        <Stat label="En ofertas" value={budgetReady ? fmtM(activeCommitted) : '—'} size="sm" tone={budgetReady && activeCommitted > 0 ? 'warning' : 'default'} hint="Enviadas, pendientes" />
-      </div>
-    </section>
-  );
 
   const content = (
     <>
@@ -616,59 +519,13 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       )}
 
       {activeTab === 'stats' && (
-        <div className="space-y-6">
-          {finances}
-          <section className="panel-flat p-5" aria-labelledby="cart-ledger">
-            <h3 id="cart-ledger" className="eyebrow mb-4">Movimientos de la temporada</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <Stat label="Fichajes" value={fmtM(ledger.totals.spentOnSignings)} hint={`${ledger.signings.length} jugadores`} size="sm" />
-              <Stat label="Compras" value={fmtM(ledger.totals.spentOnPurchases)} hint={`${ledger.purchases.length} traspasos`} size="sm" />
-              <Stat label="Ventas (neto)" value={fmtM(ledger.totals.receivedFromSales)} hint={`comisión ${fmtM(ledger.totals.fees)}`} size="sm" />
-              <Stat label="Balance" value={fmtM(ledger.totals.net)} tone={ledger.totals.net < 0 ? 'danger' : 'accent'} size="sm" />
-            </div>
-            {(ledger.purchases.length > 0 || ledger.sales.length > 0) && (
-              <ul className="mt-4 divide-y divide-line/[0.08] text-sm">
-                {ledger.purchases.map(row => (
-                  <li key={`buy-${row.id}`} className="flex items-center justify-between gap-3 py-2">
-                    <span className="min-w-0 truncate text-ink-2">Compra · <span className="text-ink">{row.name}</span>{row.club ? ` de ${row.club}` : ''}</span>
-                    <span className="num font-semibold text-danger-soft shrink-0">-{fmtM(row.amount)}</span>
-                  </li>
-                ))}
-                {ledger.sales.map(row => (
-                  <li key={`sale-${row.id}`} className="flex items-center justify-between gap-3 py-2">
-                    <span className="min-w-0 truncate text-ink-2">Venta · <span className="text-ink">{row.name}</span>{row.club ? ` a ${row.club}` : ''}</span>
-                    <span className="num font-semibold text-success-soft shrink-0">+{fmtM(row.net)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="mt-3 text-xs text-ink-3">Los fichajes cuentan a precio de catálogo; las ventas, después de la comisión de la liga. El presupuesto disponible es el de arriba.</p>
-          </section>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-            <Stat label="Media del plantel" value={statsData.avgOvr} tone="accent" size="sm" />
-            <Stat label="Edad promedio" value={statsData.avgAge} hint="años" size="sm" />
-            <Stat label="Jugadores" value={statsData.totalPlayers} size="sm" />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <section className="panel-flat p-5 flex flex-col" aria-labelledby="cart-chart-positions">
-              <h3 id="cart-chart-positions" className="eyebrow mb-4">Distribución por línea</h3>
-              <div className="flex-grow relative min-h-[220px]">
-                <Doughnut data={statsData.positionChartData} options={doughnutOptions} aria-label="Gráfico de jugadores por línea" role="img" />
-              </div>
-            </section>
-            <section className="panel-flat p-5 flex flex-col" aria-labelledby="cart-chart-countries">
-              <h3 id="cart-chart-countries" className="eyebrow mb-4">Nacionalidades</h3>
-              <div className="flex-grow relative min-h-[220px]">
-                <Bar data={statsData.countryChartData} options={chartOptions} aria-label="Gráfico de las cinco nacionalidades más presentes" role="img" />
-              </div>
-            </section>
-          </div>
-        </div>
+        <FinancesPanel budgetStatus={budgetStatus} onRetryBudget={onRetryBudget} remaining={remainingBudget} percent={budgetPct}
+          base={initialBudget} spent={totalCartCost} committed={activeCommitted} ledger={ledger} cart={cart} countryMap={countryMap} />
       )}
     </>
   );
 
-  const tabList = <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} label="Secciones del plantel" />;
+  const tabList = <Tabs tabs={tabs} value={activeTab} onChange={changeTab} label="Secciones del plantel" idPrefix={TAB_PREFIX} />;
 
   if (isPage) {
     return (
@@ -684,7 +541,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           )}
         />
         {tabList}
-        <div>{content}</div>
+        <div {...tabPanelProps(TAB_PREFIX, activeTab)}>{content}</div>
       </Page>
     );
   }
@@ -702,7 +559,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       </div>
       <div className="flex-grow min-h-0 overflow-y-auto px-4 sm:px-6 py-4 space-y-5 custom-scrollbar">
         {tabList}
-        <div>{content}</div>
+        <div {...tabPanelProps(TAB_PREFIX, activeTab)}>{content}</div>
       </div>
     </div>
   );

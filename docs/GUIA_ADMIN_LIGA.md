@@ -235,7 +235,7 @@ semifinal → final, sin semis de Plata), además de `utils/bracketModel.js` hay
 
 - **Escenas**: al arrancar un partido el overlay pasa a «En partido»; al terminar, a «Final» (tira arriba con el
   resultado y el siguiente partido en el lower third), y a los dos minutos a «Tabla» con «Siguiente» abajo. Se apaga en
-  Torneo y transmisión → Escenas automáticas.
+  Transmisión → Escenas automáticas.
 - **Popups con QR**: a los 15', 30', 60' y 75' de juego (15 segundos, chico arriba a la derecha), en el entretiempo y
   al final (45) y entre partidos al pasar a la tabla (30). Al arrancar sale solo la tarjeta de predicción, y el QR
   nunca sale mientras haya una tarjeta en pantalla: espera a que se vaya.
@@ -267,7 +267,7 @@ alguno pendiente (solo lo ve el admin):
 3. La primera vez que aparece un equipo del juego te pregunta a qué club del torneo corresponde. Queda guardado.
 
 No importa si estás en modo **Editar**: guardá o cancelá primero. Nunca pisa un resultado que ya esté cargado. El
-historial completo de partidos del juego está en Administración → Torneo y transmisión.
+historial completo de partidos del juego está en Administración → Transmisión.
 
 **Partidos «Del juego».** Llevan esa marca al lado de la fecha (también en las llaves de Copa de Oro y Copa de
 Plata). En **Editar** su marcador, equipos, penales, goleadores y estado quedan bloqueados; fecha, hora y jornada sí
@@ -311,7 +311,7 @@ Antes de usarlo por primera vez hay que publicar la función `market` y las regl
 | Pantalla «Cambiar manager» | `components/admin/ClubTransferDialog.jsx` (desde `TeamsAdminSection.jsx`) |
 | Alta y aprobación | `hooks/useAuth.js`, `components/admin/TeamsAdminSection.jsx`, `supabase/functions/_shared/membership.js` |
 | Tamaño de la liga y copas | `utils/tournamentModel.js`, `utils/competitionRules.js`, `utils/bracketModel.js` (Copa de Plata: `CUP_DEFINITIONS` y `advanceCups`) |
-| Reglas del plantel (banco ≥ 73, mínimo 21, 7 locales) | `utils/squadRules.js`; pizarra `components/formation/BenchRule.jsx`, Mi Equipo `components/SquadRulesStats.jsx`, Administración → Reglas `components/admin/SquadRulesAdminSection.jsx` |
+| Reglas del plantel (banco ≥ 73 por defecto, mínimo 21, 7 locales). El mínimo del banco se cambia en Administración → Reglas («Mínimo del banco (media)» y Guardar); queda en Firestore `config/squadRules` y no hace falta tocar código ni desplegar. | `utils/squadRules.js`; pizarra `components/formation/BenchRule.jsx`, Mi Equipo `components/SquadRulesStats.jsx`, Administración → Reglas `components/admin/SquadRulesAdminSection.jsx` |
 | Comisión de traspasos (15 % sobre la prima) | `supabase/functions/_shared/transferFee.js` (app y función); después **deploy-market** |
 | Draft → PES | `pes/draftTransfer.js`, `components/pes/PesDraftPanel.jsx`, `docs/PES_ENGINE.md` §4b |
 | Centro de partidos e importación del colector | `components/tournament/MatchCenter.jsx`, `MatchCard.jsx` (copas), `FromGame.jsx` (bloqueo «Del juego»), `components/admin/CollectorImportAdmin.jsx` (`variant="inline"` en el torneo), `utils/collectorImport.js`; sorteo y «Rehacer Fecha N» en `components/TournamentModal.jsx` |

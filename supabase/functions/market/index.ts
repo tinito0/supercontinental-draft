@@ -1,5 +1,5 @@
-// Supabase Edge Function `market`: signs players and accepts transfer offers on the server, so the
-// prices and budgets cannot be forged from the browser. Writes Firestore through its REST API with a
+// Supabase Edge Function `market`: signs players, accepts transfer offers and saves lineups on the server, so
+// prices, budgets and the bench rule cannot be forged from the browser. Writes Firestore through its REST API with a
 // Firebase service account. Setup and deploy: docs/MARKET_FUNCTION.md.
 //
 // Secrets (supabase secrets set …):
@@ -11,6 +11,7 @@ import catalog from '../_shared/catalog.json' with { type: 'json' };
 import { createFirestore } from '../_shared/firestoreRest.js';
 import { FIREBASE_JWKS_URL, verifyFirebaseIdToken, createServiceAccountTokenProvider } from '../_shared/googleAuth.js';
 import { handleMarketAction, isMarketAdmin, MarketError } from '../_shared/market.js';
+import { handleLineupAction, LINEUP_ACTIONS } from '../_shared/lineup.js';
 import { APP_ID } from '../_shared/marketConstants.js';
 
 const serviceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT') ?? '{}');
@@ -75,10 +76,15 @@ Deno.serve(async (req: Request) => {
       const { uid, claims } = await verifyFirebaseIdToken(idToken, { projectId, jwtVerify, keySet });
       return { uid, provider: (claims?.firebase as { sign_in_provider?: string } | undefined)?.sign_in_provider };
     };
-    const result = await handleMarketAction({ firestore, appId: APP_ID, catalog, user, body, verifyIdToken });
+    const result = LINEUP_ACTIONS.has(body?.action)
+      ? await handleLineupAction({ firestore, appId: APP_ID, catalog, user, body })
+      : await handleMarketAction({ firestore, appId: APP_ID, catalog, user, body, verifyIdToken });
     return reply(origin, 200, { ok: true, result });
   } catch (error) {
-    if (error instanceof MarketError) return reply(origin, error.status, { ok: false, error: error.message });
+    if (error instanceof MarketError) {
+      const { code, details } = error as MarketError & { code?: string; details?: unknown };
+      return reply(origin, error.status, { ok: false, error: error.message, code, details });
+    }
     console.error('market: unexpected error', error);
     return reply(origin, 500, { ok: false, error: 'No se pudo completar la operación. Reintentá en unos instantes.' });
   }

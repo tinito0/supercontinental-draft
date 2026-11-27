@@ -59,7 +59,9 @@ service cloud.firestore {
       }
 
       // Equipos públicos. El dueño edita su nombre, escudo, formación y plantilla visible; el
-      // presupuesto y la whitelist sólo los cambia el admin (o el servidor en un traspaso).
+      // presupuesto y la whitelist sólo los cambia el admin (o el servidor en un traspaso). El once (lineup,
+      // matchBench) lo guarda el servidor, que valida la media del banco (supabase/functions/_shared/lineup.js).
+      function serverLineupKeys() { return ['lineup', 'matchBench']; }
       match /public/data/teams/{teamId} {
         allow read: if true;
         allow create: if isAuth() && (
@@ -67,13 +69,15 @@ service cloud.firestore {
             request.auth.uid == teamId
             && request.resource.data.get('inWhitelist', false) == false
             && request.resource.data.get('approved', true) == false
+            && !request.resource.data.keys().hasAny(serverLineupKeys())
             && (request.resource.data.budget == defaultBudget()
               || request.resource.data.budget == get(profilePath(teamId)).data.budget)
           )
         );
         allow update: if isAuth() && (
           isAdmin()
-          || (request.auth.uid == teamId && !changedKeys().hasAny(['budget', 'inWhitelist', 'userId', 'marketUpdatedAt', 'approved']))
+          || (request.auth.uid == teamId && !changedKeys().hasAny(['budget', 'inWhitelist', 'userId', 'marketUpdatedAt', 'approved'])
+            && !changedKeys().hasAny(serverLineupKeys()))
         );
         allow delete: if isAdmin();
       }
@@ -391,7 +395,8 @@ service cloud.firestore {
 
       // El presupuesto del perfil es una copia del público (teams/{uid}.budget): sólo puede tomar
       // el valor que el equipo tiene después de esta escritura. isAdmin, role y los datos de franquicia
-      // no los escribe el usuario (la franquicia la marca el servidor al fichar).
+      // no los escribe el usuario (la franquicia la marca el servidor al fichar). El once lo guarda el servidor;
+      // una cuenta nueva solo puede crear el perfil con el once vacío (useAuth).
       match /users/{userId}/profile/data {
         allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
         allow create: if isAuth() && (
@@ -400,12 +405,15 @@ service cloud.firestore {
             && request.resource.data.get('budget', defaultBudget()) == defaultBudget()
             && !request.resource.data.keys().hasAny(['isAdmin', 'role', 'franchisePlayerId'])
             && request.resource.data.get('franchisePlayerUsed', false) == false
+            && request.resource.data.get('lineup', {}) == {}
+            && request.resource.data.get('matchBench', []) == []
           )
         );
         allow update: if isAuth() && (
           isAdmin() || (
             request.auth.uid == userId &&
             !changedKeys().hasAny(['isAdmin', 'role', 'franchisePlayerUsed', 'franchisePlayerId']) &&
+            !changedKeys().hasAny(serverLineupKeys()) &&
             (!changedKeys().hasAny(['budget']) || request.resource.data.budget == getAfter(teamPath(userId)).data.budget)
           )
         );

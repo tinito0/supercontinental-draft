@@ -4,7 +4,9 @@ import { Clapperboard, Maximize2, Trophy, Users } from 'lucide-react';
 import { ObsSceneStudio } from './obs/ObsSceneStudio.jsx';
 import { CollectorImportAdmin } from './CollectorImportAdmin.jsx';
 import { PossessionBackfillPanel } from './PossessionBackfillPanel.jsx';
-import { Tabs } from '../ui/Tabs.jsx';
+import { Tabs, tabPanelProps } from '../ui/Tabs.jsx';
+import { useConfirmLeave } from '../../hooks/useUnsavedGuard.js';
+import { useUrlParam } from '../../hooks/useUrlParam.js';
 
 // Matchday from the phone: scenes first, one job per view (it used to be one long scroll of four).
 const VIEWS = [
@@ -13,11 +15,13 @@ const VIEWS = [
   { id: 'tournament', label: 'Torneo', icon: Trophy },
 ];
 const VIEW_KEY = 'scl.admin.broadcastView';
-const readView = () => {
-  try { return VIEWS.some(v => v.id === sessionStorage.getItem(VIEW_KEY)) ? sessionStorage.getItem(VIEW_KEY) : 'scenes'; } catch { return 'scenes'; }
+const isView = id => VIEWS.some(v => v.id === id);
+const readView = (fromUrl) => {
+  if (isView(fromUrl)) return fromUrl;
+  try { return isView(sessionStorage.getItem(VIEW_KEY)) ? sessionStorage.getItem(VIEW_KEY) : 'scenes'; } catch { return 'scenes'; }
 };
 
-// "Torneo y transmisión", en tres vistas: Escenas (editor de escenas de OBS, components/admin/obs/ObsSceneStudio.jsx,
+// «Transmisión», en tres vistas: Escenas (editor de escenas de OBS, components/admin/obs/ObsSceneStudio.jsx,
 // con las fuentes para OBS y la guía de Macro Deck), Comunidad (capa y popup) y Torneo (resumen y partidos del colector).
 
 function TournamentSummary({ tournamentData, onOpenTournamentModal }) {
@@ -75,15 +79,22 @@ export const TournamentBroadcastAdminSection = memo(function TournamentBroadcast
   onUpdateTournament,
   showStatusMessage,
 }) {
-  const [view, setView] = useState(readView);
-  const changeView = (next) => {
+  const [urlView, setUrlView] = useUrlParam('sub');
+  const [view, setView] = useState(() => readView(urlView));
+  const confirmLeave = useConfirmLeave();
+  const changeView = async (next) => {
+    if (next === view) return;
+    // Pasar a «Torneo» desmonta el editor de escenas: avisa si tiene cambios sin guardar.
+    if (next === 'tournament' && !(await confirmLeave())) return;
     setView(next);
+    setUrlView(next);
     try { sessionStorage.setItem(VIEW_KEY, next); } catch { /* sin sessionStorage */ }
   };
 
   return (
     <div className="space-y-6">
-      <Tabs tabs={VIEWS} value={view} onChange={changeView} label="Torneo y transmisión" />
+      <Tabs tabs={VIEWS} value={view} onChange={changeView} label="Transmisión" idPrefix="broadcast" />
+      <div {...tabPanelProps('broadcast', view)} className="space-y-6">
       {view === 'tournament' ? (
         <>
           <TournamentSummary tournamentData={tournamentData} onOpenTournamentModal={onOpenTournamentModal} />
@@ -103,6 +114,7 @@ export const TournamentBroadcastAdminSection = memo(function TournamentBroadcast
           onOpenTournamentModal={onOpenTournamentModal}
         />
       )}
+      </div>
     </div>
   );
 });

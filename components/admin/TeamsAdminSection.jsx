@@ -10,6 +10,8 @@ import { resizeImageFile } from '../../utils/resizeImage.js';
 import { renameTeamInTournament } from '../../utils/tournamentRename.js';
 import { confirmAction } from '../ui/ConfirmDialog.jsx';
 import { Alert } from '../ui/Alert.jsx';
+import { useConfirmLeave, useReportDirty } from '../../hooks/useUnsavedGuard.js';
+import { isTeamFormDirty } from '../../utils/unsavedGuard.js';
 import { ClubTransferDialog } from './ClubTransferDialog.jsx';
 import { uploadClubCrest } from '../../services/leagueMediaService.js';
 import { resetFranchise } from '../../services/marketService.js';
@@ -148,8 +150,12 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
     });
   };
 
-  const closeModal = () => {
+  const isFormDirty = Boolean(editingTeam) && isTeamFormDirty(editingTeam, formData);
+  useReportDirty(isFormDirty);
+  const confirmLeave = useConfirmLeave();
+  const closeModal = async () => {
     if (isSaving) return;
+    if (isFormDirty && !(await confirmLeave())) return;
     setEditingTeam(null);
   };
 
@@ -287,9 +293,9 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
 
   const handleResetFranchise = async (team) => {
     const isConfirmed = await confirmAction({
-      title: `¿Resetear la franquicia de ${team.teamName}?`,
+      title: `¿Reiniciar la franquicia de ${team.teamName}?`,
       message: 'El jugador sale de su plantel y el club puede elegir otra franquicia.',
-      confirmLabel: 'Resetear franquicia',
+      confirmLabel: 'Reiniciar franquicia',
       irreversible: true,
     });
     if (!isConfirmed) return;
@@ -299,13 +305,13 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
       showStatusMessage(
         'success',
         result?.lock === 'otherClub'
-          ? `Franquicia de "${team.teamName}" reseteada. El jugador ya pertenece a otro club, no se lo liberó.`
-          : `Franquicia de "${team.teamName}" reseteada.`,
+          ? `Franquicia de "${team.teamName}" reiniciada. El jugador ya pertenece a otro club, no se lo liberó.`
+          : `Franquicia de "${team.teamName}" reiniciada.`,
       );
       await fetchTeams();
     } catch (err) {
       console.error(err);
-      showStatusMessage('error', `No se pudo resetear la franquicia: ${err?.message || 'reintentá en unos instantes.'}`);
+      showStatusMessage('error', `No se pudo reiniciar la franquicia: ${err?.message || 'reintentá en unos instantes.'}`);
     }
   };
 
@@ -569,9 +575,9 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                 <p className="text-sm font-semibold text-danger-soft">Zona de peligro</p>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => handleResetFranchise(editingTeam)} disabled={isSaving} className="btn btn-danger btn-sm">
-                    <Crown size={16} aria-hidden="true" />Resetear franquicia
+                    <Crown size={16} aria-hidden="true" />Reiniciar franquicia
                   </button>
-                  <button type="button" onClick={async () => { if (await handleDeleteTeam(editingTeam)) closeModal(); }} disabled={isSaving} className="btn btn-danger btn-sm">
+                  <button type="button" onClick={async () => { if (await handleDeleteTeam(editingTeam)) setEditingTeam(null); }} disabled={isSaving} className="btn btn-danger btn-sm">
                     <Trash2 size={16} aria-hidden="true" />Eliminar equipo
                   </button>
                 </div>

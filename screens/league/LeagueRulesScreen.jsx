@@ -6,7 +6,8 @@ import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { useLeagueContent } from '../../hooks/useLeagueData.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
-import { SEASON_RULES_DOC } from '../../utils/leagueContent.js';
+import { SEASON_RULES_DOC, fillRuleFigures } from '../../utils/leagueContent.js';
+import { useSquadRulesConfig } from '../../hooks/useSquadRulesConfig.js';
 import { RuleBody } from '../../components/league/RuleBody.jsx';
 
 const chapterAnchor = index => `capitulo-${index + 1}`;
@@ -44,7 +45,14 @@ function ChapterList({ chapters }) {
 export default function LeagueRulesScreen() {
   useDocumentTitle('Reglamento');
   const { content, loading, error } = useLeagueContent(SEASON_RULES_DOC);
-  const chapters = content?.chapters || [];
+  const { benchMin, isLoading: isRulesConfigLoading } = useSquadRulesConfig();
+  // {bancoMinimo} and friends in a chapter become the figures the app enforces (utils/leagueContent.js).
+  const figureMin = isRulesConfigLoading ? null : benchMin;
+  const chapters = (content?.chapters || []).map(chapter => ({
+    ...chapter,
+    title: fillRuleFigures(chapter.title, figureMin),
+    body: fillRuleFigures(chapter.body, figureMin),
+  }));
 
   let body;
   if (error) body = <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;

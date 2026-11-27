@@ -21,7 +21,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
       setTeamsData(await loadDraftTeams());
     } catch (e) {
       console.error(e);
-      showStatusMessage('error', 'Error cargando datos de plantillas.');
+      showStatusMessage('error', 'Error cargando datos de tácticas.');
     }
     setIsLoading(false);
   };
@@ -124,7 +124,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
     // --- HEADER ---
     doc.setFontSize(18);
     doc.setTextColor(40);
-    doc.text(`Reporte de Plantilla: ${team.name}`, 14, 20);
+    doc.text(`Reporte de plantel: ${team.name}`, 14, 20);
 
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -235,7 +235,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
       doc.text('No hay jugadores en el banquillo.', 14, finalY + 10);
     }
 
-    doc.save(`Plantilla_${team.name.replace(/\s+/g, '_')}_Tactico.pdf`);
+    doc.save(`Plantel_${team.name.replace(/\s+/g, '_')}_Tactico.pdf`);
   };
 
   // Before exporting: what each team would lose or get guessed (utils/draftExportReport.js).
@@ -251,9 +251,9 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <p className="text-xs text-ink-3">Exportación de plantillas tácticas a PDF y Option File para PES 2021.</p>
+        <p className="text-xs text-ink-3">Exportación de tácticas a PDF y Option File para PES 2021.</p>
         <button type="button" onClick={fetchData} className="btn btn-ghost btn-sm self-end sm:self-auto">
-          <RefreshCw size={14} aria-hidden="true" /> Recargar plantillas
+          <RefreshCw size={14} aria-hidden="true" /> Recargar tácticas
         </button>
       </div>
 
@@ -305,13 +305,13 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
         </div>
       ) : teamsData.length === 0 ? (
         <div className="text-center p-8 text-ink-3 text-xs border border-dashed border-line/[0.12] rounded-xl">
-          No hay datos cargados. Tocá «Recargar plantillas».
+          No hay datos cargados. Tocá «Recargar tácticas».
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredTeamsData.length === 0 ? (
             <div className="col-span-2 text-center py-10 text-ink-3 text-xs border border-dashed border-line/[0.12] rounded-xl">
-              No se encontraron plantillas para "{searchTerm}".
+              No se encontraron equipos para "{searchTerm}".
             </div>
           ) : (
             filteredTeamsData.map(team => (

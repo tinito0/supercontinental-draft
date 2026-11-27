@@ -1,4 +1,4 @@
-// Pre-export report (Admin → Plantillas). Pure, synthetic teams shaped like loadDraftTeams().
+// Pre-export report (Admin → Exportar (PES y PDF)). Pure, synthetic teams shaped like loadDraftTeams().
 import { describe, it, expect } from 'vitest';
 import { draftTeamReport, draftExportReport } from '../utils/draftExportReport.js';
 

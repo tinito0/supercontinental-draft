@@ -3,7 +3,9 @@ import { Settings, Users, Trophy, FileText, MessageSquarePlus, Globe, Vote, List
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
-import { Tabs } from './ui/Tabs.jsx';
+import { Tabs, tabPanelProps } from './ui/Tabs.jsx';
+import { UnsavedGuardContext, useUnsavedGuardHost } from '../hooks/useUnsavedGuard.js';
+import { useUrlParam } from '../hooks/useUrlParam.js';
 import {
   SuggestionsAdminSection,
   GeneralAdminSection,
@@ -37,10 +39,10 @@ const ADMIN_TABS = [
   { id: 'equipos', label: 'Equipos y usuarios', icon: Users },
   { id: 'reglas', label: 'Reglas', icon: ListChecks },
   { id: 'promesas', label: 'Draft de promesas', icon: Sprout },
-  { id: 'torneo', label: 'Torneo y transmisión', icon: Trophy },
+  { id: 'torneo', label: 'Transmisión', icon: Trophy },
   { id: 'comunidad', label: 'Comunidad', icon: Vote },
   { id: 'web', label: 'Web pública', icon: Globe },
-  { id: 'templates', label: 'Plantillas', icon: FileText },
+  { id: 'templates', label: 'Exportar (PES y PDF)', icon: FileText },
   { id: 'suggestions', label: 'Buzón', icon: MessageSquarePlus },
 ];
 
@@ -59,15 +61,24 @@ export const AdminModal = memo(function AdminModal({
   const visibleTabs = allowedTabs ? ADMIN_TABS.filter(tab => allowedTabs.includes(tab.id)) : ADMIN_TABS;
   const isEditorOnly = Boolean(allowedTabs);
   // Vuelve a la última sección: abrir el gestor del torneo cierra este modal y antes se volvía a Configuración.
-  const [storedTab, setActiveTab] = useState(() => normalizeAdminTab(initialTab || readStoredAdminTab()));
+  // La sección activa vive en ?tab= (enlazable, «Atrás» no la pierde); sin ella, la última abierta.
+  const [urlTab, setUrlTab] = useUrlParam('tab');
+  const [storedTab, setActiveTab] = useState(() => normalizeAdminTab(urlTab || initialTab || readStoredAdminTab()));
   const activeTab = visibleTabs.some(tab => tab.id === storedTab) ? storedTab : visibleTabs[0]?.id;
-  const changeTab = (tab) => {
+  const guard = useUnsavedGuardHost();
+  const changeTab = async (tab) => {
+    if (tab === activeTab) return;
+    if (!(await guard.confirmLeave(tab, activeTab))) return;
     setActiveTab(tab);
     storeAdminTab(tab);
+    setUrlTab(tab);
+  };
+  const closeGuarded = async () => {
+    if (await guard.confirmLeave()) onClose?.();
   };
 
   const tabs = visibleTabs.length > 1
-    ? <Tabs tabs={visibleTabs} value={activeTab} onChange={changeTab} label="Secciones de administración" />
+    ? <Tabs tabs={visibleTabs} value={activeTab} onChange={changeTab} label="Secciones de administración" idPrefix="admin" />
     : null;
   const section = (
     <>
@@ -111,26 +122,32 @@ export const AdminModal = memo(function AdminModal({
     </>
   );
 
+  const panel = <div {...(visibleTabs.length > 1 ? tabPanelProps('admin', activeTab) : {})}>{section}</div>;
+
   if (!isVisible && !isPage) return null;
 
   if (isPage) {
     return (
+      <UnsavedGuardContext.Provider value={guard.value}>
       <Page className="pb-16">
         {isEditorOnly
           ? <PageHeader title="Web pública" description="Los textos del sitio de la liga: su historia, la de cada club y el reglamento de la temporada." />
-          : <PageHeader title="Administración" description="Configuración de la liga, equipos y usuarios, reglas del plantel, torneo y transmisión, y los textos de la web pública." />}
+          : <PageHeader title="Administración" description="Configuración de la liga, equipos y usuarios, reglas del plantel, transmisión, y los textos de la web pública." />}
         {tabs}
-        <div>{section}</div>
+        {panel}
       </Page>
+      </UnsavedGuardContext.Provider>
     );
   }
 
   return (
-    <BaseModal isOpen={true} onClose={onClose} size="xl" title="Administración" icon={Settings}
+    <UnsavedGuardContext.Provider value={guard.value}>
+    <BaseModal isOpen={true} onClose={closeGuarded} size="xl" title="Administración" icon={Settings}
       className="h-[100dvh] sm:h-[90vh] !max-w-5xl" contentClassName="p-4 sm:p-6 space-y-5">
       {tabs}
-      <div>{section}</div>
+      {panel}
     </BaseModal>
+    </UnsavedGuardContext.Provider>
   );
 });
 

@@ -78,7 +78,7 @@ function PredictionStatus({ overlay, tournament, onUpdateBroadcastOverlay, showS
         {matchId && <StatusBadge isOpen={!isClosed} />}
       </div>
       {!matchId ? (
-        <p className="text-sm text-ink-2">No hay partido al aire. La predicción se abre sola al mandar al aire un partido sin jugar (Torneo y transmisión → Escenas).</p>
+        <p className="text-sm text-ink-2">No hay partido al aire. La predicción se abre sola al mandar al aire un partido sin jugar (Transmisión → Escenas).</p>
       ) : (
         <>
           <p className="text-sm text-ink-2">

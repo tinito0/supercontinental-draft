@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Clapperboard, Radio, Save, Undo2 } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
+import { useReportDirty } from '../../../hooks/useUnsavedGuard.js';
 import { DEFAULT_BROADCAST_OVERLAY } from '../../BroadcastOverlay.jsx';
 import { BroadcastStage } from '../../broadcast/BroadcastStage.jsx';
 import { BroadcastOverlayLive } from '../../broadcast/BroadcastOverlayLive.jsx';
@@ -94,13 +95,8 @@ export const ObsSceneStudio = memo(function ObsSceneStudio({ allTeams, tournamen
   const isDirty = dirty.length > 0;
   const isSelectedLive = selected === liveScene;
 
-  // No perder cambios al cerrar o recargar la pestaña.
-  useEffect(() => {
-    if (!isDirty) return undefined;
-    const warn = event => { event.preventDefault(); event.returnValue = ''; };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [isDirty]);
+  // Avisa a Administración (cambiar de sección, cerrar, recargar) mientras haya cambios sin guardar.
+  useReportDirty(isDirty);
 
   const persist = useCallback(async (patch, message) => {
     if (!onUpdateBroadcastOverlay) return false;

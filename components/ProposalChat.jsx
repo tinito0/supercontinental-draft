@@ -78,7 +78,7 @@ export const ProposalChat = memo(function ProposalChat({
       const messagesRef = collection(db, `artifacts/${APP_ID}/public/data/offers/${offerId}/messages`);
       await addDoc(messagesRef, {
         senderId: userId || userProfile?.uid || '',
-        senderTeamName: userProfile?.teamName || 'Manager',
+        senderTeamName: userProfile?.teamName || 'Mánager',
         senderTeamLogo: userProfile?.logoUrl || '',
         text: trimmed,
         createdAt: serverTimestamp(),

@@ -16,7 +16,17 @@ const decimalComma = value => String(value).replace('.', ',');
 
 export function formatPriceShort(priceInMillions) {
   if (typeof priceInMillions !== 'number' || isNaN(priceInMillions)) return "$0M";
-  return `$${decimalComma(priceInMillions.toFixed(2))}M`;
+  const fixed = Math.abs(priceInMillions).toFixed(2);
+  const sign = priceInMillions < 0 && Number(fixed) !== 0 ? '-' : '';
+  return `${sign}$${decimalComma(fixed)}M`;
+}
+
+/**
+ * Money as shown in the header, in Plantel y finanzas and in alerts: $12,50M, and -$3,20M when overdrawn.
+ * Takes whole currency units (a budget or a lock price), not millions.
+ */
+export function formatMoney(amount) {
+  return formatPriceShort((Number(amount) || 0) / 1000000);
 }
 
 /**

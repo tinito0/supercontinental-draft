@@ -1,5 +1,5 @@
 import {
-  BENCH_MIN_AVG_OVR, SQUAD_MIN_PLAYERS, averageOvr, buildTeamRuleRows, benchPlayers, checkBench, evaluateSquadRules, formatAverage, isLocalPlayer,
+  DEFAULT_BENCH_MIN_AVG_OVR, BENCH_MIN_AVG_OVR, benchBlockMessage, normalizeBenchMin, squadRulesConfigPath, SQUAD_MIN_PLAYERS, averageOvr, buildTeamRuleRows, benchPlayers, checkBench, evaluateSquadRules, formatAverage, isLocalPlayer,
 } from '../utils/squadRules.js';
 
 // Synthetic squads: ids 1..n, OVR given per player.
@@ -33,7 +33,7 @@ describe('squadRules', () => {
   });
 
   test('a bench of exactly 73 passes', () => {
-    const squad = squadOf([...Array(11).fill(85), ...Array(10).fill(BENCH_MIN_AVG_OVR)]);
+    const squad = squadOf([...Array(11).fill(85), ...Array(10).fill(DEFAULT_BENCH_MIN_AVG_OVR)]);
     expect(checkBench(squad, firstEleven).ok).toBe(true);
   });
 
@@ -85,5 +85,52 @@ describe('buildTeamRuleRows', () => {
     };
     const rows = buildTeamRuleRows(teams, locks, players);
     expect(rows.map(row => [row.teamName, row.result.ok])).toEqual([['Alfa', false], ['Zeta', true]]);
+  });
+});
+
+describe('configurable bench minimum', () => {
+  const squad = squadOf([...Array(11).fill(85), ...Array(10).fill(75)]);
+
+  test('the old constant stays an alias of the default', () => {
+    expect(BENCH_MIN_AVG_OVR).toBe(DEFAULT_BENCH_MIN_AVG_OVR);
+    expect(DEFAULT_BENCH_MIN_AVG_OVR).toBe(73);
+  });
+
+  test('checkBench uses the given minimum and reports it', () => {
+    expect(checkBench(squad, firstEleven)).toMatchObject({ ok: true, min: 73 });
+    expect(checkBench(squad, firstEleven, { benchMin: 76 })).toMatchObject({ ok: false, min: 76 });
+    expect(checkBench(squad, firstEleven, { benchMin: 75 }).ok).toBe(true);
+  });
+
+  test('evaluateSquadRules shows the custom minimum as the bench target', () => {
+    const result = evaluateSquadRules({ squad, lineup: firstEleven, teamCountry: 204, benchMin: 80 });
+    const bench = result.rules.find(rule => rule.id === 'bench');
+    expect(bench).toMatchObject({ target: '80', ok: false });
+  });
+
+  test('benchBlockMessage names the minimum of the check', () => {
+    const check = checkBench(squad, firstEleven, { benchMin: 78 });
+    expect(benchBlockMessage(check)).toContain('el mínimo es 78');
+  });
+
+  test('buildTeamRuleRows passes the minimum down', () => {
+    const players = new Map(squad.map(player => [String(player.Id), player]));
+    const locks = Object.fromEntries(squad.map(player => [String(player.Id), { lockedBy: 'u1' }]));
+    const teams = { u1: { teamName: 'A', lineup: firstEleven, country: 204 } };
+    expect(buildTeamRuleRows(teams, locks, players, { benchMin: 80 })[0].result.rules.find(r => r.id === 'bench').ok).toBe(false);
+    expect(buildTeamRuleRows(teams, locks, players)[0].result.rules.find(r => r.id === 'bench').ok).toBe(true);
+  });
+
+  test('normalizeBenchMin rounds, clamps and falls back to the default', () => {
+    expect(normalizeBenchMin(75)).toBe(75);
+    expect(normalizeBenchMin('76')).toBe(76);
+    expect(normalizeBenchMin(74.6)).toBe(75);
+    expect(normalizeBenchMin(10)).toBe(40);
+    expect(normalizeBenchMin(150)).toBe(99);
+    ['abc', null, undefined, '', NaN, true].forEach(bad => expect(normalizeBenchMin(bad)).toBe(73));
+  });
+
+  test('the config document lives under public/data/config', () => {
+    expect(squadRulesConfigPath('app1')).toBe('artifacts/app1/public/data/config/squadRules');
   });
 });

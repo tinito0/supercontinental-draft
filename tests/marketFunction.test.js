@@ -6,6 +6,8 @@ import path from 'node:path';
 import { generateKeyPair, exportJWK, SignJWT, jwtVerify, createLocalJWKSet } from 'jose';
 import * as shared from '../supabase/functions/_shared/marketConstants.js';
 import * as constants from '../utils/constants.js';
+import * as sharedSquadRules from '../supabase/functions/_shared/squadRules.js';
+import * as appSquadRules from '../utils/squadRules.js';
 import { encodeFields, decodeFields } from '../supabase/functions/_shared/firestoreValues.js';
 import { verifyFirebaseIdToken } from '../supabase/functions/_shared/googleAuth.js';
 import { isMarketOpen, isMarketAdmin, getCatalogPlayer, handleMarketAction, resetFranchise, MarketError } from '../supabase/functions/_shared/market.js';
@@ -36,6 +38,60 @@ describe('market function: data kept in sync with the app', () => {
     const normal = { Id: 2, Precio: '7.5', Age: '30', OVR_CALCULADO: '84', Name: 'A', POS_NOMBRE: 'DC', Country1: 9, Finishing: 70 };
     expect(buildMarketCatalog([glitched, normal])).toEqual({ 2: [7.5, 30, 84, 'A', 'DC', 9] });
     expect(getCatalogPlayer({ 2: [7.5, 30, 84, 'A', 'DC', 9] }, '2')).toMatchObject({ Id: 2, Precio: 7.5, OVR_CALCULADO: 84 });
+  });
+});
+
+describe('squad rules kept in sync with utils/squadRules.js (REG-2)', () => {
+  // Synthetic squads only: ids 1..n with the OVR and countries given.
+  const squadOf = (ovrs, country = () => 9) => ovrs.map((ovr, i) => ({ Id: i + 1, OVR_CALCULADO: ovr, Country1: country(i) }));
+  const lineupOf = ids => Object.fromEntries(ids.map((id, slot) => [String(slot), String(id)]));
+  const eleven = lineupOf([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  const squads = [
+    [],
+    squadOf([80, 70, 60]),
+    squadOf([...Array(11).fill(85), 73, 73, 73, 73, 72, 72, 72, 73, 73, 72]),
+    squadOf([...Array(11).fill(85), ...Array(10).fill(73)], i => (i < 7 ? 5 : 9)),
+    squadOf([...Array(11).fill(85), ...Array(12).fill(60)], i => (i % 2 ? 5 : 9)),
+    [...squadOf(Array(20).fill(75)), { Id: 21 }],
+  ];
+  const lineups = [{}, eleven, lineupOf([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), lineupOf([99, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), null];
+  const mins = [undefined, 73, '70', 72.6, 10, 120, null, '', true, 'x'];
+
+  it('exports the same constants', () => {
+    for (const name of ['DEFAULT_BENCH_MIN_AVG_OVR', 'BENCH_MIN_LIMIT', 'BENCH_MAX_LIMIT', 'SQUAD_MIN_PLAYERS', 'LOCAL_MIN_PLAYERS', 'STARTERS_COUNT']) {
+      expect(sharedSquadRules[name], name).toEqual(appSquadRules[name]);
+    }
+    expect(sharedSquadRules.squadRulesConfigPath('a')).toBe(appSquadRules.squadRulesConfigPath('a'));
+    expect(sharedSquadRules.SQUAD_RULE_LABELS).toEqual(appSquadRules.SQUAD_RULE_LABELS);
+  });
+
+  it('normalizeBenchMin, checkBench, evaluateSquadRules and benchBlockMessage give the same results', () => {
+    mins.forEach(min => expect(sharedSquadRules.normalizeBenchMin(min), String(min)).toBe(appSquadRules.normalizeBenchMin(min)));
+    for (const squad of squads) {
+      for (const lineup of lineups) {
+        for (const [benchMin, missingCount] of [[73, 0], [75, 0], [60, 0], [73, 1], [73, 3]]) {
+          const check = sharedSquadRules.checkBench(squad, lineup, { benchMin, missingCount });
+          expect(check).toEqual(appSquadRules.checkBench(squad, lineup, { benchMin, missingCount }));
+          expect(sharedSquadRules.benchBlockMessage(check)).toBe(appSquadRules.benchBlockMessage(check));
+          for (const teamCountry of [5, '9', null, '']) {
+            const team = { squad, lineup, teamCountry, benchMin, missingCount };
+            expect(sharedSquadRules.evaluateSquadRules(team)).toEqual(appSquadRules.evaluateSquadRules(team));
+          }
+        }
+      }
+    }
+  });
+
+  it('evaluateMatchdayCompliance matches the admin board (buildTeamRuleRows)', () => {
+    const squad = squads[3];
+    const locks = Object.fromEntries(squad.map(p => [String(p.Id), { lockedBy: p.Id <= 18 ? 'a' : 'b' }]));
+    const players = new Map(squad.filter(p => p.Id !== 18).map(p => [String(p.Id), p]));
+    const teams = { a: { teamName: 'A', country: 5, lineup: eleven }, b: { teamName: 'B', country: 9 }, c: { teamName: 'C', approved: false } };
+    const server = sharedSquadRules.evaluateMatchdayCompliance(teams, locks, players, { benchMinAvgOvr: 74 });
+    const board = appSquadRules.buildTeamRuleRows(teams, locks, players, { benchMin: 74 });
+    expect(server.map(row => [row.teamId, row.ok, row.missingCount, row.rules]))
+      .toEqual(board.map(row => [row.userId, row.result.ok, row.result.missingCount, row.result.rules]));
+    expect(server.find(row => row.teamId === 'a').missingCount).toBe(1);
   });
 });
 

@@ -10,9 +10,8 @@ import { Tabs } from './ui/Tabs.jsx';
 import { Stat } from './ui/Stat.jsx';
 import { Alert } from './ui/Alert.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
-import { evaluateSquadRules } from '../utils/squadRules.js';
-
-const RULE_SHORT = { squad: 'plantel', bench: 'banco', locals: 'locales' };
+import { evaluateSquadRules, SQUAD_RULE_LABELS } from '../utils/squadRules.js';
+import { useSquadRulesConfig } from '../hooks/useSquadRulesConfig.js';
 
 const POS_GROUPS = [
   { id: 'TODOS', label: 'Todos' },
@@ -99,6 +98,7 @@ export const TeamsModal = memo(function TeamsModal({
     return Object.values(teams);
   }, [allTeams, playerLocks, playerMap]);
 
+  const { benchMin } = useSquadRulesConfig();
   const teamStats = useMemo(() => {
     return playersByTeam.map(team => {
       const totalCost = team.players.reduce((sum, p) => sum + (Number(p.Precio) || 0), 0);
@@ -115,11 +115,11 @@ export const TeamsModal = memo(function TeamsModal({
         return (Number(b.OVR_CALCULADO) || 0) - (Number(a.OVR_CALCULADO) || 0);
       });
       const topPlayerId = [...team.players].sort((a, b) => (Number(b.OVR_CALCULADO) || 0) - (Number(a.OVR_CALCULADO) || 0))[0]?.Id;
-      const rules = evaluateSquadRules({ squad: team.players, lineup: team.lineup, teamCountry: team.country });
-      const brokenRules = rules.rules.filter(rule => rule.applies && !rule.ok).map(rule => RULE_SHORT[rule.id]);
+      const rules = evaluateSquadRules({ squad: team.players, lineup: team.lineup, teamCountry: team.country, benchMin });
+      const brokenRules = rules.rules.filter(rule => rule.applies && !rule.ok).map(rule => SQUAD_RULE_LABELS[rule.id].short.toLowerCase());
       return { ...team, players: sortedPlayers, totalCost, avgOvr, topPlayerId, brokenRules };
     });
-  }, [playersByTeam]);
+  }, [playersByTeam, benchMin]);
 
   // Filtrado y ordenamiento de equipos. La lista son los rivales: el club propio queda fuera
   // (los totales de la liga, más abajo, sí lo cuentan).
@@ -259,14 +259,14 @@ export const TeamsModal = memo(function TeamsModal({
                   <span className="block font-display text-lg font-bold text-ink truncate leading-tight">{team.teamName}</span>
                   <span className="block text-xs text-ink-3 mt-0.5">
                     <span className="num">{selectedPosGroup === 'TODOS' ? team.players.length : `${displayedPlayers.length}/${team.players.length}`}</span> jugadores
-                    <span className="sm:hidden"> · <span className="num">{formatPriceShort(team.totalCost)}</span></span>
+                    <span className="sm:hidden"> · <span className="num">{formatPriceShort(team.totalCost)}</span> invertidos</span>
                   </span>
                   {team.brokenRules.length > 0 && (
                     <span className="block text-xs text-danger-soft mt-0.5">Incumple: {team.brokenRules.join(', ')}</span>
                   )}
                 </span>
                 <span className="hidden sm:block text-right shrink-0">
-                  <span className="block eyebrow">Invertido</span>
+                  <span className="block eyebrow">Invertido en fichajes</span>
                   <span className="block font-display num text-lg font-bold text-ink leading-tight">{formatPriceShort(team.totalCost)}</span>
                 </span>
                 <span className={`w-10 h-10 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 ${team.avgOvr ? getStatAndOvrColorClass(team.avgOvr) : 'bg-raised text-ink-3'}`}

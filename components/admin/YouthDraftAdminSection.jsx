@@ -77,7 +77,7 @@ export function YouthDraftAdminSection({ allTeams, showStatusMessage }) {
   const removeDraft = async () => {
     const isConfirmed = await confirmAction({
       title: '¿Borrar el draft de promesas?',
-      message: 'Se borran el grupo publicado, el orden y los turnos. Los jugadores ya elegidos siguen en sus planteles hasta el reseteo de temporada.',
+      message: 'Se eliminan el grupo publicado, el orden y los turnos. Los jugadores ya elegidos siguen en sus planteles hasta el reseteo de temporada.',
       confirmLabel: 'Borrar draft',
       tone: 'danger',
       irreversible: true,

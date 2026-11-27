@@ -36,6 +36,9 @@ graphics and sets its own frame in `components/broadcast/broadcast.css`.
 5. **Same skeleton everywhere**: `<Page>` → `<PageHeader eyebrow title description actions>` → optional toolbar
    (search / filters / `<Tabs>`) → content. Pages must not draw their own outer frame, close button or full-height
    card: the app shell already provides the frame. The remaining budget is shown **only** in the top header.
+   One exception: the «Finanzas» tab of «Plantel y finanzas» repeats it as «Disponible» (same figure, same `budgetTone`,
+   same money format), because the tab is about the money and the balance is its anchor. Rules and balance never share a tab:
+   rules belong to «Plantel», the balance to «Finanzas».
 6. **Football language is reused, not reinvented**: the marketplace player card (`components/PlayerCard.jsx`: square photo, OVR and position chips), position colors
    (`getPosColorClass` → `pos-*`, `getPosColor`), stat color scale (`getStatAndOvrColorClass` → `stat-c-*`),
    `Pitch`, the standings table style (`LeagueTableView`). Wherever a player appears: photo
@@ -236,6 +239,28 @@ one muted metadata line, and OVR in the stat colour. Rows are separated by hairl
 (`TeamStrength`, `utils/teamStrength.js`) sits on top: average OVR per line of the XI, bars in the stat colours, the
 bar floor at OVR 40 so close lines still look different. On the board a row is the same target as its pitch marker:
 tap a starter to take him in hand, then another starter (swap), a substitute (substitution) or «Mandar al banco».
+
+## Glosario
+
+One word per concept in UI copy. Code identifiers and routes keep their names (`Tactics`, `/tactics`, `teams`).
+
+| Concept | Say | Don't say |
+| --- | --- | --- |
+| The board (formation, starters, bench, numbers, instructions): page, modal, nav item, shared link | «Táctica» | «Pizarra», «Alineación táctica», «Plantilla» |
+| Strategy sliders and advanced instructions inside the board | «Estrategia» (sub-tab) | «Táctica» (that is the whole board) |
+| A team's formation as read from the game data (match centre, team page) | «Plan de juego» | «Plan», «plan guardado», «Plan táctico» |
+| The players a club owns | «Plantel» | «Plantilla», «Roster» |
+| The 11 on the pitch / the substitutes | «Titulares» / «Suplentes» (the control: «Mandar al banco») | «Banco de Suplentes» as a title |
+| The person who searches the market | «Ojeador» | «Scout» as a person |
+| The feature/page of searches | «Scouting» (nav, tour), «Búsqueda» (one request) | «Busqueda», «scouts» as a count |
+| Money to sign players | «Presupuesto» | «Saldo», «Fondos», «Caja» |
+| Sign / drop a player | «Fichar» / «Liberar» | «Contratar», «Dar de baja» |
+| The head coach of a club | «Mánager» | «Manager» |
+| A club in the league | «Club» in text, «Equipos» as a section name | «Franquicia» for the club itself (it is the PES club the manager picked; masculine/feminine: «la franquicia») |
+| Section rules page | «Reglamento» | «Normas», «Reglas» as a page title |
+| Destructive verbs | «Eliminar» (irreversible data), «Reiniciar» (counters, votes, state), «Quitar» (take out of a list) | «Borrar», «Resetear» |
+
+Rule labels (squad size, bench minimum) come from one table in `utils/squadRules.js`; the admin form, the league site and the teams modal must read it, not retype it.
 
 ## Don'ts
 

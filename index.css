@@ -691,25 +691,25 @@
 /* Gris */
 
 /* --- Paleta de Colores para Posiciones (Píldoras y Tarjetas) --- */
+/* Same values as before, now from the --c-data-* tokens so the Finanzas doughnut reads the same source. */
 .pos-delantero {
-  background-color: #ff4d4d;
-  color: #1e1e1e;
+  background-color: rgb(var(--c-data-red));
+  color: rgb(var(--c-data-ink));
 }
 
 .pos-medio {
-  background-color: #00b34a;
-  color: #1e1e1e;
+  background-color: rgb(var(--c-data-green));
+  color: rgb(var(--c-data-ink));
 }
 
 .pos-defensa {
-  background-color: #00aeff;
-  color: #1e1e1e;
+  background-color: rgb(var(--c-data-blue));
+  color: rgb(var(--c-data-ink));
 }
 
-/* CORREGIDO: 'ffc400' en lugar de 'ffc4al' */
 .pos-portero {
-  background-color: #ffc400;
-  color: #1e1e1e;
+  background-color: rgb(var(--c-data-yellow));
+  color: rgb(var(--c-data-ink));
 }
 
 .pos-default {

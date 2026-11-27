@@ -1,16 +1,18 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, runTransaction, Timestamp } from 'firebase/firestore';
-import { Clock, HelpCircle, Loader2, Search, Star, Trash2, UserPlus } from 'lucide-react';
+import { HelpCircle, Loader2, Search } from 'lucide-react';
 import { APP_ID, PLAYER_SKILLS_MAP, REGIONES, STAT_NAMES_MAP } from '../utils/constants.js';
-import { formatPriceShort, getFlagUrl, getRegionById, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
 import { Page } from './ui/Page.jsx';
-import { PageHeader, SectionHeader } from './ui/PageHeader.jsx';
+import { PageHeader } from './ui/PageHeader.jsx';
 import { Alert } from './ui/Alert.jsx';
 import { Button } from './ui/Button.jsx';
-import { EmptyState } from './ui/EmptyState.jsx';
+import { Tabs, tabPanelProps } from './ui/Tabs.jsx';
 import { buildResultsAsync, positionGroups, RESULT_COUNT_MIN, RESULT_COUNT_MAX } from '../utils/scoutEngine.js';
 import { PLAYING_STYLE_GROUPS, PLAYING_STYLE_POSITIONS } from '../utils/playerGlossary.js';
-import { scrollBehavior } from '../utils/scrollBehavior.js';
+import { toMillis } from '../utils/scoutView.js';
+import { ScoutGuidedTutorial, SCOUT_TUTORIAL_STEPS } from './scouting/ScoutGuidedTutorial.jsx';
+import { ScoutPicker, scoutDurationLabel } from './scouting/ScoutPicker.jsx';
+import { ScoutSearchList } from './scouting/ScoutSearchList.jsx';
 
 const MONTHLY_SEARCH_LIMIT = 5;
 
@@ -19,49 +21,6 @@ const DEFAULT_SCOUTS = [
   { id: 'scout-equilibrado', name: 'Martín Sosa', quality: 74, durationHours: 1 / 3, specialty: 'Búsqueda confiable', description: 'Buen balance entre tiempo y precisión. Ideal para búsquedas normales.' },
   { id: 'fefe-farfan', name: 'Fefe Farfan', quality: 98, durationHours: 0.5, imageUrl: '/scouts/fefe-farfan.webp', specialty: 'Élite total', description: 'El mejor ojeador de todos. Tarda más porque filtra fino y prioriza coincidencias premium.' },
   { id: 'scout-test', name: 'Ojeador de Prueba', quality: 98, durationHours: 16, testDurationSeconds: 1, specialty: 'Prueba instantánea', description: 'Funciona como Fefe Farfan, pero vuelve en 1 segundo para probar resultados. Solo lo ve el admin.' },
-];
-
-const SCOUT_TUTORIAL_STEPS = [
-  {
-    targetSelector: '[data-scout-target="scout-picker"]',
-    title: 'Elegir ojeador',
-    description: 'Acá elegís quién sale a buscar. Fefe Farfan es el más preciso; los otros vuelven antes pero tienen más margen de error.',
-  },
-  {
-    targetSelector: '[data-scout-target="position"]',
-    title: 'Zona del campo',
-    description: 'Podés buscar cualquier posición o enfocarte en delanteros, mediocampistas, defensores o arqueros.',
-  },
-  {
-    targetSelector: '[data-scout-target="specific-position"]',
-    title: 'Posición específica',
-    description: 'Si querés hilar fino, marcá una o varias posiciones puntuales según aptitud. Si no marcás ninguna, busca en toda la línea.',
-  },
-  {
-    targetSelector: '[data-scout-target="area"]',
-    title: 'Zona de búsqueda',
-    description: 'Filtrá por país o región para buscar talentos de una zona concreta.',
-  },
-  {
-    targetSelector: '[data-scout-target="attention"]',
-    title: 'Aspecto principal',
-    description: 'Decidí si el ojeador prioriza la valoración general, una habilidad puntual o promesas jóvenes.',
-  },
-  {
-    targetSelector: '[data-scout-target="budget"]',
-    title: 'Presupuesto',
-    description: 'Si elegís tenerlo en cuenta, el ojeador intenta respetar tu presupuesto disponible o el máximo que cargues.',
-  },
-  {
-    targetSelector: '[data-scout-target="attributes"]',
-    title: 'Atributos',
-    description: 'Podés pedir hasta dos atributos, por ejemplo Velocidad 80 y Definición 75.',
-  },
-  {
-    targetSelector: '[data-scout-target="submit"]',
-    title: 'Enviar ojeador',
-    description: 'Cuando esté todo listo, mandás la asignación. Se descuenta del cupo mensual y los resultados llegan cuando termina el tiempo.',
-  },
 ];
 
 
@@ -117,161 +76,8 @@ function getMonthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function toMillis(value) {
-  if (!value) return 0;
-  if (typeof value.toMillis === 'function') return value.toMillis();
-  if (typeof value.toDate === 'function') return value.toDate().getTime();
-  return new Date(value).getTime();
-}
-
-/** How long a scout takes, as text: «30 min», «1 hora», «2 horas» (short: «30 min», «1 h»). */
-function scoutDurationLabel(scout, isShort = false) {
-  const minutes = Math.round(Number(scout?.durationHours || 12) * 60);
-  if (minutes < 60) return `${minutes} min`;
-  const hours = minutes / 60;
-  if (isShort) return `${hours} h`;
-  return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
-}
-
-function getTimeLeft(resolvesAt) {
-  const diff = toMillis(resolvesAt) - Date.now();
-  if (diff <= 0) return 'Lista para revisar';
-  const hours = Math.floor(diff / 3600000);
-  const minutes = Math.ceil((diff % 3600000) / 60000);
-  if (hours <= 0) return `${minutes} min restantes`;
-  return `${hours} h ${minutes} min restantes`;
-}
-
 function makeCriteriaFingerprint(scoutId, criteria) {
   return `${scoutId}:${JSON.stringify(criteria)}`;
-}
-
-
-function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
-  const [stepIndex, setStepIndex] = useState(0);
-  const [spotlightRect, setSpotlightRect] = useState(null);
-  const [tooltipStyle, setTooltipStyle] = useState({});
-  const activeStep = steps[stepIndex];
-
-  const updatePosition = () => {
-    if (!activeStep) return;
-    const target = document.querySelector(activeStep.targetSelector);
-    if (!target) {
-      setSpotlightRect(null);
-      setTooltipStyle({
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)',
-      });
-      return;
-    }
-
-    const rect = target.getBoundingClientRect();
-    const padding = 10;
-    const nextRect = {
-      x: Math.max(8, rect.left - padding),
-      y: Math.max(8, rect.top - padding),
-      width: Math.min(window.innerWidth - 16, rect.width + padding * 2),
-      height: Math.min(window.innerHeight - 16, rect.height + padding * 2),
-    };
-    setSpotlightRect(nextRect);
-
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-      setTooltipStyle({
-        left: '12px',
-        right: '12px',
-        bottom: 'calc(14px + env(safe-area-inset-bottom))',
-        transform: 'none',
-      });
-      return;
-    }
-
-    const tooltipWidth = 340;
-    const belowTop = nextRect.y + nextRect.height + 14;
-    const aboveTop = nextRect.y - 220;
-    const top = belowTop + 210 < window.innerHeight ? belowTop : Math.max(16, aboveTop);
-    const left = Math.min(window.innerWidth - tooltipWidth - 16, Math.max(16, nextRect.x + nextRect.width / 2 - tooltipWidth / 2));
-    setTooltipStyle({ left: `${left}px`, top: `${top}px`, width: `${tooltipWidth}px`, transform: 'none' });
-  };
-
-  useEffect(() => {
-    if (!isOpen || !activeStep) return undefined;
-    const target = document.querySelector(activeStep.targetSelector);
-    target?.scrollIntoView({ behavior: scrollBehavior(), block: 'center', inline: 'nearest' });
-    const frame = requestAnimationFrame(() => {
-      window.setTimeout(updatePosition, 240);
-    });
-    const handleReposition = () => updatePosition();
-    window.addEventListener('resize', handleReposition);
-    window.addEventListener('scroll', handleReposition, true);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', handleReposition);
-      window.removeEventListener('scroll', handleReposition, true);
-    };
-  }, [activeStep, isOpen, stepIndex]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setStepIndex(0);
-    }
-  }, [isOpen]);
-
-  if (!isOpen || !activeStep) return null;
-
-  const isLast = stepIndex === steps.length - 1;
-  const path = spotlightRect
-    ? `M 0 0 H ${window.innerWidth} V ${window.innerHeight} H 0 Z M ${spotlightRect.x} ${spotlightRect.y + 12} Q ${spotlightRect.x} ${spotlightRect.y} ${spotlightRect.x + 12} ${spotlightRect.y} H ${spotlightRect.x + spotlightRect.width - 12} Q ${spotlightRect.x + spotlightRect.width} ${spotlightRect.y} ${spotlightRect.x + spotlightRect.width} ${spotlightRect.y + 12} V ${spotlightRect.y + spotlightRect.height - 12} Q ${spotlightRect.x + spotlightRect.width} ${spotlightRect.y + spotlightRect.height} ${spotlightRect.x + spotlightRect.width - 12} ${spotlightRect.y + spotlightRect.height} H ${spotlightRect.x + 12} Q ${spotlightRect.x} ${spotlightRect.y + spotlightRect.height} ${spotlightRect.x} ${spotlightRect.y + spotlightRect.height - 12} Z`
-    : `M 0 0 H ${window.innerWidth} V ${window.innerHeight} H 0 Z`;
-
-  return (
-    <div className="guide-layer" role="dialog" aria-modal="true" aria-label="Tutorial de scouting">
-      <svg className="guide-backdrop" width="100%" height="100%" aria-hidden="true">
-        <path d={path} fill="rgba(0,0,0,0.72)" fillRule="evenodd" />
-      </svg>
-      {spotlightRect && (
-        <div
-          className="guide-ring"
-          style={{
-            left: spotlightRect.x,
-            top: spotlightRect.y,
-            width: spotlightRect.width,
-            height: spotlightRect.height,
-          }}
-        />
-      )}
-      <div className="guide-popover" style={tooltipStyle}>
-        <button type="button" onClick={onClose} className="guide-close">Saltar</button>
-        <div className="eyebrow mb-2">
-          Paso {stepIndex + 1} de {steps.length}
-        </div>
-        <h3 className="font-display text-lg font-bold text-ink mb-2">{activeStep.title}</h3>
-        <p className="text-sm text-ink-2 leading-relaxed">{activeStep.description}</p>
-        <div className="flex items-center justify-between gap-3 mt-5">
-          <button
-            type="button"
-            onClick={() => setStepIndex(index => Math.max(0, index - 1))}
-            disabled={stepIndex === 0}
-            title={stepIndex === 0 ? 'Este es el primer paso' : undefined}
-            className="btn btn-secondary"
-          >
-            Anterior
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (isLast) onClose();
-              else setStepIndex(index => Math.min(steps.length - 1, index + 1));
-            }}
-            className="btn btn-primary"
-          >
-            {isLast ? 'Finalizar' : 'Siguiente'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
@@ -300,6 +106,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
   const [usageError, setUsageError] = useState(false);
   const [readAttempt, setReadAttempt] = useState(0);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [view, setView] = useState('new');
   const [clockTick, setClockTick] = useState(() => Date.now());
   const resolvingRef = useRef(new Set());
 
@@ -344,7 +151,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       setSearches(nextSearches.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)));
       setIsLoading(false);
     }, (error) => {
-      console.error('Error cargando busquedas scout:', error);
+      console.error('Error cargando búsquedas:', error);
       setSearchesError(true);
       setIsLoading(false);
     });
@@ -359,7 +166,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       setMonthlyUsage(Number(snap.data()?.count || 0));
       setUsageLoaded(true);
     }, (error) => {
-      console.error('Error cargando cupo scout:', error);
+      console.error('Error cargando cupo de búsquedas:', error);
       setUsageError(true);
     });
     return () => unsubscribe();
@@ -412,7 +219,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
             time: 'Scouting',
           });
         } catch (error) {
-          console.error('Error resolviendo busqueda scout:', error);
+          console.error('Error resolviendo búsqueda:', error);
           // Not in the effect deps on purpose: a new callback identity must not re-trigger retries.
           showStatusMessage?.('error', 'No se pudo completar la búsqueda del ojeador. Se reintenta al reabrir la pestaña.');
         } finally {
@@ -425,7 +232,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
     event.preventDefault();
     if (!scoutSearchesRef || isCreatingRef.current) return;
     if (monthlyUsage >= MONTHLY_SEARCH_LIMIT) {
-      showStatusMessage?.('error', `Ya usaste los ${MONTHLY_SEARCH_LIMIT} scouts disponibles de este mes.`);
+      showStatusMessage?.('error', `Ya usaste las ${MONTHLY_SEARCH_LIMIT} búsquedas de este mes.`);
       return;
     }
 
@@ -506,15 +313,16 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         }
       });
       setCriteria(initialCriteria);
-      showStatusMessage?.('success', scout.testDurationSeconds ? 'Búsqueda scout de prueba creada. Volvé en 1 segundo.' : `Búsqueda scout creada. Volvé en ${scoutDurationLabel(scout)}.`);
+      setView('mine');
+      showStatusMessage?.('success', scout.testDurationSeconds ? 'Búsqueda de prueba creada. Volvé en 1 segundo.' : `Búsqueda creada. Volvé en ${scoutDurationLabel(scout)}.`);
     } catch (error) {
-      console.error('Error creando busqueda scout:', error);
+      console.error('Error creando búsqueda:', error);
       if (error.message === 'scout-limit-reached') {
-        showStatusMessage?.('error', `Ya usaste los ${MONTHLY_SEARCH_LIMIT} scouts disponibles de este mes.`);
+        showStatusMessage?.('error', `Ya usaste las ${MONTHLY_SEARCH_LIMIT} búsquedas de este mes.`);
       } else if (error.message === 'scout-search-duplicate') {
         showStatusMessage?.('error', 'Ya tenés una búsqueda idéntica en curso.');
       } else {
-        showStatusMessage?.('error', 'No se pudo crear la búsqueda scout.');
+        showStatusMessage?.('error', 'No se pudo crear la búsqueda.');
       }
     } finally {
       isCreatingRef.current = false;
@@ -526,7 +334,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
     try {
       await deleteDoc(doc(db, `artifacts/${APP_ID}/users/${userId}/scout_searches`, searchId));
     } catch (error) {
-      console.error('Error descartando busqueda scout:', error);
+      console.error('Error descartando búsqueda:', error);
     }
   };
 
@@ -540,7 +348,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       <PageHeader
         eyebrow="Mi club"
         title="Scouting"
-        description="Mandá ojeadores a buscar jugadores con los criterios que elijas. Cada búsqueda usa una de tus asignaciones del mes."
+        description="Mandá ojeadores a buscar jugadores con los criterios que elijas. Cada búsqueda cuenta para tu cupo del mes."
         actions={(
           <>
             {quotaKnown && (
@@ -548,7 +356,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 Cupo del mes: <span className="num font-semibold text-ink">{monthlyUsage}/{MONTHLY_SEARCH_LIMIT}</span>
               </span>
             )}
-            <button type="button" onClick={() => setIsGuideOpen(true)} className="btn btn-secondary">
+            <button type="button" onClick={() => { setView('new'); setIsGuideOpen(true); }} className="btn btn-secondary min-h-11">
               <HelpCircle className="w-4 h-4" aria-hidden="true" />Cómo funciona
             </button>
           </>
@@ -561,17 +369,29 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
           title="No pudimos cargar tus búsquedas"
           action={<Button className="min-h-11" onClick={() => setReadAttempt(n => n + 1)}>Reintentar</Button>}
         >
-          No sabemos cuántas asignaciones te quedan este mes. Reintentá en unos segundos.
+          No sabemos cuántas búsquedas te quedan este mes. Reintentá en unos segundos.
         </Alert>
       )}
 
       {quotaFull && (
         <Alert tone="danger" title="Cupo mensual agotado">
-          Usaste las {MONTHLY_SEARCH_LIMIT} asignaciones de este mes. El cupo se restablece el 1.º del mes que viene.
+          Usaste las {MONTHLY_SEARCH_LIMIT} búsquedas de este mes. El cupo se restablece el 1.º del mes que viene.
         </Alert>
       )}
 
-      <form onSubmit={handleCreate} className="panel p-4 sm:p-6 space-y-6" aria-labelledby="scout-form-title">
+      <Tabs
+        idPrefix="scout"
+        label="Scouting"
+        value={view}
+        onChange={setView}
+        tabs={[
+          { id: 'new', label: 'Nueva búsqueda' },
+          { id: 'mine', label: 'Mis búsquedas', count: searches.length },
+        ]}
+      />
+
+      {view === 'new' && (
+      <form {...tabPanelProps('scout', 'new')} onSubmit={handleCreate} className="panel p-4 sm:p-6 space-y-6">
         <div>
           <h2 id="scout-form-title" className="section-title">Nueva búsqueda</h2>
           <p className="text-xs text-ink-3 mt-1">
@@ -581,42 +401,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
 
         <fieldset data-scout-target="scout-picker">
           <legend className="eyebrow mb-3">Ojeador</legend>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" role="radiogroup" aria-label="Ojeador">
-            {scouts.map(scout => {
-              const selected = selectedScoutId === scout.id;
-              return (
-                <button
-                  key={scout.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  disabled={quotaFull}
-                  title={quotaFull ? 'Ya usaste las asignaciones de este mes' : scout.description || undefined}
-                  onClick={() => setSelectedScoutId(scout.id)}
-                  className={`min-h-[88px] rounded-xl border p-3 text-left transition-colors flex gap-3 overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed ${
-                    selected ? 'bg-accent/10 border-accent' : 'bg-raised border-line/[0.12] hover:border-line/30'
-                  }`}
-                >
-                  <span className="w-14 h-14 rounded-lg overflow-hidden bg-surface flex-shrink-0 flex items-center justify-center">
-                    {scout.imageUrl ? (
-                      <img src={scout.imageUrl} alt="" width={56} height={56} className="w-full h-full object-cover object-top"
-                        onError={e => {
-                          if (e.currentTarget.src.endsWith('.webp')) e.currentTarget.src = '/scouts/fefe-farfan.png';
-                          else e.currentTarget.style.display = 'none';
-                        }} />
-                    ) : (
-                      <span className="font-display text-lg font-bold text-ink-2">{scout.name.slice(0, 2).toUpperCase()}</span>
-                    )}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-ink truncate">{scout.name}</span>
-                    <span className="block text-xs text-ink-3 mt-0.5">Calidad <span className="num text-ink-2">{scout.quality}</span> · {scout.testDurationSeconds ? '1 seg' : scoutDurationLabel(scout, true)}</span>
-                    <span className="block text-xs text-ink-3 line-clamp-2 mt-0.5">{scout.specialty}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <ScoutPicker scouts={scouts} selectedId={selectedScoutId} onSelect={setSelectedScoutId} disabled={quotaFull} />
         </fieldset>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-line/[0.08] pt-5">
@@ -644,7 +429,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
               </p>
             </div>
             {criteria.positions.length > 0 && (
-              <button type="button" onClick={() => setCriteria(prev => ({ ...prev, positions: [] }))} className="btn btn-ghost btn-sm">Restablecer</button>
+              <button type="button" onClick={() => setCriteria(prev => ({ ...prev, positions: [] }))} className="btn btn-ghost btn-sm min-h-11">Restablecer</button>
             )}
           </div>
           {specificPositions.length > 0 && (
@@ -663,7 +448,8 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
           )}
         </fieldset>
 
-        <div data-scout-target="area" className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-line/[0.08] pt-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-line/[0.08] pt-5">
+          <div data-scout-target="area" className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:col-span-2">
           <label>
             <span className={fieldLabel}>País</span>
             <select value={criteria.countryId} onChange={e => setCriteria(prev => ({ ...prev, countryId: e.target.value }))} className="select">
@@ -678,6 +464,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
               {REGIONES.map(region => <option key={region} value={region}>{region}</option>)}
             </select>
           </label>
+          </div>
           <label data-scout-target="budget">
             <span className={fieldLabel}>Presupuesto</span>
             <select value={criteria.considerBudget} onChange={e => setCriteria(prev => ({ ...prev, considerBudget: e.target.value }))} className="select">
@@ -758,87 +545,34 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
 
         <div data-scout-target="submit" className="border-t border-line/[0.08] pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-xs text-ink-3">
-            {!quotaKnown ? 'Usa 1 de tus asignaciones del mes.' : quotaFull ? `Ya usaste las ${MONTHLY_SEARCH_LIMIT} búsquedas de este mes.` : `Usa 1 de tus ${MONTHLY_SEARCH_LIMIT} asignaciones del mes (${monthlyUsage} usadas).`}
+            {!quotaKnown ? 'Cuenta como 1 búsqueda del mes.' : quotaFull ? `Ya usaste las ${MONTHLY_SEARCH_LIMIT} búsquedas de este mes.` : `Cuenta como 1 de tus ${MONTHLY_SEARCH_LIMIT} búsquedas del mes (${monthlyUsage} usadas).`}
           </p>
           <button type="submit" disabled={isCreating || quotaFull || readFailed}
-            title={isCreating ? 'Hay una operación en curso' : quotaFull ? 'Ya usaste las asignaciones de este mes' : undefined}
+            title={isCreating ? 'Hay una operación en curso' : quotaFull ? 'Ya usaste las búsquedas de este mes' : undefined}
             className="btn btn-primary btn-lg w-full sm:w-auto">
             {isCreating ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Search className="w-4 h-4" aria-hidden="true" />}
             {isCreating ? 'Enviando ojeador…' : quotaFull ? 'Cupo agotado' : 'Enviar ojeador'}
           </button>
         </div>
       </form>
+      )}
 
-      <section className="space-y-4" aria-labelledby="scout-searches-title">
-        <SectionHeader title={<span id="scout-searches-title">Búsquedas</span>} />
-        {isLoading ? (
-          <div className="space-y-3" aria-hidden="true">{[0, 1].map(i => <div key={i} className="skeleton h-28 rounded-2xl" />)}</div>
-        ) : searchesError ? null : searches.length === 0 ? (
-          <EmptyState icon={Search} title="Todavía no mandaste ningún ojeador" description="Elegí los criterios arriba y enviá a un ojeador a buscar." />
-        ) : searches.map(search => (
-          <article key={search.id} className="panel-flat overflow-hidden" aria-label={`Búsqueda de ${search.scoutName || 'ojeador'}`}>
-            <header className="px-4 sm:px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 border-b border-line/[0.08]">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-ink">{search.scoutName || 'Ojeador'} <span className="text-ink-3 font-normal">· calidad <span className="num">{search.scoutQuality || '-'}</span></span></p>
-                <p className={`text-xs flex items-center gap-1.5 mt-0.5 ${search.status === 'done' ? 'text-success-soft' : 'text-ink-3'}`}>
-                  <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-                  {search.status === 'searching' ? getTimeLeft(search.resolvesAt) : search.status === 'done' ? 'Resultados listos' : 'Descartada'}
-                </p>
-              </div>
-              {search.status !== 'dismissed' && (
-                <button type="button" onClick={() => dismissSearch(search.id)} className="btn btn-ghost btn-sm text-danger-soft hover:text-danger-soft">
-                  <Trash2 className="w-4 h-4" aria-hidden="true" />Descartar
-                </button>
-              )}
-            </header>
-
-            {search.status === 'done' && (search.results || []).length > 0 && (
-              <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
-                {search.results.map(player => {
-                  const isWatchlisted = wishlistSet?.has(player.Id);
-                  const ovr = player.OVR_CALCULADO || 0;
-                  return (
-                    <li key={player.Id} className="rounded-xl border border-line/[0.12] bg-raised p-3.5 flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <img src={`/fotos_jugadores/${player.Id}.webp`} alt="" width={48} height={48}
-                          className="w-12 h-12 rounded-lg object-cover object-top bg-surface flex-shrink-0"
-                          onError={e => { e.currentTarget.style.visibility = 'hidden'; }} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-ink truncate">{player.Name}</p>
-                          <p className="flex items-center gap-2 mt-1 text-xs text-ink-3">
-                            <span className={`px-1.5 rounded text-2xs font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
-                            <img src={getFlagUrl(player.Country1)} alt="" className="w-4 h-3 rounded-[2px]" onError={e => { e.currentTarget.style.display = 'none'; }} />
-                            {player.Age} años
-                          </p>
-                          {player.PlayingStyle && player.PlayingStyle !== 'Ninguno' && (
-                            <p className="mt-0.5 text-2xs text-ink-3 truncate">{player.PlayingStyle}</p>
-                          )}
-                        </div>
-                        <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
-                      </div>
-                      <p className="flex items-center justify-between text-xs text-ink-3 border-t border-line/[0.07] pt-2.5">
-                        <span>Velocidad <span className="num font-semibold text-ink-2">{player.Speed || '-'}</span></span>
-                        <span>Finalización <span className="num font-semibold text-ink-2">{player.Finishing || '-'}</span></span>
-                        <span className="num font-semibold text-ink">{formatPriceShort(player.Precio)}</span>
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button type="button" disabled={isWatchlisted} onClick={() => onAddToWatchlist(player.Id)} aria-pressed={Boolean(isWatchlisted)}
-                          title={isWatchlisted ? 'Ya está en tus favoritos' : undefined} className="btn btn-secondary btn-sm min-h-10">
-                          <Star className="w-3.5 h-3.5" fill={isWatchlisted ? 'currentColor' : 'none'} aria-hidden="true" />
-                          {isWatchlisted ? 'En favoritos' : 'Favorito'}
-                        </button>
-                        <button type="button" onClick={() => onPlayerClick(player)} className="btn btn-primary btn-sm min-h-10">
-                          <UserPlus className="w-3.5 h-3.5" aria-hidden="true" />Ver y negociar
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </article>
-        ))}
-      </section>
+      {view === 'mine' && (
+        <section {...tabPanelProps('scout', 'mine')} aria-label="Mis búsquedas">
+          <ScoutSearchList
+            searches={searches}
+            isLoading={isLoading}
+            hasError={searchesError}
+            userId={userId}
+            allPlayers={allPlayers}
+            playerLocks={playerLocks}
+            wishlistSet={wishlistSet}
+            onDismiss={dismissSearch}
+            onAddToWatchlist={onAddToWatchlist}
+            onPlayerClick={onPlayerClick}
+          />
+        </section>
+      )}
 
       <ScoutGuidedTutorial steps={SCOUT_TUTORIAL_STEPS} isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
     </Page>

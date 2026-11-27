@@ -1,5 +1,6 @@
 import React from 'react';
 import { SoftValue } from './ui/SoftValue.jsx';
+import { missingPlayersNote } from '../utils/squadRules.js';
 
 /** What to do when a rule fails, in the manager's terms. */
 const FIX = {
@@ -17,6 +18,7 @@ export const ruleTarget = rule => (rule.id === 'bench' ? `mín. ${rule.target}` 
  */
 export function SquadRulesStats({ result, className = '' }) {
   const failing = result.rules.filter(rule => rule.applies && !rule.ok).length;
+  const missing = missingPlayersNote(result.missingCount);
   return (
     <section aria-labelledby="squad-rules-heading" className={className}>
       <div className="flex items-baseline justify-between gap-3">
@@ -25,6 +27,11 @@ export function SquadRulesStats({ result, className = '' }) {
           {failing === 0 ? 'En regla' : `${failing} sin cumplir`}
         </p>
       </div>
+      {missing && (
+        <p className="mt-1 text-xs text-ink-3">
+          {missing}: cuentan para el plantel, pero no están en el mercado actual. Avisale al admin.
+        </p>
+      )}
       <dl className="mt-2 divide-y divide-line/[0.08]">
         {result.rules.map(rule => {
           const isFailing = rule.applies && !rule.ok;

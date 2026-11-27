@@ -34,11 +34,12 @@ function rowMeta(player, role, isUnavailable) {
 
 /**
  * `role`: the slot's role for a starter, the natural position for a substitute. `number`: the shirt number column
- * (left out when the number is edited in `trailing`). `onSelect` makes the player part of the row a button.
+ * (left out when the number is edited in `trailing`). `onSelect` makes the player part of the row a button;
+ * `isToggle` marks that button as a pick toggle (aria-pressed), as on the board. A row that opens something is not one.
  */
 export const SquadRow = memo(function SquadRow({
   role, player, number, isUnavailable = false, isFranchise = false, isSelected = false, onSelect, selectLabel,
-  disabledReason, trailing, emptyLabel = 'Puesto vacío', showPhoto = true,
+  disabledReason, trailing, emptyLabel = 'Puesto vacío', showPhoto = true, isToggle = false,
 }) {
   const ovr = Number(player?.OVR_CALCULADO) || 0;
   const meta = rowMeta(player, role, isUnavailable);
@@ -94,7 +95,7 @@ export const SquadRow = memo(function SquadRow({
         <button
           type="button"
           onClick={onSelect}
-          aria-pressed={isSelected}
+          aria-pressed={isToggle ? isSelected : undefined}
           aria-label={selectLabel}
           disabled={Boolean(disabledReason)}
           title={disabledReason}

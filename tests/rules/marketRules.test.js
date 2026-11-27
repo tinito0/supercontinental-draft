@@ -145,6 +145,44 @@ describe('private profile', () => {
   });
 });
 
+describe('lineup (saved by the market Edge Function, which checks the bench rule)', () => {
+  const xi = { 0: PLAYER };
+  it('a manager cannot write lineup or matchBench on the public team or the profile', async () => {
+    const db = as('seller');
+    await assertFails(setDoc(team(db, 'seller'), { lineup: xi }, { mergeFields: ['lineup'] }));
+    await assertFails(setDoc(team(db, 'seller'), { matchBench: [PLAYER] }, { merge: true }));
+    await assertFails(setDoc(profile(db, 'seller'), { lineup: xi }, { mergeFields: ['lineup'] }));
+    await assertFails(setDoc(profile(db, 'seller'), { matchBench: [PLAYER] }, { merge: true }));
+  });
+
+  it('the rest of the board is still a client write, also next to an unchanged lineup', async () => {
+    await env.withSecurityRulesDisabled(async ctx => {
+      await setDoc(team(ctx.firestore(), 'seller'), { lineup: xi, matchBench: [] }, { merge: true });
+      await setDoc(profile(ctx.firestore(), 'seller'), { lineup: xi, matchBench: [] }, { merge: true });
+    });
+    const db = as('seller');
+    const board = { formation: '4-4-2', dorsals: { [PLAYER]: '9' }, tactics: {}, setPieces: {}, availability: {}, lineup: xi, matchBench: [] };
+    const options = { mergeFields: Object.keys(board) };
+    await assertSucceeds(setDoc(team(db, 'seller'), board, options));
+    await assertSucceeds(setDoc(profile(db, 'seller'), board, options));
+    await assertFails(setDoc(team(db, 'seller'), { ...board, lineup: {} }, options));
+  });
+
+  it('a new account creates its profile with an empty lineup only, and its team without one', async () => {
+    const db = as('newbie');
+    await assertFails(setDoc(team(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET, inWhitelist: false, approved: false, lineup: xi }));
+    await assertFails(setDoc(profile(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET, lineup: xi }));
+    await assertFails(setDoc(profile(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET, lineup: {}, matchBench: [PLAYER] }));
+    await assertSucceeds(setDoc(profile(db, 'newbie'), { teamName: 'n', userId: 'newbie', budget: BUDGET, formation: '4-3-3', lineup: {}, wishlist: [] }));
+  });
+
+  it('the admin still writes lineups directly (season reset)', async () => {
+    const admin = env.authenticatedContext('2Qn5j9a9ABW66iPyFL6ZfqwXBqG3').firestore();
+    await assertSucceeds(setDoc(team(admin, 'seller'), { lineup: {}, matchBench: [] }, { merge: true }));
+    await assertSucceeds(setDoc(profile(admin, 'seller'), { lineup: {}, matchBench: [] }, { merge: true }));
+  });
+});
+
 describe('private profile: franchise flags', () => {
   it('only the server marks the franchise signing (a manager cannot set or reset it)', async () => {
     const db = as('mallory');

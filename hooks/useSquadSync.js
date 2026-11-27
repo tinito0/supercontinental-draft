@@ -48,7 +48,7 @@ export function useSquadSync({
     const roster = buildPublicRoster({ playerLocks, cart, uid: userId, playerById, userProfile });
     if (!roster || isSameRoster(storedRoster, roster)) return;
     setDoc(getPublicTeamRef(userId), { roster, rosterUpdatedAt: new Date().toISOString() }, { merge: true })
-      .catch(err => console.error('No se pudo sincronizar la plantilla pública:', err));
+      .catch(err => console.error('No se pudo sincronizar el plantel público:', err));
   }, [isReady, playerLocks, cart, userId, playerById, userProfile, storedRoster, allTeams, getPublicTeamRef]);
 
   return { needsCatalog: Boolean(plan?.missingCatalog.length) };

@@ -153,7 +153,7 @@ export default function FormationViewScreen() {
         </div>
 
         <section className="mt-5 rounded-2xl border border-line/20 bg-surface p-4 sm:p-5 shadow-sm">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-ink-3">Banco de Suplentes ({bench.length})</h2>
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-ink-3">Suplentes ({bench.length})</h2>
           {bench.length ? (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {bench.map(player => (

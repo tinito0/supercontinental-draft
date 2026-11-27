@@ -122,7 +122,7 @@ describe('ObsSceneStudio (Admin → Escenas de OBS)', () => {
   });
 });
 
-describe('TournamentBroadcastAdminSection (Torneo y transmisión)', () => {
+describe('TournamentBroadcastAdminSection (Transmisión)', () => {
   const renderSection = async () => {
     const { MemoryRouter } = await import('react-router-dom');
     const { TournamentBroadcastAdminSection } = await import('../components/admin/TournamentBroadcastAdminSection.jsx');
@@ -139,7 +139,7 @@ describe('TournamentBroadcastAdminSection (Torneo y transmisión)', () => {
 
   it('opens on the scenes, with the match source first, and keeps the other jobs behind tabs', async () => {
     const html = await renderSection();
-    expect(html).toContain('role="tablist" aria-label="Torneo y transmisión"');
+    expect(html).toContain('role="tablist" aria-label="Transmisión"');
     expect(html).toContain('Capa y popup');
     expect(html).not.toContain('Abrir gestor del torneo');
     expect(html).not.toContain('Popup para la comunidad');

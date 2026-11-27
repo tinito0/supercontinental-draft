@@ -92,7 +92,7 @@ export function LandingPage({ onEnter }) {
           <Reveal delay={100}>
             <PlatformDemo />
           </Reveal>
-          <p className="mt-5 text-sm text-ink-3">También incluye overlays para transmitir en OBS y un scout para encontrar reemplazos.</p>
+          <p className="mt-5 text-sm text-ink-3">También incluye overlays para transmitir en OBS y un ojeador para encontrar reemplazos.</p>
         </section>
 
         <section aria-labelledby="figuras" className="py-16 md:py-24">

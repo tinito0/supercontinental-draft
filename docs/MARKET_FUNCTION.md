@@ -14,12 +14,13 @@ App ──(token de Firebase + "fichar 7511")──▶ Supabase Edge Function `m
 |---|---|
 | Entrada (Deno) | `supabase/functions/market/index.ts` |
 | Lógica de fichar / aceptar | `supabase/functions/_shared/market.js` |
+| Guardar el once, control de reglas | `supabase/functions/_shared/lineup.js`, `_shared/squadRules.js` (copia de `utils/squadRules.js`) |
 | Cliente REST de Firestore con transacciones | `supabase/functions/_shared/firestoreRest.js` |
 | Token de Firebase y cuenta de servicio | `supabase/functions/_shared/googleAuth.js` |
 | Precios (generado) | `supabase/functions/_shared/catalog.json` ← `node scripts/build-market-catalog.mjs` |
-| Llamada desde la app | `services/marketService.js` |
+| Llamada desde la app | `services/marketService.js`, `services/lineupService.js` |
 | Reglas que lo exigen | `firestore.rules` (sección MERCADO) |
-| Tests | `tests/marketFunction.test.js`, `tests/marketServiceResetFranchise.test.js`, `tests/rules/marketFunction.test.js`, `tests/rules/marketRules.test.js` |
+| Tests | `tests/marketFunction.test.js`, `tests/marketServiceResetFranchise.test.js`, `tests/lineupFunction.test.js`, `tests/rules/marketFunction.test.js`, `tests/rules/lineupFunction.test.js`, `tests/rules/marketRules.test.js` |
 
 Qué hace el servidor y qué sigue en el navegador:
 
@@ -59,8 +60,20 @@ Qué hace el servidor y qué sigue en el navegador:
       tampoco dejan crear ofertas por un lock con `isDraftee`.
     - El orden, el turno y el grupo los escribe el admin desde el navegador (`services/youthDraftService.js`;
       `config/*` solo lo escribe el admin). `picks` lo escribe solo el servidor.
+  - guardar el once (`saveLineup`): pedido `{ action: 'saveLineup', lineup, teamId?, formation?, dorsals?,
+    setPieces?, tactics?, availability?, formationStates?, advancedInstructions? }`. Arma el plantel desde
+    `player_locks` y `catalog.json`, lee el mínimo del banco de `config/squadRules` (`benchMinAvgOvr`, 73 por
+    defecto) y valida con `checkBench` (el mismo de la app: mide con 21 jugadores y el once completo). Saca del once
+    a los jugadores que el club ya no tiene (`dropped`), calcula `matchBench` y escribe todos los campos, cada uno
+    entero, en `users/{uid}/profile/data` y `teams/{uid}`. Responde `{ teamId, saved, dropped, bench }`. Errores
+    con `code`: `bench-below-minimum` (409, `details: { average, min, benchCount }`), `lineup-invalid` (400),
+    `forbidden` (403, otro club sin ser admin), `team-not-found` (404). Las reglas no dejan escribir `lineup` ni
+    `matchBench` desde el navegador (salvo el admin).
+  - control de reglas (`squadCompliance`, **solo admin**): plantel mínimo, banco y locales de cada club aprobado,
+    como el tablero de Reglas (`evaluateMatchdayCompliance`). Plantel y locales no bloquean ninguna acción: la
+    regla es una fecha límite.
 - **Navegador (validado por reglas):** enviar/rechazar/contraofertar/retirar ofertas por turnos (montos enteros
-  positivos), formación, carrito privado. El carrito es una copia: `hooks/useSquadSync.js` lo alinea con los
+  positivos), formación y tácticas (todo menos `lineup` y `matchBench`), carrito privado. El carrito es una copia: `hooks/useSquadSync.js` lo alinea con los
   locks, y el presupuesto y las exportaciones salen de los locks (`_shared/budget.js`, compartido con la app).
 - **Vencimiento de ofertas:** cada turno (oferta, contraoferta, nueva oferta) vence a las 48 h
   (`expiresAtMs`, `_shared/offerExpiry.js`). Una oferta pendiente vencida no retiene plata del comprador y el
@@ -104,8 +117,19 @@ andando antes de publicar las reglas y la app**.
    npm run build && firebase deploy
    ```
 
+### Publicar `saveLineup` (orden)
+
+1. Función: `npx supabase functions deploy market --no-verify-jwt --project-ref pcmhsucbtonnaikiatuy`. Las apps
+   viejas siguen guardando directo en Firestore, que todavía lo permite.
+2. App (push a `master`, Vercel) con la Pizarra guardando por `services/lineupService.js`. Si la función no está
+   publicada, la app recibe "Acción desconocida." y no guarda el once.
+3. Reglas: `firebase deploy --only firestore:rules`. Desde ahí una pestaña con la app vieja falla al guardar un
+   once distinto (la escritura entera, con formación y tácticas) hasta que recarga.
+
 ## Mantenimiento
 
+- **Cambió `utils/squadRules.js`:** copiá las funciones a `_shared/squadRules.js`; `tests/marketFunction.test.js`
+  falla si difieren.
 - **Cambió `public/jugadores.json`:** corré `node scripts/build-market-catalog.mjs` y volvé a publicar la
   función (paso 3). `npm test` falla si el catálogo quedó desactualizado.
 - **Proyecto de Supabase en plan gratis:** se pausa tras 7 días sin actividad. Pausado, nadie puede fichar ni

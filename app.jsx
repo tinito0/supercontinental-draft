@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useDeferredValue, memo, useRef, Suspense } from 'react';
 import { DETAILED_STAT_KEYS, PLAYER_SKILLS_MAP, FILTER_SKILL_KEYS, DEFAULT_BUDGET, DEFAULT_LOGO, ADMIN_USER_ID, ADMIN_USER_IDS, APP_ID } from './utils/constants.js';
 import { isFranchiseEligible, FRANCHISE_RULE_TEXT } from './supabase/functions/_shared/franchise.js';
-import { formatPriceShort, normalizarString, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
+import { formatPriceShort, formatMoney, normalizarString, getPosColorClass, getStatAndOvrColorClass, getFlagUrl, getRegionById } from './utils/helpers.js';
 import { fetchRawPlayers, buildMarketPlayers } from './utils/playerCatalog.js';
 import { sortMarketPlayers } from './utils/marketFilters.js';
 import { LeftSidebar } from './components/LeftSidebar.jsx';
@@ -1573,7 +1573,7 @@ function App() {
     try {
       // The server frees the player's catalog price (supabase/functions/_shared/budget.js), so that is the refund.
       const refund = Math.round((Number(priceOfPlayer(playerId)) || 0) * 1000000);
-      const money = (units) => (units < 0 ? `-${formatPriceShort(-units / 1000000)}` : formatPriceShort(units / 1000000));
+      const money = formatMoney;
       const confirmed = alreadyConfirmed || await confirmAction({
         title: '¿Liberar al jugador?',
         player,
@@ -1709,8 +1709,14 @@ function App() {
     return <FirebaseError />;
   }
 
+  // A signed-in manager opening a player from a club page lands on Rivales with his sheet open (same sheet and offer flow as the list there).
+  const openPlayerFromClubPage = (player) => {
+    handleOpenPlayerModal(player);
+    navigate('/other-teams');
+  };
+
   if (location.pathname.startsWith('/team/')) {
-    return <SectionErrorBoundary resetKey={location.pathname}><Suspense fallback={<LoadingScreen message="Cargando vista..." />}><TeamScreen /></Suspense></SectionErrorBoundary>;
+    return <SectionErrorBoundary resetKey={location.pathname}><Suspense fallback={<LoadingScreen message="Cargando vista..." />}><TeamScreen onPlayerClick={user && userProfile ? openPlayerFromClubPage : undefined} /></Suspense></SectionErrorBoundary>;
   }
 
   if (location.pathname.startsWith('/tactics/view/')) {
@@ -1915,6 +1921,7 @@ function App() {
                       isVisible={true}
                       onClose={() => setActiveTab('Overview')}
                       cart={ownedCart}
+                      playerLocks={playerLocks}
                       initialTab={clubTab}
                       onRemoveFromCart={handleRemoveFromCart}
                       releasingIds={releasingIds}
@@ -1948,6 +1955,7 @@ function App() {
                     <FormationModal
                       isVisible={true}
                       onClose={() => navigate('/my-team')}
+                      onOpenMarket={() => navigate('/marketplace')}
                       cart={ownedCart}
                       userProfile={userProfile}
                       userId={userId}
@@ -2181,6 +2189,7 @@ function App() {
         <CartModal
           isVisible={true}
           isPage={false}
+          playerLocks={playerLocks}
           initialTab={cartInitialTab}
           onClose={() => {
             setCartInitialTab('players');
@@ -2298,6 +2307,7 @@ function App() {
         <FormationModal
           isVisible={true}
           onClose={() => closeModalRoute(setIsFormationModalVisible)}
+          onOpenMarket={() => { setIsFormationModalVisible(false); navigate('/marketplace', { replace: location.pathname.startsWith('/modal/') }); }}
           cart={ownedCart}
           userProfile={userProfile}
           userId={userId}
@@ -2388,7 +2398,7 @@ function App() {
         footer={<button type="button" onClick={() => setShowBudgetAlert(false)} className="btn btn-primary w-full min-h-12">Entendido</button>}
       >
         <p className="text-sm text-ink-2">Te quedan</p>
-        <p className="font-display num text-4xl font-bold text-warning-soft leading-tight">${(remainingBudget / 1000000).toFixed(1).replace('.', ',')}M</p>
+        <p className="font-display num text-4xl font-bold text-warning-soft leading-tight">{formatMoney(remainingBudget)}</p>
       </BaseModal>
 
       {/* TOASTS — global feedback and rivals' signings, one stack */}
