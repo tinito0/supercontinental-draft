@@ -21,3 +21,17 @@ describe('TournamentModal', () => {
     expect(() => render({ tournamentData: { league: [], matches: [], bracket: {} } })).not.toThrow();
   });
 });
+
+describe('TournamentModal as a public page', () => {
+  const data = { league: [], matches: [], bracket: {} };
+
+  it('has exactly one main landmark on the standalone page', () => {
+    const html = render({ tournamentData: data, landmark: true });
+    expect(html.match(/<main[\s>]/g)).toHaveLength(1);
+  });
+
+  it('adds no main inside the app tab, which already sits in app.jsx <main>', () => {
+    const html = render({ tournamentData: data });
+    expect(html).not.toMatch(/<main[\s>]/);
+  });
+});

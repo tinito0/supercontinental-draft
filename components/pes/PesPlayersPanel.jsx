@@ -10,6 +10,7 @@ import { ProfileHeader, IdentityForm, PositionMap, StatGroups } from './players/
 import { POSITION_FIELDS, IDENTITY_FIELDS, FIELD_LABELS, positionName, statGroups, statLabel } from './players/playerFields.js';
 import { YouthDraftToggle } from './players/YouthDraftToggle.jsx';
 import { useYouthDraft } from '../../hooks/useYouthDraft.js';
+import { scrollBehavior } from '../../utils/scrollBehavior.js';
 
 const MAX_RESULTS = 100;
 const DEFAULT_RESULTS = 50;
@@ -67,7 +68,7 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
   const select = id => {
     setPlayerId(id);
     if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 1023px)').matches) {
-      requestAnimationFrame(() => profileRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      requestAnimationFrame(() => profileRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }));
     }
   };
 

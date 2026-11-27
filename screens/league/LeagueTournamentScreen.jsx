@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import { CalendarDays, ChevronRight, ListOrdered, Medal, Trophy } from 'lucide-react';
+import { CalendarDays, ChevronRight, Goal, ListOrdered, Medal, Trophy } from 'lucide-react';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
-import { Tabs } from '../../components/ui/Tabs.jsx';
+import { Tabs, tabPanelProps } from '../../components/ui/Tabs.jsx';
 import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
 import { makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
@@ -27,7 +27,7 @@ const TABS = [
   { id: 'tabla', label: 'Tabla', icon: ListOrdered },
   { id: 'oro', label: 'Copa de Oro', icon: Trophy },
   { id: 'plata', label: 'Copa de Plata', icon: Medal },
-  { id: 'goleadores', label: 'Goleadores', icon: Medal },
+  { id: 'goleadores', label: 'Goleadores', icon: Goal },
 ];
 // Enlaces viejos (?tab=groups|bracket|repechaje|stats, los de TournamentModal) siguen abriendo la pestaña correcta.
 const LEGACY_TABS = { groups: 'tabla', matches: 'tabla', bracket: 'oro', repechaje: 'plata', stats: 'goleadores' };
@@ -72,7 +72,8 @@ export default function LeagueTournamentScreen() {
     return found ? `/fotos_jugadores/${found.Id || found.id}.webp` : null;
   }, [players]);
 
-  const setTab = next => setParams(next === 'tabla' ? {} : { tab: next }, { replace: true });
+  // Cada pestaña es una entrada del historial: Atrás vuelve a la pestaña anterior.
+  const setTab = next => setParams(next === 'tabla' ? {} : { tab: next });
 
   // Las estadísticas del juego tienen página propia; los links viejos a la pestaña siguen andando.
   if (params.get('tab') === 'estadisticas') return <Navigate to="/estadisticas" replace />;
@@ -95,10 +96,13 @@ export default function LeagueTournamentScreen() {
     // Esta pestaña lee los goleadores cargados a mano; los goles que registra el juego están en /estadisticas.
     content = (
       <>
+        <p className="text-sm text-ink-2">
+          Estos goleadores y asistidores los carga a mano la administración. Los goles que registra el juego están en{' '}
+          <Link to="/estadisticas" className="inline-flex min-h-11 items-center gap-1 font-semibold text-accent-soft hover:text-ink">
+            Estadísticas <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </p>
         <StatsView localData={tournament} isEditing={false} isObsMode={false} getTeamLogo={getTeamLogo} getPlayerPhoto={getPlayerPhoto} updateStat={noop} showTitle={false} />
-        <Link to="/estadisticas" className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent-soft hover:text-ink">
-          Goles, asistencias y más números de los partidos en Estadísticas <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
       </>
     );
   }
@@ -111,12 +115,12 @@ export default function LeagueTournamentScreen() {
         </SectionHeading>
       </Reveal>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Tabs tabs={TABS} value={tab} onChange={setTab} label="Secciones del torneo" />
+        <Tabs tabs={TABS} value={tab} onChange={setTab} label="Secciones del torneo" idPrefix="torneo-tabs" wrap nav />
         <Link to="/partidos" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent-soft hover:text-ink">
-          <CalendarDays className="h-4 w-4" aria-hidden="true" /> Fixture y resultados <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          <CalendarDays className="h-4 w-4" aria-hidden="true" /> Partidos y resultados <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>
-      <div role="tabpanel" aria-label={TABS.find(item => item.id === tab)?.label}>{content}</div>
+      <div {...tabPanelProps('torneo-tabs', tab)}>{content}</div>
     </section>
   );
 }

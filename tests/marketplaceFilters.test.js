@@ -88,9 +88,9 @@ describe('filters dialog', () => {
   });
 
   it('lists the active filters in Spanish, as removable chips, and shows the result count', () => {
-    expect(getActiveFilterChips({ ...baseFilters, ovrMin: '80', grupos: { Arqueros: true } }).map(chip => chip.label)).toEqual(['OVR 80–99', 'Arqueros']);
+    expect(getActiveFilterChips({ ...baseFilters, ovrMin: '80', grupos: { Arqueros: true } }).map(chip => chip.label)).toEqual(['Media 80–99', 'Arqueros']);
     const html = dialog({ ...baseFilters, ovrMin: '80' });
-    expect(html).toContain('Quitar filtro OVR 80–99');
+    expect(html).toContain('Quitar filtro Media 80–99');
     expect(html).toContain('1 filtro activo');
   });
 

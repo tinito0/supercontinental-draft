@@ -10,7 +10,7 @@ export const YOUTH_DRAFT_EDITED_MIN_OVR = 84;
 export const YOUTH_DRAFT_EDITED_MAX_OVR = 86;
 export const YOUTH_DRAFT_MAX_POOL = 40;
 
-export const YOUTH_DRAFT_RULE_TEXT = `Edad ${YOUTH_DRAFT_MIN_AGE}-${YOUTH_DRAFT_MAX_AGE} y OVR original ${YOUTH_DRAFT_MIN_OVR}-${YOUTH_DRAFT_MAX_OVR}`;
+export const YOUTH_DRAFT_RULE_TEXT = `Edad ${YOUTH_DRAFT_MIN_AGE}-${YOUTH_DRAFT_MAX_AGE} y media original ${YOUTH_DRAFT_MIN_OVR}-${YOUTH_DRAFT_MAX_OVR}`;
 
 export const youthDraftPath = appId => `artifacts/${appId}/public/data/config/youthDraft`;
 

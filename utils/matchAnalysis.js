@@ -275,7 +275,7 @@ export const SOURCE_LABELS = {
 };
 
 const PLAN_REASON = {
-  differs: 'el plan guardado no coincide con el XI que salió a la cancha',
+  differs: 'el plan de juego no coincide con el XI que salió a la cancha',
   unknown: 'todavía no se leyó el XI inicial',
   missing: 'el equipo no tiene plan en el archivo de guardado',
 };
@@ -286,10 +286,10 @@ export function dataSources(summary) {
   const hasSeries = Boolean(summary?.series?.rows?.length);
   const planStatus = SIDES.map(side => kickoffFormation(summary, side).status);
   const sideReason = status => (status === 'live' ? 'leída del juego'
-    : status === 'matches' ? 'plan guardado, coincide con el XI' : PLAN_REASON[status] || PLAN_REASON.missing);
+    : status === 'matches' ? 'plan de juego, coincide con el XI' : PLAN_REASON[status] || PLAN_REASON.missing);
   const planDetail = planStatus.every(s => s === 'live')
     ? 'Leída del juego al pitazo inicial, con cada cambio que se confirmó en el menú durante el partido.'
-    : `Del juego cuando el probe la leyó; si no, del plan guardado solo si coincide con el XI inicial (${SIDES.map((side, i) => `${side === 'home' ? 'local' : 'visitante'}: ${sideReason(planStatus[i])}`).join('; ')}).`;
+    : `Del juego cuando el probe la leyó; si no, del plan de juego solo si coincide con el XI inicial (${SIDES.map((side, i) => `${side === 'home' ? 'local' : 'visitante'}: ${sideReason(planStatus[i])}`).join('; ')}).`;
   return [
     { label: 'Marcador, goles, asistencias, tarjetas y cambios', source: 'extracted', detail: 'Eventos y contadores del juego en vivo.' },
     { label: 'Estadísticas de equipo y de jugador', source: 'extracted', detail: 'Contadores del juego; los de equipo son la suma de sus jugadores.' },

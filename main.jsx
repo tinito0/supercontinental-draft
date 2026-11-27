@@ -19,6 +19,16 @@ import './index.css';
 
 const rootElement = document.getElementById('root');
 
+// Shown while a route chunk downloads: no imports beyond React, so it paints with the entry bundle.
+function RouteFallback() {
+  return (
+    <div role="status" className="min-h-[100dvh] bg-canvas">
+      <span className="sr-only">Cargando…</span>
+      <div aria-hidden="true" className="h-16 border-b border-line/10 bg-canvas" />
+    </div>
+  );
+}
+
 // Un import dinámico que falla suele ser un deploy nuevo (los chunks viejos ya no existen): recargar una vez.
 // Sin red, o si vuelve a fallar enseguida, no recargar en bucle: el error sigue su curso (catch del import
 // o ErrorBoundary) y no se pierde lo que se estaba editando.
@@ -62,11 +72,20 @@ if (legacyTarget) {
     manifest.href = '/manifest.json';
     document.head.appendChild(manifest);
   }
+  // The draft and its OBS sources live under /draft: keep them out of search and drop the league's canonical.
+  if (isDraft) {
+    const robots = document.createElement('meta');
+    robots.name = 'robots';
+    robots.content = 'noindex';
+    document.head.appendChild(robots);
+    document.querySelector('link[rel="canonical"]')?.remove();
+  }
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <ErrorBoundary>
-        <Suspense fallback={null}>
+        {/* OBS sources stay transparent while their chunk loads: an opaque fallback would cover the game feed. */}
+        <Suspense fallback={obsRequest ? null : <RouteFallback />}>
           {obsRequest ? (
             <ObsScreen request={obsRequest} />
           ) : isDraft ? (

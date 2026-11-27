@@ -138,7 +138,7 @@ export const CollectorImportAdmin = memo(function CollectorImportAdmin({ tournam
         <p className="text-xs text-ink-3">
           {isInline
             ? 'Terminaron en el juego y todavía no están en el torneo. Revisá adónde va cada uno e importalo: nunca pisa un resultado cargado.'
-            : 'Los partidos que registró el colector. Importalos al fixture o a la copa: se revisa antes de guardar y nunca pisa un resultado cargado.'}
+            : 'Los partidos que registró el colector. Importalos al calendario o a la copa: se revisa antes de guardar y nunca pisa un resultado cargado.'}
         </p>
       </div>
       {lockedReason && finished.length > 0 && <p className="text-xs text-warning-soft">{lockedReason}</p>}

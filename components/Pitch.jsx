@@ -16,10 +16,14 @@ const MARKER_WIDTH = 'min(76px, 17cqw)';
 // name) shorter than the 16% gap between the back line and the keeper on a phone.
 const AVATAR_SIZE = 'clamp(28px, 10cqw, 54px)';
 // Chip and name text follow the pitch too, with a floor that stays legible on a 360px phone.
-const CHIP_FONT = 'clamp(9px, 2.6cqw, 11px)';
-const NAME_FONT = 'clamp(10px, 2.9cqw, 12px)';
+const CHIP_FONT = 'var(--pitch-chip-font, clamp(9px, 2.6cqw, 11px))';
+const NAME_FONT = 'var(--pitch-name-font, clamp(10px, 2.9cqw, 12px))';
 // The game anchors a slot at the centre of its role chip: photo, 4px gap, then a chip of font size + 6px padding.
-const MARKER_TRANSLATE = `-50% calc(-1 * (${AVATAR_SIZE} + 7px + ${CHIP_FONT} / 2))`;
+const MARKER_LIFT = `(${AVATAR_SIZE} + 7px + ${CHIP_FONT} / 2)`;
+// The pitch is a 3:4 box, so its height is 4/3 of its width (100cqw).
+const PITCH_HEIGHT_CQW = 4 / 3;
+// Markers sit at the pitch's top-left corner and move by translate, which the compositor animates without layout.
+const markerTranslate = (x, y) => `calc(${x}cqw - 50%) calc(${y * PITCH_HEIGHT_CQW}cqw - ${MARKER_LIFT})`;
 
 // Field markings in a 75 × 100 box, the pitch's own 3:4 shape, so circles stay round. Real proportions
 // (105 × 68 m) are scaled to a 69 × 94 field inside a 3-unit margin; utils/pitchGeometry.js maps game depth onto
@@ -139,13 +143,13 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
       aria-label={!isReadOnly ? `${player ? player.Name : 'Puesto vacío'} (${pos})${canMove ? '. Arrastrá o usá las flechas para moverlo.' : ''}` : undefined}
       aria-pressed={isRoleTarget || undefined}
       className={`absolute flex flex-col items-center justify-center z-20 group rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent
-        ${isDragging ? 'z-30 scale-105 cursor-grabbing drop-shadow-lg' : isNudging ? '' : 'transition-[left,top,transform,opacity] duration-move ease-out'}
+        ${isDragging ? 'z-30 scale-105 cursor-grabbing drop-shadow-lg' : isNudging ? '' : 'transition-[translate,transform,opacity] duration-move ease-out'}
         ${isHoldingThis ? 'opacity-30 scale-90' : ''}
         ${holdingPlayer && !isHoldingThis ? 'hover:scale-110' : ''}
         ${isReadOnly ? 'cursor-default' : canMove && !isDragging ? 'cursor-grab select-none' : 'cursor-pointer'}
-        ${isRoleTarget ? 'ring-2 ring-accent ring-offset-2 ring-offset-[#2f6a33]' : ''}
+        ${isRoleTarget ? 'ring-2 ring-accent ring-offset-2 ring-offset-pitch' : ''}
       `}
-      style={{ left: `${x}%`, top: `${y}%`, translate: MARKER_TRANSLATE, width: MARKER_WIDTH, touchAction: canMove ? 'none' : undefined }}
+      style={{ left: 0, top: 0, translate: markerTranslate(x, y), width: MARKER_WIDTH, touchAction: canMove ? 'none' : undefined }}
       title={player ? `${player.Name} · ${pos}${player.POS_NOMBRE && player.POS_NOMBRE !== pos ? ` (posición natural ${player.POS_NOMBRE})` : ''}` : readOnlySlot?.name || pos}
     >
       {hasPlayer ? (
@@ -176,7 +180,7 @@ export const PitchSlot = memo(({ pos, x, y, index, onSlotClick, lineup, cartById
               )}
             </div>
             {playerDorsal && (
-              <span className="absolute -top-1.5 -left-1.5 min-w-[18px] h-[18px] px-0.5 flex items-center justify-center rounded-sm bg-canvas/90 text-white font-display font-bold text-[10px] leading-none ring-1 ring-white/25 num">
+              <span className="absolute -top-1.5 -left-1.5 min-w-[18px] h-[18px] px-0.5 flex items-center justify-center rounded-sm bg-canvas/90 text-white font-display font-bold text-[length:var(--pitch-dorsal-font,10px)] leading-none ring-1 ring-white/25 num">
                 {playerDorsal}
               </span>
             )}
@@ -278,8 +282,8 @@ export const Pitch = memo(function Pitch({ formation, lineup, cart, holdingPlaye
       className="pitch-canvas-export-target relative w-full aspect-[3/4] rounded-xl overflow-hidden ring-1 ring-black/40 shadow-lg [container-type:inline-size]"
       style={{
         // Mown stripes as in the PES game-plan screen: ten bands, in percent so they follow the pitch size.
-        backgroundColor: '#2f6a33',
-        backgroundImage: 'repeating-linear-gradient(180deg, #33713a 0 10%, #2c6431 10% 20%)',
+        backgroundColor: 'rgb(var(--c-pitch))',
+        backgroundImage: 'repeating-linear-gradient(180deg, rgb(var(--c-pitch-light)) 0 10%, rgb(var(--c-pitch-dark)) 10% 20%)',
       }}
     >
       <PitchMarkings />

@@ -25,6 +25,21 @@ function RulesSkeleton() {
   );
 }
 
+/** Ordered chapter links; shared by the collapsed phone index and the sticky desktop one. */
+function ChapterList({ chapters }) {
+  return (
+    <ol className="space-y-1">
+      {chapters.map((chapter, index) => (
+        <li key={chapter.id}>
+          <a href={`#${chapterAnchor(index)}`} className="flex min-h-11 items-baseline gap-2 rounded-lg px-2 py-2 text-[15px] text-ink-2 transition-colors hover:bg-white/[0.04] hover:text-ink">
+            <span className="num w-6 shrink-0 text-right text-ink-3">{index + 1}.</span> {chapter.title}
+          </a>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** The season's competition rules, by chapters, written in Administración → Web pública. */
 export default function LeagueRulesScreen() {
   useDocumentTitle('Reglamento');
@@ -40,18 +55,19 @@ export default function LeagueRulesScreen() {
     body = (
       <div className="grid gap-10 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-14">
         {chapters.length > 1 && (
-          <nav aria-label="Capítulos del reglamento" className="lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:self-start lg:overflow-y-auto">
-            <p className="eyebrow mb-3">Capítulos</p>
-            <ol className="space-y-1">
-              {chapters.map((chapter, index) => (
-                <li key={chapter.id}>
-                  <a href={`#${chapterAnchor(index)}`} className="flex min-h-11 items-baseline gap-2 rounded-lg px-2 py-2 text-[15px] lg:min-h-9 lg:py-1.5 [@media(pointer:coarse)]:min-h-11 text-ink-2 transition-colors hover:bg-white/[0.04] hover:text-ink">
-                    <span className="num w-6 shrink-0 text-right text-ink-3">{index + 1}.</span> {chapter.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
+          <>
+            {/* Phones: the index is collapsed so the first rule is not pushed down by up to 40 links. */}
+            <details className="panel lg:hidden">
+              <summary className="flex min-h-11 cursor-pointer items-center px-4 text-[15px] font-semibold text-ink">Capítulos ({chapters.length})</summary>
+              <nav aria-label="Capítulos del reglamento" className="px-2 pb-2">
+                <ChapterList chapters={chapters} />
+              </nav>
+            </details>
+            <nav aria-label="Capítulos del reglamento" className="hidden lg:sticky lg:top-24 lg:block lg:max-h-[calc(100dvh-7rem)] lg:self-start lg:overflow-y-auto">
+              <p className="eyebrow mb-3">Capítulos</p>
+              <ChapterList chapters={chapters} />
+            </nav>
+          </>
         )}
         <div className={`space-y-12 ${chapters.length > 1 ? '' : 'lg:col-span-2'}`}>
           {chapters.map((chapter, index) => (

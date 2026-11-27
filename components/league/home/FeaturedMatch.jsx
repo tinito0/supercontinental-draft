@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowUp, ChevronRight, Vote } from 'lucide-react';
+import { ArrowDown, ArrowUp, Vote } from 'lucide-react';
 import { LeagueCrest } from '../match/FixtureRow.jsx';
 import { LiveScore } from '../match/LiveScore.jsx';
 import { BallIcon } from '../match/BallIcon.jsx';
@@ -146,7 +146,7 @@ export function FeaturedMatch({ featured, clubOf, prediction, liveMatch = null }
     ? { to: href, label: 'Seguí el partido', primary: true }
     : canPredict
       ? { to: '/en-vivo', label: '¿Quién gana? Votá tu predicción', icon: Vote, primary: true }
-      : { to: href, label: kind === 'last' ? 'Ver el partido' : 'Ver el fixture' };
+      : { to: href, label: kind === 'last' ? 'Ver el partido' : 'Ver todos los partidos' };
 
   return (
     <article className={`panel p-4 sm:p-7 ${kind === 'live' ? 'border-danger/40' : ''}`} aria-labelledby={`featured-${fixture.id}`}>
@@ -195,7 +195,7 @@ export function FeaturedMatch({ featured, clubOf, prediction, liveMatch = null }
         </p>
       )}
       <Link to={action.to} className={`btn btn-lg mt-5 w-full ${action.primary ? 'btn-primary' : 'btn-secondary'}`}>
-        {action.icon && <action.icon className="h-4 w-4" aria-hidden="true" />} {action.label} <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        {action.icon && <action.icon className="h-4 w-4" aria-hidden="true" />} {action.label}
       </Link>
 
     </article>

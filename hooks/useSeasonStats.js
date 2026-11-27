@@ -30,16 +30,24 @@ export function useSeasonStats() {
  * Catálogo del mercado (id → [precio, edad, OVR, nombre, posición, país]) para nombre, posición y OVR de un jugador.
  * null hasta que llega o si falla: la página funciona sin él.
  */
-export function useMarketCatalog() {
-  const [catalog, setCatalog] = useState(null);
+/** The catalog plus whether its load failed: null catalog alone cannot tell loading from a failed read. */
+export function useMarketCatalogState() {
+  const [state, setState] = useState({ catalog: null, failed: false });
   useEffect(() => {
     let active = true;
     loadMarketCatalog()
-      .then(data => { if (active) setCatalog(data); })
-      .catch(err => console.warn('[useMarketCatalog] sin catálogo:', err));
+      .then(data => { if (active) setState({ catalog: data, failed: false }); })
+      .catch(err => {
+        console.warn('[useMarketCatalog] sin catálogo:', err);
+        if (active) setState({ catalog: null, failed: true });
+      });
     return () => { active = false; };
   }, []);
-  return catalog;
+  return state;
+}
+
+export function useMarketCatalog() {
+  return useMarketCatalogState().catalog;
 }
 
 /** Ficha del catálogo de un jugador, o null. */

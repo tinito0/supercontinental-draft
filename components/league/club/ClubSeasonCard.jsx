@@ -33,7 +33,7 @@ export function ClubSeasonCard({ standing, title = 'Esta temporada' }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="club-current" className="font-display text-lg font-bold uppercase tracking-wide text-ink">{title}</h2>
-          <p className="mt-1 text-sm text-ink-2">Supercontinental League · Fase suiza</p>
+          <p className="mt-1 text-sm text-ink-2">SuperContinental League</p>
         </div>
         <p className="text-right">
           <span className="num font-display text-5xl font-bold leading-none text-ink">{standing.position}°</span>

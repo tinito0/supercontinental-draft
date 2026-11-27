@@ -9,21 +9,21 @@ import { BallIcon } from './BallIcon.jsx';
    de la cancha: x = largo (0 arco local … 100 arco visitante), y = ancho (0 arriba). */
 
 const STATUS_TEXT = {
-  differs: 'Formación sin confirmar: el plan guardado no coincide con el XI que salió a la cancha.',
+  differs: 'Formación sin confirmar: el plan de juego del equipo no coincide con el XI que salió a la cancha.',
   unknown: 'La formación aparece cuando se lee el XI inicial.',
-  missing: 'Sin formación: el equipo no tiene plan en el archivo de guardado.',
+  missing: 'Sin formación: el equipo no tiene plan de juego en los datos guardados.',
 };
 
-/** De dónde sale lo dibujado: leído del juego, o el plan guardado que coincide con el XI. */
+/** De dónde sale lo dibujado: leído del juego, o el plan del equipo que coincide con el XI. */
 function sourceNote(layout) {
   const statuses = [layout.home.status, layout.away.status];
   if (statuses.every(s => s === 'live')) {
     return 'Formación del saque inicial leída del juego. Los cambios durante el partido están en Táctica.';
   }
   if (statuses.includes('live')) {
-    return 'Formación del saque inicial leída del juego o, si no se pudo leer, el plan guardado del equipo cuando coincide puesto por puesto con el XI que salió a la cancha.';
+    return 'Formación del saque inicial leída del juego o, si no se pudo leer, el plan del equipo del equipo cuando coincide puesto por puesto con el XI que salió a la cancha.';
   }
-  return 'Formación del saque inicial según el plan guardado de cada equipo, mostrada solo si coincide puesto por puesto con el XI que salió a la cancha (partido grabado antes de leer la formación del juego).';
+  return 'Formación del saque inicial según el plan del equipo de cada equipo, mostrada solo si coincide puesto por puesto con el XI que salió a la cancha (partido registrado antes de leer la formación del juego).';
 }
 
 const lastName = name => String(name || '').split(' ').filter(Boolean).at(-1) || '?';
@@ -50,7 +50,10 @@ function Miniface({ player, side }) {
   );
 }
 
-function Marker({ player, side, vertical, rating, isBest }) {
+// Short team tag shown on each marker, so the side is not carried by colour alone (WCAG 1.4.1).
+const teamCode = name => String(name || '').replace(/\s+/g, '').slice(0, 3).toUpperCase();
+
+function Marker({ player, side, team, vertical, rating, isBest }) {
   const style = vertical
     ? { left: `${inset(player.y)}%`, top: `${inset(100 - player.x)}%` }
     : { left: `${inset(player.x)}%`, top: `${inset(player.y)}%` };
@@ -60,7 +63,7 @@ function Marker({ player, side, vertical, rating, isBest }) {
     player.subbedOff ? `salió ${player.subbedOff}` : '',
     rating != null ? `valoración ${String(rating).replace('.', ',')}` : '',
   ].filter(Boolean);
-  const label = [`${player.name}${player.number != null ? `, dorsal ${player.number}` : ''}, ${player.role}`, ...extras].join(', ');
+  const label = [team, `${player.name}${player.number != null ? `, dorsal ${player.number}` : ''}, ${player.role}`, ...extras].filter(Boolean).join(', ');
   return (
     <li className="absolute flex w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={style} aria-label={label}>
       <span className="relative">
@@ -86,6 +89,7 @@ function Marker({ player, side, vertical, rating, isBest }) {
         )}
       </span>
       <span className="mt-1 flex max-w-full items-baseline gap-1 rounded-md bg-canvas/80 px-1.5 py-0.5 text-xs font-semibold leading-tight text-ink sm:text-[13px]">
+        {team && <span className="num shrink-0 text-[11px] font-bold text-ink-2" aria-hidden="true">{teamCode(team)}</span>}
         {player.number != null && <span className="num text-accent-soft">{player.number}</span>}
         <span className="truncate">{lastName(player.name)}</span>
       </span>
@@ -132,7 +136,7 @@ function SideNotice({ side, status, vertical }) {
   );
 }
 
-function Pitch({ layout, vertical, summary }) {
+function Pitch({ layout, vertical, summary, teams }) {
   const best = bestRated(summary);
   return (
     <div className={`lineup-pitch relative w-full overflow-hidden rounded-xl ${vertical ? 'mx-auto aspect-[68/105] max-w-md' : 'aspect-[105/68]'}`}>
@@ -141,7 +145,7 @@ function Pitch({ layout, vertical, summary }) {
         <React.Fragment key={side}>
           <SideNotice side={side} status={layout[side].status} vertical={vertical} />
           <ul aria-label={side === 'home' ? 'Local' : 'Visitante'}>
-            {layout[side].players.map(player => <Marker key={player.id} player={player} side={side} vertical={vertical}
+            {layout[side].players.map(player => <Marker key={player.id} player={player} side={side} team={teams[side]} vertical={vertical}
               rating={playerRating(summary, player.id)} isBest={best.includes(player.id)} />)}
           </ul>
         </React.Fragment>
@@ -152,6 +156,7 @@ function Pitch({ layout, vertical, summary }) {
 
 export function LineupPitch({ layout, match }) {
   const summary = match.summary;
+  const teams = { home: match.home.name, away: match.away.name };
   const average = side => teamRating(summary, side);
   return (
     <section className="panel p-3 sm:p-4" aria-label="Formaciones del saque inicial">
@@ -159,8 +164,8 @@ export function LineupPitch({ layout, match }) {
         <span className="flex min-w-0 items-center gap-2 text-ink"><span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true" /><span className="truncate">{match.home.name}</span><RatingChip value={average('home')} /></span>
         <span className="flex min-w-0 items-center gap-2 text-ink"><RatingChip value={average('away')} /><span className="truncate">{match.away.name}</span><span className="h-2.5 w-2.5 shrink-0 rounded-full bg-ink-3" aria-hidden="true" /></span>
       </div>
-      <div className="hidden sm:block"><Pitch layout={layout} vertical={false} summary={summary} /></div>
-      <div className="sm:hidden"><Pitch layout={layout} vertical summary={summary} /></div>
+      <div className="hidden sm:block"><Pitch layout={layout} vertical={false} summary={summary} teams={teams} /></div>
+      <div className="sm:hidden"><Pitch layout={layout} vertical summary={summary} teams={teams} /></div>
       <p className="mt-3 text-sm text-ink-2">
         {sourceNote(layout)}
         {average('home') != null && ' Las valoraciones son las del juego; al lado de cada equipo, el promedio de los que jugaron.'}

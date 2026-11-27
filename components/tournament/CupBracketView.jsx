@@ -1,5 +1,5 @@
-import React, { memo, useMemo } from 'react';
-import { Trophy } from 'lucide-react';
+import React, { memo, useMemo, useState } from 'react';
+import { ArrowRight, Trophy } from 'lucide-react';
 import { TournamentSectionTitle } from '../TournamentUI.jsx';
 import { MatchCard } from './MatchCard.jsx';
 import { BracketBoard } from './BracketBoard.jsx';
@@ -51,11 +51,19 @@ export const CupBracketView = memo(function CupBracketView({
   );
   const connectors = useMemo(() => buildConnectors(columns), [columns]);
 
+  // Aviso de que el cuadro sigue a la derecha: solo mientras no entra en pantalla y no se llegó a la final.
+  const [reachedEnd, setReachedEnd] = useState(false);
+  const overflows = width > 0 && width < boardWidth(columns.length);
+  const handleScroll = event => {
+    const el = event.currentTarget;
+    setReachedEnd(el.scrollWidth - el.clientWidth - el.scrollLeft <= 24);
+  };
+
   return (
     <div className="flex flex-col items-center py-4 w-full">
-      {showTitle && <TournamentSectionTitle title="SUPERCONTINENTAL LEAGUE" subtitle={cup.subtitle.toUpperCase()} />}
+      {showTitle && <TournamentSectionTitle title="SuperContinental League" subtitle={cup.subtitle.toUpperCase()} />}
       {/* Con teclado también se desplaza (tabIndex): en el teléfono el cuadro es más ancho que la pantalla. */}
-      <div ref={containerRef} className="w-full overflow-x-auto custom-scrollbar pb-6 focus-visible:outline-2 focus-visible:outline-accent-soft" tabIndex={0} role="region" aria-label={`Cuadro de la ${cup.name}`}>
+      <div ref={containerRef} onScroll={handleScroll} className="w-full overflow-x-auto custom-scrollbar pb-6 focus-visible:outline-2 focus-visible:outline-accent-soft" tabIndex={0} role="region" aria-label={`Cuadro de la ${cup.name}`}>
         <BracketBoard
           className="w-max mx-auto pt-2"
           columns={columns}
@@ -94,6 +102,11 @@ export const CupBracketView = memo(function CupBracketView({
           )}
         />
       </div>
+      {overflows && !reachedEnd && (
+        <p className="flex min-h-6 items-center gap-1.5 text-sm font-medium text-ink-2">
+          Deslizá para ver la final <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </p>
+      )}
     </div>
   );
 });

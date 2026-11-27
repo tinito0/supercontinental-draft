@@ -11,9 +11,12 @@ export function formatPrice(priceInMillions) {
   return currencyFormatter.format(priceInMillions * 1000000);
 }
 
+// Prices read in es-AR: decimal comma ($12,50M).
+const decimalComma = value => String(value).replace('.', ',');
+
 export function formatPriceShort(priceInMillions) {
   if (typeof priceInMillions !== 'number' || isNaN(priceInMillions)) return "$0M";
-  return `$${priceInMillions.toFixed(2)}M`;
+  return `$${decimalComma(priceInMillions.toFixed(2))}M`;
 }
 
 /**
@@ -23,7 +26,7 @@ export function formatPriceShort(priceInMillions) {
 export function formatPriceCompact(priceInMillions) {
   if (typeof priceInMillions !== 'number' || isNaN(priceInMillions)) return "$0M";
   const decimals = priceInMillions >= 10 ? 0 : priceInMillions >= 1 ? 1 : 2;
-  return `$${Number(priceInMillions.toFixed(decimals))}M`;
+  return `$${decimalComma(Number(priceInMillions.toFixed(decimals)))}M`;
 }
 
 export function formatBudget(amount) {

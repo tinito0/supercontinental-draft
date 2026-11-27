@@ -414,7 +414,7 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                   )}
                   {team.pendingApproval && team.playerCount === 0 && (
                     <button type="button" onClick={() => setTransferTarget(team)} className="btn btn-secondary btn-sm"
-                      title="El manager nuevo se queda con un club que ya existe">
+                      title="El mánager nuevo se queda con un club que ya existe">
                       <UserCog size={16} aria-hidden="true" />Pasarle un club
                     </button>
                   )}

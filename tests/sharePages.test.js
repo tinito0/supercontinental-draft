@@ -1,6 +1,6 @@
 // Vistas previas de links por página (utils/sharePages.js), con datos sintéticos.
 import { describe, it, expect } from 'vitest';
-import { STATIC_PAGES, SHARE_END, SHARE_START, absoluteUrl, clubPage, pageFile, renderSharePage, shareTags } from '../utils/sharePages.js';
+import { DRAFT_PAGE, GENERIC_PAGES, STATIC_PAGES, SHARE_END, SHARE_START, absoluteUrl, clubPage, pageFile, renderSharePage, shareTags } from '../utils/sharePages.js';
 
 const SITE = 'https://example.test';
 const html = `<head>\n  ${SHARE_START}\n  <title>Viejo</title>\n  ${SHARE_END}\n  <script src="/boot.js"></script>\n</head>`;
@@ -89,5 +89,38 @@ describe('shareTags and renderSharePage', () => {
     expect(out).toContain('<script src="/boot.js"></script>');
     expect(out.indexOf(SHARE_START)).toBeLessThan(out.indexOf('<title>'));
     expect(renderSharePage('<head></head>', STATIC_PAGES[0], SITE)).toBeNull();
+  });
+});
+
+describe('page catalogue', () => {
+  it('does not promise an MVP vote on /en-vivo and covers /estadisticas', () => {
+    expect(STATIC_PAGES.find(page => page.path === '/en-vivo').description).not.toMatch(/MVP/);
+    expect(STATIC_PAGES.map(page => page.path)).toContain('/estadisticas');
+  });
+
+  it('writes every page to a safe file', () => {
+    for (const page of [...STATIC_PAGES, ...GENERIC_PAGES, DRAFT_PAGE]) expect(pageFile(page.path)).not.toBeNull();
+    expect(pageFile(DRAFT_PAGE.path)).toBe('draft.html');
+  });
+
+  it('gives player and match pages a generic preview without a canonical or og:url', () => {
+    expect(GENERIC_PAGES.map(page => pageFile(page.path))).toEqual(['jugadores.html', 'partido.html']);
+    for (const page of GENERIC_PAGES) {
+      const tags = shareTags(page, SITE);
+      expect(tags).not.toContain('rel="canonical"');
+      expect(tags).not.toContain('og:url');
+      expect(tags).toContain('og:title');
+    }
+  });
+
+  it('marks the draft noindex, without canonical, and with the neutral league image', () => {
+    const tags = shareTags(DRAFT_PAGE, SITE);
+    expect(tags).toContain('<meta name="robots" content="noindex">');
+    expect(tags).not.toContain('rel="canonical"');
+    expect(tags).toContain('og/liga.png');
+  });
+
+  it('keeps the canonical on indexable pages', () => {
+    expect(shareTags(STATIC_PAGES[0], SITE)).toContain('rel="canonical"');
   });
 });

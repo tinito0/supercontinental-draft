@@ -54,8 +54,9 @@ export function RatingChip({ value, isBest = false, size = 'sm', className = '' 
   const label = `Valoración ${value.toFixed(1).replace('.', ',')}${isBest ? ', la mejor del partido' : ''}`;
   return (
     <span className={`num inline-flex items-center justify-center rounded-md font-bold leading-none ${box} ${ratingTone(value, isBest)} ${className}`}
-      title={label} aria-label={label}>
-      {value.toFixed(1).replace('.', ',')}
+      title={label}>
+      <span aria-hidden="true">{value.toFixed(1).replace('.', ',')}</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

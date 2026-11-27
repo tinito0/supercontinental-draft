@@ -42,6 +42,31 @@
   --c-danger: 239 68 68;        /* #ef4444 */
   --c-danger-soft: 248 113 113;
 
+  /* Colores de datos (píldoras de posición, OVR y atributos): valores propios del juego, no interacción. Texto
+     sobre ellos: --c-data-ink (el blanco no llega a AA en ninguno). */
+  --c-data-ink: 30 30 30;       /* #1e1e1e */
+  --c-data-mint: 30 201 164;    /* #1ec9a4 */
+  --c-data-lime: 160 221 0;     /* #a0dd00 */
+  --c-data-yellow: 255 196 0;   /* #ffc400 */
+  --c-data-orange: 236 125 34;  /* #ec7d22 */
+  --c-data-amber: 255 165 0;    /* #ffa500 */
+  --c-data-red: 255 77 77;      /* #ff4d4d */
+  --c-data-green: 0 179 74;     /* #00b34a */
+  --c-data-blue: 0 174 255;     /* #00aeff */
+  --c-data-neutral: 51 51 51;   /* #333 fondo sin dato */
+  --c-data-neutral-ink: 224 224 224; /* #e0e0e0 */
+  /* Texto del OVR sobre fondo oscuro (tarjetas PES) */
+  --c-ovr-90: 250 204 21;       /* #facc15 */
+  --c-ovr-80: 251 191 36;       /* #fbbf24 */
+  --c-ovr-70: 163 230 53;       /* #a3e635 */
+  --c-ovr-60: 52 211 153;       /* #34d399 */
+  --c-ovr-none: 156 163 175;    /* #9ca3af */
+  /* Cancha (components/Pitch.jsx, .lineup-pitch): el pasto del juego y sus dos franjas */
+  --c-pitch: 47 106 51;         /* #2f6a33 */
+  --c-pitch-light: 51 113 58;   /* #33713a */
+  --c-pitch-dark: 44 100 49;    /* #2c6431 */
+  --c-pitch-solid: 24 54 36;    /* #183624 pasto liso de la página de partido */
+
   --app-focus: rgb(var(--c-accent-soft));
   --app-focus-offset: 2px;
 
@@ -62,6 +87,9 @@
   --app-z-modal: 100;
   --app-z-toast: 110;
   --app-z-tooltip: 120;
+  --app-z-sidebar: 40;        /* barra lateral de escritorio, dentro del flujo */
+  --app-z-scrim: 55;          /* fondo del menú lateral en celular; el panel va en --app-z-sticky, encima */
+  --app-z-guide: 140;         /* guía paso a paso: sobre los avisos (--app-z-toast) a propósito; anillo +1, globo +2 */
   --app-header-h: 56px;
   --app-sidebar-w: 240px;
   --app-space-xs: 4px;
@@ -532,101 +560,101 @@
 
 /* --- Paleta de Colores para Estadísticas (Píldoras) --- */
 .stat-c-90 {
-  background-color: #1ec9a4 !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-mint));
+  color: rgb(var(--c-data-ink));
 }
 
 .stat-c-80 {
-  background-color: #a0dd00 !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-lime));
+  color: rgb(var(--c-data-ink));
 }
 
 .stat-c-70 {
-  background-color: #ffc400 !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-yellow));
+  color: rgb(var(--c-data-ink));
 }
 
 .stat-c-60 {
-  background-color: #ec7d22 !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-orange));
+  color: rgb(var(--c-data-ink));
 }
 
 .stat-c-50 {
-  background-color: #ff4d4d !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-red));
+  color: rgb(var(--c-data-ink));
 }
 
 .stat-c-default {
-  background-color: #333 !important;
-  color: #e0e0e0 !important;
+  background-color: rgb(var(--c-data-neutral));
+  color: rgb(var(--c-data-neutral-ink));
 }
 
 /* --- Paleta de Colores para OVR (Tarjetas Antiguas) --- */
 .ovr-c-90 {
-  background-color: #ff4d4d !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-red));
+  color: rgb(var(--c-data-ink));
 }
 
 /* Red */
 .ovr-c-80 {
-  background-color: #ffa500 !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-amber));
+  color: rgb(var(--c-data-ink));
 }
 
 /* Orange */
 .ovr-c-70 {
-  background-color: #a0dd00 !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-lime));
+  color: rgb(var(--c-data-ink));
 }
 
 /* Light Green */
 .ovr-c-60 {
-  background-color: #00b34a !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-green));
+  color: rgb(var(--c-data-ink));
 }
 
 /* Green */
 .ovr-c-50 {
-  background-color: #00aeff !important;
-  color: #1e1e1e !important;
+  background-color: rgb(var(--c-data-blue));
+  color: rgb(var(--c-data-ink));
 }
 
 /* Blue */
 .ovr-c-default {
-  background-color: #333 !important;
-  color: #e0e0e0 !important;
+  background-color: rgb(var(--c-data-neutral));
+  color: rgb(var(--c-data-neutral-ink));
 }
 
 /* Grey */
 
 /* --- Paleta de Colores de Texto para OVR (Nuevas Tarjetas PES) --- */
 .ovr-text-90 {
-  color: #facc15 !important;
+  color: rgb(var(--c-ovr-90));
 }
 
 /* Amarillo brillante */
 .ovr-text-80 {
-  color: #fbbf24 !important;
+  color: rgb(var(--c-ovr-80));
 }
 
 /* Amarillo dorado */
 .ovr-text-70 {
-  color: #a3e635 !important;
+  color: rgb(var(--c-ovr-70));
 }
 
 /* Verde Lima */
 .ovr-text-60 {
-  color: #34d399 !important;
+  color: rgb(var(--c-ovr-60));
 }
 
 /* Verde esmeralda */
 .ovr-text-50 {
-  color: rgb(var(--c-accent-soft)) !important;
+  color: rgb(var(--c-accent-soft));
 }
 
 /* Azul claro */
 .ovr-text-default {
-  color: #9ca3af !important;
+  color: rgb(var(--c-ovr-none));
 }
 
 /* Gris */
@@ -677,6 +705,42 @@
   background: rgb(var(--c-line) / 0.4);
 }
 
+/* .custom-scrollbar: barra fina para paneles y modales con scroll propio (BaseModal, chats, listas). El estándar
+   (scrollbar-color) para Firefox y Chrome 121+; ::-webkit-scrollbar para Safari y Chrome viejo. */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-line) / 0.35) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-line) / 0.35);
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-line) / 0.55);
+}
+
+/* Colores forzados (Windows alto contraste): el sistema pinta la barra, sin colores propios. */
+@media (forced-colors: active) {
+  .custom-scrollbar {
+    scrollbar-color: auto;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: CanvasText;
+  }
+}
+
 /* Fondo de la barra lateral en celular */
 @keyframes fadeIn {
   from {
@@ -686,44 +750,6 @@
   to {
     opacity: 1;
   }
-}
-
-/* --- Grid de Habilidades --- */
-.skills-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* --- CORRECCIÓN HEATMAP --- */
-.heatmap-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(7, 1fr);
-  height: 100%;
-  min-height: 400px;
-  /* Reducido para mejor ajuste en modales */
-  align-items: center;
-  /* Centrar verticalmente */
-  justify-items: center;
-  /* Centrar horizontalmente */
-}
-
-/* La celda ahora es el círculo */
-.heatmap-cell {
-  width: 60px;
-  /* Tamaño fijo para el círculo */
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  font-weight: bold;
-  font-size: 1rem;
-  box-shadow: var(--app-shadow-sm);
-  border: 2px solid rgb(var(--c-ink) / 0.1);
-  transition: background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
-    color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -739,7 +765,7 @@
   height: 100%;
   flex-shrink: 0;
   overflow: hidden;
-  z-index: 40;
+  z-index: var(--app-z-sidebar);
   width: 0;
   min-width: 0;
   box-shadow: none;
@@ -776,7 +802,7 @@
     transform: translateX(-100%);
     /* Cerrar es más corto que abrir; las dos con --ease-out para que el panel arranque ya en movimiento. */
     transition: transform var(--dur-base) var(--ease-out);
-    z-index: 60;
+    z-index: var(--app-z-sticky);
     box-shadow: var(--app-shadow-lg);
   }
 
@@ -809,7 +835,7 @@
     position: fixed;
     inset: 0;
     background: rgb(var(--c-canvas) / 0.8);
-    z-index: 55;
+    z-index: var(--app-z-scrim);
     animation: fadeIn var(--dur-base) var(--ease-out);
   }
 }
@@ -929,7 +955,7 @@
 .guide-layer {
   position: fixed;
   inset: 0;
-  z-index: 140;
+  z-index: var(--app-z-guide);
   pointer-events: auto;
 }
 
@@ -943,7 +969,7 @@
 
 .guide-ring {
   position: fixed;
-  z-index: 141;
+  z-index: calc(var(--app-z-guide) + 1);
   border: 2px solid rgb(var(--c-accent-soft));
   border-radius: 12px;
   pointer-events: none;
@@ -952,7 +978,7 @@
 
 .guide-popover {
   position: fixed;
-  z-index: 142;
+  z-index: calc(var(--app-z-guide) + 2);
   max-width: min(360px, calc(100vw - 24px));
   border: 1px solid rgb(var(--c-accent) / 0.4);
   border-radius: var(--app-radius-2xl);

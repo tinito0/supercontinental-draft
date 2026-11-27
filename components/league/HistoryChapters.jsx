@@ -8,7 +8,7 @@ function Paragraphs({ paragraphs, className = '' }) {
   return (
     <div className={`max-w-[65ch] space-y-4 text-lg leading-relaxed text-ink ${className}`}>
       {paragraphs.map((paragraph, index) => (
-        <p key={index} className="whitespace-pre-line">{paragraph}</p>
+        <p key={index} className="whitespace-pre-line [overflow-wrap:anywhere]">{paragraph}</p>
       ))}
     </div>
   );

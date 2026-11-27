@@ -12,7 +12,7 @@ import { RuleGroups } from '../components/landing/RuleGroups.jsx';
 import { SectionHeading, SiteBrand, SiteFooter, SiteNav } from '../components/landing/SiteChrome.jsx';
 
 /* One label for the one action of the page, used in the nav, the hero and the closing call. */
-const ENTER_LABEL = 'Ingresar';
+const ENTER_LABEL = 'Entrar';
 /* The full name does not fit next to the button at 360px. */
 const SHORT_APP_NAME = 'SCL Draft';
 
@@ -26,7 +26,7 @@ function LandingNav({ onEnter }) {
   return (
     <SiteNav
       brand={(
-        <a href="#inicio" className="flex min-w-0 items-center gap-2.5">
+        <a href="#inicio" className="flex min-h-11 min-w-0 items-center gap-2.5">
           <SiteBrand shortName={SHORT_APP_NAME} name={APP_NAME} />
         </a>
       )}
@@ -38,7 +38,7 @@ function LandingNav({ onEnter }) {
           </li>
         ))}
       </ul>
-      <Button variant="primary" onClick={onEnter} iconRight={ChevronRight}>{ENTER_LABEL}</Button>
+      <Button variant="primary" onClick={onEnter} iconRight={ChevronRight} className="min-h-11">{ENTER_LABEL}</Button>
     </SiteNav>
   );
 }
@@ -50,10 +50,10 @@ function Hero({ onEnter }) {
         <div className="landing-enter">
           <p className="eyebrow mb-4 text-accent-soft">{LEAGUE_NAME}</p>
           <h1 id="hero-title" className="font-display text-[2.6rem] font-bold uppercase leading-[0.95] tracking-tight text-ink sm:text-6xl lg:text-7xl">
-            Armá tu plantel. Ganá la Supercontinental.
+            Armá tu plantel. Ganá la SuperContinental.
           </h1>
           <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-ink-2">
-            Mercado en tiempo real, pizarra táctica y exportación a PES 2021, para una liga hecha para jugar entre amigos.
+            Mercado en tiempo real, táctica y exportación a PES 2021, para una liga hecha para jugar entre amigos.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button variant="primary" size="lg" onClick={onEnter} iconRight={ChevronRight}>{ENTER_LABEL}</Button>
@@ -86,7 +86,7 @@ export function LandingPage({ onEnter }) {
         <section aria-labelledby="plataforma" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 sm:px-6 md:py-24">
           <Reveal>
             <SectionHeading id="plataforma" title="La plataforma, por dentro">
-              Probá una versión de muestra de las herramientas que usa cada manager.
+              Probá una versión de muestra de las herramientas que usa cada mánager.
             </SectionHeading>
           </Reveal>
           <Reveal delay={100}>
@@ -99,7 +99,8 @@ export function LandingPage({ onEnter }) {
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <Reveal>
               <SectionHeading id="figuras" title="Figuras del mercado">
-                {MARKET_PLAYER_COUNT_LABEL} jugadores con valoración, posición y precio, tomados de la base de datos de PES 2021.
+                {MARKET_PLAYER_COUNT_LABEL} jugadores con valoración, posición y precio, tomados de la base de datos de PES 2021.{' '}
+                <span className="font-semibold text-ink">Precios de ejemplo, no del mercado de hoy.</span>
               </SectionHeading>
             </Reveal>
           </div>
@@ -130,7 +131,7 @@ export function LandingPage({ onEnter }) {
           <Reveal className="mx-auto flex max-w-2xl flex-col items-center px-4 py-20 text-center sm:px-6 md:py-28">
             <img src="/landing/crest.webp" alt="" width="72" height="72" loading="lazy" className="mb-6 h-[72px] w-[72px]" />
             <h2 id="cierre" className="font-display text-3xl font-bold uppercase leading-none text-ink md:text-5xl">¿Listo para armar tu plantel?</h2>
-            <p className="mt-4 text-lg text-ink-2">Entrá con tu cuenta y competí en la Supercontinental.</p>
+            <p className="mt-4 text-lg text-ink-2">Entrá con tu cuenta y competí en la SuperContinental.</p>
             <Button variant="primary" size="lg" onClick={onEnter} iconRight={ChevronRight} className="mt-8">{ENTER_LABEL}</Button>
           </Reveal>
         </section>

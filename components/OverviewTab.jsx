@@ -146,7 +146,7 @@ export const OverviewTab = memo(function OverviewTab({
   return (
     <Page className="pb-10">
       <PageHeader
-        eyebrow="Supercontinental League"
+        eyebrow="SuperContinental League"
         title={(
           <span className="flex items-center gap-3 sm:gap-4">
             <Crest src={logoUrl} name={teamName} className="w-11 h-11 sm:w-14 sm:h-14 shrink-0" />
@@ -164,7 +164,7 @@ export const OverviewTab = memo(function OverviewTab({
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 border-y border-line/[0.08] py-5">
         <Stat label="Jugadores" value={ownedCart.length} hint="en el plantel" />
-        <Stat label="Media del plantel" value={averageOvr || '—'} tone="accent" hint="OVR promedio" />
+        <Stat label="Media del plantel" value={averageOvr || '—'} tone="accent" hint="Promedio de las medias" />
         <Stat label="Posición" value={userRankIndex >= 0 ? `${userRankIndex + 1}.º` : '—'}
           hint={userLeagueStats ? `${userLeagueStats.pts} pts · ${userLeagueStats.pj} PJ` : 'Sin clasificación'} />
         <div className="min-w-0">
@@ -191,7 +191,7 @@ export const OverviewTab = memo(function OverviewTab({
         <div className="lg:col-span-2 space-y-6 min-w-0">
           <section className="panel p-5 sm:p-6" aria-labelledby="overview-match">
             <SectionHeader as="h2" title={<span id="overview-match">{nextMatch ? 'Próximo partido' : lastMatch ? 'Último partido' : 'Partidos'}</span>}
-              actions={<Button size="sm" variant="ghost" icon={CalendarDays} onClick={() => setActiveTab('Tournament')}>Fixture</Button>} />
+              actions={<Button size="sm" variant="ghost" icon={CalendarDays} onClick={() => setActiveTab('Tournament')}>Calendario</Button>} />
             <div className="mt-5">
               {tournamentLoading ? (
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6" aria-hidden="true">
@@ -200,7 +200,7 @@ export const OverviewTab = memo(function OverviewTab({
               ) : match ? (
                 <MatchFocus match={match} teamName={teamName} getLogo={getLogo} />
               ) : (
-                <p className="py-6 text-center text-sm text-ink-3">Todavía no hay partidos de tu club en el fixture.</p>
+                <p className="py-6 text-center text-sm text-ink-3">Todavía no hay partidos de tu club en el calendario.</p>
               )}
             </div>
           </section>
@@ -253,7 +253,7 @@ export const OverviewTab = memo(function OverviewTab({
               {topPlayers.map(player => (
                 <li key={player.Id}>
                   <button type="button" onClick={() => onPlayerClick?.(player.Id)}
-                    aria-label={`Ver perfil de ${player.Name}, ${player.POS_NOMBRE}, OVR ${player.OVR_CALCULADO}`}
+                    aria-label={`Ver perfil de ${player.Name}, ${player.POS_NOMBRE}, media ${player.OVR_CALCULADO}`}
                     className="group w-full flex items-center gap-3 py-2.5 min-h-14 text-left rounded-lg transition-colors hover:bg-white/[0.03] -mx-2 px-2">
                     <img src={`/fotos_jugadores/${player.Id}.webp`} alt="" width={40} height={40} loading="lazy"
                       className="w-10 h-10 rounded-lg object-cover object-top bg-raised shrink-0"

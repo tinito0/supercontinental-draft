@@ -394,7 +394,9 @@ describe('Pitch drag and drop', () => {
     });
     // An inline transform used to override Tailwind's scale-90 / hover:scale-110 on the same element.
     expect(el.props.style.transform).toBeUndefined();
-    expect(el.props.style.translate).toMatch(/^-50% calc\(-1 \* \(/);
+    // The marker moves by translate from the pitch corner (x in cqw, y in 4/3 cqw), lifted to its role chip.
+    expect(el.props.style.translate).toMatch(/^calc\([0-9.]+cqw - 50%\) calc\([0-9.]+cqw - \(/);
+    expect(el.props.style).toMatchObject({ left: 0, top: 0 });
     expect(el.props.className).toContain('scale-90');
   });
 

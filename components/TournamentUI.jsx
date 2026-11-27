@@ -20,7 +20,7 @@ export const tournamentBackdropClass = 'absolute inset-0 bg-canvas pointer-event
 export const TournamentSectionTitle = memo(function TournamentSectionTitle({ title, subtitle, compact = false }) {
   return (
     <div className={`flex flex-col items-center ${compact ? 'mb-3 sm:mb-5' : 'mb-5 sm:mb-7'} z-20 relative w-full shrink-0 text-center px-4`}>
-      <h2 className={`${compact ? 'text-lg sm:text-xl md:text-2xl' : 'text-xl sm:text-2xl md:text-3xl'} font-bold text-ink tracking-tight`}>
+      <h2 className={`${compact ? 'text-lg sm:text-xl md:text-2xl' : 'text-xl sm:text-2xl md:text-3xl'} font-bold uppercase text-ink tracking-tight`}>
         {title}
       </h2>
       {subtitle && (
@@ -65,7 +65,7 @@ export const TournamentPanel = memo(function TournamentPanel({ title, icon: Icon
       {title && (
         <div className={`${compact ? ' bg-raised/40 px-4 py-2.5' : ' bg-raised/60 px-5 py-3.5'} border-b border-line/20 flex items-center gap-2.5`}>
           {Icon && <Icon className="w-4 h-4 text-ink-3" />}
-          <h3 className={`${compact ? 'text-sm' : 'text-base'} font-bold text-ink tracking-normal`}>{title}</h3>
+          <h2 className={`${compact ? 'text-sm' : 'text-base'} font-bold text-ink tracking-normal`}>{title}</h2>
         </div>
       )}
       <div className="p-3 sm:p-5">{children}</div>

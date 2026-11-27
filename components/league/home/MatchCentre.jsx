@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { CalendarDays, ChevronRight, Radio, Trophy, Vote } from 'lucide-react';
-import { Tabs } from '../../ui/Tabs.jsx';
+import { Tabs, tabPanelProps } from '../../ui/Tabs.jsx';
 import { Alert } from '../../ui/Alert.jsx';
 import { FixtureRow } from '../match/FixtureRow.jsx';
 
@@ -10,6 +10,7 @@ import { FixtureRow } from '../match/FixtureRow.jsx';
    si la temporada no empezó, los próximos. */
 
 const PREVIEW_ROWS = 6;
+const TAB_PARAM = 'partidos';
 
 function VoteLink({ children }) {
   return (
@@ -49,8 +50,17 @@ export function MatchCentre({ groups, round, clubOf, loading, error, liveError, 
   // Con el partido en juego arriba, lo que sigue interesando es qué falta de la fecha.
   const featuredIsLive = groups.live.some(f => f.id === featuredId);
   const preferred = live.length ? 'live' : featuredIsLive && upcoming.length ? 'upcoming' : results.length ? 'results' : 'upcoming';
-  const [chosen, setChosen] = useState(null);
-  const tab = chosen || preferred;
+  // La pestaña elegida queda en la URL (?partidos=), con replace para no llenar el historial.
+  const [params, setParams] = useSearchParams();
+  const requested = params.get(TAB_PARAM);
+  // A tab from the URL counts only while it is shown: «En vivo» or «Resultados» can empty out after the link was made.
+  const shown = { live: live.length > 0, results: results.length > 0, upcoming: true };
+  const tab = Object.hasOwn(shown, requested ?? '') && shown[requested] ? requested : preferred;
+  const setChosen = next => setParams(current => {
+    const updated = new URLSearchParams(current);
+    updated.set(TAB_PARAM, next);
+    return updated;
+  }, { replace: true });
 
   const tabs = [
     { id: 'live', label: 'En vivo', icon: Radio, count: live.length || null, hidden: !live.length },
@@ -75,16 +85,21 @@ export function MatchCentre({ groups, round, clubOf, loading, error, liveError, 
   }
   else if (loading) {
     body = (
-      <div className="divide-y divide-line/10" aria-busy="true" aria-label="Cargando partidos">
+      <div className="divide-y divide-line/10" role="status" aria-busy="true">
+        <span className="sr-only">Cargando partidos</span>
         {[0, 1, 2].map(i => <div key={i} className="mx-4 my-3 h-14 skeleton" />)}
       </div>
     );
   } else {
     const list = tab === 'live' ? live : tab === 'results' ? results : upcoming;
+    // The featured card above may be the only upcoming match: say so instead of "none scheduled".
+    const featuredIsUpcoming = groups.upcoming.some(f => f.id === featuredId);
     const empty = {
       live: { title: 'No hay partidos en juego', description: 'Cuando se juegue un partido aparece acá con el marcador en vivo.' },
       results: { title: 'Todavía no hay resultados', description: 'Los resultados aparecen apenas se cargan en el torneo.' },
-      upcoming: { title: 'No hay partidos programados', description: 'La próxima fecha aparece cuando se arma.' },
+      upcoming: featuredIsUpcoming
+        ? { title: 'No hay otros partidos próximos', description: 'El que aparece arriba es el único programado por ahora.' }
+        : { title: 'No hay partidos programados', description: 'La próxima fecha aparece cuando se arma.' },
     }[tab];
     // Mientras se juega, el resto de la fecha en curso debajo: qué terminó y qué falta.
     const rest = tab === 'live' && round ? round.fixtures.filter(f => !list.some(item => item.id === f.id)) : [];
@@ -110,14 +125,14 @@ export function MatchCentre({ groups, round, clubOf, loading, error, liveError, 
     <div className="panel overflow-hidden p-0">
       {!isEmpty && (
         <div className="flex flex-col gap-3 border-b border-line/10 px-4 pb-2 pt-4 sm:flex-row sm:items-end sm:justify-between">
-          <Tabs label="Partidos" value={tab} onChange={setChosen} tabs={tabs} />
+          <Tabs label="Partidos" value={tab} onChange={setChosen} tabs={tabs} idPrefix="match-centre" />
           <Link to="/partidos" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink">
             Todos los partidos <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
       )}
-      {liveError && !error && <p className="px-4 pt-3 text-sm text-warning-soft">No se pudo conectar con los partidos en vivo; el fixture sí está actualizado.</p>}
-      {body}
+      {liveError && !error && <p className="px-4 pt-3 text-sm text-warning-soft">No se pudo conectar con los partidos en vivo; el calendario sí está actualizado.</p>}
+      {isEmpty ? body : <div {...tabPanelProps('match-centre', tab)}>{body}</div>}
     </div>
   );
 }

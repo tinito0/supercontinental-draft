@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { getPosColorClass } from '../../../utils/helpers.js';
 import { roleLabel } from '../../../utils/matchAnalysis.js';
@@ -44,7 +44,7 @@ function PlayerList({ rows, match, summary, selected, onSelect, side, onSide }) 
   );
 }
 
-function Profile({ profile, match, heatmaps, onBack }) {
+function Profile({ profile, match, heatmaps, onBack, headingRef }) {
   return (
     <div className="space-y-4">
       <button type="button" onClick={onBack} className="btn btn-ghost btn-sm min-h-11 -ml-2 lg:hidden">
@@ -53,7 +53,8 @@ function Profile({ profile, match, heatmaps, onBack }) {
       <header className="flex items-center gap-4 border-b border-line/10 pb-4">
         <PlayerPhoto id={profile.id} size={72} />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-display text-2xl font-bold uppercase leading-tight text-ink">{profile.name}</h3>
+          {/* tabIndex -1: focus lands here after choosing a player on phones, when the list is hidden. */}
+          <h3 ref={headingRef} tabIndex={-1} className="truncate font-display text-2xl font-bold uppercase leading-tight text-ink rounded-sm focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-soft">{profile.name}</h3>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-ink-2">
             <span>{match[profile.side].name}</span>
             {profile.number != null && <span className="num">· #{profile.number}</span>}
@@ -67,7 +68,7 @@ function Profile({ profile, match, heatmaps, onBack }) {
           </div>
         )}
         <div className="text-right">
-          <span className="num block font-display text-4xl font-bold leading-none text-ink">{profile.minutes ?? '—'}</span>
+          <span className="num block font-display text-4xl font-bold leading-none text-ink">{profile.minutes ?? '–'}</span>
           <span className="text-sm text-ink-2">minutos</span>
         </div>
       </header>
@@ -130,7 +131,7 @@ function Profile({ profile, match, heatmaps, onBack }) {
         </section>
       )}
       <p className="text-sm text-ink-2">
-        {profile.rating == null ? 'Sin valoración: el partido se grabó antes de leerla. ' : ''}
+        {profile.rating == null ? 'Sin valoración: el partido se registró antes de leerla. ' : ''}
         {profile.heat ? 'El mapa sale de las posiciones que el juego actualiza cada 2 o 3 segundos: muestra por dónde anduvo, no cada paso. ' : ''}
         Los minutos se calculan con los cambios y las rojas.
       </p>
@@ -152,7 +153,7 @@ function Leaders({ summary, match, className = '' }) {
               {stat.players.map(player => (
                 <li key={`${player.side}:${player.id}`} className="flex items-center justify-between gap-2 py-1">
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${player.side === 'home' ? 'bg-accent' : 'bg-ink-3'}`} aria-label={match[player.side].name} />
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${player.side === 'home' ? 'bg-accent' : 'bg-ink-3'}`} ><span className="sr-only">{match[player.side].name}</span></span>
                     <span className="truncate text-ink">{player.name}</span>
                   </span>
                   <span className="num font-semibold text-ink">{player.value}</span>
@@ -169,6 +170,17 @@ function Leaders({ summary, match, className = '' }) {
 export function PlayerAnalysis({ rows, summary, match }) {
   const [selected, setSelected] = useState(null);
   const [side, setSide] = useState(null);
+  const headingRef = useRef(null);
+  const listRef = useRef(null);
+  // Focus follows the user's action: the profile after a pick, the list row after going back (phones hide the other pane).
+  const focusTarget = useRef(null);
+  useEffect(() => {
+    if (focusTarget.current === 'profile') headingRef.current?.focus();
+    if (focusTarget.current === 'list') listRef.current?.querySelector('[aria-current="true"]')?.focus();
+    focusTarget.current = null;
+  }, [selected]);
+  const pick = next => { focusTarget.current = 'profile'; setSelected(next); };
+  const goBack = () => { focusTarget.current = 'list'; setSelected(null); };
   if (!rows.length) return <p className="panel px-4 py-8 text-center text-sm text-ink-3">Las estadísticas de los jugadores aparecen al arrancar el partido.</p>;
   const current = selected || { side: rows[0].side, id: rows[0].id };
   const profile = playerProfile(summary, current.side, current.id);
@@ -176,13 +188,13 @@ export function PlayerAnalysis({ rows, summary, match }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-        <div className={`panel p-3 ${selected ? 'hidden lg:block' : ''}`}>
-          <PlayerList rows={rows} match={match} summary={summary} selected={current} onSelect={setSelected} side={listSide} onSide={setSide} />
+        <div ref={listRef} className={`panel p-3 ${selected ? 'hidden lg:block' : ''}`}>
+          <PlayerList rows={rows} match={match} summary={summary} selected={current} onSelect={pick} side={listSide} onSide={setSide} />
         </div>
         {/* Escritorio: la ficha y «Los que más» comparten la columna de la derecha, al lado de la lista. */}
         <div className="space-y-4">
           <div className={`panel p-5 sm:p-6 ${selected ? '' : 'hidden lg:block'}`}>
-            <Profile profile={profile} match={match} heatmaps={summary.heatmaps} onBack={() => setSelected(null)} />
+            <Profile profile={profile} match={match} heatmaps={summary.heatmaps} onBack={goBack} headingRef={headingRef} />
           </div>
           <Leaders summary={summary} match={match} className="hidden lg:block" />
         </div>

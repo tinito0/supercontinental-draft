@@ -35,7 +35,7 @@ function describe(points, match) {
 
 export function MomentumChart({ data, match, compact = false }) {
   if (!data) {
-    return <p className="py-6 text-center text-sm text-ink-3">Este partido se grabó antes de medir las acciones por minuto.</p>;
+    return <p className="py-6 text-center text-sm text-ink-3">Este partido se registró antes de medir las acciones por minuto.</p>;
   }
   const placed = layout(data.points);
   const width = (placed.at(-1)?.x ?? 0) + BAR;
@@ -85,7 +85,7 @@ export function MomentumChart({ data, match, compact = false }) {
         <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-3">
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-accent" aria-hidden="true" />{match.home.name}</span>
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-ink-3" aria-hidden="true" />{match.away.name}</span>
-          {data.from && <span>La grabación empezó en el minuto {data.from.minute + 1}: antes no hay datos.</span>}
+          {data.from && <span>Los datos empiezan en el minuto {data.from.minute + 1}: antes no hay datos.</span>}
         </figcaption>
       )}
     </figure>

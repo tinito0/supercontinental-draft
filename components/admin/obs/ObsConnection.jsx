@@ -36,7 +36,7 @@ function SourceRow({ source, copiedId, onCopy }) {
         <p className={`text-sm font-semibold ${source.id === 'partido' ? 'text-accent-soft' : 'text-ink'}`}>{source.title}</p>
         <p className="text-xs text-ink-3">{source.desc}</p>
       </div>
-      <input readOnly value={url} aria-label={`Enlace de ${source.title}`} onFocus={event => event.target.select()} className="input min-w-0 flex-1 font-mono text-xs" />
+      <input readOnly value={url} aria-label={`Link de ${source.title}`} onFocus={event => event.target.select()} className="input min-w-0 flex-1 font-mono text-xs" />
       <div className="flex shrink-0 gap-2">
         <button type="button" className={`btn btn-sm min-h-11 ${isCopied ? 'btn-success' : 'btn-secondary'}`} onClick={() => onCopy(source, url)} aria-live="polite">
           {isCopied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
@@ -61,7 +61,7 @@ export const ObsConnection = memo(function ObsConnection({ showStatusMessage }) 
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setCopiedId(''), 2000);
     } catch {
-      showStatusMessage?.('error', `No se pudo copiar. Enlace: ${url}`);
+      showStatusMessage?.('error', `No se pudo copiar. Link: ${url}`);
     }
   };
 
@@ -84,7 +84,7 @@ export const ObsConnection = memo(function ObsConnection({ showStatusMessage }) 
         <ul className="divide-y divide-line/10 border-y border-line/10">
           {TOURNAMENT_SOURCES.map(source => <SourceRow key={source.id} source={source} copiedId={copiedId} onCopy={copy} />)}
         </ul>
-        <p className="text-xs text-ink-3">Las fuentes que ya tenés con los enlaces viejos de la tabla y las copas siguen andando.</p>
+        <p className="text-xs text-ink-3">Las fuentes que ya tenés con los links viejos de la tabla y las copas siguen andando.</p>
       </div>
       <details className="border-t border-line/10 pt-3">
         <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-ink-2">Otras fuentes</summary>

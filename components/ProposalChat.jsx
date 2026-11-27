@@ -3,6 +3,7 @@ import { Send, MessageSquare, ChevronDown, ChevronUp, Lock } from 'lucide-react'
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { APP_ID, DEFAULT_LOGO } from '../utils/constants.js';
+import { scrollBehavior } from '../utils/scrollBehavior.js';
 
 function formatMessageTime(timestamp, isoString) {
   if (timestamp && typeof timestamp.toDate === 'function') {
@@ -62,7 +63,7 @@ export const ProposalChat = memo(function ProposalChat({
 
   useEffect(() => {
     if (isExpanded && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: scrollBehavior() });
     }
   }, [messages.length, isExpanded]);
 

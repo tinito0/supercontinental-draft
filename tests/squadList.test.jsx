@@ -15,7 +15,7 @@ describe('SquadRow', () => {
     expect(html).toContain('>MO<');
     expect(html).toContain('stat-c-80');
     expect(html).toContain('Natural MC');
-    expect(html).toContain('$12.50M');
+    expect(html).toContain('$12,50M');
     expect(html).toContain('>10<');
   });
 

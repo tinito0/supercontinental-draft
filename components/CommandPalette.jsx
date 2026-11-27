@@ -37,7 +37,7 @@ export function CommandPalette({
     { id: 'action-formation', title: 'Ir a Formación', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('formation') },
     { id: 'action-tournament', title: 'Ver Torneo', icon: <Zap className="w-4 h-4" />, action: () => setActiveTab('Tournament') },
     { id: 'action-filters', title: 'Abrir Filtros', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('filters') },
-    { id: 'action-chat', title: 'Chat de Managers', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('chat') }
+    { id: 'action-chat', title: 'Chat de mánagers', icon: <Zap className="w-4 h-4" />, action: () => openModalRoute('chat') }
   ], [setActiveTab, openModalRoute]);
 
   const filteredItems = useMemo(() => {

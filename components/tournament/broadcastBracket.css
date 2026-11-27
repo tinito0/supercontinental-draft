@@ -59,20 +59,24 @@
   white-space: nowrap;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
-.bb-status { text-align: right; flex-shrink: 0; color: #ffffff; }
+/* Placa azul marino: el estado cae sobre el extremo lavanda del degradé, donde el lila daba 2,0:1 y el dorado 2,7:1. */
+.bb-status { text-align: right; flex: 0 1 auto; min-width: 0; color: #ffffff; padding: 8px 20px 10px; background: var(--scl-navy); }
 .bb-status-label {
   font-size: 19px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--scl-lilac);
+  color: #ffffff;
 }
 .bb-status-value {
   font-size: 40px;
   font-weight: 800;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
+  /* Un campeón con nombre largo se corta con puntos suspensivos en vez de empujar el encabezado (F-85). */
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .bb-status-value.is-champion { color: rgb(var(--bb-tone)); text-transform: uppercase; }
 
@@ -124,7 +128,7 @@
 }
 .bb-card-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bb-card-state { flex-shrink: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
-.bb-card-state.is-done { color: var(--scl-lilac); }
+.bb-card-state.is-done { color: #ffffff; }
 
 .bb-team {
   display: flex;

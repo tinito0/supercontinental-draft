@@ -130,7 +130,7 @@ export function YouthDraftAdminSection({ allTeams, showStatusMessage }) {
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold text-ink truncate">{teamName(uid)}</span>
                   <span className="block text-xs text-ink-3">
-                    {entry ? `Eligió a ${entry.name} (OVR ${entry.ovr})` : hasTurn ? 'Eligiendo ahora' : uid === suggested ? 'Le toca' : 'Pendiente'}
+                    {entry ? `Eligió a ${entry.name} (media ${entry.ovr})` : hasTurn ? 'Eligiendo ahora' : uid === suggested ? 'Le toca' : 'Pendiente'}
                   </span>
                 </span>
                 <span className="flex items-center gap-1">

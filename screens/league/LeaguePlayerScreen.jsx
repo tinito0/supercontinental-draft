@@ -8,7 +8,7 @@ import { PlayerPhoto } from '../../components/league/match/MatchDetailViews.jsx'
 import { PlayerMatchLog } from '../../components/league/season/PlayerMatchLog.jsx';
 import { playerDisplayName } from '../../components/league/season/SeasonLeaderRow.jsx';
 import { useLeagueTeams } from '../../hooks/useLeagueData.js';
-import { catalogEntry, useMarketCatalog, useSeasonStats } from '../../hooks/useSeasonStats.js';
+import { catalogEntry, useMarketCatalogState, useSeasonStats } from '../../hooks/useSeasonStats.js';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 import { getPosColorClass, getStatAndOvrColorClass } from '../../utils/helpers.js';
 import { playerMatchLog, seasonHeat } from '../../utils/seasonStats.js';
@@ -19,7 +19,7 @@ import { Heatmap } from '../../components/league/match/Heatmap.jsx';
 
 const GOALKEEPER_POSITION = 0;
 const formatRating = value => value.toFixed(1).replace('.', ',');
-const percent = (done, total) => (total ? `${Math.round((done / total) * 100)} %` : '–');
+const percent = (done, total) => (total ? `${Math.round((done / total) * 100)}%` : '–');
 
 function detailRows(player, isKeeper) {
   if (isKeeper) {
@@ -42,9 +42,9 @@ function PlayerHeader({ playerId, player, entry, catalog }) {
         <h1 className="font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">{name}</h1>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-2">
           {entry?.position && <span className={`rounded-md px-1.5 py-0.5 text-xs font-bold ${getPosColorClass(entry.position)}`}>{entry.position}</span>}
-          {entry?.ovr > 0 && <span className={`num rounded-md px-1.5 py-0.5 text-xs font-bold ${getStatAndOvrColorClass(entry.ovr)}`} title="OVR del catálogo">{entry.ovr}</span>}
+          {entry?.ovr > 0 && <span className={`num rounded-md px-1.5 py-0.5 text-xs font-bold ${getStatAndOvrColorClass(entry.ovr)}`} title="Media del catálogo">{entry.ovr}</span>}
           {entry?.age > 0 && <span>{entry.age} años</span>}
-          {clubIsDraft && <Link to={`/equipos/${player.clubKey}`} className="font-semibold text-accent-soft hover:text-ink">{player.clubName || 'Su club'}</Link>}
+          {clubIsDraft && <Link to={`/equipos/${player.clubKey}`} className="inline-flex min-h-11 items-center font-semibold text-accent-soft hover:text-ink">{player.clubName || 'Su club'}</Link>}
           {!clubIsDraft && player?.clubName && <span>{player.clubName}</span>}
         </p>
       </div>
@@ -72,9 +72,10 @@ function SeasonTotals({ player, isKeeper }) {
           </div>
         ))}
         {player.xg != null && (
-          <div className="flex items-baseline justify-between gap-3 border-b border-line/10 py-2">
-            <dt className="text-sm text-ink-2" title="Estimación propia según dónde se tiró, no la del juego">xG estimado</dt>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-line/10 py-2">
+            <dt className="text-sm text-ink-2">xG estimado</dt>
             <dd className="num font-display text-lg font-bold text-ink">{player.xg.toFixed(2).replace('.', ',')}</dd>
+            <dd className="w-full text-xs text-ink-2">Estimación propia según dónde se tiró, no la del juego.</dd>
           </div>
         )}
       </dl>
@@ -110,7 +111,7 @@ export default function LeaguePlayerScreen() {
   const playerId = /^\d{1,7}$/.test(String(rawId)) ? Number(rawId) : null;
   const { stats, docs, officialKeys, loading, error } = useSeasonStats();
   const { teamsById } = useLeagueTeams();
-  const catalog = useMarketCatalog();
+  const { catalog, failed: catalogFailed } = useMarketCatalogState();
   const player = stats.players.find(p => p.id === playerId) || null;
   const entry = catalogEntry(catalog, playerId);
   const log = useMemo(() => (playerId == null ? [] : playerMatchLog(docs, playerId, { officialKeys })), [docs, playerId, officialKeys]);
@@ -121,15 +122,28 @@ export default function LeaguePlayerScreen() {
   let content;
   if (error) content = <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
   else if (loading) content = <PlayerSkeleton />;
-  else if (playerId == null || (!player && catalog && !entry)) {
-    content = <EmptyState icon={UserX} title="No encontramos este jugador" description="Puede que el enlace esté mal. Buscalo en las estadísticas de la temporada." />;
+  // Not in the season and no catalog to check the id against: say the read failed instead of showing a nameless profile.
+  else if (playerId != null && !player && catalogFailed) {
+    content = (
+      <>
+        <h1 className="sr-only">No se pudo cargar el jugador</h1>
+        <Alert tone="danger" title="No pudimos cargar los datos del jugador">Recargá la página para intentar de nuevo.</Alert>
+      </>
+    );
+  } else if (playerId == null || (!player && catalog && !entry)) {
+    content = (
+      <>
+        <h1 className="sr-only">Jugador no encontrado</h1>
+        <EmptyState icon={UserX} title="No encontramos este jugador" description="Puede que el link esté mal. Buscalo en las estadísticas de la temporada." />
+      </>
+    );
   } else {
     content = (
       <div className="space-y-6">
         <PlayerHeader playerId={playerId} player={player} entry={entry} catalog={catalog} />
         {player
           ? <SeasonTotals player={player} isKeeper={isKeeper} />
-          : <p className="text-sm text-ink-2">Todavía no tiene partidos oficiales con datos del juego esta temporada.</p>}
+          : <EmptyState title="Todavía no tiene partidos oficiales con datos del juego esta temporada." />}
         {heat && <SeasonHeat heat={heat} name={playerDisplayName(player || { id: playerId, name: entry?.name }, catalog)} />}
         {player && <PlayerMatchLog log={log} teamsById={teamsById} />}
       </div>

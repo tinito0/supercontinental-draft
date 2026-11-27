@@ -25,7 +25,7 @@ function headerMeta(ws, teamId, identity, countries, draftTeamName) {
   const country = countries.find(c => c.id === identity.country)?.name;
   if (country) meta.push(country);
   const coach = coachNameOfTeam(ws, teamId);
-  if (coach) meta.push(`DT ${coach}`);
+  if (coach) meta.push(`Director técnico ${coach}`);
   if (identity.stadiumName) meta.push(identity.stadiumName);
   else if (identity.stadiumId != null) meta.push(`Estadio ${identity.stadiumId}`);
   if (draftTeamName) meta.push(`Draft: ${draftTeamName}`);

@@ -33,7 +33,8 @@ export function Spinner({
   const spinner = (
     <div
       role="status"
-      aria-label={ariaLabel}
+      // Without a visible label the sr-only text below carries the name; an aria-label as well is announced twice.
+      aria-label={label ? ariaLabel : undefined}
       className={`inline-flex items-center gap-2.5 ${center ? 'justify-center p-6 w-full' : ''} ${className}`}
       {...props}
     >

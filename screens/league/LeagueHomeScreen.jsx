@@ -42,10 +42,23 @@ function StageLine({ stage, liveCount, className = 'mt-6' }) {
   );
 }
 
+/** Placeholder while the tournament loads: the season and preseason heroes differ, so neither is chosen yet. */
+function HeroPending() {
+  return (
+    <div className="border-b border-line/10">
+      <div className="mx-auto max-w-6xl px-4 pb-10 pt-10 sm:px-6 md:pt-14 lg:pb-14">
+        <div role="status" aria-busy="true" className="skeleton h-[22rem] rounded-2xl md:h-[26rem]">
+          <span className="sr-only">Cargando la portada</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Pretemporada: qué es la liga y sus escudos, con el camino a los clubes. */
 function PreseasonHero({ teams, stage }) {
   return (
-    <section aria-labelledby="hero-title" className="league-hero overflow-hidden border-b border-line/10">
+    <section aria-labelledby="hero-title" className="overflow-hidden border-b border-line/10">
       <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-10 pt-10 sm:px-6 md:pt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-12 lg:pb-14">
         <div className="landing-enter">
           <h1 id="hero-title" className="font-display text-[2.6rem] font-bold uppercase leading-[0.92] tracking-tight text-ink [text-wrap:balance] sm:text-6xl">
@@ -54,7 +67,7 @@ function PreseasonHero({ teams, stage }) {
           <p className="mt-2 text-ink-2">Liga de eFootball PES 2021</p>
           <StageLine stage={stage} liveCount={0} />
           <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-ink-2 [text-wrap:pretty]">
-            {teams.length > 0 && <><span className="num font-semibold text-ink">{teams.length}</span> clubes. </>}Resultados, tabla, copas y la historia de cada club, en un solo lugar.
+            {teams.length > 0 && <><span className="num font-semibold text-ink">{teams.length}</span> clubes. </>}Empezá por los clubes o por la tabla y las copas.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/equipos" className="btn btn-primary btn-lg"><Shield className="h-4 w-4" aria-hidden="true" /> Los clubes</Link>
@@ -78,10 +91,9 @@ function ManagerVoteLink({ round }) {
     <Link to="/en-vivo" className="group mt-4 flex min-h-14 items-center gap-3 rounded-2xl border border-accent/40 bg-accent-deep/30 px-4 py-3 transition-colors hover:border-accent/70">
       <UserRoundCheck className="h-5 w-5 shrink-0 text-accent-soft" aria-hidden="true" />
       <span className="min-w-0 flex-1">
-        <span className="block font-semibold text-ink">Votá al manager de la {round.title}</span>
+        <span className="block font-semibold text-ink">Votá al mánager de la {round.title}</span>
         <span className="block text-sm text-ink-2">¿Quién manejó mejor su equipo en el PES?{left != null && ` Cierra en ${left} h.`}</span>
       </span>
-      <ChevronRight className="h-5 w-5 shrink-0 text-ink-3 group-hover:text-ink" aria-hidden="true" />
     </Link>
   );
 }
@@ -89,7 +101,7 @@ function ManagerVoteLink({ round }) {
 /** Temporada en juego: el nombre en una línea y, debajo, el partido de ahora junto a la tabla. */
 function NowHero({ stage, liveCount, featured, liveMatch, clubOf, prediction, tournament, fixtures, loading, error, managerRound }) {
   return (
-    <section aria-labelledby="hero-title" className="league-hero border-b border-line/10">
+    <section aria-labelledby="hero-title" className="border-b border-line/10">
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 sm:px-6 md:pt-10 lg:pb-14">
         <div className="landing-enter flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
           <div>
@@ -104,7 +116,7 @@ function NowHero({ stage, liveCount, featured, liveMatch, clubOf, prediction, to
             <div className="min-w-0">
               {featured
                 ? <FeaturedMatch featured={featured} clubOf={clubOf} prediction={prediction} liveMatch={liveMatch} />
-                : <div className="skeleton h-72 rounded-2xl" aria-busy="true" aria-label="Cargando el partido" />}
+                : <div className="skeleton h-72 rounded-2xl" role="status" aria-busy="true"><span className="sr-only">Cargando el partido</span></div>}
               {/* Under the match: it fills the column beside the taller table and sits next to what it is about. */}
               <ManagerVoteLink round={managerRound} />
             </div>
@@ -121,7 +133,7 @@ function NowHero({ stage, liveCount, featured, liveMatch, clubOf, prediction, to
 
 export default function LeagueHomeScreen() {
   useDocumentTitle(null);
-  const { teams, teamsById, loading: teamsLoading } = useLeagueTeams();
+  const { teams, teamsById, loading: teamsLoading, error: teamsError } = useLeagueTeams();
   const { tournament, fixtures, groups, stage, prediction, liveMatches, loading, error, liveError } = useLeagueFixtures(teamsById);
   const round = useMemo(() => currentRound(fixtures), [fixtures]);
   const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
@@ -147,7 +159,7 @@ export default function LeagueHomeScreen() {
   const franchiseSection = (
     <section aria-labelledby="franquicias" className={SECTION_CLASS}>
       <Reveal>
-        <FranchiseSummary teams={teams} franchise={franchise} loading={franchiseLoading || teamsLoading} error={franchiseError} headingId="franquicias" />
+        <FranchiseSummary teams={teams} franchise={franchise} loading={franchiseLoading || teamsLoading} error={franchiseError} teamsError={teamsError} headingId="franquicias" />
       </Reveal>
     </section>
   );
@@ -158,15 +170,17 @@ export default function LeagueHomeScreen() {
         <SectionHeading id="clubes" title="Los clubes" action={<Link to="/equipos" className={SEE_ALL}>Ver todos <ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>} />
       </Reveal>
       <Reveal>
-        <ClubCrestGrid teams={teams} loading={teamsLoading} />
+        <ClubCrestGrid teams={teams} loading={teamsLoading} error={teamsError} />
       </Reveal>
     </section>
   );
 
   return (
     <>
-      {isPreseason
-        ? <PreseasonHero teams={teams} stage={stage} />
+      {loading
+        ? <HeroPending />
+        : isPreseason
+          ? <PreseasonHero teams={teams} stage={stage} />
         : (
           <NowHero
             stage={loading ? null : stage} liveCount={groups.live.length} featured={featured} liveMatch={liveMatch}

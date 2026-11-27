@@ -24,11 +24,11 @@ function Photo({ player }) {
       />
       {(player.ovr || player.pos) && (
         <div className="absolute left-2 top-2 flex flex-col items-center gap-1">
-          {player.ovr && (
+          {player.ovr ? (
             <span className={`grid h-9 w-10 place-items-center rounded-md font-display text-xl font-bold num ${getStatAndOvrColorClass(player.ovr)}`}>
-              <span className="sr-only">OVR </span>{player.ovr}
+              <span className="sr-only">Media </span>{player.ovr}
             </span>
-          )}
+          ) : null}
           {player.pos && (
             <span className={`w-10 rounded-md py-0.5 text-center font-display text-sm font-bold leading-tight ${getPosColorClass(player.pos)}`}>{player.pos}</span>
           )}
@@ -60,13 +60,13 @@ export function FranchisePlayerCard({ player, team = null, className = '' }) {
         <div className="min-w-0 flex-1">
           <p className="font-display text-xl font-bold uppercase leading-tight text-ink [overflow-wrap:anywhere]">{name}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {player.ovr && (
+            {player.ovr ? (
               <span className={`grid h-8 w-10 place-items-center rounded-md font-display text-lg font-bold num ${getStatAndOvrColorClass(player.ovr)}`}>
-                <span className="sr-only">OVR </span>{player.ovr}
+                <span className="sr-only">Media </span>{player.ovr}
               </span>
-            )}
+            ) : null}
             {player.pos && <span className={`w-10 rounded-md py-1 text-center font-display text-sm font-bold leading-tight ${getPosColorClass(player.pos)}`}>{player.pos}</span>}
-            {player.age && <span className="text-sm text-ink-2"><span className="num">{player.age}</span> años</span>}
+            {player.age ? <span className="text-sm text-ink-2"><span className="num">{player.age}</span> años</span> : null}
           </div>
         </div>
       </div>

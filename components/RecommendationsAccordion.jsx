@@ -3,6 +3,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { formatPriceShort, formatPriceCompact, getPosColorClass, getStatAndOvrColorClass } from '../utils/helpers.js';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
 import { Badge } from './ui/Badge.jsx';
+import { scrollBehavior } from '../utils/scrollBehavior.js';
 
 const STORAGE_KEY = 'recommendations_expanded';
 const SHORT_SCREEN_HEIGHT = 900; // below this the shelf starts collapsed so the market itself is in view
@@ -43,7 +44,7 @@ export const RecommendationsAccordion = memo(function RecommendationsAccordion({
   };
 
   const scrollShelf = useCallback((direction) => {
-    scrollContainerRef.current?.scrollBy({ left: direction === 'left' ? -SCROLL_STEP : SCROLL_STEP, behavior: 'smooth' });
+    scrollContainerRef.current?.scrollBy({ left: direction === 'left' ? -SCROLL_STEP : SCROLL_STEP, behavior: scrollBehavior() });
   }, []);
 
   if (!recommendations || recommendations.length === 0) return null;

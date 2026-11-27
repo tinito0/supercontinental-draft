@@ -9,8 +9,8 @@ export const POPUP_POSITIONS = ['right', 'left', 'center'];
 
 // Rutas de la web pública de la liga (utils/siteRoutes.js): el QR siempre lleva a la web, nunca al draft.
 export const POPUP_PRESETS = [
-  { id: 'vota', label: 'Votá en la web', title: 'Votá en la web', text: 'Predecí los partidos y elegí al manager de la fecha. Sin cuenta.', path: '/en-vivo' },
-  { id: 'liga', label: 'Seguí la liga', title: 'Seguí la Supercontinental', text: 'Resultados, tabla y equipos en la web.', path: '/' },
+  { id: 'vota', label: 'Votá en la web', title: 'Votá en la web', text: 'Predecí los partidos y elegí al mánager de la fecha. Sin cuenta.', path: '/en-vivo' },
+  { id: 'liga', label: 'Seguí la liga', title: 'Seguí la SuperContinental', text: 'Resultados, tabla y equipos en la web.', path: '/' },
   { id: 'tabla', label: 'Tabla y copas', title: 'Tabla y copas en vivo', text: 'Escaneá y seguí el torneo desde el celular.', path: '/torneo' },
   { id: 'equipos', label: 'Los equipos', title: 'Conocé a los equipos', text: 'Planteles e historia de cada club.', path: '/equipos' },
 ];
@@ -47,16 +47,16 @@ export function currentSiteUrl(href) {
  */
 export function normalizePopupUrl(input) {
   const raw = String(input ?? '').trim();
-  if (!raw) return { ok: false, reason: 'Falta el enlace.' };
+  if (!raw) return { ok: false, reason: 'Falta el link.' };
   let url;
   try {
     url = new URL(raw);
   } catch {
-    return { ok: false, reason: 'El enlace no es válido: tiene que empezar con https://' };
+    return { ok: false, reason: 'El link no es válido: tiene que empezar con https://' };
   }
-  if (url.protocol !== 'https:') return { ok: false, reason: 'El enlace tiene que empezar con https://' };
-  if (url.username || url.password) return { ok: false, reason: 'El enlace no puede llevar usuario ni contraseña.' };
-  if (url.href.length > POPUP_LIMITS.URL) return { ok: false, reason: `El enlace es demasiado largo (máximo ${POPUP_LIMITS.URL} caracteres).` };
+  if (url.protocol !== 'https:') return { ok: false, reason: 'El link tiene que empezar con https://' };
+  if (url.username || url.password) return { ok: false, reason: 'El link no puede llevar usuario ni contraseña.' };
+  if (url.href.length > POPUP_LIMITS.URL) return { ok: false, reason: `El link es demasiado largo (máximo ${POPUP_LIMITS.URL} caracteres).` };
   return { ok: true, url: currentSiteUrl(url.href) };
 }
 

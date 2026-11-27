@@ -87,7 +87,7 @@ export function StandingsTable({ rows, clubOf, isLive = false }) {
       )}
       <div className="panel overflow-hidden">
         <table className="w-full text-left">
-          <caption className="sr-only">Tabla de posiciones de la Supercontinental League</caption>
+          <caption className="sr-only">Tabla de posiciones de la SuperContinental League</caption>
           <thead>
             <tr className="border-b border-line/10 text-sm text-ink-2">
               <th scope="col" className="w-12 py-3 pl-4 pr-2 text-center font-semibold">#</th>
@@ -138,6 +138,7 @@ export function StandingsTable({ rows, clubOf, isLive = false }) {
         <li className="flex items-center gap-2"><span className="h-3 w-1 rounded bg-accent" aria-hidden="true" />1.° a 8.°: Copa de Oro</li>
         <li className="flex items-center gap-2"><span className="h-3 w-1 rounded bg-ink-3" aria-hidden="true" />9.° a 12.°: Copa de Plata</li>
         <li>Ganado en los 90: {LEAGUE_POINTS.REGULATION_WIN} pts · ganado por penales (GP): {LEAGUE_POINTS.SHOOTOUT_WIN} pt · perdido: {LEAGUE_POINTS.LOSS}</li>
+        <li className="w-full text-ink-3">Abreviaturas: PJ partidos jugados · G ganados · GP ganados por penales · P perdidos · GF goles a favor · GC goles en contra · DG diferencia de gol · PTS puntos</li>
       </ul>
     </div>
   );

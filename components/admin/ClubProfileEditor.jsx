@@ -132,7 +132,7 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
 
       <ClubKitsEditor teamId={teamId} kits={profile.kits} onChange={(slot, url) => setField('kits', { ...profile.kits, [slot]: url })} />
 
-      <RowList title="Palmarés" help="Títulos del club: de la Supercontinental, de su liga y copas nacionales, e internacionales."
+      <RowList title="Palmarés" help="Títulos del club: de la SuperContinental, de su liga y copas nacionales, e internacionales."
         rows={profile.honours} max={MAX_HONOURS} addLabel="Agregar título" onAdd={() => addRow('honours', newHonour())}>
         {profile.honours.map((row, index) => (
           <li key={row.id} className="grid grid-cols-1 gap-3 rounded-xl border border-line/[0.12] bg-raised/40 p-4 sm:grid-cols-[10rem_minmax(0,1fr)_5rem_auto]">
@@ -157,7 +157,7 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
         ))}
       </RowList>
 
-      <RowList title="Campañas anteriores" help="Cómo le fue en cada temporada o torneo: «2025 · Supercontinental · Campeón», «2024 · Copa de Plata · Semifinal»."
+      <RowList title="Campañas anteriores" help="Cómo le fue en cada temporada o torneo: «2025 · SuperContinental · Campeón», «2024 · Copa de Plata · Semifinal»."
         rows={profile.seasons} max={MAX_CLUB_SEASONS} addLabel="Agregar campaña" onAdd={() => addRow('seasons', newClubSeason())}>
         {profile.seasons.map((row, index) => (
           <li key={row.id} className="grid grid-cols-1 gap-3 rounded-xl border border-line/[0.12] bg-raised/40 p-4 sm:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)_auto]">
@@ -165,7 +165,7 @@ export function ClubProfileEditor({ teamId, teamName, onSave, renderSaveBar }) {
               <input className="input" value={row.season} maxLength={40} placeholder="2025" onChange={event => setRow('seasons', row.id, { season: event.target.value })} />
             </Field>
             <Field label="Competición">
-              <input className="input" value={row.competition} maxLength={80} placeholder="Supercontinental League" onChange={event => setRow('seasons', row.id, { competition: event.target.value })} />
+              <input className="input" value={row.competition} maxLength={80} placeholder="SuperContinental League" onChange={event => setRow('seasons', row.id, { competition: event.target.value })} />
             </Field>
             <Field label="Resultado">
               <input className="input" value={row.result} maxLength={120} placeholder="Campeón" onChange={event => setRow('seasons', row.id, { result: event.target.value })} />

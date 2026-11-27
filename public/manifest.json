@@ -5,8 +5,7 @@
   "display": "standalone",
   "background_color": "#080b14",
   "theme_color": "#080b14",
-  "description": "Gestor de mercado de fichajes y alineaciones para la Supercontinental League.",
-  "orientation": "portrait-primary",
+  "description": "Gestor de mercado de fichajes y alineaciones para la SuperContinental League.",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

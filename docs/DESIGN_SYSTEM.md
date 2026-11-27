@@ -71,6 +71,19 @@ borders and large icons. A control whose border is what delimits it (`.input`, `
 background, so its border is `border-line/55` (3.03:1 on raised); hairlines at 10–20 % are for dividers only.
 Text on a data color (position, OVR and stat pills) is `#1e1e1e`: white fails AA on all of them (2.1–3.3:1).
 
+Data colors and the pitch are tokens too, never literals in a component: `--c-data-*` (stat and OVR pill fills, text
+`--c-data-ink`), `--c-ovr-90…60/-none` (OVR text on the PES cards), `--c-pitch`, `--c-pitch-light`, `--c-pitch-dark`
+(`bg`/`ring-offset-pitch` in Tailwind; the mown stripes of `Pitch.jsx` are a deliberate depiction of the game's pitch) and
+`--c-pitch-solid` (`.lineup-pitch`, the match page). `.stat-c-*`, `.ovr-c-*` and `.ovr-text-*` have no `!important`: they
+sit after the Tailwind utilities, so at equal specificity they win.
+
+Z-index: only the tokens (`--app-z-sidebar` 40, `dropdown` 50, `scrim` 55, `sticky` 60, `modal` 100, `toast` 110,
+`tooltip` 120, `guide` 140 with the ring at +1 and the balloon at +2; the guide sits above toasts on purpose). No numbers in `index.css`.
+
+Scrollbars: the global thin one is in `index.css`; `.custom-scrollbar` (thin, `line` at 35 %, `scrollbar-color` plus
+`::-webkit-scrollbar`) is for panels and modals that scroll on their own, and gives way to the system colors under
+`forced-colors`.
+
 Radii: `rounded-md` 6px small controls · `rounded-lg` 8px buttons, fields · `rounded-xl` 12px inner blocks ·
 `rounded-2xl` 16px panels, dialogs. `rounded-full` only for dots, avatars, crest masks and count bubbles on an icon;
 a label, category or state is `rounded-md`, never a pill. Shadows `shadow-sm`/`shadow-md`/`shadow-lg` only (no custom
@@ -113,6 +126,9 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
 - **Only `transform` and `opacity`**, using individual properties (`translate`, `scale`), not an inline `transform`:
   it overrides Tailwind's scale classes. Exceptions: the pitch markers keep `left`/`top` in % (11 small elements) and
   meters animate `width`.
+- **Smooth scroll** (`scrollIntoView`, `scrollBy`, `scrollTo` with `behavior`): use `scrollBehavior()` from
+  `utils/scrollBehavior.js`, not `'smooth'`. A JS `behavior: 'smooth'` ignores the `scroll-behavior: auto` of the
+  reduced-motion block in `index.css`; the helper returns `'auto'` when the user asked for less motion.
 - **Duration classes**: `duration-fast` (feedback, hover, exits), `duration-base` (entries), `duration-move` (meters and
   anything that travels). No `duration-150/200/300/500`. The one literal is the live vote bar at 300ms (below).
   Easing keywords `ease`/`ease-in-out` are not used; transitions name their properties and use `var(--ease-out)`.

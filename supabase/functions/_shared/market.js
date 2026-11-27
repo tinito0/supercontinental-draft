@@ -121,7 +121,7 @@ export async function signPlayer({ tx, appId, catalog, user, playerId, isFranchi
     const budget = Number(team.data.budget ?? profile.data.budget) || 0;
     const committed = await getCommittedFunds(tx, paths, catalog, user.uid, { franchisePlayerId: profile.data.franchisePlayerId, now });
     if (budget - committed < toUnits(player.Precio)) {
-      throw new MarketError('No tienes presupuesto suficiente (incluyendo ofertas comprometidas).', 409);
+      throw new MarketError('No tenés presupuesto suficiente (incluyendo ofertas comprometidas).', 409);
     }
   }
 
@@ -482,7 +482,7 @@ const MAX_TRANSFER_WRITES = 480;
  * The old profile keeps `clubTransferredTo`, so hooks/useAuth.js shuts that account out instead of re-creating a club.
  */
 export async function transferClub({ tx, appId, user, fromUid, toUid, managerName = '', now = new Date() }) {
-  if (!user?.isAdmin) throw new MarketError('Solo el administrador puede cambiar el manager de un club.', 403);
+  if (!user?.isAdmin) throw new MarketError('Solo el administrador puede cambiar el mánager de un club.', 403);
   if (!UID_PATTERN.test(String(fromUid || '')) || !UID_PATTERN.test(String(toUid || '')) || fromUid === toUid) {
     throw new MarketError('Elegí un club y una cuenta nueva distintos.');
   }
@@ -514,9 +514,9 @@ export async function transferClub({ tx, appId, user, fromUid, toUid, managerNam
   if (!oldProfile || !oldTeam) throw new MarketError('Ese club no existe o ya pasó a otra cuenta.', 404);
   // The old account is shut out afterwards (hooks/useAuth.js): an admin account would lose access to Administración.
   if (ADMIN_USER_IDS.includes(fromUid) || oldProfile.data.isAdmin === true || oldProfile.data.role === 'admin') {
-    throw new MarketError('Ese club es de una cuenta de administrador: no se puede pasar a otro manager.', 409);
+    throw new MarketError('Ese club es de una cuenta de administrador: no se puede pasar a otro mánager.', 409);
   }
-  if (!newProfile || !newTeam) throw new MarketError('La cuenta nueva no tiene equipo: el manager nuevo tiene que entrar primero a /draft.', 404);
+  if (!newProfile || !newTeam) throw new MarketError('La cuenta nueva no tiene equipo: el mánager nuevo tiene que entrar primero a /draft.', 404);
   if (newTeam.data.approved !== false) {
     throw new MarketError('La cuenta nueva tiene que ser un equipo pendiente de aprobación, recién ingresado.', 409);
   }
@@ -633,7 +633,7 @@ export async function handleMarketAction({ firestore, appId, catalog, user, body
   }
   if (action === 'transferClub') {
     // Checked before opening a transaction, and again inside transferClub.
-    if (!user?.isAdmin) throw new MarketError('Solo el administrador puede cambiar el manager de un club.', 403);
+    if (!user?.isAdmin) throw new MarketError('Solo el administrador puede cambiar el mánager de un club.', 403);
     const { fromUid, toUid, managerName } = body;
     return firestore.runTransaction(tx => transferClub({ tx, appId, user, fromUid, toUid, managerName, now }));
   }

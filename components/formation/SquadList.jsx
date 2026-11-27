@@ -74,7 +74,7 @@ export const SquadRow = memo(function SquadRow({
       </span>
       {ovr > 0 && (
         <span className={`w-9 h-7 shrink-0 rounded-md flex items-center justify-center font-display num text-base font-bold ${getStatAndOvrColorClass(ovr)}`}>
-          <span className="sr-only">OVR </span>{ovr}
+          <span className="sr-only">Media </span>{ovr}
         </span>
       )}
     </>

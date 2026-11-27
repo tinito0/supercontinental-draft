@@ -1,12 +1,15 @@
 import React, { memo } from 'react';
 import { CommunityFrame } from './CommunityFrame.jsx';
 import { LEAVE_MS, shownKey, useExitLinger, useRemaining } from './OverlayPopup.jsx';
+import { SITE_URL } from '../../utils/sharePages.js';
 
 // Tarjeta de la comunidad sobre el overlay de OBS (lado izquierdo, el popup con QR va a la derecha): el manager de la
 // fecha, la predicción del partido o la encuesta de la copa, con los votos en vivo (utils/overlayLive.js).
 // La muestran el admin, Macro Deck (action card) o match-feed solo (la predicción, al arrancar un partido).
 
 const PREDICTION_LABEL = { home: null, draw: 'Empate', away: null };
+// Dominio sin protocolo: quien mira el stream necesita saber dónde votar (F-62).
+const VOTE_PLACE = `${new URL(SITE_URL).host}/en-vivo`;
 
 // --i escalona la entrada de cada fila y de su barra. La key={pct} vuelve a montar el número cuando cambia: el valor
 // nuevo se funde en el lugar en vez de saltar (broadcast.css scl-pop-swap).
@@ -32,8 +35,8 @@ function verdict(shares, homeName, awayName) {
 function cardContent(kind, live, homeName, awayName) {
   if (kind === 'manager' && live?.manager) {
     return {
-      title: `Manager de la ${live.manager.title}`,
-      aside: live.manager.open ? 'Votá en /en-vivo' : 'Votación cerrada',
+      title: `Mánager de la ${live.manager.title}`,
+      aside: live.manager.open ? `Votá en ${VOTE_PLACE}` : 'Votación cerrada',
       rows: live.manager.top.map((entry, index) => ({ key: entry.club, label: entry.club, pct: entry.pct, isLeader: index === 0 })),
     };
   }
@@ -50,7 +53,7 @@ function cardContent(kind, live, homeName, awayName) {
   if (kind === 'cup' && live?.cup?.total) {
     return {
       title: live.cup.title,
-      aside: live.cup.open ? 'Votá en /en-vivo' : 'Encuesta cerrada',
+      aside: live.cup.open ? `Votá en ${VOTE_PLACE}` : 'Encuesta cerrada',
       rows: live.cup.options.map((option, index) => ({ key: option.id, label: option.name, pct: option.pct, isLeader: index === 0 && option.votes > 0 })),
       footer: `${live.cup.total} ${live.cup.total === 1 ? 'voto' : 'votos'}`,
     };

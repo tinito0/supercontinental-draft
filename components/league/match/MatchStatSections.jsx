@@ -10,7 +10,7 @@ function StatValue({ value, display, isLeader, align }) {
   }
   return (
     <span className={`num leading-tight ${align}`}>
-      <span className={`font-display text-base ${weight}`}>{value.pct == null ? '—' : `${value.pct} %`}</span>
+      <span className={`font-display text-base ${weight}`}>{value.pct == null ? '–' : `${value.pct}%`}</span>
       <span className="ml-1 whitespace-nowrap text-xs text-ink-3">{value.made}/{value.total}</span>
     </span>
   );
@@ -83,7 +83,7 @@ export function StatSections({ sections, match }) {
           ))}
         </dl>
         <p className="mt-3 text-xs text-ink-3">
-          Los porcentajes se redondean al entero; sin intentos no hay porcentaje («—»). La posesión no aparece porque todavía no se mide.
+          Los porcentajes se redondean al entero; sin intentos no hay porcentaje («–»). La posesión no aparece porque todavía no se mide.
         </p>
       </details>
     </div>

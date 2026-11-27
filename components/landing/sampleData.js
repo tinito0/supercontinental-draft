@@ -97,6 +97,6 @@ export const EXPORT_FILES = [
   { name: 'Players.csv', desc: 'Atributos y posiciones de cada jugador.' },
   { name: 'Appearances.csv', desc: 'Datos de apariencia de cada jugador.' },
   { name: 'Team.csv', desc: 'Nombre y nacionalidad del equipo.' },
-  { name: 'Coach.csv', desc: 'Nombre y nacionalidad del DT.' },
+  { name: 'Coach.csv', desc: 'Nombre y nacionalidad del director técnico.' },
   { name: 'Formation.csv', desc: 'Posiciones de los titulares, lanzadores y táctica.' },
 ];

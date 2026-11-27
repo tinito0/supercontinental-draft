@@ -1,6 +1,7 @@
 import React from 'react';
 import { Keyboard, Info } from 'lucide-react';
 import { BaseModal } from './BaseModal.jsx';
+import { Button } from './Button.jsx';
 
 const SHORTCUTS = [
   {
@@ -78,15 +79,11 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
       footer={
         <div className="flex items-center justify-between w-full">
           <span className="text-[11px] text-ink-3">
-            Presiona <kbd className="kbd">Esc</kbd> o haz clic afuera
+            Presioná <kbd className="kbd">Esc</kbd> o hacé clic afuera
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-1.5 rounded-xl text-xs font-bold text-ink bg-accent/20 hover:bg-accent/30 border border-accent/30 transition active:scale-[0.97] cursor-pointer"
-          >
+          <Button variant="primary" size="sm" onClick={onClose} className="min-h-11">
             Entendido
-          </button>
+          </Button>
         </div>
       }
     >
@@ -129,7 +126,7 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-accent/10 border border-accent/20 text-accent-soft text-xs">
           <Info className="w-4 h-4 shrink-0 text-accent-soft mt-0.5" />
           <p className="leading-relaxed">
-            Los atajos están deshabilitados automáticamente mientras escribes en campos de búsqueda o texto.
+            Los atajos están deshabilitados automáticamente mientras escribís en campos de búsqueda o texto.
           </p>
         </div>
       </div>

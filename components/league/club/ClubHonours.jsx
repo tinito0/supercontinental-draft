@@ -6,6 +6,9 @@ import { SEASON_STATS, groupHonours } from '../../../utils/leagueContent.js';
 /* Pestaña «Palmarés» de la página del club: la vitrina de títulos (de la Supercontinental, nacionales e
    internacionales) y cómo le fue temporada por temporada, con sus números cuando el admin los cargó. */
 
+// Empty cell: a visible dash, read as "sin dato" by screen readers.
+const EMPTY_VALUE = <><span aria-hidden="true">–</span><span className="sr-only">sin dato</span></>;
+
 function TrophyCabinet({ honours }) {
   const groups = groupHonours(honours);
   if (!groups.length) return null;
@@ -15,7 +18,7 @@ function TrophyCabinet({ honours }) {
         <section key={group.id} aria-labelledby={`honours-${group.id}`} className="p-5">
           <div className="flex items-baseline justify-between gap-3 border-b border-line/10 pb-3">
             <h3 id={`honours-${group.id}`} className="font-display text-lg font-bold uppercase tracking-wide text-ink">{group.label}</h3>
-            <span className="num font-display text-4xl font-bold leading-none text-ink" aria-label={`${group.total} títulos`}>{group.total}</span>
+            <span className="num font-display text-4xl font-bold leading-none text-ink">{group.total}<span className="sr-only"> títulos</span></span>
           </div>
           <ul className="mt-3 space-y-3">
             {group.items.map(item => (
@@ -44,6 +47,7 @@ function CampaignTable({ seasons }) {
       {/* Escritorio: tabla. Celular: una tarjeta por campaña, sin scroll horizontal. */}
       <div className="panel hidden overflow-hidden md:block">
         <table className="w-full text-left">
+          <caption className="sr-only">Campañas anteriores del club, por temporada</caption>
           <thead>
             <tr className="border-b border-line/10 text-sm text-ink-2">
               <th scope="col" className="px-4 py-3 font-semibold">Temporada</th>
@@ -56,9 +60,9 @@ function CampaignTable({ seasons }) {
             {seasons.map(row => (
               <tr key={row.id} className="border-t border-line/10">
                 <th scope="row" className="num px-4 py-3 font-display text-lg font-bold text-ink">{row.season}</th>
-                <td className="px-4 py-3 text-ink">{row.competition || '—'}</td>
+                <td className="px-4 py-3 text-ink">{row.competition || EMPTY_VALUE}</td>
                 <td className="px-4 py-3 font-semibold text-ink">{row.result}</td>
-                {stats.map(([key]) => <td key={key} className="num px-3 py-3 text-center text-ink">{row[key] === '' ? '—' : row[key]}</td>)}
+                {stats.map(([key]) => <td key={key} className="num px-3 py-3 text-center text-ink">{row[key] === '' ? EMPTY_VALUE : row[key]}</td>)}
               </tr>
             ))}
           </tbody>
@@ -77,7 +81,7 @@ function CampaignTable({ seasons }) {
                 {stats.map(([key, short, long]) => (
                   <div key={key}>
                     <dt className="text-xs font-semibold text-ink-2"><abbr title={long} className="no-underline">{short}</abbr></dt>
-                    <dd className="num font-bold text-ink">{row[key] === '' ? '—' : row[key]}</dd>
+                    <dd className="num font-bold text-ink">{row[key] === '' ? EMPTY_VALUE : row[key]}</dd>
                   </div>
                 ))}
               </dl>

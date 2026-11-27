@@ -25,7 +25,7 @@ export default function FormationViewScreen() {
 
   useEffect(() => {
     if (!formationId) {
-      setError('El enlace no tiene una formación.');
+      setError('El link no tiene una formación.');
       setLoading(false);
       return undefined;
     }
@@ -60,20 +60,26 @@ export default function FormationViewScreen() {
     return () => { cancelled = true; };
   }, [formationId, attempt]);
 
+  // Tab title names the shared formation; the generic one is the fallback while loading or on error.
+  const sharedTeamName = formationData?.teamName;
+  useEffect(() => {
+    document.title = sharedTeamName ? `${sharedTeamName} · Táctica` : 'Táctica';
+  }, [sharedTeamName]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-canvas flex items-center justify-center">
+      <main className="min-h-screen bg-canvas flex items-center justify-center">
         <div className="text-center" role="status">
           <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" aria-hidden="true"></div>
           <p className="text-ink-3 text-xs font-medium">Cargando alineación…</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
+      <main className="min-h-screen bg-canvas flex items-center justify-center p-6">
         <div className="text-center max-w-md bg-surface p-8 rounded-2xl border border-line/20 shadow-lg" role="alert">
           <AlertCircle className="w-12 h-12 text-danger-soft mx-auto mb-3" aria-hidden="true" />
           <h1 className="font-display text-xl font-bold text-ink mb-2">Formación no disponible</h1>
@@ -87,7 +93,7 @@ export default function FormationViewScreen() {
             </button>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -109,13 +115,15 @@ export default function FormationViewScreen() {
   });
 
   return (
-    <div className="min-h-screen bg-canvas text-ink transition-colors duration-base">
+    <main className="min-h-screen bg-canvas text-ink transition-colors duration-base">
       {/* Header */}
       <div className="border-b border-line/20 bg-surface/90 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-3.5 flex items-center gap-3.5">
           <button
+            type="button"
             onClick={() => navigate('/')}
-            className="p-2 rounded-lg hover:bg-raised text-ink-3 hover:text-ink transition"
+            aria-label="Volver al inicio"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-raised text-ink-3 hover:text-ink transition"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -124,7 +132,7 @@ export default function FormationViewScreen() {
           )}
           <div>
             <h1 className="text-base font-bold text-ink tracking-tight">{teamName || 'Equipo'}</h1>
-            <p className="text-xs text-ink-3 font-medium">{formation.name} · Alineación táctica</p>
+            <p className="text-xs text-ink-3 font-medium">{formation.name} · Táctica</p>
           </div>
         </div>
       </div>
@@ -165,11 +173,11 @@ export default function FormationViewScreen() {
         {/* Info footer */}
         <div className="mt-4 text-center">
           <p className="text-[11px] text-ink-3">
-            Supercontinental League
-            {createdAt && ` · ${new Date(createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+            SuperContinental League
+            {createdAt && ` · ${new Date(createdAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}`}
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

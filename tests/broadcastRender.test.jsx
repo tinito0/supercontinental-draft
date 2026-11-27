@@ -211,8 +211,8 @@ describe('community card and live scenes (overlay en vivo)', () => {
 
   it('shows the manager of the round with each share', () => {
     const html = renderToStaticMarkup(<BroadcastOverlay overlayData={overlay({ kind: 'manager' })} live={live} />);
-    expect(html).toContain('Manager de la Fecha 3');
-    expect(html).toContain('Votá en /en-vivo');
+    expect(html).toContain('Mánager de la Fecha 3');
+    expect(html).toContain('Votá en supercontinental-draft.vercel.app/en-vivo');
     expect(html).toContain('Talleres');
     expect(html).toContain('63%');
     expect(html).toContain('is-leader');
@@ -309,8 +309,8 @@ describe('BroadcastLeagueTable live', () => {
     const html = renderToStaticMarkup(<BroadcastLeagueTable league={league} fixtures={fixtures} />);
     expect(html).toContain('Tabla en vivo');
     expect(html.indexOf('Oeste')).toBeLessThan(html.indexOf('Sur'));
-    expect(html).toContain('aria-label="sube 3"');
-    expect(html).toContain('aria-label="baja 2"');
+    expect(html).toContain('>sube 3<');
+    expect(html).toContain('>baja 2<');
     expect((html.match(/class="scl-table-live"/g) || []).length).toBe(2);
   });
 });

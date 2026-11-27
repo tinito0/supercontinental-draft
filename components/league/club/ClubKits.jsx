@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Expand, ImageOff } from 'lucide-react';
-import { Tabs } from '../../ui/Tabs.jsx';
+import { Tabs, tabPanelProps } from '../../ui/Tabs.jsx';
 import { clubKits } from '../../../utils/leagueContent.js';
 
 /* Camisetas del club en su página (titular, suplente, alternativa), las que se suben en Administración → Web
@@ -19,10 +19,11 @@ export function ClubKits({ profile, teamName }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="club-kits" className="section-title">Camisetas</h2>
         {kits.length > 1 && (
-          <Tabs label="Camiseta" value={shown.slot} onChange={setSlot}
+          <Tabs label="Camiseta" nav idPrefix="club-kit-tabs" value={shown.slot} onChange={setSlot}
             tabs={kits.map(kit => ({ id: kit.slot, label: kit.label }))} />
         )}
       </div>
+      <div {...(kits.length > 1 ? tabPanelProps('club-kit-tabs', shown.slot) : {})}>
       {broken ? (
         // A dead link (deleted upload, moved file) shows why, instead of the browser's broken-image box.
         <div className="grid aspect-[4/5] w-full place-content-center justify-items-center gap-2 rounded-xl bg-raised px-6 text-center">
@@ -31,7 +32,7 @@ export function ClubKits({ profile, teamName }) {
         </div>
       ) : (
         <a href={shown.url} target="_blank" rel="noopener noreferrer" className="group relative block overflow-hidden rounded-xl bg-raised"
-          aria-label={`Camiseta ${shown.label.toLowerCase()} de ${teamName || 'el club'}, en grande`}>
+          aria-label={`Camiseta ${shown.label.toLowerCase()} de ${teamName || 'el club'}, en grande, se abre en otra pestaña`}>
           <img key={shown.url} src={shown.url} alt={`Camiseta ${shown.label.toLowerCase()} de ${teamName || 'el club'}`}
             width="800" height="1000" loading="lazy" decoding="async" className="kit-swap aspect-[4/5] w-full object-contain"
             onError={() => setFailed(previous => new Set(previous).add(shown.url))} />
@@ -40,6 +41,7 @@ export function ClubKits({ profile, teamName }) {
           </span>
         </a>
       )}
+      </div>
       {kits.length === 1 && <p className="text-sm text-ink-2">{shown.label}</p>}
     </section>
   );

@@ -76,7 +76,7 @@ describe('services/transferService.js', () => {
         counterAmountMillions: 9.5, // Below base
         livePlayer,
         teamName: 'Boca'
-      })).rejects.toThrow(/La contraoferta debe estar entre el valor base y \$11\.50M/);
+      })).rejects.toThrow(/La contraoferta debe estar entre el valor base y \$11,50M/);
     });
 
     it('rejects counter offer above 115% of player base price', async () => {
@@ -87,7 +87,7 @@ describe('services/transferService.js', () => {
         counterAmountMillions: 11.51, // Above 115%
         livePlayer,
         teamName: 'Boca'
-      })).rejects.toThrow(/La contraoferta debe estar entre el valor base y \$11\.50M/);
+      })).rejects.toThrow(/La contraoferta debe estar entre el valor base y \$11,50M/);
     });
 
     it('rejects non-numeric or negative counter values', async () => {

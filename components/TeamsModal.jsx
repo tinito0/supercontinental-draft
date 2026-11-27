@@ -227,7 +227,7 @@ export const TeamsModal = memo(function TeamsModal({
       <EmptyState icon={Users} title="No se encontraron clubes" description="Probá con otra búsqueda o quitá el filtro de línea."
         actionLabel="Restablecer filtros" onAction={() => { setSearchQuery(''); setSelectedPosGroup('TODOS'); }} />
     ) : (
-      <EmptyState icon={Users} title="Todavía no hay otros clubes" description="Cuando los demás managers armen su club, sus planteles van a aparecer acá." />
+      <EmptyState icon={Users} title="Todavía no hay otros clubes" description="Cuando los demás mánagers armen su club, sus planteles van a aparecer acá." />
     )
   ) : (
     <ul className="space-y-3">

@@ -20,7 +20,7 @@ const SCENE_FIELDS = [
 ];
 
 const STEPS = [
-  'En OBS, en cualquier escena, agregá una fuente «Navegador» con el enlace de abajo (puede quedar oculta o fuera de cuadro).',
+  'En OBS, en cualquier escena, agregá una fuente «Navegador» con el link de abajo (puede quedar oculta o fuera de cuadro).',
   'En las propiedades de esa fuente, «Permisos de página»: «Acceso avanzado a OBS». Sin eso no puede cambiar escenas.',
   'Dejá destildado «Apagar la fuente cuando no esté visible», así sigue funcionando en cualquier escena.',
   'Poné a las escenas de OBS los nombres de la lista, o escribí acá los que ya usás.',
@@ -70,7 +70,7 @@ export const ObsRemoteControl = memo(function ObsRemoteControl({ overlay, onSave
       </ol>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input readOnly value={url} aria-label="Enlace de la fuente de control" onFocus={event => event.target.select()} className="input min-w-0 flex-1 font-mono text-xs" />
+        <input readOnly value={url} aria-label="Link de la fuente de control" onFocus={event => event.target.select()} className="input min-w-0 flex-1 font-mono text-xs" />
         <button type="button" className={`btn btn-sm min-h-11 ${copied ? 'btn-success' : 'btn-secondary'}`} onClick={copy} aria-live="polite">
           {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />} {copied ? 'Copiado' : 'Copiar'}
         </button>

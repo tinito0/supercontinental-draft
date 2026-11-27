@@ -10,4 +10,4 @@ export function isFranchiseEligible(player) {
   return age >= FRANCHISE_MIN_AGE && ovr >= FRANCHISE_MIN_OVR && ovr <= FRANCHISE_MAX_OVR;
 }
 
-export const FRANCHISE_RULE_TEXT = `Edad ≥ ${FRANCHISE_MIN_AGE} y OVR ${FRANCHISE_MIN_OVR}-${FRANCHISE_MAX_OVR}`;
+export const FRANCHISE_RULE_TEXT = `Edad ≥ ${FRANCHISE_MIN_AGE} y media ${FRANCHISE_MIN_OVR}-${FRANCHISE_MAX_OVR}`;

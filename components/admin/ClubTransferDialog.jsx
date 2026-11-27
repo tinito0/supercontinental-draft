@@ -32,7 +32,7 @@ export function ClubTransferDialog({ target, teams, onClose, onDone, showStatusM
     }
     const confirmed = await confirmAction({
       title: `¿Pasar ${club.teamName} a la cuenta nueva?`,
-      message: `El manager anterior ya no va a poder entrar a ${club.teamName}. El club sigue igual: plantel, presupuesto, ofertas e historia.`,
+      message: `El mánager anterior ya no va a poder entrar a ${club.teamName}. El club sigue igual: plantel, presupuesto, ofertas e historia.`,
       confirmLabel: 'Pasar el club',
       irreversible: true,
     });
@@ -64,7 +64,7 @@ export function ClubTransferDialog({ target, teams, onClose, onDone, showStatusM
     <BaseModal
       isOpen
       onClose={isMoving ? () => {} : onClose}
-      title="Cambiar manager"
+      title="Cambiar mánager"
       subtitle={`Cuenta nueva: ${target.email || target.teamName}`}
       icon={UserCog}
       footer={footer}
@@ -87,7 +87,7 @@ export function ClubTransferDialog({ target, teams, onClose, onDone, showStatusM
           </select>
         </Field>
 
-        <Field label="Nombre del manager nuevo" help="Se escribe en la ficha del club, en «Mánager en la liga». Si lo dejás vacío, queda el que estaba.">
+        <Field label="Nombre del mánager nuevo" help="Se escribe en la ficha del club, en «Mánager en la liga». Si lo dejás vacío, queda el que estaba.">
           <input type="text" className="input" value={managerName} maxLength={MANAGER_MAX}
             onChange={e => setManagerName(e.target.value)} placeholder="Opcional" autoComplete="off" />
         </Field>
@@ -95,7 +95,7 @@ export function ClubTransferDialog({ target, teams, onClose, onDone, showStatusM
         <div className="border-t border-line/10 pt-4">
           <h3 className="eyebrow eyebrow-strong">No se mueve</h3>
           <ul className="mt-2 space-y-1.5 text-sm text-ink-2 list-disc pl-5">
-            <li>Los mensajes del chat y los votos del manager anterior: quedan a su nombre.</li>
+            <li>Los mensajes del chat y los votos del mánager anterior: quedan a su nombre.</li>
             <li>Sus permisos de administrador o del editor PES, si tenía.</li>
           </ul>
           <p className="mt-3 text-sm text-ink-2">

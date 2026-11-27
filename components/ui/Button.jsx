@@ -7,18 +7,32 @@ const SIZES = { sm: 'btn-sm', md: '', lg: 'btn-lg' };
 /**
  * Button of the design system (see docs/DESIGN_SYSTEM.md). `type` defaults to "button" so a button
  * inside a form never submits it by accident (Enter in a field must not trigger it).
+ *
+ * While `loading` the button stays focusable (`aria-disabled`) and ignores clicks, so keyboard focus
+ * is not dropped when the action starts. An explicit `disabled` still uses the native attribute.
  */
 export const Button = forwardRef(function Button({
   variant = 'secondary', size = 'md', icon: Icon, iconRight: IconRight, loading = false,
-  type = 'button', className = '', children, disabled, ...props
+  type = 'button', className = '', children, disabled, onClick, ...props
 }, ref) {
+  const handleClick = (event) => {
+    // Also cancels implicit form submission (Enter in a field fires a click on the default button).
+    if (loading) {
+      event.preventDefault();
+      return;
+    }
+    onClick?.(event);
+  };
+
   return (
     <button
       ref={ref}
       type={type}
-      disabled={disabled || loading}
+      disabled={disabled}
+      aria-disabled={loading || undefined}
       aria-busy={loading || undefined}
-      className={`btn ${VARIANTS[variant] || VARIANTS.secondary} ${SIZES[size] || ''} ${className}`}
+      onClick={handleClick}
+      className={`btn ${VARIANTS[variant] || VARIANTS.secondary} ${SIZES[size] || ''} aria-disabled:opacity-45 aria-disabled:cursor-wait ${className}`}
       {...props}
     >
       {loading ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : Icon && <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />}

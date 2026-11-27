@@ -69,7 +69,7 @@ describe('match analysis views (full summary)', () => {
   it('pitch: the confirmed side is drawn with shirt numbers, the other one says why it is not', () => {
     const out = html(<LineupPitch layout={pitchLayout(match.summary)} match={match} />);
     expect(out).toContain('V. Gyökeres, dorsal 14, EI'); // slot 8 plays LWF in this synthetic plan
-    expect(out).toContain('el plan guardado no coincide con el XI');
+    expect(out).toContain('el plan de juego del equipo no coincide con el XI');
   });
 
   it('players, tactics and analysis render what was measured', () => {
@@ -79,7 +79,7 @@ describe('match analysis views (full summary)', () => {
     const tactics = html(<MatchTacticsView summary={match.summary} match={match} />);
     expect(tactics).toContain('Posesión');
     expect(tactics).toContain('Tiqui-taca');
-    expect(tactics).toContain('Cortos 60 %');
+    expect(tactics).toContain('Cortos 60%');
     const analysis = html(<MatchAnalysisView summary={match.summary} match={match} />);
     expect(analysis).toContain("0&#x27;–15&#x27;");
     expect(analysis).toContain('Modelo propio, no un dato del juego');
@@ -91,11 +91,11 @@ describe('match analysis views (summary recorded before the new fields)', () => 
   const match = doc(old);
 
   it('says what is missing instead of drawing zeros', () => {
-    expect(html(<MomentumChart data={momentum(match.summary)} match={match} />)).toContain('se grabó antes de medir');
+    expect(html(<MomentumChart data={momentum(match.summary)} match={match} />)).toContain('se registró antes de medir');
     expect(html(<ShotsPanel shots={shotRows(match.summary)} match={match} />)).toContain('antes de medirlos uno por uno');
     expect(html(<LineupPitch layout={pitchLayout(match.summary)} match={match} />)).toContain('no tiene plan');
     expect(html(<MatchTacticsView summary={match.summary} match={match} />)).toContain('antes de medir los tipos de pase');
-    expect(html(<MatchAnalysisView summary={match.summary} match={match} />)).toContain('antes de guardar los tramos');
+    expect(html(<MatchAnalysisView summary={match.summary} match={match} />)).toContain('antes de registrar los tramos');
   });
 });
 

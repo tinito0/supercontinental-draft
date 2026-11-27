@@ -39,7 +39,7 @@ export const BroadcastFixtures = memo(function BroadcastFixtures({ round, getTea
   const fixtures = round?.fixtures || [];
   return (
     <div className="scl-stage">
-      <BroadcastFrame className="scl-fx-frame" kicker={round?.competitionLabel || 'Supercontinental League'} title={round?.title || 'Partidos'}>
+      <BroadcastFrame className="scl-fx-frame" kicker={round?.competitionLabel || 'SuperContinental League'} title={round?.title || 'Partidos'}>
         {fixtures.length === 0 ? (
           <div className="broadcast-empty">Todavía no hay partidos cargados</div>
         ) : (

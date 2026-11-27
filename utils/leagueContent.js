@@ -148,7 +148,7 @@ export const SEASON_STATS = [
 
 /** Kinds of titles, in the order the public page groups them. */
 export const HONOUR_SCOPES = [
-  { id: 'supercontinental', label: 'Supercontinental League' },
+  { id: 'supercontinental', label: 'SuperContinental League' },
   { id: 'nacional', label: 'Nacionales' },
   { id: 'internacional', label: 'Internacionales' },
 ];

@@ -22,7 +22,7 @@ const MACRO_DECK_COMMANDS = [
   { label: 'Popup: tabla y copas (30 s)', body: { action: 'popup', preset: 'tabla', seconds: 30 } },
   { label: 'Popup: seguí la liga (30 s)', body: { action: 'popup', preset: 'liga', seconds: 30 } },
   { label: 'Ocultar popup', body: { action: 'popup', preset: 'off' } },
-  { label: 'Tarjeta: manager de la fecha (20 s)', body: { action: 'card', kind: 'manager', seconds: 20 } },
+  { label: 'Tarjeta: mánager de la fecha (20 s)', body: { action: 'card', kind: 'manager', seconds: 20 } },
   { label: 'Tarjeta: predicción (20 s)', body: { action: 'card', kind: 'prediction', seconds: 20 } },
   { label: 'Tarjeta: ¿quién gana la copa? (20 s)', body: { action: 'card', kind: 'cup', seconds: 20 } },
   { label: 'Ocultar tarjeta', body: { action: 'card', kind: 'off' } },

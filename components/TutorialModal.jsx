@@ -2,6 +2,7 @@ import React, { memo, useEffect, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { formatBudget } from '../utils/helpers.js';
 import { Tabs } from './ui/Tabs.jsx';
+import { scrollBehavior } from '../utils/scrollBehavior.js';
 
 const tour = (name) => `[data-app-tour="${name}"]`;
 
@@ -40,8 +41,8 @@ const GUIDE_CHAPTERS = [
       {
         id: 'chat',
         targets: [tour('chat')],
-        title: 'Chat de managers',
-        description: 'Hablá con los otros managers, mencioná a alguien con @ y arreglá un traspaso antes de mandar la oferta.',
+        title: 'Chat de mánagers',
+        description: 'Hablá con los otros mánagers, mencioná a alguien con @ y arreglá un traspaso antes de mandar la oferta.',
       },
       {
         id: 'transfers',
@@ -120,8 +121,8 @@ const GUIDE_CHAPTERS = [
         id: 'tactics',
         path: '/tactics',
         targets: [tour('nav-tactics'), tour('main')],
-        title: 'Pizarra táctica',
-        description: 'Formación, titulares, suplentes, dorsales e instrucciones, en una cancha calibrada con la del PES. Con la formación fluida armás las tres variantes del juego (inicio de partido, con pelota y sin pelota), y sumás instrucciones avanzadas de ataque y de defensa. Con compartir mandás un enlace público a tu táctica.',
+        title: 'Táctica',
+        description: 'Formación, titulares, suplentes, dorsales e instrucciones, en una cancha calibrada con la del PES. Con la formación fluida armás las tres variantes del juego (inicio de partido, con pelota y sin pelota), y sumás instrucciones avanzadas de ataque y de defensa. Con compartir mandás un link público a tu táctica.',
       },
       {
         id: 'scouting',
@@ -273,8 +274,7 @@ export const TutorialModal = memo(function TutorialModal({ isVisible, onClose, o
         return;
       }
       if (target && target.getBoundingClientRect().height < window.innerHeight / 2) {
-        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center', inline: 'nearest' });
+        target.scrollIntoView({ behavior: scrollBehavior(), block: 'center', inline: 'nearest' });
       }
       timer = window.setTimeout(place, SCROLL_SETTLE_MS);
     };

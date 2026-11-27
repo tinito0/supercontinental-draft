@@ -1,14 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Mail } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Mail } from 'lucide-react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { APP_ID } from '../utils/constants.js';
 import { AuthLayout, GoogleButton } from '../components/auth/AuthLayout.jsx';
-import { Button } from '../components/ui/Button.jsx';
+import { Button, IconButton } from '../components/ui/Button.jsx';
 import { Field } from '../components/ui/Field.jsx';
 import { Alert } from '../components/ui/Alert.jsx';
 
 const googleProvider = new GoogleAuthProvider();
+
+const CREDENTIALS_MESSAGE = 'Email o contraseña incorrectos. Revisá los datos o usá «¿Olvidaste tu contraseña?» para elegir una nueva.';
+const EMAIL_FALLBACK_MESSAGE = 'No pudimos iniciar sesión. Probá de nuevo en unos minutos o avisale al admin de la liga.';
+const GOOGLE_FALLBACK_MESSAGE = 'No pudimos iniciar sesión con Google. Probá de nuevo o avisale al admin de la liga.';
+
+/** Firebase auth error code to a message that says what happened and what to do next. */
+const AUTH_ERROR_MESSAGES = {
+  'auth/network-request-failed': 'Sin conexión. Revisá tu internet y volvé a intentar.',
+  'auth/too-many-requests': 'Demasiados intentos. Esperá unos minutos o restablecé la contraseña.',
+  'auth/wrong-password': CREDENTIALS_MESSAGE,
+  'auth/invalid-credential': CREDENTIALS_MESSAGE,
+  'auth/user-not-found': CREDENTIALS_MESSAGE,
+  'auth/popup-closed-by-user': 'Cancelaste el inicio de sesión. Probá de nuevo cuando quieras.',
+  'auth/popup-blocked': 'Tu navegador bloqueó la ventana de Google. Permitila y volvé a intentar.',
+};
+
+/** Message for a failed sign-in; `fallback` is the flow's generic one for codes not listed above. */
+export function authErrorMessage(code, fallback) {
+  return AUTH_ERROR_MESSAGES[code] || fallback;
+}
 
 export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
   const [email, setEmail] = useState('');
@@ -20,6 +40,18 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
   const [isResetting, setIsResetting] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const panelRef = useRef(null);
+
+  // Focus the first control of the panel that just appeared (the clicked button unmounts, so focus would fall to body).
+  // The ref starts at the first panel, so the initial render does not steal focus.
+  const panelKey = `${showEmailForm}:${forgotPasswordMode}`;
+  const shownPanelKey = useRef(panelKey);
+  useEffect(() => {
+    if (shownPanelKey.current === panelKey) return;
+    shownPanelKey.current = panelKey;
+    panelRef.current?.querySelector('input, button')?.focus();
+  }, [panelKey]);
 
   useEffect(() => {
     if (externalError) {
@@ -38,11 +70,7 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
       await signInWithPopup(auth, googleProvider);
     } catch (e) {
       console.error("Error de login con Google:", e.code, e.message);
-      if (e.code === 'auth/popup-closed-by-user') {
-        setError('Inicio de sesión cancelado.');
-      } else {
-        setError('Ocurrió un error al iniciar sesión con Google.');
-      }
+      setError(authErrorMessage(e.code, GOOGLE_FALLBACK_MESSAGE));
     } finally {
       setIsLoggingIn(false);
     }
@@ -80,11 +108,7 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
       }
     } catch (e) {
       console.error("Error de login:", e.code, e.message);
-      if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') {
-        setError('Credenciales incorrectas. Verificá tu email y contraseña.');
-      } else {
-        setError('Ocurrió un error al iniciar sesión.');
-      }
+      setError(authErrorMessage(e.code, EMAIL_FALLBACK_MESSAGE));
     } finally {
       setIsLoggingIn(false);
     }
@@ -93,7 +117,7 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!email) {
-      setError('Ingresá tu email para restablecer la contraseña.');
+      setError('Escribí tu email para restablecer la contraseña.');
       return;
     }
     setError('');
@@ -115,20 +139,20 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
   const description = isMigrated
     ? 'Tu cuenta ya está vinculada a Google: ingresá con el botón de Google.'
     : !showEmailForm
-      ? 'Ingresá con tu cuenta de Google para fichar, armar tu táctica y seguir el mercado.'
+      ? 'Entrá con tu cuenta de Google para fichar, armar tu táctica y seguir el mercado.'
       : forgotPasswordMode
-        ? 'Escribí el email de tu cuenta y te mandamos un enlace para elegir otra contraseña.'
-        : 'Ingresá con tu email y contraseña anteriores una sola vez: después vas a vincular tu perfil a Google.';
+        ? 'Escribí el email de tu cuenta y te mandamos un link para elegir otra contraseña.'
+        : 'Entrá con tu email y contraseña anteriores una sola vez: después vas a vincular tu perfil a Google.';
 
   return (
     <AuthLayout onBack={onBackToLanding} title={title} description={description}>
-      <div className="space-y-4">
+      <div className="space-y-4" ref={panelRef}>
         {error && <Alert tone="danger">{error}</Alert>}
         {success && <Alert tone="success">{success}</Alert>}
 
         {!showEmailForm ? (
           <>
-            <GoogleButton onClick={handleGoogleLogin} loading={isLoggingIn}>Ingresar con Google</GoogleButton>
+            <GoogleButton onClick={handleGoogleLogin} loading={isLoggingIn}>Entrar con Google</GoogleButton>
             {!isMigrated && (
               <>
                 <div className="flex items-center gap-3 py-1" aria-hidden="true">
@@ -152,10 +176,20 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
 
             {!forgotPasswordMode && (
               <div>
-                <Field label="Contraseña" required>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input min-h-11"
-                    autoComplete="current-password" />
-                </Field>
+                {/* Not Field: the toggle sits inside the input box, and Field would put its id on the wrapper. */}
+                <label htmlFor="login-password" className="field-label">
+                  Contraseña<span className="text-danger-soft" aria-hidden="true"> *</span>
+                </label>
+                <div className="relative">
+                  <input id="login-password" type={showPassword ? 'text' : 'password'} value={password}
+                    onChange={(e) => setPassword(e.target.value)} className="input min-h-11 pr-12"
+                    autoComplete="current-password" required />
+                  {/* The label names the action, so the state is not also announced with aria-pressed. */}
+                  <IconButton icon={showPassword ? EyeOff : Eye} variant="ghost"
+                    label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 min-h-11 min-w-11" />
+                </div>
                 <button type="button" onClick={() => { setForgotPasswordMode(true); setError(''); setSuccess(''); }}
                   className="mt-1.5 min-h-11 text-sm font-semibold text-accent-soft hover:text-ink transition-colors">
                   ¿Olvidaste tu contraseña?
@@ -165,10 +199,10 @@ export function LoginScreen({ auth, db, externalError, onBackToLanding }) {
 
             <Button type="submit" variant="primary" size="lg" className="w-full" loading={isLoggingIn || isResetting}
               iconRight={forgotPasswordMode ? undefined : ArrowRight}>
-              {forgotPasswordMode ? 'Enviar enlace' : 'Continuar'}
+              {forgotPasswordMode ? 'Enviar link' : 'Continuar'}
             </Button>
             <Button variant="ghost" icon={ArrowLeft} className="w-full" onClick={backToGoogle}>
-              Volver a ingresar con Google
+              Volver a entrar con Google
             </Button>
           </form>
         )}

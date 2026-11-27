@@ -15,6 +15,10 @@
   --scl-ink: #04173a;
   --scl-muted: #55607f;
   --scl-win: #12b532;
+  /* Texto blanco sobre verde: --scl-win da 2,73:1, este 5,50:1. Solo para fondos con texto; --scl-win queda para barras y puntos. */
+  --scl-win-deep: #0b7a22;
+  /* --scl-periwinkle como texto sobre --scl-row da 4,40:1; este da 5,60:1. */
+  --scl-periwinkle-ink: #3f5ca6;
   --scl-loss: #e8132d;
   --scl-frame: linear-gradient(100deg, #022a5e 8%, #00489a 38%, #005fbd 55%, #4f6db5 75%, #7a7bb7 95%);
   --scl-bar: linear-gradient(90deg, #022a5e, #00489a 55%, #0d6ac4);
@@ -31,7 +35,6 @@
 /* Nombres largos (BroadcastCrest.isLongName): un poco más chicos antes de cortarse con «…». */
 .scl-fx-name.is-long-name { font-size: 29px; }
 .scl-table-team span.is-long-name { font-size: 23px; }
-.broadcast-versus-team strong.is-long-name { font-size: 32px; }
 
 /* Club sin escudo cargado: sus iniciales (BroadcastCrest.jsx). */
 .scl-crest-initials {
@@ -130,70 +133,6 @@
   color: #ffffff;
 }
 
-/* Marcador (escenas que no son de panel ni el partido en vivo). */
-.broadcast-top-score {
-  position: absolute;
-  top: 36px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1040px;
-  height: 112px;
-  display: grid;
-  grid-template-columns: 1fr 190px 1fr;
-  background: var(--scl-slate);
-  border-top: 6px solid var(--scl-lavender);
-  box-shadow: 0 18px 55px rgba(2, 10, 30, 0.5);
-}
-.broadcast-team { min-width: 0; display: flex; align-items: center; gap: 18px; padding: 16px 30px; }
-.broadcast-team.away { justify-content: flex-end; text-align: right; }
-.broadcast-team-logo { width: 70px; height: 70px; object-fit: contain; flex: none; }
-.broadcast-team-name {
-  min-width: 0;
-  max-width: 300px;
-  font-size: 36px;
-  line-height: 1;
-  font-weight: 800;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.broadcast-score-core {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: var(--scl-frame);
-}
-.broadcast-score { font-size: 62px; line-height: 0.9; font-weight: 800; font-variant-numeric: tabular-nums; }
-.broadcast-clock {
-  margin-top: 6px;
-  padding: 2px 14px;
-  background: #ffffff;
-  color: var(--scl-navy);
-  font-size: 19px;
-  font-weight: 800;
-  min-width: 86px;
-  text-align: center;
-}
-.broadcast-meta {
-  position: absolute;
-  top: 148px;
-  left: 50%;
-  transform: translateX(-50%);
-  height: 36px;
-  min-width: 560px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  padding: 0 26px;
-  background: var(--scl-bar);
-  font-size: 19px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.broadcast-live-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--scl-win); }
 
 /* Lower third: como el encabezado «Momentos del Partido». */
 .broadcast-lower {
@@ -221,9 +160,8 @@
   line-height: 1;
   font-weight: 800;
   text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Un nombre largo baja a una segunda línea en vez de cortarse (F-59). */
+  overflow-wrap: anywhere;
 }
 .broadcast-headline > span {
   display: block;
@@ -278,62 +216,6 @@
   top: 48%;
   transform: translate(-50%, -50%);
   width: 1180px;
-}
-.broadcast-versus {
-  display: grid;
-  grid-template-columns: 1fr 120px 1fr;
-  align-items: center;
-  gap: 28px;
-}
-.broadcast-versus-team {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  padding: 18px 22px;
-  background: var(--scl-row);
-}
-.broadcast-versus-team.away { flex-direction: row-reverse; text-align: right; }
-.broadcast-versus-team img, .broadcast-versus-crest { width: 96px; height: 96px; object-fit: contain; flex: none; }
-.broadcast-versus-crest.scl-crest-initials { font-size: 34px; }
-.broadcast-final-pens {
-  margin-top: 6px;
-  text-align: center;
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--scl-periwinkle);
-  font-variant-numeric: tabular-nums;
-}
-.broadcast-versus-team strong {
-  min-width: 0;
-  font-size: 40px;
-  line-height: 1;
-  font-weight: 800;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.broadcast-vs {
-  display: grid;
-  place-items: center;
-  height: 120px;
-  border-radius: 999px;
-  background: var(--scl-frame);
-  color: #ffffff;
-  font-size: 40px;
-  font-weight: 800;
-}
-.broadcast-final-score {
-  margin-top: 26px;
-  text-align: center;
-  font-size: 104px;
-  line-height: 0.9;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--scl-navy);
 }
 
 /* Datos en vivo de las escenas (BroadcastMatchExtras.jsx): goleadores, predicción y MVP de la comunidad. */
@@ -465,7 +347,7 @@
 .broadcast-ranking-name small { color: var(--scl-muted); font-size: 18px; font-weight: 700; white-space: nowrap; }
 .broadcast-ranking-value { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; color: var(--scl-navy); }
 .broadcast-ranking-value strong { font-size: 34px; line-height: 1; font-weight: 800; }
-.broadcast-ranking-value small { font-size: 16px; font-weight: 800; color: var(--scl-periwinkle); }
+.broadcast-ranking-value small { font-size: 16px; font-weight: 800; color: var(--scl-periwinkle-ink); }
 .broadcast-empty {
   padding: 44px;
   color: var(--scl-muted);
@@ -502,14 +384,20 @@
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-head { min-height: 0; gap: 12px; padding: 12px 18px 10px; }
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-badge { width: 40px; height: 40px; }
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-badge img { width: 32px; height: 32px; }
-.broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-kicker { font-size: 14px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-kicker { font-size: 20px; }
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-title { font-size: 28px; -webkit-line-clamp: 1; }
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-pop-body { gap: 16px; padding: 14px 18px 16px; }
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-qr { padding: 6px; }
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-qr svg { width: 170px; height: 170px; }
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-text,
 .broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-hint { font-size: 21px; }
-.broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-url { padding: 4px 10px; font-size: 17px; }
+.broadcast-overlay-root[data-scene=live] .scl-popup .scl-popup-url { padding: 4px 10px; font-size: 22px; }
+/* Las escenas de pantalla completa (tabla, bracket, repechaje, partidos) no dejan lugar: el QR y las tarjetas se
+   ocultan ahí (F-58). */
+.broadcast-overlay-root[data-scene=tabla] .scl-pop,
+.broadcast-overlay-root[data-scene=bracket] .scl-pop,
+.broadcast-overlay-root[data-scene=repechaje] .scl-pop,
+.broadcast-overlay-root[data-scene=partidos] .scl-pop { display: none; }
 
 .scl-pop-head {
   position: relative;
@@ -549,7 +437,10 @@
   text-transform: uppercase;
   overflow-wrap: anywhere;
 }
-.scl-pop-aside { flex: none; color: #ffffff; letter-spacing: 0.06em; }
+/* Placa propia: sobre el extremo lavanda del degradé el blanco da 3,93:1; sobre el azul marino, 14,04:1. */
+.scl-pop-aside { flex: none; align-self: flex-start; padding: 2px 12px; background: var(--scl-navy); color: #ffffff; letter-spacing: 0.06em; }
+/* Solo para lectores de pantalla: texto que no se ve (F-72). */
+.scl-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .scl-pop-body { background: #ffffff; color: var(--scl-ink); padding: 20px 24px 22px; border-radius: 0 0 28px 28px; }
 
 /* Popup: el QR a la izquierda y el texto al lado, para ocupar poco alto sobre el partido. */
@@ -791,9 +682,8 @@
   font-variant-numeric: tabular-nums;
 }
 .scl-fx-score strong { font-size: 46px; line-height: 1; font-weight: 800; text-transform: uppercase; }
-.scl-fx-score small { font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--scl-lilac); }
-.scl-fx-score.is-live { background: var(--scl-win); }
-.scl-fx-score.is-live small { color: #ffffff; }
+.scl-fx-score small { font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #ffffff; }
+.scl-fx-score.is-live { background: var(--scl-win-deep); }
 .scl-fx-score.is-upcoming { background: var(--scl-slate); }
 .scl-fx-score.is-upcoming strong { font-size: 34px; }
 .scl-fx-score.is-nosignal, .scl-fx-score.is-played { background: var(--scl-periwinkle); }
@@ -819,6 +709,9 @@
   border-top: 4px solid var(--scl-lilac);
   box-shadow: 0 12px 32px rgba(2, 16, 44, 0.35);
 }
+/* Sin partido vinculado: la etiqueta y un aviso, sin escudos ni «LOCAL vs VISITANTE». */
+.scl-strip.is-unlinked { grid-template-columns: 128px 1fr; }
+.scl-strip-pending { display: grid; place-items: center; font-size: 30px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--scl-ink); }
 .scl-strip-label {
   display: grid;
   place-items: center;
@@ -837,9 +730,11 @@
   line-height: 1;
   font-weight: 800;
   text-transform: uppercase;
-  white-space: nowrap;
+  /* Dos líneas como máximo dentro de los 72 px de la tira (F-59). */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .scl-strip-team strong.is-long-name { font-size: 24px; }
 .scl-strip-crest, .scl-strip-team img { width: 48px; height: 48px; object-fit: contain; flex: none; }

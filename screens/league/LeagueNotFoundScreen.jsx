@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Compass } from 'lucide-react';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
@@ -6,6 +6,15 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle.js';
 
 export default function LeagueNotFoundScreen() {
   useDocumentTitle('Página no encontrada');
+
+  // Unknown paths are rewritten to the home (vercel.json), so the 200 status cannot say "not found": tell crawlers.
+  useEffect(() => {
+    const robots = document.createElement('meta');
+    robots.name = 'robots';
+    robots.content = 'noindex';
+    document.head.appendChild(robots);
+    return () => robots.remove();
+  }, []);
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-16 sm:px-6">

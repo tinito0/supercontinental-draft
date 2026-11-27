@@ -34,9 +34,9 @@ describe('utils/helpers.js', () => {
 
   describe('formatPriceShort', () => {
     it('formats price short notation with dollar and M suffix', () => {
-      expect(formatPriceShort(12)).toBe('$12.00M');
-      expect(formatPriceShort(0.75)).toBe('$0.75M');
-      expect(formatPriceShort(12.345)).toBe('$12.35M');
+      expect(formatPriceShort(12)).toBe('$12,00M');
+      expect(formatPriceShort(0.75)).toBe('$0,75M');
+      expect(formatPriceShort(12.345)).toBe('$12,35M');
     });
 
     it('returns $0M for NaN or non-number inputs', () => {
@@ -192,10 +192,10 @@ describe('formatPriceCompact (marketplace cards and rows)', () => {
   });
 
   it('keeps one decimal between $1M and $10M and two below $1M, without trailing zeros', () => {
-    expect(formatPriceCompact(4.75)).toBe('$4.8M');
+    expect(formatPriceCompact(4.75)).toBe('$4,8M');
     expect(formatPriceCompact(3)).toBe('$3M');
-    expect(formatPriceCompact(0.75)).toBe('$0.75M');
-    expect(formatPriceCompact(0.5)).toBe('$0.5M');
+    expect(formatPriceCompact(0.75)).toBe('$0,75M');
+    expect(formatPriceCompact(0.5)).toBe('$0,5M');
   });
 
   it('falls back to $0M for missing prices', () => {

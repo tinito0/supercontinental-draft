@@ -118,7 +118,7 @@ export const OverlayPopupAdmin = memo(function OverlayPopupAdmin({ savedPopup, o
           <Field label="Texto">
             <input type="text" className="input" value={form.text} maxLength={POPUP_LIMITS.TEXT} onChange={event => update('text', event.target.value)} />
           </Field>
-          <Field label="Enlace del QR">
+          <Field label="Link del QR">
             <input type="url" className="input" inputMode="url" value={form.url} onChange={event => update('url', event.target.value)} placeholder="https://…" />
           </Field>
           <div className="grid grid-cols-2 gap-4">

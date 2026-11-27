@@ -16,10 +16,29 @@ export const STATIC_PAGES = [
   { path: '/historia', title: `Historia · ${SITE_NAME}`, description: 'Cómo nació la SuperContinental League y todo lo que pasó temporada por temporada.' },
   { path: '/equipos', title: `Equipos · ${SITE_NAME}`, description: 'Los clubes de la SuperContinental League: escudos, estadios, palmarés y planteles.' },
   { path: '/torneo', title: `Torneo · ${SITE_NAME}`, description: 'La tabla oficial, la Copa de Oro, la Copa de Plata y los goleadores, actualizados con cada resultado.' },
-  { path: '/partidos', title: `Partidos · ${SITE_NAME}`, description: 'El fixture con los resultados oficiales y el minuto a minuto de cada partido jugado.' },
-  { path: '/en-vivo', title: `En vivo · ${SITE_NAME}`, description: 'El partido que se está jugando: marcador, votá al MVP y quién gana.' },
+  { path: '/partidos', title: `Partidos · ${SITE_NAME}`, description: 'Los partidos con los resultados oficiales y el minuto a minuto de cada partido jugado.' },
+  { path: '/en-vivo', title: `En vivo · ${SITE_NAME}`, description: 'El partido que se está jugando: marcador en vivo, votá quién gana y seguí la encuesta de la copa.' },
+  { path: '/estadisticas', title: `Estadísticas · ${SITE_NAME}`, description: 'Los líderes de la temporada, armados con cada partido jugado en la liga.' },
   { path: '/reglamento', title: `Reglamento · ${SITE_NAME}`, description: 'El reglamento de la temporada: formato, puntos, desempates y copas.' },
 ];
+
+/**
+ * Rutas con id (/jugadores/{id}, /partidos/{clave}) que no se pueden escribir una por una: hay decenas de miles de
+ * jugadores y los partidos nacen con la liga. Cada una lleva una vista previa genérica de la sección; vercel.json
+ * reescribe la ruta con id a este archivo (la URL del navegador no cambia). Sin canonical ni og:url: no tienen una URL propia.
+ */
+export const GENERIC_PAGES = [
+  { path: '/jugadores', generic: true, title: `Jugador · ${SITE_NAME}`, description: 'La temporada de un jugador de la liga: partidos, goles y estadísticas.' },
+  { path: '/partido', generic: true, title: `Partido · ${SITE_NAME}`, description: 'Un partido de la liga: marcador, estadísticas, tácticas y análisis.' },
+];
+
+/** El draft (/draft y todo lo que cuelga): privado de los managers, sin indexar y con una vista previa neutra. */
+export const DRAFT_PAGE = {
+  path: '/draft',
+  noindex: true,
+  title: `Draft · ${SITE_NAME}`,
+  description: 'El mercado de fichajes y las alineaciones de la liga. Entrá con tu cuenta de mánager.',
+};
 
 const TEAM_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -107,11 +126,12 @@ export function shareTags(page, siteUrl = SITE_URL) {
   const tags = [
     `<title>${escapeAttr(page.title)}</title>`,
     `<meta name="description" content="${escapeAttr(page.description)}">`,
-    `<link rel="canonical" href="${escapeAttr(url)}">`,
+    ...(page.noindex ? ['<meta name="robots" content="noindex">'] : []),
+    ...(page.generic || page.noindex ? [] : [`<link rel="canonical" href="${escapeAttr(url)}">`]),
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${escapeAttr(SITE_NAME)}">`,
     `<meta property="og:locale" content="es_AR">`,
-    `<meta property="og:url" content="${escapeAttr(url)}">`,
+    ...(page.generic ? [] : [`<meta property="og:url" content="${escapeAttr(url)}">`]),
     `<meta property="og:title" content="${escapeAttr(page.title)}">`,
     `<meta property="og:description" content="${escapeAttr(page.description)}">`,
     `<meta property="og:image" content="${escapeAttr(image)}">`,

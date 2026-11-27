@@ -18,7 +18,7 @@ const NAV_GROUPS = [
     label: 'Mi club',
     items: [
       { id: 'My Team', label: 'Plantel y finanzas', icon: ClipboardList, paths: ['/my-team', '/financials'] },
-      { id: 'Tactics', label: 'Pizarra táctica', icon: Shield, paths: ['/tactics'] },
+      { id: 'Tactics', label: 'Táctica', icon: Shield, paths: ['/tactics'] },
       { id: 'Scouting', label: 'Scouting', icon: Search, paths: ['/scouting'] },
     ],
   },
@@ -97,7 +97,7 @@ export const LeftSidebar = memo(function LeftSidebar({
           <div className="flex items-center gap-3 px-4 pt-5 pb-4">
             <img src="/logo.webp" alt="" width={40} height={40} className="w-10 h-10 object-contain shrink-0" />
             <div className="min-w-0 leading-none">
-              <p className="font-display text-[19px] font-bold tracking-wide text-ink uppercase">Supercontinental</p>
+              <p className="font-display text-[19px] font-bold tracking-wide text-ink uppercase">SuperContinental</p>
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3 mt-1">Draft · Liga SCL</p>
             </div>
             <button type="button" onClick={onClose} className="sidebar-close-btn ml-auto" aria-label="Cerrar menú">

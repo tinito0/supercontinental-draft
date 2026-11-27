@@ -46,7 +46,7 @@ export function ClubHero({ team, profile, loading = false, action = null }) {
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               {profile?.nickname && <p className="font-display text-lg font-semibold uppercase tracking-wide text-accent-soft sm:text-xl">«{profile.nickname}»</p>}
-              <h1 className="font-display text-[2.75rem] font-bold uppercase leading-[0.9] tracking-tight text-ink [text-wrap:balance] sm:text-7xl">{name}</h1>
+              <h1 className="font-display text-[2.75rem] font-bold uppercase leading-[0.9] tracking-tight text-ink [overflow-wrap:anywhere] [text-wrap:balance] sm:text-7xl">{name}</h1>
               {(place || founded || members) && (
                 <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-base font-medium text-ink">
                   {place && <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-accent-soft" aria-hidden="true" />{place}</span>}

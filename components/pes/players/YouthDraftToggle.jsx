@@ -47,7 +47,7 @@ export function YouthDraftToggle({ playerId, get, appPlayer, draft }) {
       )}>
       {published && (
         <p className="text-sm text-ink-3">
-          Publicada con OVR <span className="num text-ink-2">{published.ovr}</span>
+          Publicada con media <span className="num text-ink-2">{published.ovr}</span>
           {rating != null && rating !== Number(published.ovr) && <> · la ficha cambió: volvé a publicar desde «Promesas»</>}.
         </p>
       )}

@@ -27,6 +27,7 @@ export function BroadcastStage({ mode = 'viewport', transparent = true, label = 
     >
       <div
         className="scl-broadcast scl-stage-canvas"
+        role="region"
         aria-label={label}
         style={{
           position: 'absolute',

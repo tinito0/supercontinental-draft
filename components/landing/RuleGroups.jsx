@@ -2,7 +2,7 @@ import React from 'react';
 import { Reveal } from './Reveal.jsx';
 import { RULE_GROUPS } from './rules.js';
 
-/** The draft rules, one column per group (draft landing and the league site's Reglamento). */
+/** The draft rules, one column per group (draft landing only; the league's Reglamento uses RuleBody). */
 export function RuleGroups() {
   return (
     <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3 md:gap-14">

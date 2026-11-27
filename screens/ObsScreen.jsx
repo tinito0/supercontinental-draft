@@ -2,7 +2,8 @@ import React, { useEffect, useMemo } from 'react';
 import { BroadcastStage } from '../components/broadcast/BroadcastStage.jsx';
 import { BroadcastOverlayLive } from '../components/broadcast/BroadcastOverlayLive.jsx';
 import { OverlayErrorBoundary } from '../components/broadcast/OverlayErrorBoundary.jsx';
-import { useBroadcastOverlay, useLeagueTeams, useTournament } from '../hooks/useLeagueData.js';
+import { useLeagueTeams, useTournament } from '../hooks/useLeagueData.js';
+import { useOverlayDoc } from '../hooks/useOverlayDoc.js';
 import { useNow } from '../hooks/useNow.js';
 import { useObsSceneControl } from '../hooks/useObsSceneControl.js';
 import { useObsDirector } from '../hooks/useObsDirector.js';
@@ -17,16 +18,24 @@ const CONTROL_STATUS = {
   switched: 'Conectado. Cambia la escena de OBS cuando cambia la del overlay.',
 };
 
+const READ_ERROR_TEXT = 'No se puede leer el overlay: la fuente sigue con los últimos datos y reintenta sola.';
+
 /**
  * ?control=obs: draws nothing on air; switches the real OBS scene with the overlay, plus the Final camera tour
  * (hooks/useObsDirector.js).
  */
-function ObsSceneControl({ overlay }) {
+function ObsSceneControl({ overlay, readError }) {
   const shot = useObsDirector(overlay?.scene || 'live');
   const status = useObsSceneControl(obsSceneName(shot, overlay?.obsScenes));
-  // Text only outside OBS or while the permission is missing, so the source stays empty on air.
+  // Connected inside OBS the source stays empty on air, even on a read error (the studio warns the operator and the
+  // air keeps its last data). Text only outside OBS or while the permission is missing; the plate keeps it legible.
   if (status === 'ready' || status === 'switched') return null;
-  return <p style={{ position: 'absolute', top: 40, left: 40, right: 40, font: '600 28px system-ui', color: '#fff', textShadow: '0 2px 6px #000' }}>{CONTROL_STATUS[status]}</p>;
+  const lines = [readError && READ_ERROR_TEXT, CONTROL_STATUS[status]].filter(Boolean);
+  return (
+    <div role="alert" style={{ position: 'absolute', top: 40, left: 40, right: 40, padding: '16px 24px', background: '#04173a', color: '#fff', font: '600 28px system-ui' }}>
+      {lines.map(text => <p key={text} style={{ margin: 0 }}>{text}</p>)}
+    </div>
+  );
 }
 
 /**
@@ -39,7 +48,7 @@ function ObsSceneControl({ overlay }) {
 export default function ObsScreen({ request }) {
   const { teamsById } = useLeagueTeams();
   const { tournament } = useTournament();
-  const { data: overlay, loading: overlayLoading } = useBroadcastOverlay();
+  const { data: overlay, loading: overlayLoading, error: overlayError } = useOverlayDoc();
   const now = useNow(5000);
   // Two minutes after an automatic «Final» every source moves to the table on its own (no write needed).
   const shown = useMemo(() => effectiveOverlay(overlay, now, SITE_URL), [overlay, now]);
@@ -48,10 +57,10 @@ export default function ObsScreen({ request }) {
     document.title = 'SCL · OBS';
   }, []);
 
-  if (request.control) return <ObsSceneControl overlay={shown} />;
+  if (request.control) return <ObsSceneControl overlay={shown} readError={Boolean(overlayError)} />;
 
   return (
-    <BroadcastStage transparent={request.transparent} label="Overlay de la Supercontinental">
+    <BroadcastStage transparent={request.transparent} label="Overlay de la SuperContinental">
       <OverlayErrorBoundary name="overlay" resetKey={overlay}>
         <BroadcastOverlayLive
           overlayData={shown || {}}

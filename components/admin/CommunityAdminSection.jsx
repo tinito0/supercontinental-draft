@@ -133,10 +133,10 @@ function ManagerStatus({ tournament, showStatusMessage }) {
     setBusy(true);
     try {
       await setVotingClosed('manager', round.roundId, closed);
-      showStatusMessage?.('success', closed ? 'Votación del manager cerrada.' : 'Votación del manager reabierta.');
+      showStatusMessage?.('success', closed ? 'Votación del mánager cerrada.' : 'Votación del mánager reabierta.');
     } catch (error) {
       console.error('[CommunityAdminSection] manager', error);
-      showStatusMessage?.('error', 'No se pudo cambiar la votación del manager. Revisá la conexión.');
+      showStatusMessage?.('error', 'No se pudo cambiar la votación del mánager. Revisá la conexión.');
     } finally {
       setBusy(false);
     }
@@ -148,7 +148,7 @@ function ManagerStatus({ tournament, showStatusMessage }) {
   return (
     <section className="panel space-y-4 p-5" aria-labelledby="admin-manager">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="admin-manager" className="section-title flex items-center gap-2"><UserRoundCheck className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Manager de la fecha</h2>
+        <h2 id="admin-manager" className="section-title flex items-center gap-2"><UserRoundCheck className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Mánager de la fecha</h2>
         {round && <StatusBadge isOpen={round.open} />}
       </div>
       {!round ? (
@@ -178,7 +178,7 @@ function ManagerStatus({ tournament, showStatusMessage }) {
                 <Lock className="h-4 w-4" aria-hidden="true" /> Cerrar ahora
               </button>
             )}
-            {total > 0 && <ResetVotesButton kind="manager" target={round.roundId} label={`el manager de la ${round.title}`} total={total} showStatusMessage={showStatusMessage} />}
+            {total > 0 && <ResetVotesButton kind="manager" target={round.roundId} label={`el mánager de la ${round.title}`} total={total} showStatusMessage={showStatusMessage} />}
           </div>
         </>
       )}

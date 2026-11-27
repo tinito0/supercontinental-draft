@@ -12,6 +12,8 @@ export const StatsView = memo(function StatsView({
   updateStat,
   showTitle = true,
 }) {
+  // Without its own title (the league site) the cards sit right under the page's h1, so they are h2.
+  const Heading = showTitle ? 'h3' : 'h2';
   return (
     <div className={`flex flex-col items-center w-full ${isObsMode ? 'h-full justify-center scale-100 px-20' : 'max-w-5xl mx-auto py-4 px-4'}`}>
       {showTitle && <TournamentSectionTitle title="LÍDERES INDIVIDUALES" subtitle="ESTADÍSTICAS DEL TORNEO" />}
@@ -23,7 +25,7 @@ export const StatsView = memo(function StatsView({
               <div className="w-7 h-7 rounded-lg bg-warning/10 flex items-center justify-center text-warning-soft">
                 <Trophy className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-ink uppercase tracking-wide">Máximos Goleadores</h3>
+              <Heading className="text-sm font-bold text-ink uppercase tracking-wide">Máximos Goleadores</Heading>
             </div>
             <span className="text-xs text-ink-3 font-medium">Goles</span>
           </div>
@@ -35,7 +37,7 @@ export const StatsView = memo(function StatsView({
               const photoUrl = player.photoUrl || (player.playerId ? `/fotos_jugadores/${player.playerId}.webp` : getPlayerPhoto?.(player.name));
 
               return (
-                <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
+                <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 p-2 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-amber-500 text-[#1e1e1e] shadow-sm' : idx === 1 ? ' bg-overlay text-ink-2' : idx === 2 ? 'bg-amber-700/70 text-ink' : ' text-ink-3'}`}>
                       {idx + 1}
@@ -95,7 +97,7 @@ export const StatsView = memo(function StatsView({
               <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center text-success-soft">
                 <Star className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-ink uppercase tracking-wide">Máximos Asistidores</h3>
+              <Heading className="text-sm font-bold text-ink uppercase tracking-wide">Máximos Asistidores</Heading>
             </div>
             <span className="text-xs text-ink-3 font-medium">Asist</span>
           </div>
@@ -106,7 +108,7 @@ export const StatsView = memo(function StatsView({
               const photoUrl = player.photoUrl || (player.playerId ? `/fotos_jugadores/${player.playerId}.webp` : getPlayerPhoto?.(player.name));
 
               return (
-                <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 hover:bg-white/[0.02] p-2 rounded-lg transition-colors">
+                <div key={idx} className="flex items-center justify-between pt-2 first:pt-0 p-2 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${idx === 0 ? 'bg-emerald-500 text-ink shadow-sm' : idx === 1 ? ' bg-overlay text-ink-2' : idx === 2 ? 'bg-emerald-700/70 text-ink' : ' text-ink-3'}`}>
                       {idx + 1}

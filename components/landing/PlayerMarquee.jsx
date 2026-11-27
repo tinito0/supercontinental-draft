@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { getPosColorClass, getStatAndOvrColorClass } from '../../utils/helpers.js';
 import { SHOWCASE_PLAYERS } from './sampleData.js';
 
@@ -23,7 +23,7 @@ const PlayerTile = memo(function PlayerTile({ player }) {
         </div>
         <div className="px-3 py-2.5">
           <p className="truncate text-sm font-semibold text-ink" title={player.card}>{player.card}</p>
-          <p className="font-display num text-lg font-semibold text-ink-2">${player.price.toFixed(2)}M</p>
+          <p className="font-display num text-lg font-semibold text-ink-2">${player.price.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}M</p>
         </div>
       </div>
     </li>
@@ -36,8 +36,19 @@ const PlayerTile = memo(function PlayerTile({ player }) {
  * (CSS) and the strip scrolls by hand.
  */
 export function PlayerMarquee() {
+  const [isPaused, setIsPaused] = useState(false);
   return (
-    <div className="landing-marquee" tabIndex={0} aria-label="Jugadores del mercado">
+    <>
+    <div className="mx-auto mb-3 flex max-w-6xl justify-end px-4 sm:px-6">
+      <button
+        type="button"
+        onClick={() => setIsPaused(p => !p)}
+        className="landing-marquee-toggle btn btn-sm btn-secondary min-h-11"
+      >
+        {isPaused ? 'Reanudar la marquesina' : 'Pausar la marquesina'}
+      </button>
+    </div>
+    <div className="landing-marquee" data-paused={isPaused} tabIndex={0} role="region" aria-label="Jugadores del mercado">
       <div className="landing-marquee__track">
         <ul className="flex gap-4 pr-4">
           {SHOWCASE_PLAYERS.map(p => <PlayerTile key={p.key} player={p} />)}
@@ -47,6 +58,7 @@ export function PlayerMarquee() {
         </ul>
       </div>
     </div>
+    </>
   );
 }
 

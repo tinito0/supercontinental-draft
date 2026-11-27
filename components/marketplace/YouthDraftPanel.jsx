@@ -92,7 +92,7 @@ export function YouthDraftPanel({ draft, playerById, userId, allTeams, onSelectP
                   <span className="font-semibold text-ink truncate">{entry.name}</span>
                 </span>
                 <span className="block mt-0.5 text-xs text-ink-3">
-                  <span className="num">{entry.age}</span> años · OVR original <span className="num">{entry.originalOvr}</span>
+                  <span className="num">{entry.age}</span> años · media original <span className="num">{entry.originalOvr}</span>
                   {owner && <> · {owner === userId ? 'tu promesa' : teamName(owner)}</>}
                 </span>
               </button>

@@ -18,11 +18,11 @@ export const OnlineIndicator = memo(function OnlineIndicator({
       role="status"
       aria-live="polite"
       className={`inline-flex items-center gap-2 text-xs font-medium text-ink-2 select-none shrink-0 ${className}`}
-      title={`${safeCount} ${safeCount === 1 ? 'manager en línea' : 'managers en línea'}`}
+      title={`${safeCount} ${safeCount === 1 ? 'mánager en línea' : 'mánagers en línea'}`}
       {...props}
     >
       <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_0_3px_rgb(var(--c-success)/0.18)] shrink-0" aria-hidden="true" />
-      <span className="num">{`${safeCount} online`}</span>
+      <span className="num">{`${safeCount} en línea`}</span>
     </div>
   );
 });

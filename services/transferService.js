@@ -1,4 +1,5 @@
 import { doc, runTransaction } from 'firebase/firestore';
+import { formatPriceShort } from '../utils/helpers.js';
 import { APP_ID, MAX_TRANSFER_MULTIPLIER } from '../utils/constants.js';
 import { offerExpiresAt } from '../supabase/functions/_shared/offerExpiry.js';
 
@@ -120,7 +121,7 @@ export async function counterTransferOffer({ db, offer, userId, counterAmountMil
     valueInMillions < Number(livePlayer.Precio) ||
     valueInMillions > maxCounterAmount
   ) {
-    throw new Error(`La contraoferta debe estar entre el valor base y $${maxCounterAmount.toFixed(2)}M (115% del valor base).`);
+    throw new Error(`La contraoferta debe estar entre el valor base y ${formatPriceShort(maxCounterAmount)} (115% del valor base).`);
   }
 
   const at = new Date().toISOString();

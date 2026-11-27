@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, UserRound } from 'lucide-react';
 import { BallIcon } from './BallIcon.jsx';
 import { Tabs } from '../../ui/Tabs.jsx';
@@ -9,16 +9,14 @@ import { CardMark } from './MatchParts.jsx';
 
 export function PlayerPhoto({ id, size = 32 }) {
   const [failed, setFailed] = useState(false);
+  const imgRef = useRef(null);
   const box = { width: size, height: size };
   // A photo that already failed elsewhere on the page (same URL, cached failure) may never reach React's onError:
-  // check it on mount and listen on the element itself too.
-  const checkLoaded = img => {
-    if (!img) return;
-    const check = () => { if (img.complete && img.naturalWidth === 0) setFailed(true); };
-    check();
-    img.addEventListener('error', () => setFailed(true), { once: true });
-    img.addEventListener('load', check, { once: true });
-  };
+  // check the element once per photo URL, after mount.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth === 0) setFailed(true);
+  }, [id]);
   if (failed) {
     // Players without a photo in /fotos_jugadores keep the same box, with a silhouette instead of an empty square.
     return (
@@ -28,7 +26,7 @@ export function PlayerPhoto({ id, size = 32 }) {
     );
   }
   return (
-    <img ref={checkLoaded} src={`/fotos_jugadores/${id}.webp`} alt="" width={size} height={size} loading="lazy" style={box}
+    <img ref={imgRef} src={`/fotos_jugadores/${id}.webp`} alt="" width={size} height={size} loading="lazy" style={box}
       className="shrink-0 rounded-lg bg-raised object-cover object-top" onError={() => setFailed(true)} />
   );
 }
@@ -38,7 +36,7 @@ function PlayerMarks({ player }) {
     <span className="flex shrink-0 items-center gap-1 text-xs text-ink-3">
       {Array.from({ length: player.goals }, (_, i) => <span key={`g${i}`} role="img" aria-label="Gol" className="inline-flex"><BallIcon className="h-4 w-4" /></span>)}
       {Array.from({ length: player.ownGoals || 0 }, (_, i) => <span key={`o${i}`} role="img" aria-label="Gol en contra" className="inline-flex rounded-full ring-2 ring-danger"><BallIcon className="h-4 w-4" /></span>)}
-      {player.assists > 0 && <span title="Asistencias" className="num">A{player.assists > 1 ? player.assists : ''}</span>}
+      {player.assists > 0 && <span className="num"><abbr title="Asistencias" className="no-underline">A</abbr>{player.assists > 1 ? player.assists : ''}</span>}
       {player.cards.map((card, i) => <CardMark key={`c${i}`} type={card} />)}
       {player.subbedOff && <span className="flex items-center"><ArrowDown className="h-3.5 w-3.5 text-danger-soft" aria-label="Salió" /><span className="num">{player.subbedOff}</span></span>}
       {player.subbedOn && <span className="flex items-center"><ArrowUp className="h-3.5 w-3.5 text-success-soft" aria-label="Entró" /><span className="num">{player.subbedOn}</span></span>}
@@ -90,7 +88,7 @@ export function MatchLineups({ lineups, match }) {
 }
 
 const PLAYER_COLUMNS = [
-  { key: 'rating', label: 'Nota', title: 'Valoración del juego', render: r => (r.rating == null ? '—' : r.rating.toFixed(1).replace('.', ',')) },
+  { key: 'rating', label: 'Nota', title: 'Valoración del juego', render: r => (r.rating == null ? '–' : r.rating.toFixed(1).replace('.', ',')) },
   { key: 'goals', label: 'G', title: 'Goles' },
   { key: 'assists', label: 'A', title: 'Asistencias' },
   { key: 'shots', label: 'Tiros', title: 'Tiros (al arco)', render: r => `${r.shots} (${r.shotsOnTarget})` },
@@ -108,6 +106,8 @@ export function PlayerStatsTable({ rows, match }) {
   // Sin valoraciones (partidos grabados antes) la columna no aparece.
   const columns = rows.some(row => row.rating != null) ? PLAYER_COLUMNS : PLAYER_COLUMNS.filter(column => column.key !== 'rating');
   const visible = rows.filter(row => row.side === side).sort((a, b) => ((b[sortKey] ?? -1) - (a[sortKey] ?? -1)) || a.name.localeCompare(b.name, 'es'));
+  // Abbreviations are explained below the table too: a hover tooltip is not reachable on touch.
+  const legend = columns.map(column => `${column.label}: ${column.title}`).join(' · ');
   return (
     <div className="panel p-0">
       <div className="p-3">
@@ -120,14 +120,15 @@ export function PlayerStatsTable({ rows, match }) {
       </div>
       <div className="overflow-x-auto">
         <table className="data-table w-full min-w-[640px] text-base">
+          <caption className="sr-only">Estadísticas de los jugadores de {match[side].name}</caption>
           <thead>
             <tr>
               <th scope="col" className="!px-4 !text-xs !text-ink-2">Jugador</th>
               {columns.map(column => (
                 <th key={column.key} scope="col" className="!px-2 text-right !text-xs !text-ink-2 last:!pr-4" aria-sort={sortKey === column.key ? 'descending' : 'none'}>
-                  <button type="button" title={column.title} onClick={() => setSortKey(column.key)}
+                  <button type="button" onClick={() => setSortKey(column.key)}
                     className={`inline-flex min-h-11 w-full items-center justify-end ${sortKey === column.key ? 'text-ink' : ''}`}>
-                    {column.label}
+                    <abbr title={column.title} className="no-underline">{column.label}</abbr>
                   </button>
                 </th>
               ))}
@@ -147,6 +148,7 @@ export function PlayerStatsTable({ rows, match }) {
           </tbody>
         </table>
       </div>
+      <p className="px-4 py-3 text-xs text-ink-3">{legend}</p>
     </div>
   );
 }

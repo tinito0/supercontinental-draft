@@ -35,10 +35,10 @@ export function SectionHeading({ id, title, children, as: Tag = 'h2', action = n
   );
 }
 
-/** Fixed translucent header: brand on the left, then whatever the page puts in it. */
-export function SiteNav({ brand, children }) {
+/** Fixed header on a solid canvas colour: brand on the left, then whatever the page puts in it. */
+export function SiteNav({ brand, children, className = '' }) {
   return (
-    <header className="landing-nav fixed inset-x-0 top-0 z-sticky border-b border-line/10">
+    <header className={`fixed inset-x-0 top-0 z-sticky border-b border-line/10 bg-canvas/95 ${className}`}>
       <nav aria-label="Principal" className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         {brand}
         {children}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Award, Check, Trophy, UserRoundCheck, Vote } from 'lucide-react';
 import { Reveal } from '../../components/landing/Reveal.jsx';
 import { SectionHeading } from '../../components/landing/SiteChrome.jsx';
@@ -31,6 +31,24 @@ function useNow(intervalMs = 30_000) {
   return now;
 }
 
+/**
+ * Confirmation of a vote. The buttons vanish once voted, so the panel announces it in a live region that stays in the
+ * accessibility tree while empty (sr-only, not display:none) and moves focus to the panel title (a stable element)
+ * instead of letting it fall to <body>.
+ */
+function useVoteConfirmation() {
+  const [message, setMessage] = useState('');
+  const titleRef = useRef(null);
+  useEffect(() => { if (message) titleRef.current?.focus(); }, [message]);
+  return { message, titleRef, confirm: setMessage };
+}
+
+function VoteStatus({ message }) {
+  return <p role="status" className="text-sm font-semibold text-ink empty:sr-only">{message}</p>;
+}
+
+const voteMessage = (result, label) => (result.ok ? `Voto registrado: ${label}.` : 'Ya habías votado desde este navegador.');
+
 function ShareBar({ label, pct, isMine, isLeader }) {
   return (
     <div>
@@ -50,13 +68,15 @@ function ShareBar({ label, pct, isMine, isLeader }) {
 }
 
 /** matchId: el partido al aire, solo si está en el torneo con los dos clubes (si no, no hay nada que predecir). */
-function PredictionPanel({ matchId, overlay, teamsById, matches }) {
-  const { data: prediction, loading: predictionLoading } = usePrediction(matchId);
+function PredictionPanel({ matchId, overlay, teamsById, matches, loading = false, loadError = '' }) {
+  const { data: prediction, loading: predictionLoading, error: predictionError } = usePrediction(matchId);
+  const hasError = Boolean(loadError || predictionError);
   // round: cuántas veces el admin reinició esta votación; el voto recordado de otra ronda no cuenta. null mientras carga:
   // se muestra lo recordado y no se vota hasta saber la ronda.
   const round = predictionLoading ? null : Number(prediction?.resetCount) || 0;
   const [myVote, setMyVote] = useState(() => (matchId ? getMyVote('prediction', matchId, round) : null));
   const [state, setState] = useState({ busy: false, error: '' });
+  const { message, titleRef, confirm } = useVoteConfirmation();
   useEffect(() => { setMyVote(matchId ? getMyVote('prediction', matchId, round) : null); }, [matchId, round]);
 
   const home = { name: prediction?.homeTeam || overlay?.homeTeamName || teamsById?.[overlay?.homeTeamId]?.teamName || 'Local', draftTeamId: overlay?.homeTeamId || null };
@@ -69,17 +89,25 @@ function PredictionPanel({ matchId, overlay, teamsById, matches }) {
   const vote = async choice => {
     setState({ busy: true, error: '' });
     const result = await sendVote({ kind: 'prediction', matchId, choice }, { round });
-    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('prediction', matchId, round) || choice);
+    if (result.ok || result.alreadyVoted) {
+      setMyVote(getMyVote('prediction', matchId, round) || choice);
+      confirm(voteMessage(result, choice === 'draw' ? 'Empate' : choice === 'home' ? home.name : away.name));
+    }
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
   return (
     <section className="panel p-5 space-y-4" aria-labelledby="prediction-title">
       <div className="flex items-center justify-between gap-3">
-        <h2 id="prediction-title" className="section-title flex items-center gap-2"><Vote className="h-5 w-5 text-accent-soft" aria-hidden="true" /> ¿Quién gana?</h2>
+        <h2 id="prediction-title" ref={titleRef} tabIndex={-1} className="section-title flex items-center gap-2 rounded-sm focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-soft"><Vote className="h-5 w-5 text-accent-soft" aria-hidden="true" /> ¿Quién gana?</h2>
         {matchId && <span className="text-sm text-ink-2">{isClosed ? 'Cerrada: ya empezó' : 'Se cierra al empezar'}</span>}
       </div>
-      {!matchId ? (
+      <VoteStatus message={message} />
+      {hasError ? (
+        <Alert tone="danger" title="No pudimos cargar la predicción">Revisá tu conexión y recargá la página para votar.</Alert>
+      ) : loading || predictionLoading ? (
+        <p className="text-base text-ink-2" role="status">Cargando la predicción…</p>
+      ) : !matchId ? (
         <p className="text-base text-ink-2">Cuando haya un partido por jugarse vas a poder predecir acá.</p>
       ) : myVote || isClosed ? (
         <div className="space-y-3">
@@ -101,17 +129,19 @@ function PredictionPanel({ matchId, overlay, teamsById, matches }) {
         </div>
       ) : (
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3">
-          {[['home', home], ['away', away]].map(([side, team]) => (
+          {/* DOM order = visual order: local, empate, visitante. */}
+          {[['home', home], ['draw', null], ['away', away]].map(([side, team]) => (team ? (
             <button key={side} type="button" disabled={state.busy || round == null} onClick={() => vote(side)}
-              className={`${CHOICE_BUTTON} min-h-24 min-w-0 flex-col gap-2 px-2 py-4 text-center ${side === 'away' ? 'order-3' : ''}`}>
+              className={`${CHOICE_BUTTON} min-h-24 min-w-0 flex-col gap-2 px-2 py-4 text-center`}>
               <TeamMark team={team} teamsById={teamsById} />
               <span className="w-full truncate font-display text-lg font-bold leading-tight text-ink">{team.name}</span>
             </button>
-          ))}
-          <button type="button" disabled={state.busy || round == null} onClick={() => vote('draw')}
-            className={`${CHOICE_BUTTON} order-2 min-h-24 min-w-16 px-3 font-display text-base font-bold text-ink`}>
-            Empate
-          </button>
+          ) : (
+            <button key={side} type="button" disabled={state.busy || round == null} onClick={() => vote('draw')}
+              className={`${CHOICE_BUTTON} min-h-24 min-w-16 px-3 font-display text-base font-bold text-ink`}>
+              Empate
+            </button>
+          )))}
         </div>
       )}
       {state.error && <Alert tone="danger">{state.error}</Alert>}
@@ -120,19 +150,33 @@ function PredictionPanel({ matchId, overlay, teamsById, matches }) {
 }
 
 function CupPollPanel({ pollId, label }) {
-  const { data: poll, loading: pollLoading } = usePoll(pollId);
+  const { data: poll, loading: pollLoading, error: pollError } = usePoll(pollId);
   const round = pollLoading ? null : Number(poll?.resetCount) || 0;
   const [myVote, setMyVote] = useState(() => getMyVote('cup', pollId, round));
   const [state, setState] = useState({ busy: false, error: '' });
+  const { message, titleRef, confirm } = useVoteConfirmation();
   const results = useMemo(() => pollResults(poll), [poll]);
   useEffect(() => { setMyVote(getMyVote('cup', pollId, round)); }, [pollId, round]);
+  if (pollError) {
+    return (
+      <section className="panel p-5 space-y-4" aria-labelledby={`poll-${pollId}`}>
+        <h2 id={`poll-${pollId}`} className="section-title flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-accent-soft" aria-hidden="true" /> ¿Quién gana la {label}?
+        </h2>
+        <Alert tone="danger" title="No pudimos cargar la encuesta">Revisá tu conexión y recargá la página para votar.</Alert>
+      </section>
+    );
+  }
   // Cerrada y sin votos no tiene nada que contar (p. ej. la de la temporada anterior antes del sorteo).
   if (!poll?.options?.length || (!poll.open && !results?.total)) return null;
 
   const vote = async choice => {
     setState({ busy: true, error: '' });
     const result = await sendVote({ kind: 'cup', pollId, choice }, { round });
-    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('cup', pollId, round) || choice);
+    if (result.ok || result.alreadyVoted) {
+      setMyVote(getMyVote('cup', pollId, round) || choice);
+      confirm(voteMessage(result, poll.options.find(option => option.id === choice)?.name || ''));
+    }
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
@@ -140,11 +184,12 @@ function CupPollPanel({ pollId, label }) {
   return (
     <section className="panel p-5 space-y-4" aria-labelledby={`poll-${pollId}`}>
       <div className="flex items-center justify-between gap-3">
-        <h2 id={`poll-${pollId}`} className="section-title flex items-center gap-2">
+        <h2 id={`poll-${pollId}`} ref={titleRef} tabIndex={-1} className="section-title flex items-center gap-2 rounded-sm focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-soft">
           <Trophy className="h-5 w-5 text-accent-soft" aria-hidden="true" /> {poll.title || `¿Quién gana la ${label}?`}
         </h2>
         <span className="shrink-0 text-sm text-ink-2">{isOpen ? 'Encuesta abierta' : 'Encuesta cerrada'}</span>
       </div>
+      <VoteStatus message={message} />
       {myVote || !isOpen ? (
         <div className="space-y-3">
           {results.options.map((option, index) => (
@@ -198,13 +243,14 @@ const hoursLeft = (closesAtMs, now) => (Number.isFinite(closesAtMs) && closesAtM
  */
 function ManagerPanel({ tournament, matches, teams }) {
   const now = useNow();
-  const { round, loading } = useManagerRound(tournament, matches);
+  const { round, loading, error: roundError } = useManagerRound(tournament, matches);
   const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
   const managerOf = useManagerLookup(teams);
   const resetRound = loading ? null : Number(round?.votes?.resetCount) || 0;
   const [selected, setSelected] = useState(null);
   const [myVote, setMyVote] = useState(null);
   const [state, setState] = useState({ busy: false, error: '' });
+  const { message, titleRef, confirm } = useVoteConfirmation();
   useEffect(() => {
     setSelected(null);
     setMyVote(round ? getMyVote('manager', round.roundId, resetRound) : null);
@@ -216,7 +262,10 @@ function ManagerPanel({ tournament, matches, teams }) {
   const vote = async () => {
     setState({ busy: true, error: '' });
     const result = await sendVote({ kind: 'manager', roundId: round.roundId, choice: selected }, { round: resetRound });
-    if (result.ok || result.alreadyVoted) setMyVote(getMyVote('manager', round.roundId, resetRound) || selected);
+    if (result.ok || result.alreadyVoted) {
+      setMyVote(getMyVote('manager', round.roundId, resetRound) || selected);
+      confirm(voteMessage(result, managerOf(selected) || selected));
+    }
     setState({ busy: false, error: result.ok || result.alreadyVoted ? '' : result.error });
   };
 
@@ -233,8 +282,12 @@ function ManagerPanel({ tournament, matches, teams }) {
   );
 
   let body;
-  if (!round) {
-    body = <p className="text-base text-ink-2">Cuando termine la primera fecha vas a poder elegir al manager que mejor manejó su equipo.</p>;
+  if (roundError) {
+    body = <Alert tone="danger" title="No pudimos cargar la votación">Revisá tu conexión y recargá la página para votar.</Alert>;
+  } else if (loading) {
+    body = <p className="text-base text-ink-2" role="status">Cargando la votación…</p>;
+  } else if (!round) {
+    body = <p className="text-base text-ink-2">Cuando termine la primera fecha vas a poder elegir al mánager que mejor manejó su equipo.</p>;
   } else if (myVote || !round.open) {
     const winner = !round.open ? managerWinner(round.votes) : null;
     body = ranking.length ? (
@@ -243,7 +296,7 @@ function ManagerPanel({ tournament, matches, teams }) {
           <div className="flex items-center gap-4 border-b border-line/10 pb-4" role="status">
             <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-white p-1.5"><LeagueCrest name={winner.club} club={clubOf(winner.club)} size="lg" /></span>
             <div className="min-w-0">
-              <p className="eyebrow">Manager de la {round.title}</p>
+              <p className="eyebrow">Mánager de la {round.title}</p>
               <p className="truncate font-display text-2xl font-bold text-ink">{managerOf(winner.club) || winner.club}</p>
               <p className="text-sm text-ink-2">{managerOf(winner.club) ? `${winner.club} · ` : ''}<span className="num">{ranking[0].pct}%</span> de los votos</p>
             </div>
@@ -274,9 +327,10 @@ function ManagerPanel({ tournament, matches, teams }) {
           </div>
         </fieldset>
         <button type="button" className="btn btn-primary w-full min-h-11" disabled={!selected || state.busy || resetRound == null} onClick={vote}
-          title={!selected ? 'Elegí un manager' : undefined}>
+          aria-describedby={!selected ? 'manager-vote-hint' : undefined}>
           {state.busy ? 'Votando…' : 'Votar'}
         </button>
+        {!selected && <p id="manager-vote-hint" className="text-sm text-ink-2">Elegí un mánager de la lista para poder votar.</p>}
       </div>
     );
   }
@@ -285,13 +339,14 @@ function ManagerPanel({ tournament, matches, teams }) {
   return (
     <section className="panel p-5 space-y-4" aria-labelledby="manager-title">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <h2 id="manager-title" className="section-title flex items-center gap-2"><UserRoundCheck className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Manager de la fecha</h2>
+        <h2 id="manager-title" ref={titleRef} tabIndex={-1} className="section-title flex items-center gap-2 rounded-sm focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-soft"><UserRoundCheck className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Manager de la fecha</h2>
         {round && (
           <span className="text-sm text-ink-2">
             {round.title} · {round.open ? (left != null ? `cierra en ${left} h` : 'votación abierta') : 'votación cerrada'}
           </span>
         )}
       </div>
+      <VoteStatus message={message} />
       {body}
       {state.error && <Alert tone="danger">{state.error}</Alert>}
     </section>
@@ -311,7 +366,7 @@ function ManagerOfTournamentPanel({ tournament, matches, teams }) {
   return (
     <section className="panel p-5 space-y-4" aria-labelledby="mot-title">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <h2 id="mot-title" className="section-title flex items-center gap-2"><Award className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Manager del torneo</h2>
+        <h2 id="mot-title" className="section-title flex items-center gap-2"><Award className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Mánager del torneo</h2>
         <span className="text-sm text-ink-2">Fechas ganadas</span>
       </div>
       <ol className="divide-y divide-line/10">
@@ -336,7 +391,7 @@ function ManagerOfTournamentPanel({ tournament, matches, teams }) {
 
 export default function LeagueLiveScreen() {
   useDocumentTitle('En vivo');
-  const { data: overlay } = useBroadcastOverlay();
+  const { data: overlay, loading: overlayLoading, error: overlayError } = useBroadcastOverlay();
   // Toda la temporada, no los últimos 40: la hora de final de cada partido de la fecha abre la votación del manager.
   const { matches, error } = useLiveMatches(SEASON_MATCH_LIMIT);
   const { teams, teamsById } = useLeagueTeams();
@@ -349,20 +404,23 @@ export default function LeagueLiveScreen() {
     <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 md:py-16">
       <Reveal>
         <SectionHeading as="h1" title="En vivo">
-          Seguí el partido en juego, predecí el resultado, elegí al manager de la fecha y quién gana la copa. Sin cuenta: un voto por navegador.
+          Seguí el partido en juego, predecí el resultado, elegí al mánager de la fecha y quién gana la copa. Sin cuenta: un voto por navegador.
         </SectionHeading>
       </Reveal>
       {error && <Alert tone="danger" title={error} className="mb-4">Recargá la página para intentar de nuevo.</Alert>}
       <div className="space-y-5">
         <LiveNowPanel matches={matches} teamsById={teamsById} />
         {/* Con un partido en juego y nada que predecir, el aviso «cuando haya un partido…» sobra. */}
-        {(predictionMatchId || !liveMatch) && <PredictionPanel matchId={predictionMatchId} overlay={overlay} teamsById={teamsById} matches={matches} />}
+        {(predictionMatchId || !liveMatch || overlayError) && (
+          <PredictionPanel matchId={predictionMatchId} overlay={overlay} teamsById={teamsById} matches={matches}
+            loading={overlayLoading || tournamentLoading} loadError={overlayError} />
+        )}
         <ManagerPanel tournament={tournament} matches={matches} teams={teams} />
         {CUP_POLLS.map(poll => <CupPollPanel key={poll.id} pollId={poll.id} label={poll.label} />)}
         <ManagerOfTournamentPanel tournament={tournament} matches={matches} teams={teams} />
       </div>
       <p className="mt-6 text-sm text-ink-2">
-        Los resultados se actualizan solos. La predicción cierra cuando empieza el partido; el manager de la fecha se vota durante las 24 horas siguientes al último partido de la fecha.
+        Los resultados se actualizan solos. La predicción cierra cuando empieza el partido; el mánager de la fecha se vota durante las 24 horas siguientes al último partido de la fecha.
       </p>
     </section>
   );

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { BallIcon } from '../match/BallIcon.jsx';
 import { CardMark, RatingChip, TeamMark } from '../match/MatchParts.jsx';
+import { EmptyState } from '../../ui/EmptyState.jsx';
 
 /* Partidos oficiales de un jugador en /jugadores/:id (utils/seasonStats.js playerMatchLog), el más nuevo arriba. */
 
@@ -23,7 +24,7 @@ function Contribution({ line }) {
   return (
     <span className="flex shrink-0 items-center gap-1 text-xs text-ink-3">
       {Array.from({ length: line.goals }, (_, i) => <span key={`g${i}`} role="img" aria-label="Gol" className="inline-flex"><BallIcon className="h-4 w-4" /></span>)}
-      {line.assists > 0 && <span title="Asistencias" className="num">A{line.assists > 1 ? line.assists : ''}</span>}
+      {line.assists > 0 && <span className="num">A{line.assists > 1 ? line.assists : ''}<span className="sr-only"> asistencias</span></span>}
       {line.yellow > 0 && <CardMark type="yellow" />}
       {line.red > 0 && <CardMark type="red" />}
     </span>
@@ -35,7 +36,8 @@ function LogRow({ entry, teamsById }) {
   const { line } = entry;
   return (
     <li>
-      <Link to={`/partidos/${entry.matchKey}`} className="grid min-h-11 grid-cols-[2.75rem_minmax(0,1fr)_auto_auto] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.03]">
+      {/* Phones: the contributions drop to a second line under the rival; from sm they share the row. */}
+      <Link to={`/partidos/${entry.matchKey}`} className="grid min-h-11 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 transition-colors hover:bg-white/[0.03] sm:grid-cols-[2.75rem_minmax(0,1fr)_auto_auto]">
         <span className="num text-sm text-ink-3">{shortDate(entry.startedAt)}</span>
         <span className="flex min-w-0 items-center gap-2">
           <TeamMark team={entry.rival} teamsById={teamsById} size="sm" />
@@ -46,7 +48,7 @@ function LogRow({ entry, teamsById }) {
             <span aria-hidden="true">{result.letter} </span><span className="sr-only">{result.label} </span>{entry.own.score}-{entry.rival.score}
           </span>
         </span>
-        <span className="flex items-center gap-2">
+        <span className="col-start-2 row-start-2 flex items-center gap-2 sm:col-start-auto sm:row-start-auto">
           <Contribution line={line} />
           {line.minutes != null && <span className="num hidden text-xs text-ink-3 sm:inline">{line.minutes}'</span>}
           <RatingChip value={line.rating} />
@@ -69,7 +71,9 @@ export function PlayerMatchLog({ log, teamsById }) {
           {log.map(entry => <LogRow key={entry.matchKey} entry={entry} teamsById={teamsById} />)}
         </ol>
       ) : (
-        <p className="px-4 pb-5 pt-2 text-sm text-ink-3 sm:px-5">Todavía no jugó partidos oficiales registrados por el juego.</p>
+        <div className="px-4 pb-4 sm:px-5">
+          <EmptyState title="Todavía no jugó partidos oficiales registrados por el juego." />
+        </div>
       )}
     </section>
   );

@@ -31,7 +31,7 @@ describe('match page views', () => {
   it('header: teams, live score, minute and scorers with minute', () => {
     const html = renderToStaticMarkup(<MatchHeader match={match} timeline={timeline} teamsById={{}} />);
     expect(html).toContain('Arsenal');
-    expect(html).toContain('<span class="sr-only">2 a 1</span>');
+    expect(html).toContain('<span class="sr-only" aria-live="polite" aria-atomic="true">2 a 1</span>');
     expect(html).toContain("63&#x27;");
     expect(html).toContain('en vivo');
     expect(html).toContain('L. Trossard 15&#x27;');
@@ -52,7 +52,7 @@ describe('match page views', () => {
   it('stats, lineups and player table render what was measured', () => {
     const stats = renderToStaticMarkup(<StatSections sections={statSections(match.summary)} match={match} />);
     expect(stats).toContain('Pases precisos');
-    expect(stats).toContain('75 %');
+    expect(stats).toContain('75%');
     expect(stats).toContain('60/80');
     expect(stats).toContain('La posesión no aparece porque todavía no se mide');
     const lineups = renderToStaticMarkup(<MatchLineups lineups={buildLineups(match.summary)} match={match} />);

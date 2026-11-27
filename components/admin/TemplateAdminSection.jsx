@@ -430,7 +430,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label htmlFor="pes-coach-name" className="block text-xs font-bold text-ink-2 mb-1">Nombre del DT</label>
+                  <label htmlFor="pes-coach-name" className="block text-xs font-bold text-ink-2 mb-1">Nombre del director técnico</label>
                   <input
                     id="pes-coach-name"
                     type="text"
@@ -442,7 +442,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
                 </div>
 
                 <div>
-                  <label htmlFor="pes-coach-country" className="block text-xs font-bold text-ink-2 mb-1">Nacionalidad del DT</label>
+                  <label htmlFor="pes-coach-country" className="block text-xs font-bold text-ink-2 mb-1">Nacionalidad del director técnico</label>
                   <select
                     id="pes-coach-country"
                     value={targetCoachNationality}

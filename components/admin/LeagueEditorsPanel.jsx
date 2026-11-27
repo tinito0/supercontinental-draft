@@ -50,7 +50,7 @@ export const LeagueEditorsPanel = memo(function LeagueEditorsPanel({ allTeams, s
   };
 
   const revoke = async editor => {
-    const name = editor.teamName || allTeams?.[editor.uid]?.teamName || 'Este manager';
+    const name = editor.teamName || allTeams?.[editor.uid]?.teamName || 'Este mánager';
     const isConfirmed = await confirmAction({
       title: `¿Quitarle a ${name} el permiso de edición?`,
       message: 'Deja de poder editar los textos de la web pública. Se lo podés volver a dar cuando quieras.',
@@ -89,7 +89,7 @@ export const LeagueEditorsPanel = memo(function LeagueEditorsPanel({ allTeams, s
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field label="Sumar editor" className="flex-1">
           <select className="select" value={choice} onChange={event => setChoice(event.target.value)} disabled={!candidates.length}>
-            <option value="">{candidates.length ? 'Elegí el club de su manager…' : 'No quedan clubes aprobados para sumar'}</option>
+            <option value="">{candidates.length ? 'Elegí el club de su mánager…' : 'No quedan clubes aprobados para sumar'}</option>
             {candidates.map(team => <option key={team.uid} value={team.uid}>{team.teamName}</option>)}
           </select>
         </Field>

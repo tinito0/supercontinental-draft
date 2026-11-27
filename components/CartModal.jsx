@@ -649,7 +649,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
           description={userProfile?.teamName || 'Mi Equipo'}
           actions={onOpenTactics && (
             <button type="button" onClick={onOpenTactics} className="btn btn-secondary">
-              <ClipboardList className="w-4 h-4" aria-hidden="true" />Pizarra táctica
+              <ClipboardList className="w-4 h-4" aria-hidden="true" />Táctica
             </button>
           )}
         />

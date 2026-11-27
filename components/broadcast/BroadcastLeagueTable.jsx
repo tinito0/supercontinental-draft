@@ -27,8 +27,9 @@ function Move({ move }) {
   const up = move > 0;
   return (
     // <b>, no <span>: `.scl-table-team span` es el nombre del club (mayúsculas, recorte con puntos).
-    <b className={`scl-table-move ${up ? 'is-up' : 'is-down'}`} aria-label={`${up ? 'sube' : 'baja'} ${Math.abs(move)}`}>
-      <i aria-hidden="true">{up ? '▲' : '▼'}</i>{Math.abs(move)}
+    <b className={`scl-table-move ${up ? 'is-up' : 'is-down'}`}>
+      <i aria-hidden="true">{up ? '▲' : '▼'}</i><span aria-hidden="true">{Math.abs(move)}</span>
+      <span className="scl-sr-only">{`${up ? 'sube' : 'baja'} ${Math.abs(move)}`}</span>
     </b>
   );
 }
@@ -47,9 +48,9 @@ export const BroadcastLeagueTable = memo(function BroadcastLeagueTable({ league,
     <div className="scl-stage">
       <BroadcastFrame
         className="scl-table-frame"
-        kicker="Supercontinental League"
+        kicker="SuperContinental League"
         title={live ? 'Tabla en vivo' : 'Tabla de posiciones'}
-        aside={live ? 'Con el marcador de ahora' : 'PG 2 · GPEN 1 · PP 0'}
+        aside={live ? 'Con el marcador de ahora' : '2 pts por victoria · 1 si gana en penales'}
       >
         {rows.length === 0 ? (
           <div className="broadcast-empty">Sin datos cargados</div>
@@ -76,7 +77,7 @@ export const BroadcastLeagueTable = memo(function BroadcastLeagueTable({ league,
                         <div className="scl-table-team">
                           <BroadcastCrest name={team.name} logo={getTeamLogo?.(team.name)} />
                           <span className={isLongName(team.name) ? 'is-long-name' : undefined} title={team.name}>{team.name}</span>
-                          {team.isLive && <i className="scl-table-live" aria-label="jugando ahora" />}
+                          {team.isLive && <i className="scl-table-live"><span className="scl-sr-only">jugando ahora</span></i>}
                           <Move move={team.move} />
                         </div>
                       </td>

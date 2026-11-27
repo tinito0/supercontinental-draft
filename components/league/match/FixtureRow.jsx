@@ -31,7 +31,7 @@ export function LeagueCrest({ name, club, size = 'md' }) {
 }
 
 const STATUS = {
-  nosignal: { label: 'Sin señal', className: 'text-warning-soft' },
+  nosignal: { label: 'Sin datos en vivo', className: 'text-warning-soft' },
   played: { label: 'Jugado', className: 'text-ink-2' },
   abandoned: { label: 'Suspendido', className: 'text-warning-soft' },
   postponed: { label: 'Postergado', className: 'text-warning-soft' },
@@ -73,9 +73,10 @@ function TeamLine({ team, club, score, pens, outcome }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
       <LeagueCrest name={team.name} club={club} size="sm" />
-      <span className={`min-w-0 flex-1 truncate ${tone}`} title={team.name}>{team.name}</span>
+      {/* Long club names wrap instead of being cut off: the row is a link, so the full name must be readable. */}
+      <span className={`min-w-0 flex-1 line-clamp-2 break-words ${tone}`}>{team.name}</span>
       {/* Penales al lado del marcador, como en los centros de partidos: «1 (5)». */}
-      {pens != null && <span className={`num text-sm ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink-2'}`} aria-label={`${pens} en los penales`}>({pens})</span>}
+      {pens != null && <span className={`num text-sm ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink-2'}`}><span aria-hidden="true">({pens})</span><span className="sr-only">{pens} en los penales</span></span>}
       {score != null && <span key={score} className={`num w-6 text-right font-display text-lg ${outcome === 'win' ? 'font-bold text-ink' : 'text-ink'} ${scoreChanged ? 'score-pop' : ''}`}>{score}</span>}
     </div>
   );

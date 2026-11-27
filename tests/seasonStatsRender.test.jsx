@@ -151,7 +151,7 @@ describe('BroadcastFinalAwards', () => {
     const html = renderToStaticMarkup(<BroadcastFinalAwards topRated={{ names: ['Saka', 'Nine'], rating: 7.5 }} />);
     expect(html).toContain('Mejor valoración');
     expect(html).toContain('7,5');
-    expect(html).toContain('aria-label="Saka y Nine"');
+    expect(html).toContain('<span>Saka</span><span>Nine</span>');
   });
 
   it('shows nothing without ratings', () => {

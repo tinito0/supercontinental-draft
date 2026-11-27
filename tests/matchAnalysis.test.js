@@ -184,7 +184,7 @@ describe('dataSources', () => {
     expect(by('Lista de tiros').source).toBe('unavailable');
     expect(by('Dominio').source).toBe('unavailable');
     expect(by('Goles esperados').source).toBe('unavailable');
-    expect(by('Formación').detail).toMatch(/visitante: el plan guardado no coincide/);
+    expect(by('Formación').detail).toMatch(/visitante: el plan de juego no coincide/);
     expect(by('Posesión').source).toBe('unavailable');
   });
 

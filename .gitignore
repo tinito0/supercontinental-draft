@@ -78,6 +78,8 @@ vendor/
 
 # Generado desde public/jugadores.json en dev/build (scripts/build-players-compact.mjs)
 public/jugadores.compact.json
+# Generated from supabase/functions/_shared/catalog.json in dev/build (scripts/build-franchise-index.mjs)
+public/franchise-index.json
 
 # Supabase CLI temp files
 supabase/.temp/

@@ -91,7 +91,7 @@ const numeric = value => (value && typeof value === 'object' ? value.pct : value
 /** «44/54 (81 %)», «81 %» sin intentos conocidos, o el número. */
 export function formatStat(value) {
   if (value == null) return '—';
-  if (typeof value === 'object') return value.pct == null ? `${value.made}/${value.total}` : `${value.made}/${value.total} (${value.pct} %)`;
+  if (typeof value === 'object') return value.pct == null ? `${value.made}/${value.total}` : `${value.made}/${value.total} (${value.pct}%)`;
   return String(value);
 }
 
@@ -134,7 +134,7 @@ export function statSections(summary) {
     sections[0].rows.unshift({
       key: 'possession', label: 'Posesión', help: 'Tiempo con la pelota, contado por el juego. Puede diferir en 1 punto de su pantalla.',
       home: possession.home, away: possession.away,
-      display: { home: `${possession.home} %`, away: `${possession.away} %` },
+      display: { home: `${possession.home}%`, away: `${possession.away}%` },
       share: { home: possession.home, away: possession.away }, leader: null,
     });
   }

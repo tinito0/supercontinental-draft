@@ -302,7 +302,7 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
               <li>Historial y créditos mensuales del Scout</li>
               <li>Bloqueos de mercado, ofertas (con su chat), noticias, formaciones compartidas y transferencias</li>
             </ul>
-            <p className="pt-1">Se conservan los presupuestos, el acceso anticipado, el torneo, el chat de managers y las sugerencias.</p>
+            <p className="pt-1">Se conservan los presupuestos, el acceso anticipado, el torneo, el chat de mánagers y las sugerencias.</p>
             <p className="text-warning-soft font-semibold pt-1">Si necesitás los planteles de esta temporada en el PES (Draft → PES o CSV), exportalos antes: después del reseteo ya no existen.</p>
             <p className="font-semibold text-danger-soft">No se puede deshacer.</p>
           </div>

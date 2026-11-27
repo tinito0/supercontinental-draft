@@ -13,6 +13,8 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { knockoutWinner, teamMatchResult } from '../utils/competitionRules.js';
 import { Button } from '../components/ui/Button.jsx';
 import { EmptyState } from '../components/ui/EmptyState.jsx';
+import { Alert } from '../components/ui/Alert.jsx';
+import { OFFLINE_MESSAGE } from '../utils/leagueDataErrors.js';
 import { Stat } from '../components/ui/Stat.jsx';
 import { SquadSection, SquadRow } from '../components/formation/SquadList.jsx';
 import { TeamStrength } from '../components/formation/TeamStrength.jsx';
@@ -32,14 +34,19 @@ const POS_RANK = {
 
 const getPosRank = (pos) => POS_RANK[String(pos || '').toUpperCase()] || 5;
 
+/** No connection: Firestore reports it as `unavailable`, and the browser flag covers the rest. */
+const isOfflineLoadError = (err) => err?.code === 'unavailable' || (typeof navigator !== 'undefined' && navigator.onLine === false);
+
 /**
  * Public page of a club. Shared by the draft (/draft/team/:id) and the league site (/equipos/:id), which passes
  * `isLeagueSite` (no draft badge, no own footer) and the club's history as `afterHeader`.
  */
-export default function TeamScreen({ isLeagueSite = false, afterHeader = null, hideHeader = false }) {
+export default function TeamScreen({ isLeagueSite = false, afterHeader = null, hideHeader = false, embedded = false }) {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  // Inside the club's Plantel tab the page already has its <main>.
+  const Body = embedded ? 'div' : 'main';
 
   // useParams works inside <Route>, but this component is rendered via pathname check,
   // so extract userId from the URL path as fallback
@@ -62,6 +69,9 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
   const [transferHistory, setTransferHistory] = useState([]);
   // Jugador Franquicia: the market marks his lock (utils/franchisePlayers.js).
   const [franchiseIds, setFranchiseIds] = useState(() => new Set());
+  // A failed optional read hides only its own section (record or market); the page still loads.
+  const [recordFailed, setRecordFailed] = useState(false);
+  const [transfersFailed, setTransfersFailed] = useState(false);
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
   const fetchTeam = useCallback(() => {
@@ -74,6 +84,8 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
     const load = async () => {
       setLoading(true);
       setError(null);
+      setRecordFailed(false);
+      setTransfersFailed(false);
       try {
         if (!userId) {
           if (isMounted) {
@@ -98,18 +110,29 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
         if (isMounted) setTeamData(data);
 
         // Cargar historial de transferencias
-        const transfersSnap = await getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/transfers`), orderBy('timestamp', 'desc'), limit(100)));
-        if (isMounted) {
-          setTransferHistory(transfersSnap.docs.map(transferDoc => transferDoc.data())
-            .filter(transfer => transfer.teamId === userId || transfer.fromTeamId === userId)
-            .slice(0, 6));
+        try {
+          const transfersSnap = await getDocs(query(collection(db, `artifacts/${APP_ID}/public/data/transfers`), orderBy('timestamp', 'desc'), limit(100)));
+          if (isMounted) {
+            setTransferHistory(transfersSnap.docs.map(transferDoc => transferDoc.data())
+              .filter(transfer => transfer.teamId === userId || transfer.fromTeamId === userId)
+              .slice(0, 6));
+          }
+        } catch (transfersErr) {
+          console.warn("No se pudieron cargar los movimientos del club:", transfersErr);
+          if (isMounted) setTransfersFailed(true);
         }
 
         // Cargar datos de torneo oficial
-        const tournamentSnap = await getDoc(doc(db, `artifacts/${APP_ID}/public/data/tournament`, 'official'));
+        let tournamentSnap = null;
+        try {
+          tournamentSnap = await getDoc(doc(db, `artifacts/${APP_ID}/public/data/tournament`, 'official'));
+        } catch (tournamentErr) {
+          console.warn("No se pudo cargar el torneo oficial:", tournamentErr);
+          if (isMounted) setRecordFailed(true);
+        }
         const normalizedTeamName = String(data.teamName || '').trim().toLowerCase();
         const record = { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [], mvpCount: 0, rival: '', titles: Number(data.titles) || 0 };
-        if (tournamentSnap.exists() && normalizedTeamName) {
+        if (tournamentSnap?.exists() && normalizedTeamName) {
           const tournament = tournamentSnap.data();
           const rivals = {};
           // Solo partidos con marcador válido (antes un marcador vacío contaba 0-0). Un partido definido por penales
@@ -203,6 +226,8 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
         if (!isMounted) return;
         if (err?.code === 'permission-denied') {
           setError("Sin permisos para cargar el equipo.");
+        } else if (isOfflineLoadError(err)) {
+          setError(OFFLINE_MESSAGE);
         } else if (err?.message?.includes('network') || err?.message?.includes('fetch')) {
           setError("Error de conexión. Verificá tu internet e intentá de nuevo.");
         } else {
@@ -340,12 +365,15 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
 
       {afterHeader}
 
-      <main className="w-full max-w-6xl mx-auto px-4 py-6 space-y-6 animate-in fade-in">
+      <Body className="w-full max-w-6xl mx-auto px-4 py-6 space-y-6 animate-in fade-in">
         {/* Official record: plain numbers in a row, no tiles (docs/DESIGN_SYSTEM.md, principle 1). Draft only:
             the league site's squad tab leaves it out. */}
         {!isLeagueSite && (
         <section aria-labelledby="team-record-title" className="panel-flat px-4 py-5 sm:px-6">
           <h2 id="team-record-title" className="section-title">Récord oficial</h2>
+          {recordFailed ? (
+            <Alert tone="danger" title="No se pudo cargar el récord oficial." className="mt-4">Recargá la página para intentar de nuevo.</Alert>
+          ) : (
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-5">
             <Stat label="Partidos" value={teamRecord.played} />
             <Stat label="G-E-P" value={`${teamRecord.wins}-${teamRecord.draws}-${teamRecord.losses}`} />
@@ -373,6 +401,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
             <Stat label="Títulos SCL" value={teamRecord.titles} tone={teamRecord.titles > 0 ? 'warning' : 'default'} />
             <Stat label="Rival directo" value={<span className="block truncate" title={teamRecord.rival}>{teamRecord.rival || '–'}</span>} size="sm" />
           </div>
+          )}
         </section>
         )}
 
@@ -417,7 +446,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
                     />
                   ))}
                 </SquadSection>
-                <SquadSection title="Suplentes" count={substitutes.length} hint="Por línea y OVR">
+                <SquadSection title="Suplentes" count={substitutes.length} hint="Por línea y media">
                   {substitutes.map(player => (
                     <SquadRow
                       key={player.Id}
@@ -442,7 +471,9 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
             <h2 id="team-market-title" className="section-title">Mercado</h2>
             <p className="text-xs text-ink-3">Últimos movimientos</p>
           </div>
-          {transferHistory.length > 0 ? (
+          {transfersFailed ? (
+            <Alert tone="danger" title="No se pudieron cargar los movimientos." className="mt-3">Recargá la página para intentar de nuevo.</Alert>
+          ) : transferHistory.length > 0 ? (
             <ul className="mt-3 grid md:grid-cols-2 md:gap-x-8">
               {transferHistory.map((transfer, index) => {
                 const isSale = transfer.fromTeamId === userId;
@@ -466,7 +497,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
             <p className="mt-3 text-sm text-ink-3">Todavía no hay movimientos de mercado registrados para este club.</p>
           )}
         </section>
-      </main>
+      </Body>
 
       {/* The league site has its own footer. */}
       {!isLeagueSite && (

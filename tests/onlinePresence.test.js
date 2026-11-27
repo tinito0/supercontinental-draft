@@ -122,20 +122,20 @@ describe('hooks/useOnlinePresence - Core logic', () => {
 describe('components/ui/OnlineIndicator', () => {
   it('renders default online count (1 online)', () => {
     const html = renderToString(React.createElement(OnlineIndicator));
-    expect(html).toContain('1 online');
+    expect(html).toContain('1 en línea');
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
   });
 
   it('renders custom online count (e.g. 3 online)', () => {
     const html = renderToString(React.createElement(OnlineIndicator, { count: 3 }));
-    expect(html).toContain('3 online');
-    expect(html).toContain('3 managers en línea');
+    expect(html).toContain('3 en línea');
+    expect(html).toContain('3 mánagers en línea');
   });
 
   it('renders via onlineCount prop', () => {
     const html = renderToString(React.createElement(OnlineIndicator, { onlineCount: 5 }));
-    expect(html).toContain('5 online');
+    expect(html).toContain('5 en línea');
   });
 
   it('uses the design-system tokens (plain text + status dot, no pill)', () => {
@@ -166,12 +166,12 @@ describe('components/TopHeader integration', () => {
       })
     );
 
-    expect(html).toContain('4 online');
+    expect(html).toContain('4 en línea');
     expect(html).toContain('Atlético Test');
     expect(html).toContain('role="status"');
     // Budget label (visible from sm, read by screen readers on every width) and amount.
     expect(html).toContain('Presupuesto');
-    expect(html).toContain('$50.00M');
+    expect(html).toContain('$50,00M');
   });
 });
 

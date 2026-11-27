@@ -3,27 +3,7 @@
    the entry/reveal motion and the player marquee. Every animation is off with reduced motion. */
 
 .landing-nav {
-  background: rgb(var(--c-canvas) / 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-/* ── Competition mark ────────────────────────────────────────── */
-/* The league's broadcast band (components/broadcast/broadcast.css: navy → blue → lavender). On the site it is only a
-   competition mark: a thin rule on top of the match centre and under the hero title, never a background. */
-.league-band {
-  height: 4px;
-  background: linear-gradient(90deg, #022a5e, #005fbd 45%, #7a7bb7 85%, #b6b6ec);
-}
-/* Hero status line: the stage of the season, read from the tournament (utils/leagueFixtures.leagueStage). */
-.league-stage {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.75rem;
-  padding: 0.5rem 0.9rem 0.5rem 0.75rem;
-  border-left: 3px solid #7a7bb7;
-  background: rgb(var(--c-surface) / 0.8);
+  background: rgb(var(--c-canvas) / 0.95);
 }
 
 /* ── Entry and scroll reveal ─────────────────────────────────── */
@@ -58,6 +38,7 @@
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
 .landing-marquee:focus-visible { outline: 2px solid rgb(var(--c-accent)); outline-offset: 2px; }
+.landing-marquee[data-paused='true'] .landing-marquee__track { animation-play-state: paused; }
 .landing-marquee__track {
   display: flex;
   width: max-content;
@@ -81,15 +62,21 @@
   }
   .landing-marquee__track { animation: none; }
   .landing-marquee__copy { display: none; }
+  .landing-marquee-toggle { display: none; }
 }
 
 /* ── Readable text on the public sites ───────────────────────── */
 /* The app's secondary and muted greys (#b8c2d6, #8692ab) read as washed out on the public pages, where most text is
-   small metadata. Inside the league site and the draft landing they are lifted to near-white, and the smallest
-   labels grow to 12px. The draft app keeps its own greys. */
+   small metadata. Inside the league site and the draft landing they are lifted, keeping a clear step below the
+   primary ink: #cfd8e8 secondary (13.7:1 on canvas), #a9b5cc muted (9.5:1 on canvas, 8.3:1 on raised). The draft app
+   keeps its own greys. */
 .landing-root {
-  --c-ink-2: 226 232 242;  /* #e2e8f2 secundario */
-  --c-ink-3: 190 200 220;  /* #bec8dc apagado (≈ 11:1 sobre surface) */
+  --c-ink-2: 207 216 232;  /* #cfd8e8 secundario */
+  --c-ink-3: 169 181 204;  /* #a9b5cc apagado */
+  /* Mini pitch of the demo: nothing under 11px (the draft app keeps the smaller clamp). */
+  --pitch-chip-font: 11px;
+  --pitch-name-font: clamp(11px, 2.9cqw, 12px);
+  --pitch-dorsal-font: 11px;
 }
 .landing-root .eyebrow {
   font-size: 0.75rem;
@@ -115,7 +102,7 @@
 /* ── Lineup pitch (match page) ───────────────────────────────── */
 /* The same grass as the formation Pitch (components/Pitch.jsx), solid: no stripes or gradients. */
 .lineup-pitch {
-  background: #183624;
+  background: rgb(var(--c-pitch-solid));
   border: 1px solid rgb(6 78 59 / 0.4);
 }
 

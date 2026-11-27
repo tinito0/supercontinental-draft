@@ -17,7 +17,7 @@ function PlanPanel({ title, view }) {
       <h3 className="section-title mb-3 truncate">{title}</h3>
       {!view ? (
         <p className="text-sm text-ink-3">
-          Sin plan confirmado: el guardado no coincide con el XI que jugó, o el equipo no tiene plan. No se muestra uno a ojo.
+          Sin plan confirmado: el plan del equipo no coincide con el XI que jugó, o el equipo no tiene plan. No se muestra uno a ojo.
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -49,11 +49,16 @@ function PassMixBar({ name, mix }) {
     <div>
       <p className="mb-1 truncate text-sm font-semibold text-ink">{name}</p>
       <div className="flex h-3 overflow-hidden rounded-full bg-raised" role="img"
-        aria-label={`${name}: ${MIX.map(part => `${part.label.toLowerCase()} ${mix[part.key]} %`).join(', ')}`}>
+        aria-label={`${name}: ${MIX.map(part => `${part.label.toLowerCase()} ${mix[part.key]}%`).join(', ')}`}>
         {MIX.map(part => <span key={part.key} className={part.className} style={{ width: `${mix[part.key] || 0}%` }} />)}
       </div>
       <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-ink-3">
-        {MIX.map(part => <span key={part.key} className="num">{part.label} {mix[part.key]} %</span>)}
+        {MIX.map(part => (
+          <span key={part.key} className="num flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-sm ${part.className}`} aria-hidden="true" />
+            {part.label} {mix[part.key]}%
+          </span>
+        ))}
       </p>
     </div>
   );
@@ -93,8 +98,8 @@ export function MatchTacticsView({ summary, match }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-2">
-        <PlanPanel title={`Plan · ${match.home.name}`} view={teamPlanView(summary, 'home')} />
-        <PlanPanel title={`Plan · ${match.away.name}`} view={teamPlanView(summary, 'away')} />
+        <PlanPanel title={`Plan de juego · ${match.home.name}`} view={teamPlanView(summary, 'home')} />
+        <PlanPanel title={`Plan de juego · ${match.away.name}`} view={teamPlanView(summary, 'away')} />
       </div>
       <FormationChanges summary={summary} match={match} />
       <section className="panel p-4 sm:p-5" aria-labelledby="pass-mix-title">
@@ -105,11 +110,11 @@ export function MatchTacticsView({ summary, match }) {
             <PassMixBar name={match.away.name} mix={mix.away} />
           </div>
         ) : (
-          <p className="text-sm text-ink-3">Este partido se grabó antes de medir los tipos de pase.</p>
+          <p className="text-sm text-ink-3">Este partido se registró antes de medir los tipos de pase.</p>
         )}
         <p className="mt-3 text-xs text-ink-3">
-          Porcentaje de los pases de cada tipo, contados por el juego. Bloque defensivo, presión (PPDA), líneas y mapas de calor
-          necesitan la posición de cada jugador en la cancha, que todavía no se lee.
+          Porcentaje de los pases de cada tipo, contados por el juego. El bloque defensivo, las líneas y la presión todavía no se miden.
+          PPDA es la presión del equipo: los pases que deja hacer el rival antes de presionarlo.
         </p>
       </section>
     </div>

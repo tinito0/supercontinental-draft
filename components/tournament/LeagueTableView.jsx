@@ -34,11 +34,12 @@ export const LeagueTableView = memo(function LeagueTableView({
   return (
     <div className={`flex flex-col items-center w-full ${isObsMode ? 'h-full justify-start pt-8' : 'py-2'}`}>
       {/* The broadcast frame needs its own title; inside the app the page header already names it. */}
-      {isObsMode && <TournamentSectionTitle title="SUPERCONTINENTAL LEAGUE" subtitle="TABLA GENERAL DE POSICIONES" compact />}
+      {isObsMode && <TournamentSectionTitle title="SuperContinental League" subtitle="TABLA GENERAL DE POSICIONES" compact />}
       <div className={`w-full ${isObsMode ? 'max-w-[1640px] px-12 mt-1' : 'max-w-5xl px-2 sm:px-4 mt-2'}`}>
         <TournamentPanel title={`Clasificación (${clubCount} ${clubCount === 1 ? 'equipo' : 'equipos'})`} className="[&>div:last-child]:p-0">
-          <div className="overflow-x-auto custom-scrollbar -mx-2 px-2">
+          <div className="overflow-x-auto custom-scrollbar -mx-2 px-2 focus-visible:outline-2 focus-visible:outline-accent-soft" tabIndex={0} role="region" aria-label="Tabla de posiciones">
             <table className={`w-full text-left border-collapse text-sm ${isEditing || isObsMode ? 'min-w-[620px]' : 'min-w-[400px] sm:min-w-[620px]'}`}>
+              <caption className="sr-only">Clasificación de la SuperContinental League</caption>
               <thead className={`bg-raised text-ink-3 uppercase tracking-wider font-bold border-b border-line/[0.12] ${isObsMode ? 'text-sm' : 'text-xs'}`}>
                 <tr>
                   <th className="py-3 px-3 w-10 text-center">#</th>
@@ -175,8 +176,9 @@ export const LeagueTableView = memo(function LeagueTableView({
                 <span className="font-semibold text-ink-2">Puestos 9-12: Copa de Plata</span>
               </div>
             </div>
-            <div className="text-[11px] font-mono text-ink-3">
-              PG = 2 pts • GPEN = 1 pt • PP = 0 pts
+            <div className="text-[11px] text-ink-3">
+              <p>PJ partidos jugados · G ganados · GP ganados por penales · P perdidos · GF goles a favor · GC goles en contra · DG diferencia de gol · PTS puntos</p>
+              <p className="font-mono">G = 2 pts • GP = 1 pt • P = 0 pts</p>
             </div>
           </div>
         </TournamentPanel>

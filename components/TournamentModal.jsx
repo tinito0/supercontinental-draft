@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { X, Save, Edit2, Trophy, LayoutGrid, Star, CalendarDays } from 'lucide-react';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Tabs } from './ui/Tabs.jsx';
@@ -52,6 +53,7 @@ export {
 export const TournamentModal = memo(function TournamentModal({
   isVisible,
   isPage,
+  landmark = false,
   onClose,
   tournamentData,
   isAdmin,
@@ -62,6 +64,13 @@ export const TournamentModal = memo(function TournamentModal({
   allPlayers,
 }) {
   const [activeTab, setActiveTab] = useState(() => normalizeTournamentView(initialTab));
+  const [, setSearchParams] = useSearchParams();
+  // En la página pública la pestaña viaja en ?tab= (otros parámetros, como mode, se conservan).
+  const changeTab = useCallback((next) => {
+    setActiveTab(next);
+    if (!isPage) return;
+    setSearchParams(prev => { const params = new URLSearchParams(prev); params.set('tab', next); return params; }, { replace: true });
+  }, [isPage, setSearchParams]);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -378,22 +387,24 @@ export const TournamentModal = memo(function TournamentModal({
   const currentPhaseContext = useMemo(() => {
     if (activeTab === 'matches' || activeTab === 'groups') {
       const nextM = (localData?.matches || []).find(m => m.status !== 'completed');
-      if (nextM?.round) return `Fase de Liga — ${nextM.round}`;
-      return 'Fase de Liga — Temporada Regular';
+      if (nextM?.round) return `Fase de Liga · ${nextM.round}`;
+      return 'Fase de Liga · Temporada Regular';
     }
-    if (activeTab === 'bracket') return 'Fase Eliminatoria — Cuadro Principal';
+    if (activeTab === 'bracket') return 'Fase Eliminatoria · Cuadro Principal';
     if (activeTab === 'repechaje') return 'Copa de Plata · Reducidos';
-    if (activeTab === 'stats') return 'Estadísticas — Goleadores y Asistidores';
-    return 'Supercontinental League';
+    if (activeTab === 'stats') return 'Estadísticas · Goleadores y Asistidores';
+    return 'SuperContinental League';
   }, [activeTab, localData?.matches]);
 
   if (!isVisible && !isPage) return null;
 
   if (!localData) {
+    // Only the standalone /torneo page owns the <main>; the in-app tab already sits inside app.jsx's <main>.
+    const Shell = isPage && landmark ? 'main' : 'div';
     return (
-      <div className={isPage ? `w-full h-full flex flex-col items-center justify-center p-12 ${tournamentShellClass}` : `fixed inset-0 z-[100] flex flex-col items-center justify-center p-12 ${tournamentShellClass}`}>
+      <Shell className={isPage ? `w-full h-full flex flex-col items-center justify-center p-12 ${tournamentShellClass}` : `fixed inset-0 z-[100] flex flex-col items-center justify-center p-12 ${tournamentShellClass}`}>
         <Spinner size="lg" label="Cargando el torneo…" />
-      </div>
+      </Shell>
     );
   }
 
@@ -487,12 +498,12 @@ export const TournamentModal = memo(function TournamentModal({
                 <div className="flex flex-wrap items-center gap-2">
                   {isPage && isAdmin && (
                     <details className="relative">
-                      <summary className="btn btn-secondary list-none cursor-pointer [&::-webkit-details-marker]:hidden">Enlaces OBS</summary>
+                      <summary className="btn btn-secondary list-none cursor-pointer [&::-webkit-details-marker]:hidden">Links OBS</summary>
                       <div className="absolute right-0 top-full mt-2 z-dropdown panel p-2 w-56 flex flex-col">
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Tabla', 'tabla')}>Copiar enlace de la tabla</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Oro', 'bracket')}>Copiar enlace de la Copa de Oro</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Goleadores', 'goleadores')}>Copiar enlace de goleadores</button>
-                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Plata', 'repechaje')}>Copiar enlace de Copa de Plata</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Tabla', 'tabla')}>Copiar link de la tabla</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Oro', 'bracket')}>Copiar link de la Copa de Oro</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Goleadores', 'goleadores')}>Copiar link de goleadores</button>
+                        <button type="button" className="btn btn-ghost justify-start" onClick={() => copyObsUrl('Copa de Plata', 'repechaje')}>Copiar link de Copa de Plata</button>
                       </div>
                     </details>
                   )}
@@ -547,10 +558,10 @@ export const TournamentModal = memo(function TournamentModal({
               )}
               {copiedObs && (
                 <p role="status" className={`text-xs ${copiedObs.ok ? 'text-success-soft' : 'text-warning-soft'}`}>
-                  {copiedObs.ok ? `Enlace OBS de ${copiedObs.label} copiado.` : <>No se pudo copiar. Enlace: <code className="text-ink-2 break-all">{copiedObs.url}</code></>}
+                  {copiedObs.ok ? `Link OBS de ${copiedObs.label} copiado.` : <>No se pudo copiar. Link: <code className="text-ink-2 break-all">{copiedObs.url}</code></>}
                 </p>
               )}
-              <Tabs label="Secciones del torneo" value={activeTab} onChange={setActiveTab} tabs={[
+              <Tabs label="Secciones del torneo" value={activeTab} onChange={changeTab} tabs={[
                 { id: 'matches', label: 'Partidos', icon: CalendarDays, count: pendingMatchesCount || null },
                 { id: 'groups', label: 'Tabla', icon: LayoutGrid },
                 { id: 'bracket', label: 'Copa de Oro', icon: Trophy },
@@ -570,11 +581,12 @@ export const TournamentModal = memo(function TournamentModal({
   );
 
   if (isPage) {
+    const PageRoot = landmark ? 'main' : 'div';
     return (
       <TournamentTeamsContext.Provider value={teamOptions}>
-        <div className="mx-auto w-full max-w-page h-full min-h-[32rem] flex flex-col relative text-ink">
+        <PageRoot className="mx-auto w-full max-w-page h-full min-h-[32rem] flex flex-col relative text-ink">
           {content}
-        </div>
+        </PageRoot>
       </TournamentTeamsContext.Provider>
     );
   }

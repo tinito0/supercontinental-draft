@@ -113,9 +113,9 @@ export function StandingsCard({ tournament, fixtures, clubOf, loading, error = '
   return (
     <div className="panel overflow-hidden p-0">
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
-        <h3 className="section-title">
+        <h2 className="section-title">
           {!loading && rows.length && !played ? 'Clubes inscriptos' : live ? 'Tabla en vivo' : 'Tabla'}
-        </h3>
+        </h2>
         <Link to="/torneo" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink">
           Tabla completa <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Link>

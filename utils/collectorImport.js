@@ -103,7 +103,7 @@ export function planCollectorImport({ match, tournamentData, teamMap }) {
 
   if (!isCupMatch) {
     const candidates = leagueTarget(tournamentData, teams.home, teams.away);
-    if (candidates.length > 1) return { ok: false, reason: `Hay ${candidates.length} partidos sin jugar entre ${teams.home} y ${teams.away} en el fixture: cargalo a mano.` };
+    if (candidates.length > 1) return { ok: false, reason: `Hay ${candidates.length} partidos sin jugar entre ${teams.home} y ${teams.away} en el calendario: cargalo a mano.` };
     if (candidates.length === 1) {
       const [target] = candidates;
       const fields = toTournamentFields(summary, { playerName: id => playerName(summary, id), homeTeam: teams.home, awayTeam: teams.away });

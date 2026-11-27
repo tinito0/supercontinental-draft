@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, SearchX } from 'lucide-react';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
-import { Tabs } from '../../components/ui/Tabs.jsx';
+import { Tabs, tabPanelProps } from '../../components/ui/Tabs.jsx';
 import { MatchHeader, MatchTimeline } from '../../components/league/match/MatchSummaryView.jsx';
 import { MatchLineups, PlayerStatsTable } from '../../components/league/match/MatchDetailViews.jsx';
 import { StatSections, TopStats } from '../../components/league/match/MatchStatSections.jsx';
@@ -49,7 +49,7 @@ function SummaryTab({ match, views }) {
     <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start">
       <div className="contents lg:block lg:space-y-4">
         <div className="order-1"><MatchTimeline timeline={views.timeline} match={match} /></div>
-        {views.momentum && <div className="order-3"><Card title="Dominio"><MomentumChart data={views.momentum} match={match} compact /></Card></div>}
+        {views.momentum && <div className="order-3"><Card title="Dominio"><p className="mb-2 text-xs text-ink-3">Modelo propio, con pesos fijados a mano y sin calibrar. El método está en Análisis.</p><MomentumChart data={views.momentum} match={match} compact /></Card></div>}
         {views.shots.length > 0 && <div className="order-4"><Card title="Tiros"><ShotsPanel shots={views.shots} match={match} /></Card></div>}
       </div>
       <div className="contents lg:block lg:space-y-4">
@@ -82,11 +82,26 @@ export default function LeagueMatchScreen() {
 
   let content;
   if (error) {
-    content = <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
+    content = (
+      <>
+        <h1 className="sr-only">No se pudo cargar el partido</h1>
+        <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>
+      </>
+    );
   } else if (loading) {
-    content = <div className="panel h-56 skeleton" aria-busy="true" />;
+    content = (
+      <div role="status">
+        <span className="sr-only">Cargando el partido…</span>
+        <div className="panel h-56 skeleton" aria-hidden="true" />
+      </div>
+    );
   } else if (!match) {
-    content = <EmptyState icon={SearchX} title="No encontramos este partido" description="Puede que el enlace esté mal. Volvé a la lista de partidos." />;
+    content = (
+      <>
+        <h1 className="sr-only">Partido no encontrado</h1>
+        <EmptyState icon={SearchX} title="No encontramos este partido" description="Puede que el link esté mal. Volvé a la lista de partidos." />
+      </>
+    );
   } else {
     const summary = match.summary || {};
     content = (
@@ -95,37 +110,40 @@ export default function LeagueMatchScreen() {
         <Tabs
           label="Secciones del partido"
           value={tab}
-          onChange={id => setSearchParams(id === 'resumen' ? {} : { tab: id }, { replace: true })}
+          onChange={id => setSearchParams(id === 'resumen' ? {} : { tab: id })}
           tabs={TABS}
+          idPrefix="match-tabs"
         />
-        {/* The sections inside each tab are h3: this keeps the outline h1 → h2 → h3 («Jugadores» has its own h2). */}
-        {tab !== 'jugadores' && <h2 className="sr-only">{TABS.find(t => t.id === tab)?.label}</h2>}
-        {tab === 'resumen' && <SummaryTab match={match} views={views} />}
-        {tab === 'estadisticas' && (
-          <div className="space-y-8">
-            <StatSections sections={views.sections} match={match} />
-            {views.players.length > 0 && (
-              <section aria-labelledby="per-player" className="space-y-3">
-                <h2 id="per-player" className="font-display text-2xl font-bold uppercase leading-none text-ink">Por jugador</h2>
-                <PlayerStatsTable rows={views.players} match={match} />
-              </section>
-            )}
-          </div>
-        )}
-        {tab === 'alineaciones' && (
-          <div className="space-y-4">
-            <LineupPitch layout={views.pitch} match={match} />
-            <MatchCoaches match={match} teamsById={teamsById} profiles={clubProfiles} />
-            <MatchLineups lineups={views.lineups} match={match} />
-          </div>
-        )}
-        {tab === 'jugadores' && (
-          <div className="space-y-4">
-            <PlayerAnalysis rows={views.players} summary={summary} match={match} />
-          </div>
-        )}
-        {tab === 'tactica' && <MatchTacticsView summary={summary} match={match} />}
-        {tab === 'analisis' && <MatchAnalysisView summary={summary} match={match} />}
+        <div {...tabPanelProps('match-tabs', tab)} className="space-y-5">
+          {/* The sections inside each tab are h3: this keeps the outline h1 → h2 → h3 on every tab, «Jugadores» included. */}
+          <h2 className="sr-only">{TABS.find(t => t.id === tab)?.label}</h2>
+          {tab === 'resumen' && <SummaryTab match={match} views={views} />}
+          {tab === 'estadisticas' && (
+            <div className="space-y-8">
+              <StatSections sections={views.sections} match={match} />
+              {views.players.length > 0 && (
+                <section aria-labelledby="per-player" className="space-y-3">
+                  <h2 id="per-player" className="font-display text-2xl font-bold uppercase leading-none text-ink">Por jugador</h2>
+                  <PlayerStatsTable rows={views.players} match={match} />
+                </section>
+              )}
+            </div>
+          )}
+          {tab === 'alineaciones' && (
+            <div className="space-y-4">
+              <LineupPitch layout={views.pitch} match={match} />
+              <MatchCoaches match={match} teamsById={teamsById} profiles={clubProfiles} />
+              <MatchLineups lineups={views.lineups} match={match} />
+            </div>
+          )}
+          {tab === 'jugadores' && (
+            <div className="space-y-4">
+              <PlayerAnalysis rows={views.players} summary={summary} match={match} />
+            </div>
+          )}
+          {tab === 'tactica' && <MatchTacticsView summary={summary} match={match} />}
+          {tab === 'analisis' && <MatchAnalysisView summary={summary} match={match} />}
+        </div>
       </div>
     );
   }

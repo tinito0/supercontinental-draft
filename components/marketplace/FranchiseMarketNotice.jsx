@@ -13,10 +13,10 @@ export function FranchiseMarketNotice({ hasUsedFranchise, franchisePlayerName, c
       <ul className="mt-1 space-y-1 list-disc pl-4 marker:text-ink-3">
         <li>
           Por ahora solo se ficha al <strong className="font-semibold text-ink">Jugador Franquicia</strong>. El mercado
-          muestra únicamente a los elegibles: <span className="num">{FRANCHISE_MIN_AGE}</span> años o más y OVR
+          muestra únicamente a los elegibles: <span className="num">{FRANCHISE_MIN_AGE}</span> años o más y media
           entre <span className="num">{FRANCHISE_MIN_OVR}</span> y <span className="num">{FRANCHISE_MAX_OVR}</span>.
         </li>
-        <li>Cada manager elige uno por temporada y es gratis: no descuenta presupuesto.</li>
+        <li>Cada mánager elige uno por temporada y es gratis: no descuenta presupuesto.</li>
         <li>Queda fijo en tu plantel: no se puede liberar. Solo el admin puede resetear la franquicia.</li>
         <li>
           {hasUsedFranchise

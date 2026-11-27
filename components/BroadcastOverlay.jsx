@@ -27,17 +27,32 @@ export const DEFAULT_BROADCAST_OVERLAY = {
   awayScore: '0',
   matchStatus: 'EN VIVO',
   clock: '00:00',
-  competitionLabel: 'SUPERCONTINENTAL LEAGUE',
+  competitionLabel: 'SuperContinental League',
   roundLabel: '',
-  headline: 'SUPERCONTINENTAL LEAGUE',
+  headline: 'SuperContinental League',
   subheadline: 'Transmisión oficial',
-  ticker: 'Bienvenidos a la transmisión de la Supercontinental League.',
-  showScoreboard: true,
+  ticker: 'Bienvenidos a la transmisión de la SuperContinental League.',
   showLowerThird: true,
   showTicker: true,
 };
 
 const MATCH_SCENE_TITLES = { previa: 'Previa', descanso: 'Entretiempo', final: 'Final' };
+export const NO_MATCH_TEXT = 'Próximo partido a confirmar';
+
+/**
+ * The bridge match counts only while it is live, or in the Final: liveMatchKey is never cleared, so an old
+ * finished match must not make next week's Previa look linked.
+ */
+export function bridgeMatchOnAir(liveMatch, scene) {
+  if (!liveMatch?.home?.name || !liveMatch?.away?.name) return null;
+  return liveMatch.status === 'live' || scene === 'final' ? liveMatch : null;
+}
+
+/** Whether the overlay points at a match (admin pick, named club or a bridge match on air); without one the strip must not air placeholders. */
+export function hasLinkedMatch(data, onAirFixture = null, liveMatch = null) {
+  return Boolean(onAirFixture || data?.matchId || data?.homeTeamId || data?.awayTeamId || data?.homeTeamName || data?.awayTeamName
+    || bridgeMatchOnAir(liveMatch, data?.scene));
+}
 
 function teamOf(teamId, teams, fallbackName) {
   const team = teamId && teams?.[teamId] ? teams[teamId] : null;
@@ -89,7 +104,15 @@ function RankingRows({ rows, unit, getTeamLogo }) {
  * Previa, entretiempo y final: a thin strip at the top with both clubs and the result (or VS), so the commentators'
  * camera keeps the full screen. Goals, the next match and the kickoff go on the lower third (utils/obsLowerThird.js).
  */
-function MatchStrip({ scene, data, home, away, live }) {
+function MatchStrip({ scene, data, home, away, live, linked = true }) {
+  if (!linked) {
+    return (
+      <div className="scl-strip is-unlinked" data-scene={scene}>
+        <span className="scl-strip-label">{MATCH_SCENE_TITLES[scene]}</span>
+        <div className="scl-strip-pending">{NO_MATCH_TEXT}</div>
+      </div>
+    );
+  }
   const showsResult = scene === 'final' || scene === 'descanso';
   // El marcador del juego (bridge) manda; si no hay, el resultado cargado en el torneo; si no, el del admin.
   const score = live?.score || { home: data.homeScore || 0, away: data.awayScore || 0 };
@@ -141,15 +164,21 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
   const onAirFixture = fixtures.find(fixture => fixture.id === matchId) || null;
   // homeTeamName/awayTeamName vienen del partido elegido en el panel: cubren clubes del torneo sin cuenta.
   const withLogo = team => ({ ...team, logoUrl: team.logoUrl || getTeamLogo(team.name) });
-  const home = withLogo(teamOf(data.homeTeamId, allTeams, data.homeTeamName || onAirFixture?.home.name || 'LOCAL'));
-  const away = withLogo(teamOf(data.awayTeamId, allTeams, data.awayTeamName || onAirFixture?.away.name || 'VISITANTE'));
+  const bridgeMatch = bridgeMatchOnAir(liveMatch, scene);
+  const home = withLogo(teamOf(data.homeTeamId, allTeams, data.homeTeamName || onAirFixture?.home.name || bridgeMatch?.home.name || 'LOCAL'));
+  const away = withLogo(teamOf(data.awayTeamId, allTeams, data.awayTeamName || onAirFixture?.away.name || bridgeMatch?.away.name || 'VISITANTE'));
 
   const showChrome = scene !== 'live' && !FULLSCREEN_SCENES.has(scene);
   // Previa, entretiempo and final write their own lower third from the match (utils/obsLowerThird.js); the admin's
   // headline and subheadline stay for the other scenes.
   const next = useMemo(() => nextFixture(fixtures, matchId), [fixtures, matchId]);
   const liveScore = live?.score || onAirFixture?.score || null;
-  const lower = sceneLowerThird({ scene, home: home.name, away: away.name, score: liveScore, fixture: onAirFixture, scorers: live?.scorers, next })
+  // The Final may come from the bridge alone (game score, no admin pick); the other scenes need a live or chosen match.
+  const linked = hasLinkedMatch({ ...data, scene }, onAirFixture, liveMatch) || Boolean(scene === 'final' && live?.score);
+  // Unlinked: only the Final keeps its «Siguiente partido» (it comes from the fixtures, not from the placeholders).
+  const lower = (linked || (scene === 'final' && next)
+    ? sceneLowerThird({ scene, home: home.name, away: away.name, score: liveScore, fixture: onAirFixture, scorers: live?.scorers, next })
+    : MATCH_SCENES.has(scene) ? { headline: NO_MATCH_TEXT, subheadline: '' } : null)
     || { headline: data.headline, subheadline: data.subheadline };
   // La tarjeta va del lado contrario al popup cuando el popup está a la izquierda (antes se pisaban).
   const cardSide = data.popup?.visible && data.popup?.position === 'left' ? 'right' : 'left';
@@ -157,7 +186,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
   let content = null;
   if (MATCH_SCENES.has(scene)) {
     const withScore = live?.score ? live : { ...live, score: onAirFixture?.score || null };
-    content = <MatchStrip scene={scene} data={data} home={home} away={away} live={withScore?.score ? withScore : live} />;
+    content = <MatchStrip scene={scene} data={data} home={home} away={away} live={withScore?.score ? withScore : live} linked={linked} />;
   }
   else if (scene === 'tabla') content = <BroadcastLeagueTable league={tournamentData?.league} fixtures={fixtures} getTeamLogo={getTeamLogo} />;
   else if (scene === 'bracket' || scene === 'repechaje') {
@@ -172,7 +201,7 @@ export const BroadcastOverlay = memo(function BroadcastOverlay({ overlayData, al
   }
 
   return (
-    <div className="broadcast-overlay-root" data-scene={scene} aria-label="SCL OBS overlay">
+    <div className="broadcast-overlay-root" data-scene={scene} role="region" aria-label="SCL OBS overlay">
       <OverlayErrorBoundary name={`escena ${scene}`} resetKey={tournamentData}>
         {/* Keyed by scene only: the old scene leaves and the new one enters on a scene change, not with every update. */}
         <SceneSwitch sceneKey={scene}>{content}</SceneSwitch>

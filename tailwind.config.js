@@ -36,6 +36,8 @@ export default {
         success: { DEFAULT: token('success'), soft: token('success-soft') },
         warning: { DEFAULT: token('warning'), soft: token('warning-soft') },
         danger: { DEFAULT: token('danger'), soft: token('danger-soft') },
+        // The game's grass (components/Pitch.jsx); the stripes use the --c-pitch-light/-dark channels directly.
+        pitch: token('pitch'),
       },
       fontFamily: {
         sans: ['Barlow', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],

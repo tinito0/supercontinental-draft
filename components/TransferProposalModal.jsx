@@ -7,6 +7,7 @@ import { db } from '../config/firebase.js';
 import { APP_ID, DEFAULT_LOGO, MAX_TRANSFER_MULTIPLIER, TRANSFER_FEE_RATE } from '../utils/constants.js';
 import { transferSplit } from '../supabase/functions/_shared/transferFee.js';
 import { playerPlaceholder } from '../utils/playerPlaceholder.js';
+import { formatPriceShort } from '../utils/helpers.js';
 
 export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamName, targetTeamId, senderId, senderTeamName, senderTeamLogo, remainingBudget }) => {
   const [offerAmount, setOfferAmount] = useState('');
@@ -33,24 +34,24 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
     }
 
     if (!offerAmount || isNaN(offerAmount) || offerAmount <= 0) {
-      setError('Por favor, ingresa un monto válido.');
+      setError('Escribí un monto válido.');
       return;
     }
     
     if (Number(offerAmount) < player.Precio) {
-      setError(`La oferta debe ser al menos el valor base del jugador ($${(player.Precio).toFixed(2)}M).`);
+      setError(`La oferta debe ser al menos el valor base del jugador (${formatPriceShort(player.Precio)}).`);
       return;
     }
 
     const maxOfferAmount = Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100;
     if (Number(offerAmount) > maxOfferAmount) {
-      setError(`La oferta no puede superar el límite máximo de $${maxOfferAmount.toFixed(2)}M (115% del valor base).`);
+      setError(`La oferta no puede superar el límite máximo de ${formatPriceShort(maxOfferAmount)} (115% del valor base).`);
       return;
     }
 
     const numericOffer = Math.round(Number(offerAmount) * 1000000);
     if (remainingBudget !== undefined && numericOffer > remainingBudget) {
-      setError(`No te alcanza el presupuesto: tenés $${((remainingBudget || 0) / 1000000).toFixed(2)}M disponibles.`);
+      setError(`No te alcanza el presupuesto: tenés ${formatPriceShort((remainingBudget || 0) / 1000000)} disponibles.`);
       return;
     }
     
@@ -191,16 +192,16 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-3 font-bold text-xs">M</span>
               </div>
               <div className="flex items-center justify-between mt-1.5 text-[11px] text-ink-3">
-                <span>Máximo: ${(Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100).toFixed(2)}M</span>
+                <span>Máximo: {formatPriceShort(Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100)}</span>
                 {remainingBudget !== undefined && (
                   <span className="font-semibold text-accent-soft">
-                    Disponible: ${((remainingBudget || 0) / 1000000).toFixed(2)}M
+                    Disponible: {formatPriceShort((remainingBudget || 0) / 1000000)}
                   </span>
                 )}
               </div>
               <p className="mt-1 text-xs text-ink-3">
                 {offerSplit
-                  ? <>El vendedor recibe <span className="num font-semibold text-ink-2">${(offerSplit.sellerNet / 1000000).toFixed(2)}M</span>; la liga se queda con <span className="num">${(offerSplit.fee / 1000000).toFixed(2)}M</span>, el {Math.round(TRANSFER_FEE_RATE * 100)}% de lo que pagás por encima del valor base.</>
+                  ? <>El vendedor recibe <span className="num font-semibold text-ink-2">{formatPriceShort(offerSplit.sellerNet / 1000000)}</span>; la liga se queda con <span className="num">{formatPriceShort(offerSplit.fee / 1000000)}</span>, el {Math.round(TRANSFER_FEE_RATE * 100)}% de lo que pagás por encima del valor base.</>
                   : <>La liga cobra el {Math.round(TRANSFER_FEE_RATE * 100)}% solo de lo que se pague por encima del valor base; el vendedor siempre se queda con el valor base completo.</>}
               </p>
             </div>

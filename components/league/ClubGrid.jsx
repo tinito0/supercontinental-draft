@@ -54,7 +54,7 @@ export function ClubGrid({ teams, loading, error, profiles = null, franchise = n
                 className="h-14 w-14 shrink-0 object-contain"
               />
               <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 font-display text-xl font-bold uppercase leading-tight text-ink">{team.teamName}</span>
+                <span className="line-clamp-2 font-display text-xl font-bold leading-tight text-ink">{team.teamName}</span>
                 {profile?.nickname && <span className="block truncate text-sm font-medium text-accent-soft">«{profile.nickname}»</span>}
                 {details.map(({ icon: Icon, text, label }) => (
                   <span key={label} className="mt-1 flex items-center gap-1.5 text-sm text-ink-2">

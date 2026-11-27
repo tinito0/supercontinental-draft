@@ -45,7 +45,7 @@ export function candidateCheck(appPlayer) {
   if (!appPlayer) return { eligible: false, reason: 'No está en el mercado (jugadores.json).' };
   const original = { Age: appPlayer.Age, OVR_CALCULADO: originalOvrOf(appPlayer) };
   if (!isYouthDraftEligible(original)) {
-    return { eligible: false, reason: `Tiene ${appPlayer.Age} años y OVR ${original.OVR_CALCULADO} en el juego original.` };
+    return { eligible: false, reason: `Tiene ${appPlayer.Age} años y media ${original.OVR_CALCULADO} en el juego original.` };
   }
   return { eligible: true, reason: '' };
 }

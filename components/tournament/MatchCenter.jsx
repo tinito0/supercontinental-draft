@@ -65,7 +65,7 @@ export const MatchCenter = memo(function MatchCenter({
 
   const groupedByRound = useMemo(() => {
     return filteredMatches.reduce((acc, m) => {
-      const r = m.round || 'Jornada Regular';
+      const r = m.round || 'Fecha regular';
       if (!acc[r]) acc[r] = [];
       acc[r].push(m);
       return acc;
@@ -79,13 +79,14 @@ export const MatchCenter = memo(function MatchCenter({
       {/* Selector de Jornadas estilo SofaScore (no en OBS: ahí nadie puede tocarlo) */}
       {!isObsMode && (
       <div className="flex items-center justify-between gap-3 mt-4 mb-5 flex-wrap">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full custom-scrollbar -mx-2 px-2">
+        <div tabIndex={0} role="region" aria-label="Fechas" className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full custom-scrollbar -mx-2 px-2 focus-visible:outline-2 focus-visible:outline-accent-soft">
           <button
             type="button"
             onClick={() => setSelectedRound('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+            aria-pressed={selectedRound === 'all'}
+            className={`min-h-11 px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
               selectedRound === 'all'
-                ? 'bg-accent text-black shadow-sm'
+                ? 'bg-accent text-on-accent shadow-sm'
                 : 'bg-raised text-ink-3 hover:text-ink border border-line/[0.12]'
             }`}
           >
@@ -96,9 +97,10 @@ export const MatchCenter = memo(function MatchCenter({
               key={round}
               type="button"
               onClick={() => setSelectedRound(round)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              aria-pressed={selectedRound === round}
+              className={`min-h-11 px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                 selectedRound === round
-                  ? 'bg-accent text-black shadow-sm'
+                  ? 'bg-accent text-on-accent shadow-sm'
                   : 'bg-raised text-ink-3 hover:text-ink border border-line/[0.12]'
               }`}
             >
@@ -233,7 +235,7 @@ export const MatchCenter = memo(function MatchCenter({
                               />
                             ) : (
                               <span
-                                className={`text-xs sm:text-sm truncate tracking-wide ${
+                                className={`text-xs sm:text-sm line-clamp-2 break-words leading-tight tracking-wide ${
                                   homeWon ? 'font-bold text-ink' : 'font-medium text-ink-2'
                                 }`}
                               >
@@ -283,7 +285,7 @@ export const MatchCenter = memo(function MatchCenter({
                               />
                             ) : (
                               <span
-                                className={`text-xs sm:text-sm truncate tracking-wide ${
+                                className={`text-xs sm:text-sm line-clamp-2 break-words leading-tight tracking-wide ${
                                   awayWon ? 'font-bold text-ink' : 'font-medium text-ink-2'
                                 }`}
                               >
@@ -382,7 +384,7 @@ export const MatchCenter = memo(function MatchCenter({
                       {isEditing && (
                         <div className="mt-3 pt-3 border-t border-line/[0.12] grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Fecha</label>
+                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Día del partido</label>
                             <input
                               type="date"
                               value={match.date || ''}
@@ -400,7 +402,7 @@ export const MatchCenter = memo(function MatchCenter({
                             />
                           </div>
                           <div>
-                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Jornada</label>
+                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Fecha</label>
                             <input
                               type="text"
                               value={match.round || ''}

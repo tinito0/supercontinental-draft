@@ -326,7 +326,7 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
         {/* Footer */}
         <div className="shrink-0 px-4 py-3 bg-surface/40 border-t border-line/20 text-center pb-[max(12px,env(safe-area-inset-bottom))]">
           <p className="text-[11px] text-ink-3 font-medium">
-            Supercontinental League • Mercado Oficial
+            SuperContinental League • Mercado Oficial
           </p>
         </div>
       </div>

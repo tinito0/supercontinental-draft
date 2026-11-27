@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 // OBS browser sources expose window.obsstudio; switching scenes needs the source's «Page permissions» set to
 // «Advanced access to OBS» (control level 4) or more.
 const ADVANCED_ACCESS = 4;
+// While the permission is missing, check again: the operator grants it in OBS and the text must go away.
+const PERMISSION_RECHECK_MS = 5000;
 
 /**
  * Switches the real OBS scene when the overlay scene changes (the remote control source, ?control=obs). Only on
@@ -13,6 +15,7 @@ const ADVANCED_ACCESS = 4;
 export function useObsSceneControl(target) {
   const [status, setStatus] = useState(() => (typeof window !== 'undefined' && window.obsstudio ? 'ready' : 'no-obs'));
   const applied = useRef(null);
+  const [recheck, setRecheck] = useState(0);
   useEffect(() => {
     const obs = typeof window !== 'undefined' ? window.obsstudio : null;
     if (!obs || !target || applied.current === target) return;
@@ -26,6 +29,19 @@ export function useObsSceneControl(target) {
       if (level < ADVANCED_ACCESS) { applied.current = null; setStatus('no-permission'); return; }
       apply();
     });
-  }, [target]);
+  }, [target, recheck]);
+
+  useEffect(() => {
+    if (status !== 'no-permission') return undefined;
+    const retry = () => {
+      if (typeof document === 'undefined' || document.visibilityState !== 'hidden') setRecheck(count => count + 1);
+    };
+    const timer = setInterval(retry, PERMISSION_RECHECK_MS);
+    document.addEventListener('visibilitychange', retry);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', retry);
+    };
+  }, [status]);
   return status;
 }

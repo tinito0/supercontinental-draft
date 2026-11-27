@@ -17,7 +17,7 @@ export function LiveScore({ home, away, className = '' }) {
   const first = useRef({ home, away });
   return (
     <p className={`num font-display font-bold leading-none text-ink ${className}`}>
-      <span className="sr-only">{home} a {away}</span>
+      <span className="sr-only" aria-live="polite" aria-atomic="true">{home} a {away}</span>
       <span aria-hidden="true">
         <Digit value={home} initial={first.current.home} />
         <span className="mx-1.5 text-ink-3">-</span>

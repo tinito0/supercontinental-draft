@@ -16,7 +16,7 @@ export const InstallPopup = memo(({ isVisible, onInstall, onClose }) => {
         <img src="/logo.webp" alt="" width={56} height={56} className="w-14 h-14 mx-auto object-contain" />
         <h2 id="install-title" className="font-display text-2xl font-bold text-ink mt-4">Instalá la app</h2>
         <p className="text-sm text-ink-2 mt-2 leading-relaxed">
-          Sumá Supercontinental a tu pantalla de inicio: se abre a pantalla completa, sin la barra del navegador.
+          Sumá SuperContinental a tu pantalla de inicio: se abre a pantalla completa, sin la barra del navegador.
         </p>
         <div className="mt-6 space-y-2">
           <button type="button" onClick={onInstall} className="btn btn-primary btn-lg w-full">

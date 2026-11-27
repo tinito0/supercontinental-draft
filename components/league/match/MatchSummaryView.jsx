@@ -20,7 +20,8 @@ function scorersOf(timeline, side) {
     .map(event => `${event.player} ${event.minute}${event.penalty ? ' (p)' : ''}${event.ownGoal ? ' (e.c.)' : ''}`);
 }
 
-export function MatchHeader({ match, timeline, teamsById }) {
+/** `as`: h1 on the match page; h2 when embedded in another page that already has its own h1 (/en-vivo). */
+export function MatchHeader({ match, timeline, teamsById, as: Heading = 'h1' }) {
   // Fecha corta en 24 h, para que entre en una línea en el teléfono.
   const date = match.startedAt
     ? new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(match.startedAt)
@@ -36,7 +37,7 @@ export function MatchHeader({ match, timeline, teamsById }) {
   );
   return (
     <header className="panel p-5 sm:p-6">
-      <h1 className="sr-only">{match.home.name} {match.home.score}-{match.away.score} {match.away.name}</h1>
+      <Heading className="sr-only">{match.home.name} {match.home.score}-{match.away.score} {match.away.name}</Heading>
       <p className="eyebrow text-center first-letter:uppercase">{match.competition} · {date}</p>
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 sm:gap-6">
         {team('home', '')}
@@ -101,17 +102,19 @@ export function MatchTimeline({ timeline, match }) {
     }
     period = eventPeriod;
     const isHome = event.side === 'home';
+    // The team is in the text, not only in the column (WCAG 1.4.1 / 1.3.1).
+    const teamName = <span className="sr-only">{match[event.side]?.name}: </span>;
     rows.push(
       <li key={index} className="grid grid-cols-[minmax(0,1fr)_3.5rem_minmax(0,1fr)] items-center gap-2 py-2.5">
         <div className={`flex items-center gap-2 justify-end text-right ${isHome ? '' : 'invisible'}`}>
-          {isHome && <><div className="min-w-0 text-sm">{<EventBody event={event} />}</div><EventIcon event={event} /></>}
+          {isHome && <><div className="min-w-0 text-sm">{teamName}<EventBody event={event} /></div><EventIcon event={event} /></>}
         </div>
         <div className="text-center">
           <span className="num font-display text-sm font-semibold text-ink-2">{event.minute}</span>
           {event.score && <span className="block num text-xs font-semibold text-ink">{event.score}</span>}
         </div>
         <div className={`flex items-center gap-2 text-left ${isHome ? 'invisible' : ''}`}>
-          {!isHome && <><EventIcon event={event} /><div className="min-w-0 text-sm">{<EventBody event={event} />}</div></>}
+          {!isHome && <><EventIcon event={event} /><div className="min-w-0 text-sm">{teamName}<EventBody event={event} /></div></>}
         </div>
       </li>,
     );

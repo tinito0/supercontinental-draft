@@ -25,7 +25,7 @@ function Tie({ match, clubOf }) {
     <div className="flex min-w-0 items-center gap-2">
       <LeagueCrest name={name} club={clubOf(name)} size="sm" />
       <span className={`min-w-0 flex-1 truncate text-sm ${winner === side ? 'font-semibold text-ink' : winner ? 'text-ink-3' : 'text-ink-2'}`}>{name || 'A definir'}</span>
-      {pens != null && <span className={`num text-sm ${winner === side ? 'font-semibold text-ink' : 'text-ink-2'}`} aria-label={`${pens} en los penales`}>({pens})</span>}
+      {pens != null && <span className={`num text-sm ${winner === side ? 'font-semibold text-ink' : 'text-ink-2'}`} >({pens})<span className="sr-only"> en los penales</span></span>}
       <span className="num font-display text-base text-ink">{isMatchCompleted(match) ? Number(score) : ''}</span>
     </div>
   );
@@ -51,7 +51,7 @@ export function CupsCard({ tournament, clubOf }) {
   return (
     <div className="panel space-y-5 p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="section-title">Copas</h3>
+        <h2 className="section-title">Copas</h2>
         <Link to="/torneo?tab=bracket" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink">
           Ver cuadros <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Link>
@@ -67,7 +67,7 @@ export function CupsCard({ tournament, clubOf }) {
               <LeagueCrest name={summary.champion} club={clubOf(summary.champion)} size="lg" />
               <div>
                 <p className="text-xs text-ink-3">{cup.championLabel}</p>
-                <p className="font-display text-2xl font-bold uppercase leading-tight text-ink">{summary.champion}</p>
+                <p className="font-display text-2xl font-bold leading-tight text-ink">{summary.champion}</p>
               </div>
             </div>
           ) : (

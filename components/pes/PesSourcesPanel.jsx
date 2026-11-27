@@ -82,7 +82,7 @@ function Pickers({ onFiles, disabled }) {
 export function PesSourcesPanel({ pes }) {
   const { caps, workspaces, activeId, wsDoc, missing } = pes;
   const [pending, setPending] = useState([]);
-  const [name, setName] = useState('Liga Supercontinental');
+  const [name, setName] = useState('Liga SuperContinental');
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [league, setLeague] = useState('');

@@ -40,7 +40,7 @@ describe('percent and formatStat', () => {
 
   it('formats counts, ratios and missing values', () => {
     expect(formatStat(5)).toBe('5');
-    expect(formatStat({ made: 44, total: 54, pct: 81 })).toBe('44/54 (81 %)');
+    expect(formatStat({ made: 44, total: 54, pct: 81 })).toBe('44/54 (81%)');
     expect(formatStat({ made: 0, total: 0, pct: null })).toBe('0/0');
     expect(formatStat(null)).toBe('—');
   });
@@ -54,7 +54,7 @@ describe('statSections', () => {
     expect(sections.map(s => s.id)).toEqual(['principales', 'tiros', 'pases', 'defensa', 'duelos', 'disciplina']);
     expect(row('tiros', 'shotsOffTarget').home).toBe(2);
     expect(row('pases', 'passAccuracy').home).toEqual({ made: 60, total: 80, pct: 75 });
-    expect(row('pases', 'longPasses').display.home).toBe('8/15 (53 %)');
+    expect(row('pases', 'longPasses').display.home).toBe('8/15 (53%)');
     expect(row('duelos', 'duels').home).toEqual({ made: 2, total: 5, pct: 40 });
   });
 
@@ -82,7 +82,7 @@ describe('statSections', () => {
 
   it('puts possession first when the collector measured it, and leaves it out when it is unknown', () => {
     const withPossession = statSections({ ...summary, possession: { home: 46, away: 54, counters: { home: 6536, away: 7553 } } });
-    expect(withPossession[0].rows[0]).toMatchObject({ key: 'possession', display: { home: '46 %', away: '54 %' } });
+    expect(withPossession[0].rows[0]).toMatchObject({ key: 'possession', display: { home: '46%', away: '54%' } });
     expect(sections.flatMap(s => s.rows).some(r => r.key === 'possession')).toBe(false);
   });
 });

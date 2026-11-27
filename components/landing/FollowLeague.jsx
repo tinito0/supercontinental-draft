@@ -13,7 +13,7 @@ export function SocialLinks({ className = '' }) {
           <a
             href={s.url}
             {...external}
-            aria-label={`${LEAGUE_NAME} en ${s.name}`}
+            aria-label={`${LEAGUE_NAME} en ${s.name} (se abre en otra pestaña)`}
             title={s.name}
             className="grid h-11 w-11 place-items-center rounded-lg border border-line/[0.16] bg-raised transition-colors hover:border-line/30 hover:bg-overlay"
           >
@@ -49,7 +49,7 @@ export function FollowLeague() {
         <div className="flex flex-1 items-center justify-between gap-4 p-4 sm:p-5">
           <div>
             <p className="font-display text-2xl font-bold uppercase leading-tight text-ink">{FEATURED_VIDEO.title}</p>
-            <p className="text-sm text-ink-2">Mirala completa en YouTube</p>
+            <p className="text-sm text-ink-2">Mirala completa en YouTube<span className="sr-only"> (se abre en otra pestaña)</span></p>
           </div>
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent text-on-accent transition-colors group-hover:bg-accent-hover" aria-hidden="true">
             <Play className="h-5 w-5 translate-x-px" fill="currentColor" />
@@ -69,7 +69,7 @@ export function FollowLeague() {
           </div>
           <div>
             <p className="font-display text-2xl font-bold uppercase text-ink">Partidos en vivo</p>
-            <p className="text-sm text-ink-2">Los streams de la liga, en {STREAM_CHANNEL.handle}</p>
+            <p className="text-sm text-ink-2">Los streams de la liga, en {STREAM_CHANNEL.handle}<span className="sr-only"> (se abre en otra pestaña)</span></p>
           </div>
         </a>
 

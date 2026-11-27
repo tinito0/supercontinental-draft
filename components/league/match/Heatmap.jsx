@@ -36,6 +36,9 @@ function palette() {
 
 const PALETTE = typeof Uint8ClampedArray === 'undefined' ? null : palette();
 
+// Legend bar: the same ramp as the canvas, from the least («menos») to the most («más») visits.
+const LEGEND_GRADIENT = `linear-gradient(to right, ${STOPS.map(([at, [r, g, b]]) => `rgb(${r}, ${g}, ${b}) ${at * 100}%`).join(', ')})`;
+
 function draw(canvas, cells, cols, rows) {
   const ctx = canvas.getContext('2d');
   if (!ctx || !PALETTE) return;
@@ -79,13 +82,20 @@ export function Heatmap({ cells, cols, rows, label, className = '' }) {
   return (
     <figure className={`m-0 ${className}`}>
       <div className="relative aspect-[105/68] w-full overflow-hidden rounded-xl border border-line/15 bg-canvas">
-        <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} className="absolute inset-0 h-full w-full" role="img" aria-label={label} />
+        <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} className="absolute inset-0 h-full w-full" role="img"
+          aria-label={`${label}. A la izquierda, el arco propio; a la derecha, hacia donde ataca. Rojo: zonas donde más veces estuvo; verde: donde menos.`} />
         <PitchLines vertical={false} className="stroke-ink/30" />
       </div>
       <figcaption className="mt-1 flex justify-between text-xs text-ink-3">
         <span>Arco propio</span>
         <span>Ataca hacia acá</span>
       </figcaption>
+      <div className="mt-2 flex items-center gap-2 text-xs text-ink-3">
+        <span>menos</span>
+        <span className="h-2 flex-1 rounded-full" style={{ background: LEGEND_GRADIENT }} aria-hidden="true" />
+        <span>más</span>
+        <span className="sr-only">Intensidad: cuántas veces el juego ubicó al equipo o jugador en cada zona.</span>
+      </div>
     </figure>
   );
 }

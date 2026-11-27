@@ -1,17 +1,69 @@
 import { useEffect, useMemo, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import { db } from '../config/firebase.js';
+import { db } from '../config/firebaseCore.js';
 import { APP_ID } from '../utils/constants.js';
 import { isTeamApproved } from '../supabase/functions/_shared/membership.js';
 import { LEAGUE_CONTENT_COLLECTION } from '../utils/leagueContent.js';
 import { parseMatchDoc } from '../utils/matchCenter.js';
-import { franchiseByTeam } from '../utils/franchisePlayers.js';
+import { franchiseByTeam, franchiseIdsOf } from '../utils/franchisePlayers.js';
+import { OFFLINE_MESSAGE } from '../utils/leagueDataErrors.js';
+import { retryDelay } from '../utils/retryDelay.js';
 // The market catalog (id → price, age, OVR, name, position): ~0.4 MB gzipped against 2.3 MB for the full one.
 import marketCatalogUrl from '../supabase/functions/_shared/catalog.json?url';
 
 /* Live, public data for the league site (screens/league/). Both paths are public-read in firestore.rules. */
 
+const FRANCHISE_INDEX_URL = '/franchise-index.json';
+
 const sortByName = (a, b) => String(a.teamName || '').localeCompare(String(b.teamName || ''), 'es');
+
+/** How long a listener may stay silent before the page says the connection is the problem. */
+export const OFFLINE_TIMEOUT_MS = 10000;
+export { OFFLINE_MESSAGE };
+
+/** A snapshot served from the local cache that has nothing in it: Firestore has not heard from the server yet. */
+function isUnansweredCacheSnapshot(snap) {
+  if (!snap?.metadata?.fromCache) return false;
+  if (typeof snap.exists === 'function') return !snap.exists();
+  return snap.empty === true;
+}
+
+/**
+ * Wraps an onSnapshot subscription so the page never waits forever. Offline with an empty cache Firestore either
+ * stays silent or answers from the cache with nothing: neither is data, so `onOffline` fires after
+ * OFFLINE_TIMEOUT_MS. A later real snapshot still reaches `onData` (which should clear the error).
+ * @param {(next: Function, error: Function) => Function} subscribe receives the guarded callbacks, returns the unsubscribe
+ * @param {{ onData: Function, onError: Function, onOffline: Function }} handlers
+ * @returns {() => void} cleanup
+ */
+export function listenWithOfflineGuard(subscribe, { onData, onError, onOffline }) {
+  let answered = false;
+  const timer = setTimeout(() => { if (!answered) onOffline(); }, OFFLINE_TIMEOUT_MS);
+  const unsubscribe = subscribe(
+    (snap) => {
+      if (isUnansweredCacheSnapshot(snap)) return;
+      answered = true;
+      clearTimeout(timer);
+      onData(snap);
+    },
+    (err) => {
+      answered = true;
+      clearTimeout(timer);
+      onError(err);
+    },
+  );
+  return () => {
+    clearTimeout(timer);
+    unsubscribe();
+  };
+}
+
+/** Offline state for a hook's `setState`: stops the skeletons and says why, keeping whatever data it had. */
+/* Without metadata changes Firestore never reports the server confirming an empty result it already had from
+   the cache, so the guard would wait for an answer that never comes (useFirebaseData.js does the same). */
+const METADATA = { includeMetadataChanges: true };
+
+const offlineState = prev => ({ ...prev, loading: false, error: OFFLINE_MESSAGE });
 
 /**
  * The league's clubs: every approved draft team, by name.
@@ -20,18 +72,21 @@ const sortByName = (a, b) => String(a.teamName || '').localeCompare(String(b.tea
 export function useLeagueTeams() {
   const [state, setState] = useState({ teams: [], loading: true, error: '' });
 
-  useEffect(() => onSnapshot(
-    collection(db, `artifacts/${APP_ID}/public/data/teams`),
-    (snap) => {
-      const teams = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(team => isTeamApproved(team) && String(team.teamName || '').trim())
-        .sort(sortByName);
-      setState({ teams, loading: false, error: '' });
-    },
-    (err) => {
-      console.error('[useLeagueTeams]', err);
-      setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar los equipos.' }));
+  useEffect(() => listenWithOfflineGuard(
+    (next, error) => onSnapshot(collection(db, `artifacts/${APP_ID}/public/data/teams`), METADATA, next, error),
+    {
+      onData: (snap) => {
+        const teams = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(team => isTeamApproved(team) && String(team.teamName || '').trim())
+          .sort(sortByName);
+        setState({ teams, loading: false, error: '' });
+      },
+      onError: (err) => {
+        console.error('[useLeagueTeams]', err);
+        setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar los equipos.' }));
+      },
+      onOffline: () => setState(offlineState),
     },
   ), []);
 
@@ -79,12 +134,15 @@ export function useLeagueContent(docId) {
 export function useTournament() {
   const [state, setState] = useState({ tournament: null, loading: true, error: '' });
 
-  useEffect(() => onSnapshot(
-    doc(db, `artifacts/${APP_ID}/public/data/tournament/official`),
-    (snap) => setState({ tournament: snap.exists() ? snap.data() : null, loading: false, error: '' }),
-    (err) => {
-      console.error('[useTournament]', err);
-      setState(prev => ({ ...prev, loading: false, error: 'No se pudo cargar el torneo.' }));
+  useEffect(() => listenWithOfflineGuard(
+    (next, error) => onSnapshot(doc(db, `artifacts/${APP_ID}/public/data/tournament/official`), METADATA, next, error),
+    {
+      onData: snap => setState({ tournament: snap.exists() ? snap.data() : null, loading: false, error: '' }),
+      onError: (err) => {
+        console.error('[useTournament]', err);
+        setState(prev => ({ ...prev, loading: false, error: 'No se pudo cargar el torneo.' }));
+      },
+      onOffline: () => setState(offlineState),
     },
   ), []);
 
@@ -142,24 +200,37 @@ export function useLiveMatch(matchKey) {
 /**
  * Un doc público en vivo (overlay, predicción o votos del MVP); null si no existe o si no hay path.
  * El estado recuerda de qué path es: al cambiar de partido no se muestran los datos del anterior mientras llega el nuevo.
+ * Un error de lectura no es definitivo: se vuelve a suscribir con espera creciente (2 s … 30 s) y conserva los últimos
+ * datos mientras tanto.
  */
 function usePublicDoc(path, label) {
   const [state, setState] = useState({ path, data: null, loading: Boolean(path), error: '' });
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => { setAttempt(0); }, [path]);
   useEffect(() => {
     if (!path) {
       setState({ path, data: null, loading: false, error: '' });
       return undefined;
     }
-    setState({ path, data: null, loading: true, error: '' });
-    return onSnapshot(
+    setState(prev => (prev.path === path ? prev : { path, data: null, loading: true, error: '' }));
+    let retryTimer = null;
+    const unsubscribe = onSnapshot(
       doc(db, path),
-      (snap) => setState({ path, data: snap.exists() ? snap.data() : null, loading: false, error: '' }),
+      (snap) => {
+        setAttempt(0);
+        setState({ path, data: snap.exists() ? snap.data() : null, loading: false, error: '' });
+      },
       (err) => {
         console.error(`[${label}]`, err);
-        setState({ path, data: null, loading: false, error: 'No se pudo cargar.' });
+        setState(prev => ({ path, data: prev.path === path ? prev.data : null, loading: false, error: 'No se pudo cargar.' }));
+        retryTimer = setTimeout(() => setAttempt(n => n + 1), retryDelay(attempt + 1));
       },
     );
-  }, [path, label]);
+    return () => {
+      clearTimeout(retryTimer);
+      unsubscribe();
+    };
+  }, [path, label, attempt]);
   return state.path === path ? state : { path, data: null, loading: Boolean(path), error: '' };
 }
 
@@ -197,16 +268,19 @@ export const usePoll = pollId => usePublicDoc(pollId ? `${PUBLIC_DATA}/polls/${p
 /** Fichas de todos los clubes (league_content/club-{teamId}.profile), por teamId: la página Equipos muestra estadio y mánager. */
 export function useClubProfiles() {
   const [state, setState] = useState({ byTeamId: {}, loading: true, error: '' });
-  useEffect(() => onSnapshot(
-    collection(db, `${PUBLIC_DATA}/${LEAGUE_CONTENT_COLLECTION}`),
-    (snap) => setState({
-      byTeamId: Object.fromEntries(snap.docs.filter(d => d.id.startsWith('club-') && d.data()?.profile).map(d => [d.id.slice('club-'.length), d.data().profile])),
-      loading: false,
-      error: '',
-    }),
-    (err) => {
-      console.error('[useClubProfiles]', err);
-      setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar las fichas de los clubes.' }));
+  useEffect(() => listenWithOfflineGuard(
+    (next, error) => onSnapshot(collection(db, `${PUBLIC_DATA}/${LEAGUE_CONTENT_COLLECTION}`), METADATA, next, error),
+    {
+      onData: snap => setState({
+        byTeamId: Object.fromEntries(snap.docs.filter(d => d.id.startsWith('club-') && d.data()?.profile).map(d => [d.id.slice('club-'.length), d.data().profile])),
+        loading: false,
+        error: '',
+      }),
+      onError: (err) => {
+        console.error('[useClubProfiles]', err);
+        setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar las fichas de los clubes.' }));
+      },
+      onOffline: () => setState(offlineState),
     },
   ), []);
   return state;
@@ -227,6 +301,23 @@ export function useMatchLines() {
     },
   ), []);
   return state;
+}
+
+let franchiseIndexPromise = null;
+/** Small subset of the catalog with the possible franchise players, built by scripts/build-franchise-index.mjs. */
+export function loadFranchiseIndex() {
+  if (!franchiseIndexPromise) {
+    franchiseIndexPromise = fetch(FRANCHISE_INDEX_URL)
+      .then(response => {
+        if (!response.ok) throw new Error(`Índice de franquicias no disponible (${response.status})`);
+        return response.json();
+      })
+      .catch(err => {
+        franchiseIndexPromise = null;
+        throw err;
+      });
+  }
+  return franchiseIndexPromise;
 }
 
 let marketCatalogPromise = null;
@@ -254,24 +345,36 @@ export function useFranchisePlayers() {
   const [state, setState] = useState({ locks: [], loading: true, error: '' });
   const [catalog, setCatalog] = useState(null);
 
-  useEffect(() => onSnapshot(
-    query(collection(db, `${PUBLIC_DATA}/player_locks`), where('isFranchise', '==', true)),
-    (snap) => setState({ locks: snap.docs.map(d => ({ id: d.id, ...d.data() })), loading: false, error: '' }),
-    (err) => {
-      console.error('[useFranchisePlayers]', err);
-      setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar los jugadores franquicia.' }));
+  useEffect(() => listenWithOfflineGuard(
+    (next, error) => onSnapshot(query(collection(db, `${PUBLIC_DATA}/player_locks`), where('isFranchise', '==', true)), METADATA, next, error),
+    {
+      onData: snap => setState({ locks: snap.docs.map(d => ({ id: d.id, ...d.data() })), loading: false, error: '' }),
+      onError: (err) => {
+        console.error('[useFranchisePlayers]', err);
+        setState(prev => ({ ...prev, loading: false, error: 'No se pudieron cargar los jugadores franquicia.' }));
+      },
+      onOffline: () => setState(offlineState),
     },
   ), []);
 
-  const hasLocks = state.locks.length > 0;
+  // The home only needs the few rows a franchise player can be (public/franchise-index.json, ~6 kB). The full
+  // catalog is fetched only when a lock is not in the index (or the index is missing), so the names still show.
+  const franchiseIdsKey = useMemo(() => [...franchiseIdsOf(state.locks)].sort().join(','), [state.locks]);
   useEffect(() => {
-    if (!hasLocks) return undefined;
+    if (!franchiseIdsKey) return undefined;
     let active = true;
-    loadMarketCatalog()
-      .then(data => { if (active) setCatalog(data); })
+    const ids = franchiseIdsKey.split(',');
+    loadFranchiseIndex()
+      .catch(err => { console.warn('[useFranchisePlayers] índice', err); return null; })
+      .then(index => {
+        if (!active) return null;
+        if (index) setCatalog(index);
+        if (index && ids.every(id => index[id])) return null;
+        return loadMarketCatalog().then(data => { if (active) setCatalog(data); });
+      })
       .catch(err => console.error('[useFranchisePlayers] catálogo', err));
     return () => { active = false; };
-  }, [hasLocks]);
+  }, [franchiseIdsKey]);
 
   const byTeamId = useMemo(() => franchiseByTeam(state.locks, catalog), [state.locks, catalog]);
   return { byTeamId, loading: state.loading, error: state.error };

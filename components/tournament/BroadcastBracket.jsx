@@ -104,7 +104,7 @@ export const BroadcastBracket = memo(function BroadcastBracket({ cupId, bracket,
           <div className="bb-brand">
             <BroadcastBadge />
             <div className="bb-brand-text">
-              <div className="bb-eyebrow">Supercontinental League</div>
+              <div className="bb-eyebrow">SuperContinental League</div>
               <div className="bb-title">{cup.name}</div>
             </div>
           </div>

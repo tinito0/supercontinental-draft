@@ -50,7 +50,10 @@
   justify-items: end;
   color: #ffffff;
 }
-.scl-xi-formation span { font-size: 18px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--scl-lilac); }
+/* Placa azul marino: el lila sobre el extremo lavanda del degradé daba 2,04:1; blanco sobre la placa, 14,04:1. */
+/* Mientras hay once en pantalla, el popup con QR no se dibuja: el once ocupa arriba a la derecha (F-58). */
+.broadcast-overlay-root:has(.scl-xi) .scl-popup { display: none; }
+.scl-xi-formation span { padding: 2px 10px; background: var(--scl-navy); font-size: 18px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #ffffff; }
 .scl-xi-formation strong { font-size: 58px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
 .scl-xi-seal { position: relative; z-index: 1; }
 

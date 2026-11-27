@@ -54,7 +54,7 @@ function SigningToast({ toast, onOpen, onDismiss }) {
           <span className="font-semibold text-ink">{toast.playerName}</span>
         </p>
         <p className="text-xs text-ink-3 mt-0.5">
-          <span className="num">{toast.ovr}</span> OVR · {toast.pos}
+          Media <span className="num">{toast.ovr}</span> · {toast.pos}
         </p>
       </div>
       <span className="text-xs font-semibold text-accent-soft shrink-0">Ver</span>

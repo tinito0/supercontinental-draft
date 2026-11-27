@@ -8,6 +8,7 @@ import { OverlayPopupAdmin } from '../OverlayPopupAdmin.jsx';
 import { CommunityLayerControl } from '../OverlaySceneControl.jsx';
 import { MatchSettings, TextSettings, TournamentDataNote } from './SceneSettings.jsx';
 import { ObsRemoteControl } from './ObsRemoteControl.jsx';
+import { ObsAirAlerts } from './ObsAirAlerts.jsx';
 import { ObsConnection, sourceShortLabel } from './ObsConnection.jsx';
 import { FULLSCREEN_SCENES, MATCH_SCENES, OBS_SCENES, sceneLabel, sourcesShowingOnAir } from '../../../utils/obsScenes.js';
 import { EMPTY_OVERLAY_MATCH, buildOverlayPatchForMatch, rebaseOverlayForm } from '../../../utils/broadcastMatches.js';
@@ -182,6 +183,7 @@ export const ObsSceneStudio = memo(function ObsSceneStudio({ allTeams, tournamen
 
   return (
     <div className="space-y-6">
+      <ObsAirAlerts overlay={overlay} tournament={tournamentData} />
       <section className="space-y-4" aria-labelledby="obs-studio-title">
         <div className="flex flex-col gap-1">
           <h2 id="obs-studio-title" className="section-title flex items-center gap-2.5">

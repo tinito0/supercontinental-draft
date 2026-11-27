@@ -22,7 +22,7 @@ export function LiveNowPanel({ matches, teamsById }) {
   return (
     <section aria-label="Partido en juego" className="space-y-3">
       {/* key: otro partido en vivo es otro marcador, no un gol. */}
-      <MatchHeader key={match.key} match={match} timeline={timeline} teamsById={teamsById} />
+      <MatchHeader as="h2" key={match.key} match={match} timeline={timeline} teamsById={teamsById} />
       <MatchTimeline timeline={timeline} match={match} />
       <Link to={`/partidos/${match.key}`} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent-soft hover:text-ink">
         Estadísticas, alineaciones y táctica del partido <ChevronRight className="h-4 w-4" aria-hidden="true" />

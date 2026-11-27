@@ -40,12 +40,12 @@ function CoachInput({ team, value, current, countries, onChange }) {
   const country = Number(value?.country) || Number(team.country) || 0;
   return (
     <div className="flex flex-wrap gap-2">
-      <input value={name} maxLength={44} aria-label={`Nombre del DT de ${team.name}`}
-        placeholder={current ? `Mantiene a ${current}` : 'Mantiene el DT del juego'}
+      <input value={name} maxLength={44} aria-label={`Nombre del director técnico de ${team.name}`}
+        placeholder={current ? `Mantiene a ${current}` : 'Mantiene el director técnico del juego'}
         onChange={e => onChange({ name: e.target.value, country })}
         className="w-44 input" />
       {name.trim() && (
-        <select value={country} aria-label={`Nacionalidad del DT de ${team.name}`} onChange={e => onChange({ name, country: Number(e.target.value) })}
+        <select value={country} aria-label={`Nacionalidad del director técnico de ${team.name}`} onChange={e => onChange({ name, country: Number(e.target.value) })}
           className="animate-in fade-in w-36 select">
           {!countries.some(c => c.id === country) && <option value={country}>País {country}</option>}
           {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -160,7 +160,7 @@ export function PesDraftPanel({ pes }) {
   return (
     <div className="space-y-4">
       <Card title="Equipos del draft a equipos del juego"
-        description="Cada equipo del draft reemplaza al equipo del juego que elijas: nombre, abreviatura, país, plantel con dorsales, 11 titular, formación, estrategia, capitán y pateadores. Se escribe en la base (Team.bin, PlayerAssignment.bin) y en el EDIT. Los fichados salen de su club original (las selecciones no se tocan). Si escribís un DT, se renombra el entrenador del equipo reemplazado; vacío, queda el del juego. Nada se modifica hasta que tocás «Aplicar»."
+        description="Cada equipo del draft reemplaza al equipo del juego que elijas: nombre, abreviatura, país, plantel con dorsales, 11 titular, formación, estrategia, capitán y pateadores. Se escribe en la base (Team.bin, PlayerAssignment.bin) y en el EDIT. Los fichados salen de su club original (las selecciones no se tocan). Si escribís un director técnico, se renombra el entrenador del equipo reemplazado; vacío, queda el del juego. Nada se modifica hasta que tocás «Aplicar»."
         actions={<>
           <Button onClick={load} disabled={busy}><RefreshCw className={`w-4 h-4 ${busy && !teams ? 'animate-spin' : ''}`} aria-hidden="true" />Recargar equipos</Button>
           <Button onClick={saveMap}><Save className="w-4 h-4" aria-hidden="true" />Guardar asignación</Button>
@@ -184,7 +184,7 @@ export function PesDraftPanel({ pes }) {
                     <th scope="col">Equipo del draft</th>
                     <th scope="col" className="text-right">Jugadores</th>
                     <th scope="col">Reemplaza a</th>
-                    <th scope="col">DT</th>
+                    <th scope="col">Director técnico</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -234,7 +234,7 @@ export function PesDraftPanel({ pes }) {
               {plan.ok && (
                 <div className="overflow-x-auto -mx-4 sm:-mx-5">
                   <table className="data-table min-w-[32rem]">
-                    <thead><tr><th scope="col">Equipo del draft</th><th scope="col">Reemplaza a</th><th scope="col" className="text-right">Plantel</th><th scope="col">DT</th></tr></thead>
+                    <thead><tr><th scope="col">Equipo del draft</th><th scope="col">Reemplaza a</th><th scope="col" className="text-right">Plantel</th><th scope="col">Director técnico</th></tr></thead>
                     <tbody>{plan.teams.map(t => (
                       <tr key={t.draftTeamId}>
                         <td className="font-semibold text-ink">{t.name}</td>

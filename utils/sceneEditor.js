@@ -17,10 +17,10 @@ export const DRAFT_FIELDS = [...MATCH_FIELDS, ...TEXT_FIELDS, ...VISIBILITY_FIEL
 
 /** Textos por defecto de los rótulos (lo que hace «Restablecer textos»). */
 export const DEFAULT_TEXTS = {
-  competitionLabel: 'SUPERCONTINENTAL LEAGUE',
-  headline: 'SUPERCONTINENTAL LEAGUE',
+  competitionLabel: 'SuperContinental League',
+  headline: 'SuperContinental League',
   subheadline: 'Transmisión oficial',
-  ticker: 'Bienvenidos a la transmisión de la Supercontinental League.',
+  ticker: 'Bienvenidos a la transmisión de la SuperContinental League.',
 };
 
 /** El borrador inicial: los campos editables del overlay guardado. */

@@ -167,7 +167,7 @@ function Slider({ label, value, min, max, step, format, onChange }) {
     </Row>
   );
 }
-const percent = v => `${Math.round(v * 100)} %`;
+const percent = v => `${Math.round(v * 100)}%`;
 
 /**
  * «Tela»: relief and shine like PES Editor Rebuilt's «Tela y relieve» — the kit's own _nrm or a fabric preset

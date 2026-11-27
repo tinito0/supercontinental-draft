@@ -8,8 +8,8 @@ import { Tabs } from '../../ui/Tabs.jsx';
    Datos: utils/matchAnalysis.js. */
 
 const WEIGHT_NAMES = { shots: 'tiro', shotsOnTarget: 'al arco (extra)', corners: 'córner', crosses: 'centro', throughPasses: 'pase filtrado' };
-const dash = value => (value == null ? '—' : value);
-const pct = value => (value == null ? '—' : `${value} %`);
+const dash = value => (value == null ? '–' : value);
+const pct = value => (value == null ? '–' : `${value}%`);
 
 function PeriodTable({ rows, match, caption }) {
   return (
@@ -76,7 +76,7 @@ export function MatchAnalysisView({ summary, match }) {
         <MomentumChart data={momentum(summary)} match={match} />
         <p className="mt-3 text-sm text-ink-2">
           Modelo propio, no un dato del juego: cada minuto suma las acciones de ataque de cada equipo ({weights}) y resta las del
-          rival; además arrastra el {Math.round(MOMENTUM_DECAY * 100)} % del minuto anterior y vuelve a cero en cada tiempo. Los
+          rival; además arrastra el {Math.round(MOMENTUM_DECAY * 100)}% del minuto anterior y vuelve a cero en cada tiempo. Los
           pesos se eligieron a mano y no están calibrados.
         </p>
       </section>
@@ -86,7 +86,7 @@ export function MatchAnalysisView({ summary, match }) {
         {buckets.length ? (
           <PeriodTable rows={buckets} match={match} caption="Estadísticas por tramo de 15 minutos" />
         ) : (
-          <p className="px-4 py-6 text-sm text-ink-2">Este partido se grabó antes de guardar los tramos.</p>
+          <p className="px-4 py-6 text-sm text-ink-2">Este partido se registró antes de registrar los tramos.</p>
         )}
         {halves.length > 0 && (
           <>

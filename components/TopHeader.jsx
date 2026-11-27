@@ -113,8 +113,8 @@ export const TopHeader = memo(function TopHeader({
           onClick={onChatClick}
           {...prefetch(onChatPrefetch)}
           className={iconBtn}
-          title="Chat de managers"
-          aria-label={unreadChatCount > 0 ? `Chat de managers, ${unreadChatCount} mensajes sin leer` : 'Chat de managers'}
+          title="Chat de mánagers"
+          aria-label={unreadChatCount > 0 ? `Chat de mánagers, ${unreadChatCount} mensajes sin leer` : 'Chat de mánagers'}
         >
           <MessageSquareText className="w-5 h-5" aria-hidden="true" />
           {unreadChatCount > 0 && (

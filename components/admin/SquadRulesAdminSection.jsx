@@ -86,7 +86,7 @@ export function SquadRulesAdminSection({ allTeams, playerLocks, allPlayers, onRe
           {offenders === 0
             ? <>Los <span className="num">{rows.length}</span> clubes están en regla.</>
             : <><span className="num font-semibold text-danger-soft">{offenders}</span> de <span className="num">{rows.length}</span> clubes incumplen alguna regla.</>}
-          {' '}La pizarra no deja guardar un once con el banco por debajo de {BENCH_MIN_AVG_OVR}; el plantel y los locales se corrigen en el mercado.
+          {' '}La táctica no deja guardar un once con el banco por debajo de {BENCH_MIN_AVG_OVR}; el plantel y los locales se corrigen en el mercado.
         </p>
       </div>
 

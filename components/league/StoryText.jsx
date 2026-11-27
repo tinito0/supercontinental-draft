@@ -27,7 +27,7 @@ export function StoryText({ body, loading, error, emptyTitle, emptyDescription, 
   return (
     <div className={`max-w-[68ch] space-y-4 text-lg leading-relaxed text-ink ${className}`}>
       {shown.map((paragraph, index) => (
-        <p key={index} className="whitespace-pre-line">{paragraph}</p>
+        <p key={index} className="whitespace-pre-line [overflow-wrap:anywhere]">{paragraph}</p>
       ))}
     </div>
   );

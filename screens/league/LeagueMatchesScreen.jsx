@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { CalendarDays } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { FixtureRow, makeClubLookup } from '../../components/league/match/FixtureRow.jsx';
 import { FeaturedMatch } from '../../components/league/home/FeaturedMatch.jsx';
 import { LeagueLeaders } from '../../components/league/match/LeagueLeaders.jsx';
@@ -57,6 +58,7 @@ function gameLogClubs(matches, teamsById) {
   return name => byName.get(String(name || '').trim().toLowerCase()) || null;
 }
 
+const COMPETITION_PARAM = 'competencia';
 const COMPETITIONS = [
   { id: 'all', label: 'Todo' },
   { id: 'liga', label: 'Liga' },
@@ -66,8 +68,17 @@ const COMPETITIONS = [
 
 /** Fixture completo (utils/leagueFixtures.js): en vivo arriba, después cada ronda en orden, con su estado real. */
 function FixtureList({ teams, teamsById }) {
-  const { fixtures, groups, liveMatches, prediction, loading, error } = useLeagueFixtures(teamsById);
-  const [competition, setCompetition] = useState('all');
+  const { fixtures, groups, liveMatches, prediction, loading, error, liveError } = useLeagueFixtures(teamsById);
+  // El filtro queda en la URL (?competencia=), con replace para que Atrás no pase por cada filtro.
+  const [params, setParams] = useSearchParams();
+  const requested = params.get(COMPETITION_PARAM);
+  const competition = COMPETITIONS.some(item => item.id === requested) ? requested : 'all';
+  const setCompetition = next => setParams(current => {
+    const updated = new URLSearchParams(current);
+    if (next === 'all') updated.delete(COMPETITION_PARAM);
+    else updated.set(COMPETITION_PARAM, next);
+    return updated;
+  }, { replace: true });
   const clubOf = useMemo(() => makeClubLookup(teams), [teams]);
   const rounds = useMemo(() => {
     const map = new Map();
@@ -81,12 +92,22 @@ function FixtureList({ teams, teamsById }) {
   }, [fixtures, competition]);
 
   if (error) return <Alert tone="danger" title={error}>Recargá la página para intentar de nuevo.</Alert>;
-  if (loading) return <div className="panel space-y-3 p-4" aria-busy="true">{[0, 1, 2].map(i => <div key={i} className="h-16 skeleton" />)}</div>;
+  if (loading) return <div className="panel space-y-3 p-4" role="status" aria-busy="true"><span className="sr-only">Cargando los partidos</span>{[0, 1, 2].map(i => <div key={i} className="h-16 skeleton" />)}</div>;
+  // A failed live read does not hide the fixture; say so instead of showing no live match.
+  const liveAlert = liveError
+    ? <Alert tone="danger" title="No pudimos cargar los partidos en vivo">Recargá la página para verlos. El calendario de abajo sigue disponible.</Alert>
+    : null;
   if (!fixtures.length) {
-    return <EmptyState icon={CalendarDays} title="Todavía no hay partidos programados" description="El fixture aparece apenas se cargan las fechas del torneo." />;
+    return (
+      <div className="space-y-8">
+        {liveAlert}
+        <EmptyState icon={CalendarDays} title="Todavía no hay partidos programados" description="El calendario aparece apenas se cargan las fechas del torneo." />
+      </div>
+    );
   }
   return (
     <div className="space-y-8">
+      {liveAlert}
       {groups.live.length > 0 && (
         // Lo que se juega ahora, en grande: marcador, goles y números del juego (se juega un partido a la vez).
         <section aria-label="En vivo" className="space-y-4">
@@ -140,7 +161,7 @@ function OtherGameMatches({ fixtures, liveMatches, teamsById }) {
         <section key={group.label} aria-label={group.label}>
           <h3 className="mb-2 text-sm font-semibold text-ink-2 first-letter:uppercase">{group.label}</h3>
           <ul className="panel divide-y divide-line/10 overflow-hidden p-0">
-            {group.matches.map(match => <FixtureRow key={match.key} fixture={gameLogFixture(match)} clubOf={clubOf} />)}
+            {group.matches.map(match => <FixtureRow key={match.key} fixture={gameLogFixture(match)} clubOf={clubOf} quietLive />)}
           </ul>
         </section>
       ))}
@@ -157,7 +178,7 @@ export default function LeagueMatchesScreen() {
     <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 md:py-16">
       <Reveal>
         <SectionHeading as="h1" title="Partidos">
-          El fixture del torneo con los resultados oficiales. Cada partido jugado abre su minuto a minuto.
+          Los partidos del torneo con los resultados oficiales. Cada partido jugado abre su minuto a minuto.
         </SectionHeading>
       </Reveal>
       <LeagueLeaders />

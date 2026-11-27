@@ -9,6 +9,7 @@ import { Alert } from './ui/Alert.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
 import { buildResultsAsync, positionGroups, RESULT_COUNT_MIN, RESULT_COUNT_MAX } from '../utils/scoutEngine.js';
 import { PLAYING_STYLE_GROUPS, PLAYING_STYLE_POSITIONS } from '../utils/playerGlossary.js';
+import { scrollBehavior } from '../utils/scrollBehavior.js';
 
 const MONTHLY_SEARCH_LIMIT = 5;
 
@@ -196,7 +197,7 @@ function ScoutGuidedTutorial({ steps, isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen || !activeStep) return undefined;
     const target = document.querySelector(activeStep.targetSelector);
-    target?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    target?.scrollIntoView({ behavior: scrollBehavior(), block: 'center', inline: 'nearest' });
     const frame = requestAnimationFrame(() => {
       window.setTimeout(updatePosition, 240);
     });
@@ -491,7 +492,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         }
       });
       setCriteria(initialCriteria);
-      showStatusMessage?.('success', scout.testDurationSeconds ? 'Busqueda scout de prueba creada. Vuelve en 1 segundo.' : `Busqueda scout creada. Vuelve en ${scoutDurationLabel(scout)}.`);
+      showStatusMessage?.('success', scout.testDurationSeconds ? 'Busqueda scout de prueba creada. Volvé en 1 segundo.' : `Busqueda scout creada. Volvé en ${scoutDurationLabel(scout)}.`);
     } catch (error) {
       console.error('Error creando busqueda scout:', error);
       if (error.message === 'scout-limit-reached') {
@@ -659,7 +660,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         </div>
 
         <div data-scout-target="attributes" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
-          {[['minAge', 'Edad mín'], ['maxAge', 'Edad máx'], ['minOvr', 'OVR mín'], ['maxOvr', 'OVR máx']].map(([key, label]) => (
+          {[['minAge', 'Edad mín'], ['maxAge', 'Edad máx'], ['minOvr', 'Media mín'], ['maxOvr', 'Media máx']].map(([key, label]) => (
             <label key={key}>
               <span className={fieldLabel}>{label}</span>
               <input type="number" inputMode="numeric" min="0" max="99" value={criteria[key]} onChange={e => setCriteria(prev => ({ ...prev, [key]: e.target.value }))} className="input num" />

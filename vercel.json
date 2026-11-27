@@ -36,6 +36,14 @@
     {
       "source": "/assets/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/(Logos_equipos|fotos_jugadores)/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }]
+    },
+    {
+      "source": "/(.*)\\.(webp|png)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }]
     }
   ],
   "redirects": [
@@ -56,6 +64,9 @@
     { "source": "/team/:rest*", "destination": "/draft/team/:rest*", "statusCode": 301 }
   ],
   "rewrites": [
+    { "source": "/draft/:rest+", "destination": "/draft" },
+    { "source": "/jugadores/:playerId", "destination": "/jugadores" },
+    { "source": "/partidos/:matchKey", "destination": "/partido" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }

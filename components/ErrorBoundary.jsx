@@ -64,7 +64,7 @@ export class ErrorBoundary extends Component {
             <button
               type="button"
               onClick={this.handleReset}
-              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent font-bold text-xs rounded-xl shadow-lg transition active:scale-[0.97] flex items-center gap-2 cursor-pointer"
+              className="min-h-11 px-5 py-2.5 bg-accent hover:bg-accent-hover text-on-accent font-bold text-xs rounded-xl shadow-lg transition active:scale-[0.97] flex items-center gap-2 cursor-pointer"
             >
               <RefreshCw className="w-4 h-4" />
               Reintentar
@@ -72,7 +72,7 @@ export class ErrorBoundary extends Component {
             <button
               type="button"
               onClick={this.handleGoHome}
-              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-ink border border-line/[0.12] font-bold text-xs rounded-xl transition active:scale-[0.97] flex items-center gap-2 cursor-pointer"
+              className="min-h-11 px-5 py-2.5 bg-white/5 hover:bg-white/10 text-ink border border-line/[0.12] font-bold text-xs rounded-xl transition active:scale-[0.97] flex items-center gap-2 cursor-pointer"
             >
               <Home className="w-4 h-4" />
               Ir al Inicio
@@ -81,7 +81,7 @@ export class ErrorBoundary extends Component {
 
           {process.env.NODE_ENV !== 'production' && this.state.error && (
             <details className="mt-8 text-left max-w-xl w-full bg-black/40 border border-line/[0.12] rounded-xl p-4 text-xs font-mono text-danger-soft overflow-x-auto">
-              <summary className="cursor-pointer text-ink-3 font-bold hover:text-ink">
+              <summary className="cursor-pointer inline-flex min-h-11 items-center text-ink-3 font-bold hover:text-ink">
                 Ver detalles técnicos del error
               </summary>
               <p className="mt-2 text-danger-soft font-semibold">{this.state.error.toString()}</p>

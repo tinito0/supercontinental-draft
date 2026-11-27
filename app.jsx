@@ -42,6 +42,7 @@ import { calculateSmartRecommendations } from './utils/recommendations.js';
 import { handleListenerError } from './utils/listenerErrorHandler.js';
 import { KeyboardShortcutsHelp } from './components/ui/KeyboardShortcutsHelp.jsx';
 import { Alert } from './components/ui/Alert.jsx';
+import { TournamentPublicState } from './components/tournament/TournamentPublicState.jsx';
 import { ConfirmHost, confirmAction } from './components/ui/ConfirmDialog.jsx';
 import { MarketplaceView } from './components/marketplace/MarketplaceView.jsx';
 import { YouthDraftPanel } from './components/marketplace/YouthDraftPanel.jsx';
@@ -156,13 +157,19 @@ const initialFilters = {
 const initialSort = { key: 'ovr', direction: 'desc' };
 
 function FirebaseError() {
+  useEffect(() => {
+    console.error('Firebase no pudo inicializarse:', firebaseInitializationError);
+  }, []);
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen p-10 font-sans text-lg bg-surface text-ink">
-      <h1 className="text-4xl font-bold text-red-500 mb-4">Error de Configuración</h1>
-      <p className="text-ink-2 mb-6 text-center">No se pudo conectar a Firebase. Por favor, revisa que tus credenciales sean válidas.</p>
-      <pre className="bg-raised p-4 rounded-lg border border-red-700 text-danger-soft overflow-x-auto text-sm max-w-full">
-        <strong>Mensaje del error:</strong> {firebaseInitializationError?.message || "Error desconocido."}
-      </pre>
+    <div className="flex min-h-screen items-center justify-center bg-surface p-5 text-ink">
+      <Alert
+        tone="danger"
+        title="No pudimos conectar con la liga"
+        className="w-full max-w-md"
+        action={<button type="button" className="btn btn-secondary min-h-[44px]" onClick={() => window.location.reload()}>Reintentar</button>}
+      >
+        Probá de nuevo en un rato.
+      </Alert>
     </div>
   );
 }
@@ -184,8 +191,8 @@ function LoadingScreen({ message, error }) {
   }
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-surface text-ink-2 font-sans text-xl text-center p-5">
-      <div className="w-10 h-10 border-4 border-line/20 border-t-accent rounded-full animate-spin mb-5"></div>
-      {message || "Cargando..."}
+      <div className="w-10 h-10 border-4 border-line/20 border-t-accent rounded-full animate-spin mb-5" aria-hidden="true"></div>
+      <span role="status">{message || "Cargando..."}</span>
     </div>
   );
 }
@@ -356,6 +363,8 @@ function App() {
   const [gridDensity, setGridDensity] = useStoredChoice('market_density', ['comfortable', 'compact']);
   const [isLoading, setIsLoading] = useState(true);
   const [tournamentData, setTournamentData] = useState(null);
+  const [tournamentStatus, setTournamentStatus] = useState('loading'); // 'loading' | 'ready' | 'missing' | 'error'
+  const [tournamentRetryKey, setTournamentRetryKey] = useState(0);
   const [broadcastOverlayData, setBroadcastOverlayData] = useState(DEFAULT_BROADCAST_OVERLAY);
   const [isTournamentModalVisible, setIsTournamentModalVisible] = useState(false);
   const getTournamentDocRef = useCallback(() => doc(db, `artifacts/${APP_ID}/public/data/tournament/official`), []);
@@ -675,7 +684,7 @@ function App() {
 
       // 2. Si ya hay 2, no dejamos agregar más (pero no abrimos modal)
       if (prev.length >= 2) {
-        showStatusMessage('error', 'Ya tienes 2 jugadores seleccionados. Elimina uno primero.');
+        showStatusMessage('error', 'Ya tenés 2 jugadores seleccionados. Sacá uno primero.');
         return prev;
       }
 
@@ -907,13 +916,20 @@ function App() {
 
   useEffect(() => {
 
-    const unsubTournament = onSnapshot(getTournamentDocRef(),
+    // Metadata changes let the server confirm a missing doc the cache already reported; a cache-only miss (offline,
+    // nothing cached) is not proof that there is no tournament.
+    const unsubTournament = onSnapshot(getTournamentDocRef(), { includeMetadataChanges: true },
       (docSnapshot) => {
         if (docSnapshot.exists()) {
           setTournamentData(docSnapshot.data());
+          setTournamentStatus('ready');
+        } else if (!docSnapshot.metadata.fromCache) {
+          setTournamentData(null);
+          setTournamentStatus('missing');
         }
       },
       (error) => {
+        setTournamentStatus('error');
         handleListenerError(error, "Tournament Data", showStatusMessage, {
           onPermissionDenied: () => {
             setIsLoading(false);
@@ -923,7 +939,7 @@ function App() {
       }
     );
     return () => unsubTournament();
-  }, [getTournamentDocRef, showStatusMessage]);
+  }, [getTournamentDocRef, showStatusMessage, tournamentRetryKey]);
 
   useEffect(() => {
     const unsubscribeBroadcast = onSnapshot(getBroadcastOverlayDocRef(),
@@ -1170,7 +1186,7 @@ function App() {
               category: 'transfer',
               type: 'transfer',
               playerId: player.Id,
-              text: `${lockData.teamName || 'Un rival'} fichó a ${player.Name} (${player.OVR_CALCULADO} OVR) por ${formatPriceShort(player.Precio)}.`,
+              text: `${lockData.teamName || 'Un rival'} fichó a ${player.Name} (media ${player.OVR_CALCULADO}) por ${formatPriceShort(player.Precio)}.`,
               time: 'Fichaje en vivo',
               targetModal: 'transfers',
             });
@@ -1415,7 +1431,7 @@ function App() {
 
           const type = message.transferIntent ? 'warning' : 'info';
           const label = message.transferIntent ? 'Chat / Traspaso' : 'Chat';
-          const prefix = mentionedMe ? `${message.senderTeamName || 'Un manager'} te menciono` : `${message.senderTeamName || 'Un manager'} hablo de traspasos`;
+          const prefix = mentionedMe ? `${message.senderTeamName || 'Un mánager'} te menciono` : `${message.senderTeamName || 'Un mánager'} hablo de traspasos`;
           addNotification({
             id: `chat-${message.id}`,
             category: 'chat',
@@ -1504,7 +1520,7 @@ function App() {
     const playerCost = isFranchise ? 0 : player.Precio * 1000000;
 
     if (!isFranchise && remainingBudget < playerCost) {
-      showStatusMessage('error', 'No tienes presupuesto suficiente (incluyendo ofertas comprometidas).');
+      showStatusMessage('error', 'No tenés presupuesto suficiente (incluyendo ofertas comprometidas).');
       return false;
     }
     if (playerLocks[player.Id]) {
@@ -1543,7 +1559,7 @@ function App() {
     const confirmed = alreadyConfirmed || await confirmAction({
       title: '¿Liberar al jugador?',
       player,
-      message: 'Sale de tu plantel y vuelve al mercado: cualquier manager lo puede fichar.',
+      message: 'Sale de tu plantel y vuelve al mercado: cualquier mánager lo puede fichar.',
       confirmLabel: 'Liberar',
     });
     if (!confirmed) return;
@@ -1628,11 +1644,17 @@ function App() {
       return <LoadingScreen message="Cargando torneo..." />;
     }
 
-    if (!tournamentData)
-      return <div role="status" className="min-h-screen bg-canvas flex items-center justify-center gap-2 text-white font-bold tracking-wider uppercase"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Cargando Torneo...</div>;
+    if (!tournamentData) {
+      return (
+        <TournamentPublicState
+          status={tournamentStatus === 'loading' ? 'loading' : tournamentStatus === 'error' ? 'error' : 'missing'}
+          onRetry={() => { setTournamentStatus('loading'); setTournamentRetryKey((k) => k + 1); }}
+        />
+      );
+    }
 
     return (
-      <div className="min-h-screen bg-canvas text-slate-200">
+      <div className="min-h-screen bg-canvas text-ink-2">
         <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
           <TournamentModal
             isVisible={true}
@@ -1650,6 +1672,7 @@ function App() {
             allPlayers={allPlayers}
             initialTab={initialTab}
             isPage={true}
+            landmark
             userTeamName={userProfile?.teamName}
           />
         </Suspense>
@@ -1811,7 +1834,7 @@ function App() {
                     setActiveTab={setActiveTab}
                     onPlayerClick={handleOpenPlayerModal}
                     signingToasts={signingToasts}
-                    isLoading={isLoading || tournamentData === null}
+                    isLoading={isLoading || tournamentStatus === 'loading'}
                   />
                 </div>
               )}
@@ -2295,7 +2318,7 @@ function App() {
         footer={<button type="button" onClick={() => setShowBudgetAlert(false)} className="btn btn-primary w-full min-h-12">Entendido</button>}
       >
         <p className="text-sm text-ink-2">Te quedan</p>
-        <p className="font-display num text-4xl font-bold text-warning-soft leading-tight">${(remainingBudget / 1000000).toFixed(1)}M</p>
+        <p className="font-display num text-4xl font-bold text-warning-soft leading-tight">${(remainingBudget / 1000000).toFixed(1).replace('.', ',')}M</p>
       </BaseModal>
 
       {/* TOASTS — global feedback and rivals' signings, one stack */}

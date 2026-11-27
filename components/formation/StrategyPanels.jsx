@@ -155,7 +155,7 @@ function formatRolePlayerOption(player, roleKey, dorsals = {}) {
 }
 
 const ROLE_CONFIGS = [
-  { key: 'captain', label: 'Capitán', icon: Crown, statLabel: 'Habilidad Capitanía · OVR' },
+  { key: 'captain', label: 'Capitán', icon: Crown, statLabel: 'Habilidad Capitanía · Media' },
   { key: 'shortFK', label: 'Tiro Libre Corto', icon: Target, statLabel: 'Balón Parado · Efecto' },
   { key: 'longFK', label: 'Tiro Libre Largo', icon: Zap, statLabel: 'Balón Parado · Potencia' },
   { key: 'leftCorner', label: 'Córner Izquierdo', icon: Target, statLabel: 'Balón Parado · Efecto · Pie' },

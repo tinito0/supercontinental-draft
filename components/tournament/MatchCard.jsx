@@ -166,7 +166,7 @@ export const MatchCard = memo(function MatchCard({
                 <>
                 {/* Penales al lado del marcador, como en /partidos: «1 (4)». */}
                 {pens != null && (
-                  <span className={`ml-2 text-xs tabular-nums ${isWinner ? 'font-bold text-ink' : 'text-ink-2'}`} aria-label={`${pens} en los penales`}>({pens})</span>
+                  <span className={`ml-2 text-xs tabular-nums ${isWinner ? 'font-bold text-ink' : 'text-ink-2'}`}>({pens})<span className="sr-only"> en los penales</span></span>
                 )}
                 <div
                   className={`min-w-[24px] h-6 flex items-center justify-center rounded px-1.5 ml-1.5 font-mono text-xs font-bold tabular-nums ${

@@ -4,9 +4,9 @@
   "version": "2.6.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/build-players-compact.mjs",
+    "predev": "node scripts/build-players-compact.mjs && node scripts/build-franchise-index.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/build-players-compact.mjs",
+    "prebuild": "node scripts/build-players-compact.mjs && node scripts/build-franchise-index.mjs",
     "build": "vite build",
     "postbuild": "node scripts/build-share-pages.mjs",
     "preview": "vite preview",

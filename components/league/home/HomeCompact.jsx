@@ -7,12 +7,17 @@ import { getStatAndOvrColorClass } from '../../../utils/helpers.js';
 import { FRANCHISE_MIN_AGE, FRANCHISE_MIN_OVR, FRANCHISE_MAX_OVR } from '../../../supabase/functions/_shared/marketConstants.js';
 import { FEATURED_VIDEO, STREAM_CHANNEL } from '../../landing/leagueLinks.js';
 import { SocialLinks } from '../../landing/FollowLeague.jsx';
+import { Alert } from '../../ui/Alert.jsx';
+import { isOfflineError } from '../../../utils/leagueDataErrors.js';
 
 /* Las franjas cortas de la portada, debajo de partidos y tabla: clubes como grilla de escudos, los jugadores
    franquicia en una tarjeta y los canales de la liga. Las páginas completas son /equipos y cada club. */
 
 /** Los clubes como escudos: 4 por fila en el teléfono, 6 desde sm. Cada escudo lleva a su club. */
-export function ClubCrestGrid({ teams, loading }) {
+export function ClubCrestGrid({ teams, loading, error = '' }) {
+  if (error && !teams.length) {
+    return <Alert tone="danger" title={error}>{isOfflineError(error) ? null : 'Recargá la página para intentar de nuevo.'}</Alert>;
+  }
   if (loading && !teams.length) {
     return (
       <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-3" aria-hidden="true">
@@ -57,7 +62,7 @@ function FranchiseTile({ team, player }) {
         />
         {player.ovr && (
           <span className={`absolute left-1 top-1 grid h-6 min-w-[1.75rem] place-items-center rounded px-1 font-display text-sm font-bold num ${getStatAndOvrColorClass(player.ovr)}`}>
-            <span className="sr-only">OVR </span>{player.ovr}
+            <span className="sr-only">Media </span>{player.ovr}
           </span>
         )}
         <img src={teamCrestUrl(team)} alt="" width="24" height="24" loading="lazy" className="absolute bottom-1 right-1 h-6 w-6 object-contain" />
@@ -69,7 +74,12 @@ function FranchiseTile({ team, player }) {
 }
 
 /** Qué es el Jugador Franquicia en una línea, y el de cada club que ya lo eligió. */
-export function FranchiseSummary({ teams, franchise, loading, error = '', headingId }) {
+export function FranchiseSummary({ teams, franchise, loading, error = '', teamsError = '', headingId }) {
+  const failure = error ? 'No se pudieron cargar los jugadores franquicia.' : (teams.length ? '' : teamsError);
+  // The offline title already says what happens next; the fixed franchise title needs it in the body.
+  const failureBody = isOfflineError(failure) ? null
+    : isOfflineError(error) ? 'No hay conexión. Aparecen apenas vuelva.'
+      : 'Recargá la página para intentar de nuevo.';
   const entries = teams.filter(team => franchise?.[team.id]).map(team => ({ team, player: franchise[team.id] }));
   return (
     <div className="panel p-5 sm:p-7">
@@ -82,8 +92,8 @@ export function FranchiseSummary({ teams, franchise, loading, error = '', headin
       <p className="mt-3 max-w-[64ch] text-ink-2 [text-wrap:pretty]">
         Cada club elige un referente que nadie le puede sacar en toda la temporada. {FRANCHISE_RULE}
       </p>
-      {error ? (
-        <p className="mt-5 text-sm text-warning-soft">No se pudieron cargar los jugadores franquicia. Recargá la página para intentar de nuevo.</p>
+      {failure ? (
+        <Alert tone="danger" title={failure} className="mt-5">{failureBody}</Alert>
       ) : !loading && !entries.length ? (
         <p className="mt-5 text-sm text-ink-2">Ningún club eligió el suyo todavía: cada uno lo ficha en el Mercado Franquicia y aparece acá.</p>
       ) : loading && !entries.length ? (
@@ -117,13 +127,14 @@ export function FollowCompact() {
         <span className="min-w-0">
           <span className="block text-xs font-semibold uppercase tracking-wide text-ink-3">Último video</span>
           <span className="line-clamp-2 font-display text-lg font-bold uppercase leading-tight text-ink">{FEATURED_VIDEO.title}</span>
+          <span className="sr-only"> (se abre en otra pestaña)</span>
         </span>
       </a>
       <div className="flex flex-col justify-center gap-3 rounded-2xl border border-line/10 bg-surface p-4">
         <a href={STREAM_CHANNEL.url} {...external} className="group flex min-h-11 items-center gap-3">
           <img src={STREAM_CHANNEL.logo} alt="" width="24" height="24" className="h-6 w-6 shrink-0" />
           <span className="min-w-0 flex-1">
-            <span className="block font-semibold text-ink group-hover:text-accent-soft">Los partidos en vivo, en {STREAM_CHANNEL.name}</span>
+            <span className="block font-semibold text-ink group-hover:text-accent-soft">Los partidos en vivo, en {STREAM_CHANNEL.name}<span className="sr-only"> (se abre en otra pestaña)</span></span>
             <span className="block truncate text-sm text-ink-2">{STREAM_CHANNEL.handle}</span>
           </span>
           <ExternalLink className="h-4 w-4 shrink-0 text-ink-3" aria-hidden="true" />

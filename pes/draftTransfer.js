@@ -381,7 +381,7 @@ export function planCoach(ws, teamId, { name, country }) {
     .concat(ws.edit ? [...ws.edit.teams.keys()].filter(t => t !== teamId && ws.edit.coachOfTeam(t) === id) : []);
   const shared = [...new Set([ids.bin, ids.edit].filter(v => v != null).flatMap(sharedWith))];
   if (shared.length) {
-    warnings.push(`el DT del equipo del juego también dirige a ${shared.map(t => teamName(ws, t)).join(', ')}: no se cambia el DT.`);
+    warnings.push(`el director técnico del equipo del juego también dirige a ${shared.map(t => teamName(ws, t)).join(', ')}: no se cambia el director técnico.`);
     return { ops, warnings };
   }
   const validCountry = Number.isInteger(country) && country > 0 && country < 512;
@@ -390,13 +390,13 @@ export function planCoach(ws, teamId, { name, country }) {
     ops.push({ type: 'bin.coach.set', target: { coachId: ids.bin, teamId }, field: 'name', value: fitBytes(name, 44) });
     if (validCountry) ops.push({ type: 'bin.coach.set', target: { coachId: ids.bin, teamId }, field: 'country', value: country });
   } else if (ws.bin?.tables.team) {
-    warnings.push(coachTable ? `el DT ${ids.bin} no está en Coach.bin.` : 'falta Coach.bin en la base: el DT no cambia en la base.');
+    warnings.push(coachTable ? `el director técnico ${ids.bin} no está en Coach.bin.` : 'falta Coach.bin en la base: el director técnico no cambia en la base.');
   }
   if (ids.edit != null && ws.edit.coaches.has(ids.edit)) {
     ops.push({ type: 'edit.coach.set', target: { coachId: ids.edit, teamId }, field: 'name', value: fitBytes(name, 77) });
     if (validCountry) ops.push({ type: 'edit.coach.set', target: { coachId: ids.edit, teamId }, field: 'country', value: country });
   } else if (ws.edit) {
-    warnings.push(`el DT ${ids.edit} no está en la lista de entrenadores del EDIT: no cambia en el EDIT.`);
+    warnings.push(`el director técnico ${ids.edit} no está en la lista de entrenadores del EDIT: no cambia en el EDIT.`);
   }
   return { ops, warnings };
 }

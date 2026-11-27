@@ -583,7 +583,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       }, 8000); // Longer timeout so user can see/copy the URL
     } catch (err) {
       console.error('Error al compartir formación:', err);
-      showStatusMessage('error', 'Error al generar el enlace público.');
+      showStatusMessage('error', 'Error al generar el link público.');
     }
     sharingRef.current = false;
     setIsSharing(false);
@@ -634,7 +634,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           type="text"
           readOnly
           value={shareUrl}
-          aria-label="Enlace público de la alineación"
+          aria-label="Link público de la alineación"
           className="input flex-1 min-h-9 text-xs font-mono select-all"
           onClick={(e) => e.target.select()}
         />
@@ -648,7 +648,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
       </div>
       {shareCopied && (
         <div className="flex items-center gap-1.5 text-success-soft text-xs font-semibold" role="status">
-          <Check className="w-3.5 h-3.5" aria-hidden="true" /> Enlace copiado al portapapeles
+          <Check className="w-3.5 h-3.5" aria-hidden="true" /> Link copiado al portapapeles
         </div>
       )}
     </div>
@@ -678,7 +678,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           {isSharing ? (
             <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Generando…</>
           ) : (
-            <>{ShareIcon} {shareCopied ? 'Enlace copiado' : 'Compartir enlace público'}</>
+            <>{ShareIcon} {shareCopied ? 'Link copiado' : 'Compartir link público'}</>
           )}
         </button>
         {SharePopover}
@@ -700,7 +700,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         </button>
         <div className="relative shrink-0" data-share-area>
           <button onClick={handleShareURL} disabled={isSharing} type="button" className="btn btn-secondary btn-icon"
-            aria-label={shareCopied ? 'Enlace copiado' : 'Compartir enlace público'} title="Compartir enlace público">
+            aria-label={shareCopied ? 'Link copiado' : 'Compartir link público'} title="Compartir link público">
             {isSharing ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : ShareIcon}
           </button>
           {SharePopover}
@@ -874,11 +874,11 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
             {isPage ? (
               <div>
                 <p className="eyebrow mb-1">{userProfile?.teamName || 'Mi club'}</p>
-                <h1 className="page-title">Pizarra táctica</h1>
+                <h1 className="page-title">Táctica</h1>
               </div>
             ) : (
               <h2 className="font-display text-xl font-bold text-ink flex items-center gap-2.5">
-                <ClipboardList className="w-5 h-5 text-accent-soft" aria-hidden="true" />Pizarra táctica
+                <ClipboardList className="w-5 h-5 text-accent-soft" aria-hidden="true" />Táctica
               </h2>
             )}
             <span role="status" className="text-xs font-medium">
@@ -904,13 +904,13 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />Plantel y finanzas
             </button>
           ) : (
-            <button type="button" onClick={onClose} className="btn btn-ghost btn-icon" aria-label="Cerrar pizarra táctica"><X className="w-5 h-5" aria-hidden="true" /></button>
+            <button type="button" onClick={onClose} className="btn btn-ghost btn-icon" aria-label="Cerrar táctica"><X className="w-5 h-5" aria-hidden="true" /></button>
           )}
         </div>
 
         {/* ── MOBILE TAB SWITCHER (visible only on < lg) ── */}
         <div className="lg:hidden shrink-0 px-3 py-2.5">
-          <Tabs className="w-full [&>button]:flex-1 [&>button]:justify-center" label="Secciones de la pizarra" value={mobileTab} onChange={setMobileTab} tabs={[
+          <Tabs className="w-full [&>button]:flex-1 [&>button]:justify-center" label="Secciones de la táctica" value={mobileTab} onChange={setMobileTab} tabs={[
             { id: 'pitch', label: 'Cancha', icon: LandPlot },
             { id: 'squad', label: 'Plantel', icon: Users, count: cart.length || null },
             { id: 'roles', label: 'Roles', icon: Target },
@@ -1002,7 +1002,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     <BaseModal
       isOpen={true}
       onClose={onClose}
-      ariaLabel="Pizarra táctica"
+      ariaLabel="Táctica"
       size="2xl"
       showClose={false}
       className="!max-w-7xl !p-0 !bg-surface !h-[100dvh] sm:!h-[90vh]"

@@ -9,6 +9,9 @@ const LENGTH = 105;
 const WIDTH = 68;
 // Se dibuja desde la mitad de la cancha hasta el arco: 52,5 m de alto por 68 de ancho.
 const HALF = LENGTH / 2;
+// viewBox units: about 5 units is 22px on a 328px-wide phone pitch (the 44px target).
+const HIT_RADIUS = 5;
+const HIT_RING_WIDTH = 0.6;
 
 function HalfPitch() {
   return (
@@ -37,13 +40,18 @@ export function ShotMap({ shots, match, selected, onSelect }) {
             const r = 0.9 + 2.4 * Math.sqrt(shot.xg ?? 0.05);
             const isHome = shot.side === 'home';
             const isGoal = shot.outcome === 'goal';
+            const y = Math.min(HALF - 0.8, Math.max(0.8, cy));
             return (
-              <circle key={shot.index} cx={cx} cy={Math.min(HALF - 0.8, Math.max(0.8, cy))} r={r} role="button" tabIndex={0}
-                aria-label={describe(shot)} aria-pressed={selected === shot.index}
-                onClick={() => onSelect(shot.index === selected ? null : shot.index)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(shot.index === selected ? null : shot.index); } }}
-                className={`cursor-pointer outline-none ${isHome ? 'stroke-accent' : 'stroke-ink-2'} ${isGoal ? (isHome ? 'fill-accent' : 'fill-ink-2') : 'fill-transparent'} focus-visible:stroke-ink`}
-                strokeWidth={selected === shot.index ? 0.9 : 0.5} />
+              <g key={shot.index}>
+                <circle cx={cx} cy={y} r={r} aria-hidden="true" className={`pointer-events-none ${isHome ? 'stroke-accent' : 'stroke-ink-2'} ${isGoal ? (isHome ? 'fill-accent' : 'fill-ink-2') : 'fill-transparent'}`}
+                  strokeWidth={selected === shot.index ? 0.9 : 0.5} />
+                {/* Invisible hit area of about 44px at phone width; the focus ring is drawn on it. */}
+                <circle cx={cx} cy={y} r={Math.max(r, HIT_RADIUS)} fill="transparent" role="button" tabIndex={0}
+                  aria-label={describe(shot)} aria-pressed={selected === shot.index}
+                  onClick={() => onSelect(shot.index === selected ? null : shot.index)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(shot.index === selected ? null : shot.index); } }}
+                  className="cursor-pointer focus-visible:stroke-ink" strokeWidth={HIT_RING_WIDTH} />
+              </g>
             );
           })}
         </svg>

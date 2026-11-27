@@ -262,7 +262,7 @@ export const ManagerChat = memo(function ManagerChat({
       onClose={handleClose}
       size="xl"
       showClose={false}
-      ariaLabel="Chat de managers"
+      ariaLabel="Chat de mánagers"
       className="!p-0 sm:!max-w-3xl h-[85vh] sm:h-[80vh]"
       contentClassName="!p-0 !overflow-hidden flex flex-col h-full min-h-0"
     >
@@ -273,7 +273,7 @@ export const ManagerChat = memo(function ManagerChat({
               <MessageSquareText className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-ink">Chat de managers</h2>
+              <h2 className="text-sm font-bold text-ink">Chat de mánagers</h2>
               <p className="text-xs text-ink-3 truncate">Negociaciones y traspasos directos entre equipos.</p>
             </div>
           </div>
@@ -298,7 +298,7 @@ export const ManagerChat = memo(function ManagerChat({
             >
               {messages.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-center px-6">
-                  <p className="text-xs text-ink-3 font-medium">Todavía no hay mensajes. Empezá la conversación o mencioná a otro manager.</p>
+                  <p className="text-xs text-ink-3 font-medium">Todavía no hay mensajes. Empezá la conversación o mencioná a otro mánager.</p>
                 </div>
               ) : (
                 messages.map(message => {
@@ -309,7 +309,7 @@ export const ManagerChat = memo(function ManagerChat({
                       <div className={`manager-chat-bubble rounded-xl px-3 py-2 border ${mine ? 'bg-accent text-ink border-accent' : ' bg-surface border-line/20 text-ink'}`}>
                         <div className="flex items-center gap-1.5 mb-1">
                           <img src={message.senderLogoUrl || DEFAULT_LOGO} alt="" width={16} height={16} className="w-4 h-4 rounded object-contain bg-black/30" onError={e => { e.target.src = DEFAULT_LOGO; }} />
-                          <span className={`text-[11px] font-bold truncate ${mine ? 'text-ink/85' : ' text-ink'}`}>{message.senderTeamName || 'Manager'}</span>
+                          <span className={`text-[11px] font-bold truncate ${mine ? 'text-ink/85' : ' text-ink'}`}>{message.senderTeamName || 'Mánager'}</span>
                           {isTransfer && (
                             <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.2 rounded ${mine ? 'bg-white/20 text-ink' : ' text-success-soft bg-success/10 border border-success/20'}`}>
                               <Handshake className="w-3 h-3" /> Traspaso
@@ -427,8 +427,8 @@ export const ManagerChat = memo(function ManagerChat({
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={handleComposerKeyDown}
-                    placeholder={`Escribí como ${userProfile?.teamName || 'manager'}…`}
-                    aria-label="Escribir mensaje para los managers"
+                    placeholder={`Escribí como ${userProfile?.teamName || 'mánager'}…`}
+                    aria-label="Escribir mensaje para los mánagers"
                     className="w-full max-h-28 min-h-[44px] resize-none bg-canvas border border-line/55 rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-accent placeholder:text-ink-3"
                     maxLength={500}
                   />
@@ -478,7 +478,7 @@ function ChatTutorial({ onClose }) {
       >
         <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-line/10">
           <div>
-            <h3 id="chat-tutorial-title" className="font-display text-xl font-bold text-ink">Chat de managers</h3>
+            <h3 id="chat-tutorial-title" className="font-display text-xl font-bold text-ink">Chat de mánagers</h3>
             <p className="text-sm text-ink-2 mt-1">Para hablar de traspasos, tantear jugadores y dejar constancia antes de que alguno se haga el distraído.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Cerrar ayuda del chat" className="w-11 h-11 shrink-0 rounded-lg flex items-center justify-center text-ink-3 hover:text-ink hover:bg-raised transition-colors">

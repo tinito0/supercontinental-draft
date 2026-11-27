@@ -6,7 +6,7 @@
 // escudo de ese momento: un cambio de escudo o de nombre se ve en las vistas previas desde el próximo deploy.
 import fs from 'node:fs';
 import path from 'node:path';
-import { STATIC_PAGES, clubPage, isDefaultLogo, pageFile, renderSharePage } from '../utils/sharePages.js';
+import { DRAFT_PAGE, GENERIC_PAGES, STATIC_PAGES, clubPage, isDefaultLogo, pageFile, renderSharePage } from '../utils/sharePages.js';
 import { writeClubCard } from './clubCards.mjs';
 
 const DIST = path.resolve('dist');
@@ -98,7 +98,7 @@ function writePage(html, page) {
 
 const html = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8');
 let written = 0;
-for (const page of STATIC_PAGES) written += writePage(html, page) ? 1 : 0;
+for (const page of [...STATIC_PAGES, ...GENERIC_PAGES, DRAFT_PAGE]) written += writePage(html, page) ? 1 : 0;
 try {
   const clubs = await clubPages();
   for (const page of clubs) written += writePage(html, page) ? 1 : 0;

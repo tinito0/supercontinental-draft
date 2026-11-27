@@ -11,7 +11,7 @@ import {
 } from './sampleData.js';
 
 const TABS = [
-  { id: 'pitch', label: 'Pizarra', icon: Sliders },
+  { id: 'pitch', label: 'Táctica', icon: Sliders },
   { id: 'market', label: 'Mercado', icon: ArrowLeftRight },
   { id: 'export', label: 'Exportación', icon: FileDown },
 ];
@@ -22,7 +22,7 @@ const TAB_INTRO = {
   export: 'Un ZIP con los CSV de tu equipo, para importar con el editor EJOGC327.',
 };
 
-const formatPrice = price => `$${price.toFixed(2)}M`;
+const formatPrice = price => `$${price.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}M`;
 
 /* Pitch shows only the last word of a name; a no-break space keeps "Van Dijk" or "De Bruyne" whole. */
 const pitchName = name => name.replace(/ /g, ' ');
@@ -80,7 +80,7 @@ function PitchPanel() {
 function TacticList({ title, rows }) {
   return (
     <section>
-      <h4 className="section-title mb-2">{title}</h4>
+      <h3 className="section-title mb-2">{title}</h3>
       <dl className="divide-y divide-line/10 border-t border-line/10">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-baseline justify-between gap-4 py-2.5">
@@ -152,6 +152,7 @@ function MarketPanel() {
                   <span className={`${getPosColorClass(p.pos)} rounded px-1.5 py-0.5 text-[11px] font-bold`}>{p.pos}</span>
                   <span className={`${getStatAndOvrColorClass(p.ovr)} num rounded px-1.5 py-0.5 text-[11px] font-bold`}>{p.ovr}</span>
                 </div>
+                {!isSigned && !canAfford && <p className="mt-1 text-xs text-warning-soft">No te alcanza el presupuesto. Liberá a alguien para fichar.</p>}
               </div>
               <span className="font-display num text-lg font-semibold text-ink">{formatPrice(p.price)}</span>
               <Button
@@ -159,7 +160,6 @@ function MarketPanel() {
                 variant={isSigned ? 'danger' : 'primary'}
                 onClick={() => toggle(p)}
                 disabled={!isSigned && !canAfford}
-                title={!isSigned && !canAfford ? 'No alcanza el presupuesto' : undefined}
                 className="min-h-11 w-20 sm:min-h-8"
               >
                 {isSigned ? 'Liberar' : 'Fichar'}

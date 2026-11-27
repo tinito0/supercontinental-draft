@@ -5,7 +5,7 @@ import { DETAILED_STAT_KEYS, FILTER_SKILL_KEYS, PLAYER_SKILLS_MAP, STAT_NAMES_MA
 const DETAILED_STATS = Object.values(DETAILED_STAT_KEYS).flat();
 
 const RANGE_CHIPS = [
-  { id: 'ovr', minKey: 'ovrMin', maxKey: 'ovrMax', label: (min, max) => `OVR ${min || '0'}–${max || '99'}` },
+  { id: 'ovr', minKey: 'ovrMin', maxKey: 'ovrMax', label: (min, max) => `Media ${min || '0'}–${max || '99'}` },
   { id: 'age', minKey: 'ageMin', maxKey: 'ageMax', label: (min, max) => `Edad ${min || '15'}–${max || '45'}` },
   { id: 'price', minKey: 'priceMin', maxKey: 'priceMax', label: (min, max) => `Precio $${min || '0'}M–${max ? `$${max}M` : '∞'}` },
 ];

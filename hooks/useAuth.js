@@ -130,7 +130,7 @@ export function useAuth({
           // new club either (the missing team below would otherwise be re-created).
           if (profileData.clubTransferredTo) {
             await signOut(auth);
-            setAuthError('Tu club pasó a otro manager. Si creés que es un error, hablá con el administrador de la liga.');
+            setAuthError('Tu club pasó a otro mánager. Si creés que es un error, hablá con el administrador de la liga.');
             setIsAuthReady(true);
             setIsLoading(false);
             return;
@@ -143,7 +143,7 @@ export function useAuth({
             // Logueado con email/password
             if (profileData.providers?.includes('google.com')) {
               await signOut(auth);
-              setAuthError("Esta cuenta ya ha sido migrada. Por favor, ingresa directamente con el botón 'Ingresar con Google'.");
+              setAuthError("Esta cuenta ya fue migrada. Entrá directamente con el botón «Entrar con Google».");
               setIsAuthReady(true);
               setIsLoading(false);
               return;

@@ -17,7 +17,7 @@ export function BroadcastScorers({ scorers }) {
     </ul>
   );
   return (
-    <div className="broadcast-scorers" aria-label="Goles">
+    <div className="broadcast-scorers" role="region" aria-label="Goles">
       {column('home', scorers.home)}
       {column('away', scorers.away)}
     </div>
@@ -49,7 +49,7 @@ export function BroadcastTopRated({ topRated }) {
   return (
     <div className={`broadcast-community broadcast-mvp${topRated.names.length > 1 ? ' is-tie' : ''}`}>
       <span className="broadcast-community-label"><span>Mejor valoración</span><span>{formatDecimal(topRated.rating, 1)}</span></span>
-      <strong aria-label={topRated.names.join(' y ')}>
+      <strong>
         {topRated.names.map(name => <span key={name}>{name}</span>)}
       </strong>
     </div>

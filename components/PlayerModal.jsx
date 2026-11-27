@@ -559,7 +559,7 @@ export const PlayerModal = memo(function PlayerModal({
       if (isFranchisePlayer) {
         return (
           <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
-            <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-raised text-ink-3 border border-line/[0.12] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro manager">
+            <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-raised text-ink-3 border border-line/[0.12] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro mánager">
               <div className="flex items-center text-[11px] text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
                 <Lock className="w-3 h-3 mr-1" />
                 <span>Fichado por</span>
@@ -578,7 +578,7 @@ export const PlayerModal = memo(function PlayerModal({
       }
       return (
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
-          <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-raised text-ink-3 border border-line/[0.12] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro manager">
+          <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-raised text-ink-3 border border-line/[0.12] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro mánager">
             <div className="flex items-center text-[11px] text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
               <Lock className="w-3 h-3 mr-1" />
               <span>Fichado por</span>
@@ -950,7 +950,7 @@ export const PlayerModal = memo(function PlayerModal({
                           )}
                         </div>
                         <span className={`num text-[11px] font-medium ${ovrDiff > 0 ? 'text-success-soft' : 'text-ink-3'}`}>
-                          {ovrDiff === 0 ? 'Mismo OVR' : `${ovrDiff > 0 ? '+' : '−'}${Math.abs(ovrDiff)} OVR`}
+                          {ovrDiff === 0 ? 'Misma media' : `${ovrDiff > 0 ? '+' : '−'}${Math.abs(ovrDiff)} de media`}
                         </span>
                       </div>
                     </button>

@@ -13,8 +13,8 @@ export const OVERLAY_TOGGLES = { marcador: 'showScoreboard', lower: 'showLowerTh
 export const DEFAULT_SITE_URL = 'https://supercontinental-draft.vercel.app';
 
 export const POPUP_PRESETS = [
-  { id: 'vota', title: 'Votá en la web', text: 'Predecí los partidos y elegí al manager de la fecha. Sin cuenta.', path: '/en-vivo' },
-  { id: 'liga', title: 'Seguí la Supercontinental', text: 'Resultados, tabla y equipos en la web.', path: '/' },
+  { id: 'vota', title: 'Votá en la web', text: 'Predecí los partidos y elegí al mánager de la fecha. Sin cuenta.', path: '/en-vivo' },
+  { id: 'liga', title: 'Seguí la SuperContinental', text: 'Resultados, tabla y equipos en la web.', path: '/' },
   { id: 'tabla', title: 'Tabla y copas en vivo', text: 'Escaneá y seguí el torneo desde el celular.', path: '/torneo' },
   { id: 'equipos', title: 'Conocé a los equipos', text: 'Planteles e historia de cada club.', path: '/equipos' },
 ];

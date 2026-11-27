@@ -36,7 +36,7 @@ export function ShotsPanel({ shots, match, compact = false }) {
   const [period, setPeriod] = useState('all');
   const [selected, setSelected] = useState(null);
   if (!shots.length) {
-    return <p className="py-6 text-center text-sm text-ink-3">Sin tiros todavía, o el partido se grabó antes de medirlos uno por uno.</p>;
+    return <p className="py-6 text-center text-sm text-ink-3">Sin tiros todavía, o el partido se registró antes de medirlos uno por uno.</p>;
   }
   const periods = [...new Set(shots.map(s => s.period).filter(Boolean))];
   const visible = shots.filter(s => (side === 'all' || s.side === side)
@@ -81,8 +81,12 @@ export function ShotsPanel({ shots, match, compact = false }) {
           </li>
         ))}
       </ul>
+      {/* Always mounted, so the announcement is made on change (MATCH-7). */}
+      <p className="sr-only" aria-live="polite">
+        {detail ? `${detail.name}, ${detail.minute}, ${detail.outcomeLabel}, xG ${formatDecimal(detail.xg)}` : ''}
+      </p>
       {detail && (
-        <dl className="well grid grid-cols-2 gap-3 p-3 text-sm sm:grid-cols-4" aria-live="polite">
+        <dl className="well grid grid-cols-2 gap-3 p-3 text-sm sm:grid-cols-4">
           <div><dt className="text-xs text-ink-3">Jugador</dt><dd className="font-semibold text-ink">{detail.name}</dd></div>
           <div><dt className="text-xs text-ink-3">Minuto</dt><dd className="num font-semibold text-ink">{detail.minute}</dd></div>
           <div><dt className="text-xs text-ink-3">Resultado</dt><dd className="font-semibold text-ink">{detail.outcomeLabel}</dd></div>
@@ -96,7 +100,7 @@ export function ShotsPanel({ shots, match, compact = false }) {
       <p className="text-xs text-ink-3">
         {hasXg
           ? 'xG: modelo propio de distancia y ángulo (penal 0,76), no un dato del juego. La posición es la última que el juego registró del pateador antes del tiro, con unos metros de error. '
-          : 'Sin mapa ni xG: el partido se grabó antes de leer las posiciones. '}
+          : 'Sin mapa ni xG: el partido se registró antes de leer las posiciones. '}
         «Afuera» incluye los tiros bloqueados.
       </p>
     </div>
