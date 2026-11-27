@@ -354,9 +354,9 @@
     "semantic_hash": ""
   },
   "components/tournament/MatchCard.jsx": {
-    "mtime": 1793843723.218319,
-    "seen": 1793845429.7993653,
-    "ast_hash": "c445e715987e395c8060e8e5db874f19",
+    "mtime": 1795741389.1770747,
+    "seen": 1795741660.5753543,
+    "ast_hash": "d36bfbafe1183b2bac76f9d8bf10b847",
     "semantic_hash": ""
   },
   "components/tournament/MatchCenter.jsx": {
@@ -264126,9 +264126,9 @@
     "semantic_hash": ""
   },
   "components/tournament/BroadcastBracket.jsx": {
-    "mtime": 1793308653.766123,
-    "seen": 1793845429.7993567,
-    "ast_hash": "9230ed05e200b41ac32899e7c0a3b88f",
+    "mtime": 1795741389.1832855,
+    "seen": 1795741660.5728488,
+    "ast_hash": "0751ce2e7bc903adff5800be9653e584",
     "semantic_hash": ""
   },
   "components/tournament/CupBracketView.jsx": {
@@ -264168,9 +264168,9 @@
     "semantic_hash": ""
   },
   "utils/bracketModel.js": {
-    "mtime": 1793843723.256422,
-    "seen": 1793845429.812171,
-    "ast_hash": "1bdfce04d02fb45635a177f01f7d2a8e",
+    "mtime": 1795741389.172919,
+    "seen": 1795741660.675124,
+    "ast_hash": "968df1730b52f019ce0d704560ada6d1",
     "semantic_hash": ""
   },
   "utils/broadcastMatches.js": {
@@ -264186,9 +264186,9 @@
     "semantic_hash": ""
   },
   "tests/bracketModel.test.js": {
-    "mtime": 1793843723.241133,
-    "seen": 1793845429.80898,
-    "ast_hash": "8d52e51adfdb3bdadac5ebe115cdaba3",
+    "mtime": 1795741389.1755457,
+    "seen": 1795741660.6351447,
+    "ast_hash": "2acd1f86b5d76928ff087a17089bab7c",
     "semantic_hash": ""
   },
   "tests/broadcastMatches.test.js": {
@@ -264984,9 +264984,9 @@
     "semantic_hash": ""
   },
   "screens/league/LeagueTournamentScreen.jsx": {
-    "mtime": 1795547098.275296,
-    "seen": 1795548023.5544965,
-    "ast_hash": "c7435e05ea1196b9f76fee054ab298b7",
+    "mtime": 1795741406.348019,
+    "seen": 1795741660.6176033,
+    "ast_hash": "95da88fbb6dc147eee78600352c64793",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/matchFeed.js": {
@@ -265218,9 +265218,9 @@
     "semantic_hash": ""
   },
   "components/league/match/MatchSummaryView.jsx": {
-    "mtime": 1795547097.8437195,
-    "seen": 1795548023.5118742,
-    "ast_hash": "5b4810eb69c17f9e86fe1e7b4e842363",
+    "mtime": 1795741389.1876683,
+    "seen": 1795741660.5560477,
+    "ast_hash": "db0a71a1662581154ae26dfb6eb8b87a",
     "semantic_hash": ""
   },
   "pes-collector/bridge/nameIndex.js": {
@@ -265566,9 +265566,9 @@
     "semantic_hash": ""
   },
   "components/league/home/CupsCard.jsx": {
-    "mtime": 1795547097.7618363,
-    "seen": 1795548023.5096443,
-    "ast_hash": "725bb402e3e132c3db19f76acf3ce869",
+    "mtime": 1795741389.180254,
+    "seen": 1795741660.5526958,
+    "ast_hash": "8c0ab77a2cb71c77ddcd6dfd2483cf91",
     "semantic_hash": ""
   },
   "components/league/home/MatchCentre.jsx": {
@@ -265722,9 +265722,9 @@
     "semantic_hash": ""
   },
   "screens/ObsScreen.jsx": {
-    "mtime": 1795547098.1543114,
-    "seen": 1795548023.5531554,
-    "ast_hash": "d8066f8a0a58427eb975246d76eac4b1",
+    "mtime": 1795740222.2146978,
+    "seen": 1795741660.6145384,
+    "ast_hash": "bc4e02b777195d46315ac398368f47a8",
     "semantic_hash": ""
   },
   "services/leagueEditorService.js": {
@@ -266766,9 +266766,9 @@
     "semantic_hash": ""
   },
   "docs/GUIA_ADMIN_LIGA.md": {
-    "mtime": 1795726233.8874795,
-    "seen": 1795726373.0629086,
-    "ast_hash": "1ee886f8145f9c036248de566c778afe",
+    "mtime": 1795740254.2427156,
+    "seen": 1795741660.757239,
+    "ast_hash": "54ea770bc85ec29c79282a2cd4fdfbdf",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/matchLines.js": {
@@ -267006,9 +267006,9 @@
     "semantic_hash": ""
   },
   "components/admin/obs/ObsRemoteControl.jsx": {
-    "mtime": 1795547097.6212935,
-    "seen": 1795548023.5027642,
-    "ast_hash": "e2e6c316142a1135917f2684389898cb",
+    "mtime": 1795740227.8752997,
+    "seen": 1795741660.538979,
+    "ast_hash": "cf1bc184ea6cd73b9f9b9efc9a74c6a8",
     "semantic_hash": ""
   },
   "components/broadcast/Presence.jsx": {
@@ -267072,9 +267072,9 @@
     "semantic_hash": ""
   },
   "hooks/useObsDirector.js": {
-    "mtime": 1795547098.0633838,
-    "seen": 1795548023.5325103,
-    "ast_hash": "28f5d8754394852cdeff9a097128436e",
+    "mtime": 1795740184.8721576,
+    "seen": 1795741660.5868416,
+    "ast_hash": "fe51150b0b630de1a0edb33e3192b9e4",
     "semantic_hash": ""
   },
   "hooks/useObsSceneControl.js": {
@@ -267156,9 +267156,9 @@
     "semantic_hash": ""
   },
   "tests/obsAutoScene.test.js": {
-    "mtime": 1795547098.5653663,
-    "seen": 1795548023.571674,
-    "ast_hash": "6c4fc8a0d5c1dda324e75abaebad387f",
+    "mtime": 1795740236.5356705,
+    "seen": 1795741660.6474721,
+    "ast_hash": "bfc6e12bc7554b27b683a5179f3b3e35",
     "semantic_hash": ""
   },
   "tests/obsLowerThird.test.js": {
@@ -267198,9 +267198,9 @@
     "semantic_hash": ""
   },
   "utils/obsAutoScene.js": {
-    "mtime": 1795547098.7255597,
-    "seen": 1795548023.593605,
-    "ast_hash": "11285bc2d01d40d6754eff785768d632",
+    "mtime": 1795740177.6553953,
+    "seen": 1795741660.6904595,
+    "ast_hash": "23f44958a69955dc5ae3a0d22c932b66",
     "semantic_hash": ""
   },
   "utils/obsLowerThird.js": {
@@ -267630,9 +267630,9 @@
     "semantic_hash": ""
   },
   "components/broadcast/LineupIntro.jsx": {
-    "mtime": 1795738175.2096577,
-    "seen": 1795738460.4735613,
-    "ast_hash": "0c8a7413a9103dd30a8dc84b837135d7",
+    "mtime": 1795740867.197637,
+    "seen": 1795741660.5420296,
+    "ast_hash": "eeab6580ffc4bd177253d7363cba05c6",
     "semantic_hash": ""
   },
   "pes-collector/bridge/lineupCommand.js": {
@@ -267648,9 +267648,9 @@
     "semantic_hash": ""
   },
   "tests/lineupIntro.test.js": {
-    "mtime": 1795738043.713023,
-    "seen": 1795738460.9382708,
-    "ast_hash": "d331a6ac4e25658a570538f15aa7d31f",
+    "mtime": 1795741008.6911433,
+    "seen": 1795741660.6420789,
+    "ast_hash": "c34f345a709d568e4965e48e6c4279ee",
     "semantic_hash": ""
   },
   "tests/pesCollector/prematch.test.js": {
@@ -267660,9 +267660,9 @@
     "semantic_hash": ""
   },
   "utils/lineupIntro.js": {
-    "mtime": 1795738175.2182987,
-    "seen": 1795738461.109462,
-    "ast_hash": "7a3e88f0bcc3a1bc63b41769d52b1fd0",
+    "mtime": 1795740841.9357066,
+    "seen": 1795741660.6855905,
+    "ast_hash": "cf26b42c3d7f4cbeac388a86e08937af",
     "semantic_hash": ""
   },
   "pes/rating.js": {

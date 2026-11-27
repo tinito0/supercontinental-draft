@@ -1,0 +1,89 @@
+/* Barrido de transmisión reutilizable (once inicial, tarjetas de jugador, escudos, paneles). El elemento NO se mueve:
+   una franja angosta recorre su caja y el contenido aparece detrás de ella (entrada) o se va con ella (salida). La
+   franja es el borde del barrido, nunca tapa el elemento entero. Solo se animan clip-path y, en los detalles, opacity.
+
+   Uso: class="scl-wipe" en un elemento ya posicionado (relative/absolute), y opcionalmente
+     data-wipe-in="right|left|down|up"   hacia dónde avanza la franja al entrar (por defecto right: de izquierda a derecha)
+     data-wipe-out="right|left|down|up"  hacia dónde avanza al salir (por defecto right)
+   La salida se dispara con .is-leaving en el elemento o en un ancestro.
+
+   Variables (en el elemento o en un ancestro):
+     --wipe-dur / --wipe-out-dur       duración del recorrido de la franja
+     --wipe-delay / --wipe-out-delay   retardo de cada elemento (el stagger lo calcula utils/lineupIntro.js)
+     --wipe-ease / --wipe-out-ease     easing del recorrido
+     --wipe-band                       ancho de la franja en px (como mínimo 40px: también es el margen de las sombras)
+     --wipe-color / --wipe-edge-color  la franja (azul de la barra de la liga) y su filo delantero (lavanda)
+   El recorte deja 40px de margen para que las sombras no salten al terminar. La franja va en ::after, así que el
+   elemento no puede usar ese pseudo-elemento. */
+
+.scl-wipe {
+  --wipe-band: 56px;
+  --wipe-in: scl-mask-in-right;
+  --wipe-out: scl-mask-out-right;
+  --wipe-bar-in: scl-mask-bar-right;
+  --wipe-bar-out: scl-mask-bar-right;
+  --wipe-edge-in: to right;
+  --wipe-edge-out: to right;
+  animation: var(--wipe-in) var(--wipe-dur, 560ms) var(--wipe-delay, 0ms) var(--wipe-ease, cubic-bezier(0.65, 0, 0.35, 1)) backwards;
+}
+.scl-wipe::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(var(--wipe-edge, var(--wipe-edge-in)), var(--wipe-color, #00489a) calc(100% - 6px), var(--wipe-edge-color, #b6b6ec) 0);
+  clip-path: inset(0 0 0 100%);
+  animation: var(--wipe-bar-in) var(--wipe-dur, 560ms) var(--wipe-delay, 0ms) var(--wipe-ease, cubic-bezier(0.65, 0, 0.35, 1)) both;
+}
+
+.is-leaving.scl-wipe,
+.is-leaving .scl-wipe {
+  animation: var(--wipe-out) var(--wipe-out-dur, 420ms) var(--wipe-out-delay, 0ms) var(--wipe-out-ease, cubic-bezier(0.65, 0, 0.35, 1)) forwards;
+}
+.is-leaving.scl-wipe::after,
+.is-leaving .scl-wipe::after {
+  --wipe-edge: var(--wipe-edge-out);
+  animation: var(--wipe-bar-out) var(--wipe-out-dur, 420ms) var(--wipe-out-delay, 0ms) var(--wipe-out-ease, cubic-bezier(0.65, 0, 0.35, 1)) both;
+}
+
+.scl-wipe[data-wipe-in='left'] { --wipe-in: scl-mask-in-left; --wipe-bar-in: scl-mask-bar-left; --wipe-edge-in: to left; }
+.scl-wipe[data-wipe-in='down'] { --wipe-in: scl-mask-in-down; --wipe-bar-in: scl-mask-bar-down; --wipe-edge-in: to bottom; }
+.scl-wipe[data-wipe-in='up'] { --wipe-in: scl-mask-in-up; --wipe-bar-in: scl-mask-bar-up; --wipe-edge-in: to top; }
+.scl-wipe[data-wipe-out='left'] { --wipe-out: scl-mask-out-left; --wipe-bar-out: scl-mask-bar-left; --wipe-edge-out: to left; }
+.scl-wipe[data-wipe-out='down'] { --wipe-out: scl-mask-out-down; --wipe-bar-out: scl-mask-bar-down; --wipe-edge-out: to bottom; }
+.scl-wipe[data-wipe-out='up'] { --wipe-out: scl-mask-out-up; --wipe-bar-out: scl-mask-bar-up; --wipe-edge-out: to top; }
+
+/* La franja: entra por un lado con su ancho completo y sale por el otro. La misma para la entrada y la salida. */
+@keyframes scl-mask-bar-right { from { clip-path: inset(0 100% 0 calc(var(--wipe-band) * -1)); } to { clip-path: inset(0 calc(var(--wipe-band) * -1) 0 100%); } }
+@keyframes scl-mask-bar-left { from { clip-path: inset(0 calc(var(--wipe-band) * -1) 0 100%); } to { clip-path: inset(0 100% 0 calc(var(--wipe-band) * -1)); } }
+@keyframes scl-mask-bar-down { from { clip-path: inset(calc(var(--wipe-band) * -1) 0 100% 0); } to { clip-path: inset(100% 0 calc(var(--wipe-band) * -1) 0); } }
+@keyframes scl-mask-bar-up { from { clip-path: inset(100% 0 calc(var(--wipe-band) * -1) 0); } to { clip-path: inset(calc(var(--wipe-band) * -1) 0 100% 0); } }
+
+/* Entrada: el borde del contenido va pegado al frente de la franja, así que lo nuevo aparece siempre bajo la franja. */
+@keyframes scl-mask-in-right { from { clip-path: inset(-40px 100% -40px 0); } to { clip-path: inset(-40px calc(var(--wipe-band) * -1) -40px -40px); } }
+@keyframes scl-mask-in-left { from { clip-path: inset(-40px 0 -40px 100%); } to { clip-path: inset(-40px -40px -40px calc(var(--wipe-band) * -1)); } }
+@keyframes scl-mask-in-down { from { clip-path: inset(0 -40px 100% -40px); } to { clip-path: inset(-40px -40px calc(var(--wipe-band) * -1) -40px); } }
+@keyframes scl-mask-in-up { from { clip-path: inset(100% -40px 0 -40px); } to { clip-path: inset(calc(var(--wipe-band) * -1) -40px -40px -40px); } }
+
+/* Salida: el contenido se corta en la cola de la franja, que se lo lleva. */
+@keyframes scl-mask-out-right { from { clip-path: inset(-40px -40px -40px calc(var(--wipe-band) * -1)); } to { clip-path: inset(-40px -40px -40px 100%); } }
+@keyframes scl-mask-out-left { from { clip-path: inset(-40px calc(var(--wipe-band) * -1) -40px -40px); } to { clip-path: inset(-40px 100% -40px -40px); } }
+@keyframes scl-mask-out-down { from { clip-path: inset(calc(var(--wipe-band) * -1) -40px -40px -40px); } to { clip-path: inset(100% -40px -40px -40px); } }
+@keyframes scl-mask-out-up { from { clip-path: inset(-40px -40px calc(var(--wipe-band) * -1) -40px); } to { clip-path: inset(-40px -40px 100% -40px); } }
+
+/* Detalles internos (dorsal, nombre, puesto): se descubren escalonados cuando la franja ya pasó. */
+.scl-wipe-detail { animation: scl-mask-detail 240ms calc(var(--wipe-delay, 0ms) + var(--wipe-dur, 560ms) * 0.6 + var(--detail-step, 0ms)) var(--scl-ease, ease-out) backwards; }
+.is-leaving .scl-wipe-detail { animation: none; }
+@keyframes scl-mask-detail { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 -8px 0 0); } }
+
+@keyframes scl-mask-fade-in { from { opacity: 0; } }
+@keyframes scl-mask-fade-out { to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .scl-wipe { animation: scl-mask-fade-in 200ms ease-out backwards; }
+  .is-leaving .scl-wipe, .is-leaving.scl-wipe { animation: scl-mask-fade-out 200ms ease-in forwards; }
+  .scl-wipe::after { display: none; }
+  .scl-wipe-detail { animation: none; }
+}

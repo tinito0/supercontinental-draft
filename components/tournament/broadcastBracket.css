@@ -175,6 +175,15 @@
   color: var(--scl-ink);
 }
 .bb-score.is-empty { color: var(--scl-muted); background: transparent; }
+/* Penales al lado del marcador: «(4)». */
+.bb-pens {
+  flex-shrink: 0;
+  font-size: calc(26px * var(--k));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--scl-ink);
+}
+.bb-team.is-loser .bb-pens { color: var(--scl-muted); }
 .bb-team.is-winner .bb-score { background: var(--scl-bar); color: #ffffff; }
 .bb-card.is-final .bb-team.is-winner .bb-score { background: rgb(var(--bb-tone-strong)); color: #ffffff; }
 .bb-team.is-loser .bb-score { color: var(--scl-muted); }

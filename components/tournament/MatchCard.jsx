@@ -2,7 +2,7 @@ import React, { memo, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
 import { TeamSelect } from './TournamentTeamsContext.jsx';
-import { getMatchWinner, isMatchCompleted, isTiedScore, shootoutLabel } from '../../utils/bracketModel.js';
+import { getMatchWinner, isMatchCompleted, isTiedScore, shootoutResult } from '../../utils/bracketModel.js';
 import { FromGameLock, FromGameNote, isFromGame } from './FromGame.jsx';
 
 export const BracketFork = memo(function BracketFork({ height = 180, tone = 'slate' }) {
@@ -63,7 +63,7 @@ export const MatchCard = memo(function MatchCard({
   const teamAWon = winner === 'A';
   const teamBWon = winner === 'B';
   const isTied = isTiedScore(match);
-  const penalties = shootoutLabel(match);
+  const shootout = shootoutResult(match);
   const fromGame = isFromGame(match);
   // Cruce importado del juego: en edición se ve como quedó, salvo que el admin elija corregirlo a mano.
   const canEdit = isEditing && (!fromGame || isUnlocked);
@@ -102,9 +102,9 @@ export const MatchCard = memo(function MatchCard({
       {/* Teams Body */}
       <div className="flex flex-col divide-y divide-white/[0.05]">
         {[
-          { key: 'teamA', scoreKey: 'scoreA', isWinner: teamAWon, isLoser: teamBWon, seed: seedA },
-          { key: 'teamB', scoreKey: 'scoreB', isWinner: teamBWon, isLoser: teamAWon, seed: seedB },
-        ].map(({ key, scoreKey, isWinner, isLoser, seed }) => {
+          { key: 'teamA', scoreKey: 'scoreA', isWinner: teamAWon, isLoser: teamBWon, seed: seedA, pens: shootout?.a },
+          { key: 'teamB', scoreKey: 'scoreB', isWinner: teamBWon, isLoser: teamAWon, seed: seedB, pens: shootout?.b },
+        ].map(({ key, scoreKey, isWinner, isLoser, seed, pens }) => {
           const name = match[key];
           const score = match[scoreKey];
           const logo = getTeamLogo ? getTeamLogo(name) : DEFAULT_LOGO;
@@ -117,11 +117,7 @@ export const MatchCard = memo(function MatchCard({
               }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                {isWinner ? (
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                ) : (
-                  <div className="w-1.5 h-1.5 rounded-full bg-transparent shrink-0" />
-                )}
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isWinner ? 'bg-success' : 'bg-transparent'}`} aria-hidden="true" />
                 {seed && (
                   <span className="text-xs text-ink-3 font-mono font-bold shrink-0">{seed}</span>
                 )}
@@ -167,8 +163,13 @@ export const MatchCard = memo(function MatchCard({
                   className="w-8 h-6 bg-surface text-center rounded text-ink text-xs border border-white/20 outline-none font-bold ml-2"
                 />
               ) : (
+                <>
+                {/* Penales al lado del marcador, como en /partidos: «1 (4)». */}
+                {pens != null && (
+                  <span className={`ml-2 text-xs tabular-nums ${isWinner ? 'font-bold text-ink' : 'text-ink-2'}`} aria-label={`${pens} en los penales`}>({pens})</span>
+                )}
                 <div
-                  className={`min-w-[24px] h-6 flex items-center justify-center rounded px-1.5 ml-2 font-mono text-xs font-bold tabular-nums ${
+                  className={`min-w-[24px] h-6 flex items-center justify-center rounded px-1.5 ml-1.5 font-mono text-xs font-bold tabular-nums ${
                     isWinner
                       ? 'bg-success/20 text-success-soft border border-success/30'
                       : isLoser
@@ -178,6 +179,7 @@ export const MatchCard = memo(function MatchCard({
                 >
                   {score !== '' && score !== undefined && score !== null ? score : '-'}
                 </div>
+                </>
               )}
             </div>
           );
@@ -205,10 +207,10 @@ export const MatchCard = memo(function MatchCard({
           </span>
         </div>
       )}
-      {!canEdit && penalties && (
-        <div className="border-t border-line/[0.08] px-3 py-1 text-right text-xs font-semibold text-ink-3 tabular-nums">{penalties}</div>
+      {!canEdit && shootout && (
+        <div className="border-t border-line/[0.08] px-3 py-1.5 text-xs font-semibold text-ink-2 tabular-nums">{shootout.sentence}</div>
       )}
-      {!canEdit && isTied && !penalties && (
+      {!canEdit && isTied && !shootout && (
         <div className="border-t border-line/[0.08] px-3 py-1 text-right text-xs font-semibold text-warning-soft">Falta la tanda</div>
       )}
     </div>

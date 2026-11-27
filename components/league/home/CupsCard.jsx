@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Trophy } from 'lucide-react';
-import { CUP_DEFINITIONS, CUP_IDS, buildCupRounds, getMatchWinner, isMatchCompleted, shootoutLabel } from '../../../utils/bracketModel.js';
+import { CUP_DEFINITIONS, CUP_IDS, buildCupRounds, getMatchWinner, isMatchCompleted, shootoutResult } from '../../../utils/bracketModel.js';
 import { LeagueCrest } from '../match/FixtureRow.jsx';
 
 /* Las copas en la portada: la ronda en juego de cada copa (o el campeón), solo cuando ya tienen cruces. */
@@ -20,18 +20,20 @@ function cupSummary(cupId, bracket) {
 
 function Tie({ match, clubOf }) {
   const winner = getMatchWinner(match);
-  const line = (name, score, side) => (
+  const shootout = shootoutResult(match);
+  const line = (name, score, side, pens) => (
     <div className="flex min-w-0 items-center gap-2">
       <LeagueCrest name={name} club={clubOf(name)} size="sm" />
       <span className={`min-w-0 flex-1 truncate text-sm ${winner === side ? 'font-semibold text-ink' : winner ? 'text-ink-3' : 'text-ink-2'}`}>{name || 'A definir'}</span>
+      {pens != null && <span className={`num text-sm ${winner === side ? 'font-semibold text-ink' : 'text-ink-2'}`} aria-label={`${pens} en los penales`}>({pens})</span>}
       <span className="num font-display text-base text-ink">{isMatchCompleted(match) ? Number(score) : ''}</span>
     </div>
   );
   return (
     <li className="space-y-1 py-2.5">
-      {line(match.teamA, match.scoreA, 'A')}
-      {line(match.teamB, match.scoreB, 'B')}
-      {shootoutLabel(match) && <p className="pl-8 text-xs text-ink-3">{shootoutLabel(match)}</p>}
+      {line(match.teamA, match.scoreA, 'A', shootout?.a)}
+      {line(match.teamB, match.scoreB, 'B', shootout?.b)}
+      {shootout && <p className="pl-8 text-sm font-semibold text-ink-2">{shootout.sentence}</p>}
     </li>
   );
 }

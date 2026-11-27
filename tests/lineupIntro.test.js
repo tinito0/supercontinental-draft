@@ -1,6 +1,6 @@
 // Once inicial animado de OBS (utils/lineupIntro.js). Synthetic data: the Arsenal plan of the real save decoded
 // (tests/pesCollector/formations.test.js), not a recorded match.
-import { formationLabel, formationLines, introStep, introTeams, introWakeMs, lineupIntroRemainingMs, pitchLayout, XI_PITCH } from '../utils/lineupIntro.js';
+import { formationLabel, formationLines, introStep, introTeams, introWakeMs, lineupIntroRemainingMs, pitchLayout, wipeSchedule, XI_MOTION, XI_PITCH } from '../utils/lineupIntro.js';
 
 // Arsenal variant 0: roles and (depth, lateral) per formation slot.
 const ROLES = [0, 1, 1, 3, 2, 4, 5, 10, 9, 8, 12];
@@ -101,5 +101,42 @@ describe('timing', () => {
     expect(introWakeMs(doc, 9_300, 300)).toBe(300);
     expect(introWakeMs(doc, 500, 300)).toBe(200);
     expect(introWakeMs(doc, 200, 300)).toBe(200);
+  });
+});
+
+describe('wipeSchedule', () => {
+  const cards = pitchLayout(formationLines(players()));
+  const order = schedule => Object.entries(schedule).sort((a, b) => a[1].inMs - b[1].inMs).map(([id]) => Number(id) - 1000);
+
+  it('wipes the keeper first, then each line from the left wing, with a pause between lines', () => {
+    const schedule = wipeSchedule(cards);
+    expect(order(schedule)).toEqual([0, 4, 2, 1, 3, 5, 8, 6, 9, 7, 10]);
+    const { playersStartMs: start, staggerMs: step, lineGapMs: gap } = XI_MOTION;
+    expect(schedule[1000].inMs).toBe(start);
+    expect(schedule[1004].inMs).toBe(start + step + gap);
+    expect(schedule[1002].inMs).toBe(start + 2 * step + gap);
+    expect(schedule[1010].inMs).toBe(start + 10 * step + 4 * gap);
+  });
+
+  it('leaves in the same order, outStaggerMs apart, starting with no delay', () => {
+    const schedule = wipeSchedule(cards);
+    expect(schedule[1000].outMs).toBe(0);
+    expect(schedule[1010].outMs).toBe(10 * XI_MOTION.outStaggerMs);
+  });
+
+  it('follows another order and stagger when configured', () => {
+    const forwards = wipeSchedule(cards, { ...XI_MOTION, order: 'forwards-first' });
+    expect(order(forwards)).toEqual([10, 8, 6, 9, 7, 5, 4, 2, 1, 3, 0]);
+    const topDown = wipeSchedule(cards, { ...XI_MOTION, order: 'top-down', staggerMs: 50 });
+    const ranks = order(topDown);
+    const ys = ranks.map(i => cards.find(c => c.id === 1000 + i).y);
+    expect(ys).toEqual([...ys].sort((a, b) => a - b));
+    expect(topDown[1000 + ranks[3]].inMs).toBe(XI_MOTION.playersStartMs + 150);
+  });
+
+  it('fits every exit inside leaveMs', () => {
+    const last = (cards.length - 1) * XI_MOTION.outStaggerMs + XI_MOTION.outWipeMs;
+    expect(last).toBeLessThanOrEqual(XI_MOTION.leaveMs);
+    expect(XI_MOTION.panelOutDelayMs + XI_MOTION.panelOutMs).toBeLessThanOrEqual(XI_MOTION.leaveMs);
   });
 });

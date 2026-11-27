@@ -13,6 +13,8 @@ import {
   getMatchWinner,
   isTiedScore,
   shootoutLabel,
+  shootoutResult,
+  shootoutSentence,
   isMatchCompleted,
   slotCenter,
 } from '../utils/bracketModel.js';
@@ -64,6 +66,11 @@ describe('getMatchWinner / isMatchCompleted', () => {
     expect(getMatchWinner({ ...m('A', 'B', 1, 1), penaltiesA: '', penaltiesB: '' })).toBeNull();
     expect(shootoutLabel({ ...m('A', 'B', 1, 1), penaltiesA: 4, penaltiesB: 3 })).toBe('4-3 pen.');
     expect(shootoutLabel({ ...m('A', 'B', 2, 1), penaltiesA: 4, penaltiesB: 3 })).toBe('');
+    expect(shootoutResult({ ...m('River', 'Boca', 1, 1), penaltiesA: 3, penaltiesB: 4 }))
+      .toEqual({ a: 3, b: 4, sentence: 'Ganó Boca por penales 4-3' });
+    expect(shootoutResult({ ...m('River', 'Boca', 2, 1), penaltiesA: 4, penaltiesB: 3 })).toBeNull();
+    expect(shootoutResult({ ...m('River', 'Boca', 1, 1), penaltiesA: 4, penaltiesB: 4 }).sentence).toBe('Penales 4-4');
+    expect(shootoutSentence('', 2, 3)).toBe('Penales 2-3');
     expect(isTiedScore(m('A', 'B', '2', 2))).toBe(true);
     expect(isTiedScore(m('A', 'B', '', ''))).toBe(false);
   });

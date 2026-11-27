@@ -92,7 +92,15 @@ export default function LeagueTournamentScreen() {
       </div>
     );
   } else {
-    content = <StatsView localData={tournament} isEditing={false} isObsMode={false} getTeamLogo={getTeamLogo} getPlayerPhoto={getPlayerPhoto} updateStat={noop} showTitle={false} />;
+    // Esta pestaña lee los goleadores cargados a mano; los goles que registra el juego están en /estadisticas.
+    content = (
+      <>
+        <StatsView localData={tournament} isEditing={false} isObsMode={false} getTeamLogo={getTeamLogo} getPlayerPhoto={getPlayerPhoto} updateStat={noop} showTitle={false} />
+        <Link to="/estadisticas" className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent-soft hover:text-ink">
+          Goles, asistencias y más números de los partidos en Estadísticas <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </>
+    );
   }
 
   return (

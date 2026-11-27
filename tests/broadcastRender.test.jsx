@@ -268,7 +268,9 @@ describe('BroadcastOverlay full-screen and tournament scenes', () => {
 
   it('shows a cup tie decided on penalties', () => {
     const html = renderToStaticMarkup(<BroadcastOverlay overlayData={{ scene: 'bracket' }} allTeams={{}} tournamentData={tournamentData} />);
-    expect(html).toContain('Final · 4-3 pen.');
+    expect(html).toContain('Final · penales');
+    expect(html).toContain('<span class="bb-pens">(4)</span>');
+    expect(html).toContain('<span class="bb-pens">(3)</span>');
   });
 
   it('the Fecha scene lists the open round with date and time', () => {

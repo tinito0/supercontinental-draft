@@ -69,6 +69,30 @@ export function shootoutLabel(match) {
   return `${Number(match.penaltiesA)}-${Number(match.penaltiesB)} pen.`;
 }
 
+/**
+ * «Ganó River por penales 4-3»: who won a shootout and by how much, the higher number first. «Penales 4-4» when the
+ * numbers do not name a winner (a shootout loaded half way).
+ */
+export function shootoutSentence(winnerName, home, away) {
+  const a = Number(home);
+  const b = Number(away);
+  if (!winnerName || a === b) return `Penales ${a}-${b}`;
+  return `Ganó ${winnerName} por penales ${Math.max(a, b)}-${Math.min(a, b)}`;
+}
+
+/**
+ * A cup tie decided on penalties: each side's shootout goals (shown next to its score, «1 (4)») and the sentence that
+ * says who went through. null when the tie was not decided on penalties.
+ * @returns {{ a: number, b: number, sentence: string } | null}
+ */
+export function shootoutResult(match) {
+  if (!shootoutLabel(match)) return null;
+  const a = Number(match.penaltiesA);
+  const b = Number(match.penaltiesB);
+  const winnerName = a === b ? '' : (a > b ? match.teamA : match.teamB) || '';
+  return { a, b, sentence: shootoutSentence(winnerName, a, b) };
+}
+
 export function isMatchCompleted(match) {
   return Boolean(match) && hasScore(match.scoreA) && hasScore(match.scoreB);
 }

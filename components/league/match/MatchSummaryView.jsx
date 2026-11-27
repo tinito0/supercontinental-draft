@@ -3,8 +3,16 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { BallIcon } from './BallIcon.jsx';
 import { CardMark, MatchStatus, TeamMark } from './MatchParts.jsx';
 import { LiveScore } from './LiveScore.jsx';
+import { shootoutSentence } from '../../../utils/bracketModel.js';
 
 /* Encabezado y minuto a minuto del partido (screens/league/LeagueMatchScreen.jsx). Datos: utils/matchCenter.js. */
+
+/** Name of the team that won the shootout; '' while it is level. */
+function shootoutWinner(match) {
+  const { home, away } = match.shootout;
+  if (home === away) return '';
+  return home > away ? match.home.name : match.away.name;
+}
 
 function scorersOf(timeline, side) {
   return timeline
@@ -36,12 +44,15 @@ export function MatchHeader({ match, timeline, teamsById }) {
           {/* Un gol en vivo hace entrar solo el número que cambió (LiveScore); al abrir la página no se anima. */}
           <LiveScore home={match.home.score} away={match.away.score} className="text-5xl sm:text-6xl" />
           <MatchStatus status={match.status} className="mt-2 text-sm" />
-          {match.shootout && (
-            <p className="mt-1 text-sm text-ink-2">Penales <span className="num font-semibold text-ink">{match.shootout.home}-{match.shootout.away}</span></p>
-          )}
         </div>
         {team('away', '')}
       </div>
+      {/* Debajo de los equipos y a todo el ancho: en la columna del marcador no entra en el teléfono. */}
+      {match.shootout && (
+        <p className="num mt-4 border-t border-line/10 pt-3 text-center text-sm font-semibold text-ink">
+          {shootoutSentence(shootoutWinner(match), match.shootout.home, match.shootout.away)}
+        </p>
+      )}
     </header>
   );
 }
@@ -108,7 +119,7 @@ export function MatchTimeline({ timeline, match }) {
   if (match.status.kind === 'finished') {
     rows.push(
       <li key="end" className="eyebrow py-2 text-center">
-        Final {match.home.score}-{match.away.score}{match.shootout ? ` · penales ${match.shootout.home}-${match.shootout.away}` : ''}
+        Final {match.home.score}-{match.away.score}{match.shootout ? ` · ${shootoutSentence(shootoutWinner(match), match.shootout.home, match.shootout.away)}` : ''}
       </li>,
     );
   }

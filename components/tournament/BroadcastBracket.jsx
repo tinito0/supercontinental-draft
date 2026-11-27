@@ -14,7 +14,7 @@ import {
   getMatchWinner,
   hasScore,
   isMatchCompleted,
-  shootoutLabel,
+  shootoutResult,
 } from '../../utils/bracketModel.js';
 import { BroadcastBadge } from '../broadcast/BroadcastFrame.jsx';
 import { BroadcastCrest, isLongName } from '../broadcast/BroadcastCrest.jsx';
@@ -25,13 +25,14 @@ const TONE_STROKES = {
   silver: { final: 'rgba(85,96,127,0.85)', base: 'rgba(57,67,107,0.35)' },
 };
 
-function TeamRow({ name, score, seed, outcome, logo }) {
+function TeamRow({ name, score, seed, outcome, logo, pens }) {
   const scoreShown = hasScore(score);
   return (
     <div className={`bb-team ${outcome ? `is-${outcome}` : ''}`}>
       {seed !== undefined && <span className="bb-seed">{seed}</span>}
       <BroadcastCrest className="bb-crest" name={name} logo={name ? logo : null} />
       <span className={`bb-name ${name ? '' : 'is-empty'} ${isLongName(name) ? 'is-long-name' : ''}`} title={name || undefined}>{name || 'A definir'}</span>
+      {pens != null && <span className="bb-pens">({pens})</span>}
       <span className={`bb-score ${scoreShown ? '' : 'is-empty'}`}>{scoreShown ? Number(score) : '–'}</span>
     </div>
   );
@@ -43,7 +44,7 @@ const BroadcastMatchCard = memo(function BroadcastMatchCard({ entry, cup, getTea
   const showSeeds = Boolean(entry.seedA || entry.seedB);
   const winner = getMatchWinner(match);
   const completed = isMatchCompleted(match);
-  const pens = shootoutLabel(match);
+  const shootout = shootoutResult(match);
   const outcomeFor = side => (winner ? (winner === side ? 'winner' : 'loser') : null);
   const championName = entry.isFinal && winner ? (winner === 'A' ? match.teamA : match.teamB) : '';
   const logoOf = name => (name && getTeamLogo ? getTeamLogo(name) : null);
@@ -59,10 +60,10 @@ const BroadcastMatchCard = memo(function BroadcastMatchCard({ entry, cup, getTea
       <div className={`bb-card ${entry.isFinal ? 'is-final' : ''}`}>
         <div className="bb-card-head">
           <span className="bb-card-title">{entry.title}</span>
-          <span className={`bb-card-state ${completed ? 'is-done' : ''}`}>{pens ? `Final · ${pens}` : completed ? 'Final' : ''}</span>
+          <span className={`bb-card-state ${completed ? 'is-done' : ''}`}>{shootout ? 'Final · penales' : completed ? 'Final' : ''}</span>
         </div>
-        <TeamRow name={match.teamA} score={match.scoreA} seed={showSeeds ? entry.seedA : undefined} outcome={outcomeFor('A')} logo={logoOf(match.teamA)} />
-        <TeamRow name={match.teamB} score={match.scoreB} seed={showSeeds ? entry.seedB : undefined} outcome={outcomeFor('B')} logo={logoOf(match.teamB)} />
+        <TeamRow name={match.teamA} score={match.scoreA} seed={showSeeds ? entry.seedA : undefined} outcome={outcomeFor('A')} logo={logoOf(match.teamA)} pens={shootout?.a} />
+        <TeamRow name={match.teamB} score={match.scoreB} seed={showSeeds ? entry.seedB : undefined} outcome={outcomeFor('B')} logo={logoOf(match.teamB)} pens={shootout?.b} />
       </div>
       {championName && (
         <div className="bb-champion">

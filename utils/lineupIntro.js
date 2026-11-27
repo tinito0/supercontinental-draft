@@ -161,6 +161,55 @@ export function introWakeMs(intro, remainingMs, leaveMs) {
 }
 
 /**
+ * Ritmo del once (ms), con barridos de components/broadcast/wipe.css. Entrada: el panel, después el encabezado
+ * (escudo, nombre, formación, sello) y la cancha, y los jugadores uno por uno en `order` con `staggerMs` entre cada
+ * uno y `lineGapMs` extra al pasar de línea. Salida (`leaveMs` antes del cambio de equipo): los jugadores en el mismo
+ * orden, después el encabezado y al final el panel.
+ */
+export const XI_MOTION = Object.freeze({
+  panelMs: 600,
+  headStartMs: 260,
+  headStepMs: 90,
+  fieldMs: 380,
+  playersStartMs: 760,
+  staggerMs: 80,
+  lineGapMs: 140,
+  wipeMs: 520,
+  order: 'keeper-first',
+  inDirection: 'right',
+  outDirection: 'right',
+  outStaggerMs: 30,
+  outWipeMs: 380,
+  headOutMs: 360,
+  panelOutDelayMs: 560,
+  panelOutMs: 440,
+  leaveMs: 1000,
+});
+
+/** Órdenes de aparición: del arco hacia adelante, de los delanteros hacia atrás, o de la banda izquierda a la derecha. */
+export const XI_ORDERS = Object.freeze({
+  'keeper-first': (a, b) => a.line - b.line || a.slot - b.slot,
+  'forwards-first': (a, b) => b.line - a.line || a.slot - b.slot,
+  'top-down': (a, b) => a.y - b.y || a.x - b.x,
+});
+
+/**
+ * Cuándo arranca el barrido de cada jugador, a la entrada y a la salida (relativo al comienzo de la salida).
+ * @param {Array<{ id: number, line: number, slot: number, x: number, y: number }>} cards de pitchLayout
+ * @returns {Record<number, { inMs: number, outMs: number }>} por id de jugador
+ */
+export function wipeSchedule(cards, motion = XI_MOTION) {
+  const sorted = [...(cards || [])].sort(XI_ORDERS[motion.order] || XI_ORDERS['keeper-first']);
+  const byLine = motion.order !== 'top-down';
+  let lineBreaks = 0;
+  return Object.fromEntries(sorted.map((card, rank) => {
+    if (byLine && rank > 0 && card.line !== sorted[rank - 1].line) lineBreaks += 1;
+    const inMs = motion.playersStartMs + rank * motion.staggerMs + lineBreaks * motion.lineGapMs;
+    return [card.id, { inMs, outMs: rank * motion.outStaggerMs }];
+  }));
+}
+
+/**
  * Qué equipo va en pantalla según lo que le queda a la animación: su índice y cuánto le queda a ese equipo.
  * @returns {null | { index: number, remainingMs: number }}
  */
