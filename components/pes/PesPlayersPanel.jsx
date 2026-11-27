@@ -9,7 +9,7 @@ import { useCountries } from './useCountries.js';
 import { PesPlayerList } from './players/PesPlayerList.jsx';
 import { ProfileHeader, IdentityForm, PositionMap, StatGroups } from './players/PesPlayerProfile.jsx';
 import { POSITION_FIELDS, IDENTITY_FIELDS, FIELD_LABELS, TRAIT_GROUPS, fieldsInGroup, positionName, statGroups, statLabel } from './players/playerFields.js';
-import { TraitToggles, MotionForm } from './players/PlayerTraits.jsx';
+import { TraitToggles, MotionForm, EditCelebrations } from './players/PlayerTraits.jsx';
 import { YouthDraftToggle } from './players/YouthDraftToggle.jsx';
 import { useYouthDraft } from '../../hooks/useYouthDraft.js';
 import { scrollBehavior } from '../../utils/scrollBehavior.js';
@@ -90,7 +90,7 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
           // Keyed by player: the profile fades in, so picking another player reads as a new record, not an edit.
           <div key={playerId} className="animate-in fade-in space-y-4 lg:space-y-6">
             {inBin && (
-              <BinPlayer table={table} playerId={playerId} fieldOf={fieldOf} canEdit={canEdit} modified={modified} onApply={onApply} inEdit={inEdit}
+              <BinPlayer table={table} playerId={playerId} fieldOf={fieldOf} canEdit={canEdit} modified={modified} onApply={onApply} inEdit={inEdit} edit={ws?.edit}
                 appPlayer={appById.get(playerId)} countries={countries} countryName={countryName}
                 youthDraft={canMarkProspects ? youthDraft : undefined} />
             )}
@@ -102,7 +102,7 @@ export function PesPlayersPanel({ pes, onApply, appPlayers = [] }) {
   );
 }
 
-function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, inEdit, appPlayer, countries, countryName, youthDraft }) {
+function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, inEdit, edit, appPlayer, countries, countryName, youthDraft }) {
   const get = name => table.get(playerId, name);
   const isModified = field => modified.has(opKey({ type: 'bin.player.set', target: { playerId }, field }));
   // A player that is also in the EDIT gets the same change there: the game reads the EDIT value of edited players.
@@ -114,14 +114,15 @@ function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, inEdi
   const others = table.fields.filter(f => !used.has(f.name) && !TRAIT_GROUPS.includes(f.group));
   const skills = fieldsInGroup(table.fields, 'skill');
   const comStyles = fieldsInGroup(table.fields, 'comStyle');
-  const motions = fieldsInGroup(table.fields, 'motion');
+  // The game takes celebrations from the EDIT only (owner, 2026-11-27): the Player.bin one is not shown.
+  const motions = fieldsInGroup(table.fields, 'motion').filter(f => f.name !== 'celebration');
   const count = list => list.filter(f => get(f.name)).length;
 
   return (
     <>
       <Card>
         <ProfileHeader playerId={playerId} get={get} appPlayer={appPlayer} countryName={countryName} />
-        {inEdit && <p className="mt-4 text-xs text-ink-2 max-w-[65ch]">También está en el EDIT: cada cambio se guarda en Player.bin y en el EDIT, salvo el festejo y las posiciones de defensa y arquero, que van solo a Player.bin.</p>}
+        {inEdit && <p className="mt-4 text-xs text-ink-2 max-w-[65ch]">También está en el EDIT: cada cambio se guarda en Player.bin y en el EDIT, salvo las posiciones de defensa y arquero, que van solo a Player.bin.</p>}
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_17rem]">
           <Group title="Identidad">
             <IdentityForm {...shared} countries={countries} />
@@ -151,8 +152,14 @@ function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, inEdi
       )}
 
       {motions.length > 0 && (
-        <Card title="Movimientos y festejo" description="Tipos que usa el juego. El festejo va por número.">
+        <Card title="Movimientos" description="Tipos que usa el juego.">
           <MotionForm {...shared} fields={motions} />
+        </Card>
+      )}
+
+      {motions.length > 0 && (
+        <Card title="Festejos" description={inEdit ? 'El juego los toma del EDIT. Número del festejo, 0 a 255, incluidos los del mod.' : 'El juego toma los festejos del EDIT y este jugador no está en el EDIT: cargá el EDIT o agregalo ahí para elegirlos.'}>
+          {inEdit && <EditCelebrations edit={edit} playerId={playerId} canEdit={canEdit} modified={modified} onApply={onApply} />}
         </Card>
       )}
 

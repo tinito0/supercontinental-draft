@@ -7,8 +7,8 @@
 // Player.bin/CSV skill order, so the 13 skills none of those players has (Sombrero, Rabona, No Look Pass, the GK
 // kicks, Long Throw, GK Penalty Saver, Man Marking, Interception, Acrobatic Clear) follow by position; the 28 that
 // do appear all sit where that order puts them. Positions pos9–pos12 are left out: those players are C everywhere
-// there, so the order of CB/LB/RB/GK is not known. The celebration is left out too: EDIT gc1 equals Player.bin
-// only on 3 of the 17 and goes past its highest id (249 vs 162), so it is another numbering.
+// there, so the order of CB/LB/RB/GK is not known. Celebrations are not linked: the game takes them from the EDIT
+// only (owner, 2026-11-27), and the editor edits EDIT gc1/gc2 directly.
 
 const SKILL_ORDER = [
   // [Player.bin field, EDIT field], in the file order of both.

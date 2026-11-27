@@ -1,5 +1,7 @@
 import React from 'react';
 import { FieldInput, ModifiedDot } from '../PesUi.jsx';
+import { EDIT_PLAYER_FIELDS } from '../../../pes/formats/pes2021/editLayout.js';
+import { opKey } from '../opKeys.js';
 import { fieldRange } from '../../../pes/core/fields.js';
 import { SKILL_INFO } from '../../../utils/playerGlossary.js';
 import { traitLabel, MOTION_LABELS } from './playerFields.js';
@@ -48,6 +50,25 @@ export function MotionForm({ fields, get, canEdit, isModified, commit }) {
               {options.map(n => <option key={n} value={n}>Tipo {n}</option>)}
             </select>
           </label>
+        );
+      })}
+    </div>
+  );
+}
+
+const CELEBRATIONS = [['gc1', 'Festejo 1'], ['gc2', 'Festejo 2']];
+
+/** The two celebrations of an EDIT player (gc1, gc2); writing one raises the EDIT motion flag. */
+export function EditCelebrations({ edit, playerId, canEdit, modified, onApply }) {
+  const values = edit.readPlayer(playerId);
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 max-w-md">
+      {CELEBRATIONS.map(([name, label]) => {
+        const field = EDIT_PLAYER_FIELDS.find(f => f.name === name);
+        return (
+          <FieldInput key={name} field={field} value={values[name]} readOnly={!canEdit} label={label}
+            modified={modified.has(opKey({ type: 'edit.player.set', target: { playerId }, field: name }))}
+            onCommit={value => onApply([{ type: 'edit.player.set', target: { playerId }, field: name, value }])} />
         );
       })}
     </div>

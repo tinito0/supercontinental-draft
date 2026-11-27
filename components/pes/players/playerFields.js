@@ -50,7 +50,7 @@ export const fieldsInGroup = (fields, group) => fields.filter(f => f.group === g
 export const traitLabel = field => PLAYER_SKILLS_MAP[field.csv] || field.name;
 
 export const MOTION_LABELS = {
-  celebration: 'Festejo', dribblingHunching: 'Gambeta: inclinación', dribblingArmMovement: 'Gambeta: brazos',
+  dribblingHunching: 'Gambeta: inclinación', dribblingArmMovement: 'Gambeta: brazos',
   runningHunching: 'Carrera: inclinación', runningArmMovement: 'Carrera: brazos', dribbleMotion: 'Forma de gambetear',
   cornerKicks: 'Córners', freeKicks: 'Tiros libres', penaltyKick: 'Penales',
 };
