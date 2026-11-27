@@ -135,6 +135,10 @@ export const EDIT_STRATEGY = {
   numbersInDefense: { offset: 0x90, min: 1, max: 3 },
 };
 
+// A celebration stored as 0 or 1 belongs to the owner's celebration mod, which applies celebrations past 255 from
+// outside the EDIT (owner, 2026-11-27): the engine never changes it.
+export const isModCelebration = (field, value) => (field === 'gc1' || field === 'gc2') && (value === 0 || value === 1);
+
 // Fields that are identifiers or edit flags: shown but never editable through the engine.
 export const EDIT_LOCKED_FIELDS = new Set(['id', 'comm_id', 'copy_id', 'e_player', 'e_basic', 'e_regpos', 'e_playpos', 'e_ability',
   'e_skill', 'e_style', 'e_com', 'e_motion', 'e_face', 'e_hair', 'e_phys', 'e_strip', 'e_name', 'e_emblem', 'e_stadium', 'e_stadname']);

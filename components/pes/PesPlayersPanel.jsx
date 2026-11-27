@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Users } from 'lucide-react';
 import { Card, Group, FieldInput } from './PesUi.jsx';
 import { EmptyState } from '../ui/EmptyState.jsx';
-import { EDIT_PLAYER_FIELDS, EDIT_LOCKED_FIELDS } from '../../pes/formats/pes2021/editLayout.js';
+import { EDIT_PLAYER_FIELDS, EDIT_LOCKED_FIELDS, isModCelebration } from '../../pes/formats/pes2021/editLayout.js';
 import { opKey } from './opKeys.js';
 import { playerEditOps } from '../../pes/formats/pes2021/playerFieldSync.js';
 import { useCountries } from './useCountries.js';
@@ -158,7 +158,7 @@ function BinPlayer({ table, playerId, fieldOf, canEdit, modified, onApply, inEdi
       )}
 
       {motions.length > 0 && (
-        <Card title="Festejos" description={inEdit ? 'El juego los toma del EDIT. Número del festejo, 0 a 255, incluidos los del mod.' : 'El juego toma los festejos del EDIT y este jugador no está en el EDIT: cargá el EDIT o agregalo ahí para elegirlos.'}>
+        <Card title="Festejos" description={inEdit ? 'El juego los toma del EDIT. Número del festejo, hasta 255. Los que valen 0 o 1 los pone el mod y quedan como están.' : 'El juego toma los festejos del EDIT y este jugador no está en el EDIT: cargá el EDIT o agregalo ahí para elegirlos.'}>
           {inEdit && <EditCelebrations edit={edit} playerId={playerId} canEdit={canEdit} modified={modified} onApply={onApply} />}
         </Card>
       )}
@@ -184,7 +184,7 @@ function EditPlayer({ ws, playerId, canEdit, modified, onApply, bare }) {
       description="Valores crudos del EDIT00000000 (formato 4ccEditor). Al cambiar un campo se marca como editado para que el juego use el valor del EDIT.">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {EDIT_PLAYER_FIELDS.filter(f => !EDIT_LOCKED_FIELDS.has(f.name)).map(f => (
-          <FieldInput key={f.name} field={f} value={p[f.name]} readOnly={!canEdit}
+          <FieldInput key={f.name} field={f} value={p[f.name]} readOnly={!canEdit || isModCelebration(f.name, p[f.name])}
             modified={modified.has(opKey({ type: 'edit.player.set', target: { playerId }, field: f.name }))}
             onCommit={value => onApply([{ type: 'edit.player.set', target: { playerId }, field: f.name, value }])} />
         ))}
