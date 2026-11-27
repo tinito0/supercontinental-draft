@@ -162,7 +162,7 @@ export function introWakeMs(intro, remainingMs, leaveMs) {
 
 /**
  * Ritmo del once (ms), con barridos de components/broadcast/wipe.css. Entrada: el panel, después el encabezado
- * (escudo, nombre, formación, sello) y la cancha, y los jugadores uno por uno en `order` con `staggerMs` entre cada
+ * (escudo, nombre, formación, sello), y los jugadores uno por uno en `order` con `staggerMs` entre cada
  * uno y `lineGapMs` extra al pasar de línea. Salida (`leaveMs` antes del cambio de equipo): los jugadores en el mismo
  * orden, después el encabezado y al final el panel.
  */
@@ -170,7 +170,6 @@ export const XI_MOTION = Object.freeze({
   panelMs: 600,
   headStartMs: 260,
   headStepMs: 90,
-  fieldMs: 380,
   playersStartMs: 760,
   staggerMs: 80,
   lineGapMs: 140,
@@ -180,10 +179,11 @@ export const XI_MOTION = Object.freeze({
   outDirection: 'right',
   outStaggerMs: 30,
   outWipeMs: 380,
-  headOutMs: 360,
-  panelOutDelayMs: 560,
+  headOutMs: 300,
+  headOutStepMs: 40,
+  panelOutDelayMs: 800,
   panelOutMs: 440,
-  leaveMs: 1000,
+  leaveMs: 1250,
 });
 
 /** Órdenes de aparición: del arco hacia adelante, de los delanteros hacia atrás, o de la banda izquierda a la derecha. */

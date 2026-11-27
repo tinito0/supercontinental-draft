@@ -13,6 +13,7 @@
   border-radius: 0 0 36px 36px;
   overflow: hidden;
   box-shadow: 0 26px 80px rgba(2, 10, 30, 0.55);
+  --wipe-band: 140px;
 }
 
 .scl-xi-head {
@@ -25,7 +26,7 @@
   background: var(--scl-frame);
   overflow: hidden;
 }
-.scl-xi-edge { position: absolute; inset: 0 0 auto 0; height: 8px; background: var(--scl-stripe); transform-origin: left; animation: scl-popup-stripe 640ms 80ms var(--scl-ease) backwards; }
+.scl-xi-edge { position: absolute; inset: 0 0 auto 0; height: 8px; background: var(--scl-stripe); }
 .scl-xi .scl-frame-ball { right: 120px; bottom: -200px; width: 380px; height: 380px; }
 .scl-xi-crest {
   position: relative;
@@ -60,7 +61,7 @@
   padding: 22px 28px;
   background: repeating-linear-gradient(90deg, #f4f6fb 0 130px, #eaedf5 130px 260px);
 }
-.scl-xi-field { position: absolute; inset: 14px 18px; border: 3px solid rgba(2, 42, 94, 0.12); pointer-events: none; --wipe-color: rgba(122, 123, 183, 0.28); }
+.scl-xi-field { position: absolute; inset: 14px 18px; border: 3px solid rgba(2, 42, 94, 0.12); pointer-events: none; }
 .scl-xi-box { position: absolute; left: -3px; top: 26%; width: 150px; height: 48%; border: 3px solid rgba(2, 42, 94, 0.12); }
 .scl-xi-half { position: absolute; right: -3px; top: 50%; width: 150px; height: 150px; translate: 50% -50%; border: 3px solid rgba(2, 42, 94, 0.12); border-radius: 50%; }
 
@@ -89,17 +90,19 @@
   object-fit: cover;
   object-position: top;
   background: #ffffff;
-  animation: scl-xi-photo-in 420ms calc(var(--wipe-delay, 0ms) + var(--wipe-dur, 520ms) * 0.5) var(--scl-ease) backwards;
+  animation: scl-xi-photo-in 320ms calc(var(--wipe-delay, 0ms) + var(--wipe-dur, 520ms) * 0.6) var(--scl-ease) backwards;
 }
 .scl-xi-plate { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; padding: 0 10px; }
 .scl-xi-number { flex: none; min-width: 30px; font-size: 32px; line-height: 1; font-weight: 800; color: var(--scl-periwinkle); font-variant-numeric: tabular-nums; text-align: center; }
 .scl-xi-copy { display: grid; min-width: 0; }
-/* Nombres largos («Bruno Fernandes») pasan a dos renglones en vez de cortarse. */
+/* Nombres largos («Bruno Fernandes») pasan a dos renglones; una palabra de más de 11 letras («Kvaratskhelia», data-long)
+   va más chica para no cortarse a la mitad. */
 .scl-xi-copy strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-size: 24px; line-height: 1; font-weight: 800; color: var(--scl-ink); text-transform: uppercase; }
+.scl-xi-copy strong[data-long] { font-size: 20px; }
 .scl-xi-copy small { font-size: 17px; font-weight: 700; letter-spacing: 0.08em; color: var(--scl-muted); text-transform: uppercase; }
 
-@keyframes scl-xi-photo-in { from { opacity: 0; transform: scale(1.08); } }
+@keyframes scl-xi-photo-in { from { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .scl-xi-photo img, .scl-xi-edge { animation: none; }
+  .scl-xi-photo img { animation: none; }
 }

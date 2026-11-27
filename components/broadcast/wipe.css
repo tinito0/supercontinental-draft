@@ -68,10 +68,10 @@
 @keyframes scl-mask-in-up { from { clip-path: inset(100% -40px 0 -40px); } to { clip-path: inset(calc(var(--wipe-band) * -1) -40px -40px -40px); } }
 
 /* Salida: el contenido se corta en la cola de la franja, que se lo lleva. */
-@keyframes scl-mask-out-right { from { clip-path: inset(-40px -40px -40px calc(var(--wipe-band) * -1)); } to { clip-path: inset(-40px -40px -40px 100%); } }
-@keyframes scl-mask-out-left { from { clip-path: inset(-40px calc(var(--wipe-band) * -1) -40px -40px); } to { clip-path: inset(-40px 100% -40px -40px); } }
-@keyframes scl-mask-out-down { from { clip-path: inset(calc(var(--wipe-band) * -1) -40px -40px -40px); } to { clip-path: inset(100% -40px -40px -40px); } }
-@keyframes scl-mask-out-up { from { clip-path: inset(-40px -40px calc(var(--wipe-band) * -1) -40px); } to { clip-path: inset(-40px -40px 100% -40px); } }
+@keyframes scl-mask-out-right { from { clip-path: inset(-40px -40px -40px calc(var(--wipe-band) * -1)); } to { clip-path: inset(-40px -40px -40px calc(100% + 40px)); } }
+@keyframes scl-mask-out-left { from { clip-path: inset(-40px calc(var(--wipe-band) * -1) -40px -40px); } to { clip-path: inset(-40px calc(100% + 40px) -40px -40px); } }
+@keyframes scl-mask-out-down { from { clip-path: inset(calc(var(--wipe-band) * -1) -40px -40px -40px); } to { clip-path: inset(calc(100% + 40px) -40px -40px -40px); } }
+@keyframes scl-mask-out-up { from { clip-path: inset(-40px -40px calc(var(--wipe-band) * -1) -40px); } to { clip-path: inset(-40px -40px calc(100% + 40px) -40px); } }
 
 /* Detalles internos (dorsal, nombre, puesto): se descubren escalonados cuando la franja ya pasó. */
 .scl-wipe-detail { animation: scl-mask-detail 240ms calc(var(--wipe-delay, 0ms) + var(--wipe-dur, 560ms) * 0.6 + var(--detail-step, 0ms)) var(--scl-ease, ease-out) backwards; }

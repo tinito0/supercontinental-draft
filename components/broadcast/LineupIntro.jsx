@@ -27,6 +27,9 @@ function Silhouette() {
   );
 }
 
+const LONG_WORD = 11;
+const hasLongWord = name => String(name || '').split(/s+/).some(word => word.length > LONG_WORD);
+
 function XiPlayer({ player, timing, motion }) {
   // Se recuerda qué foto falló: con otro jugador en el mismo lugar se vuelve a intentar.
   const [failedId, setFailedId] = useState(null);
@@ -42,7 +45,7 @@ function XiPlayer({ player, timing, motion }) {
       <div className="scl-xi-plate">
         <span className="scl-xi-number scl-wipe-detail">{player.number ?? ''}</span>
         <span className="scl-xi-copy">
-          <strong className="scl-wipe-detail" style={{ '--detail-step': '60ms' }}>{player.name || `Jugador ${player.id}`}</strong>
+          <strong className="scl-wipe-detail" data-long={hasLongWord(player.name) || undefined} style={{ '--detail-step': '60ms' }}>{player.name || `Jugador ${player.id}`}</strong>
           {player.roleLabel && <small className="scl-wipe-detail" style={{ '--detail-step': '120ms' }}>{player.roleLabel}</small>}
         </span>
       </div>
@@ -54,9 +57,8 @@ function XiCard({ team, logo, isLeaving, motion }) {
   const schedule = useMemo(() => wipeSchedule(team.cards, motion), [team.cards, motion]);
   // Encabezado: escudo, nombre, formación y sello, uno detrás del otro; a la salida, después de los jugadores.
   const playersOutMs = (team.cards.length - 1) * motion.outStaggerMs + motion.outWipeMs * 0.5;
-  const head = step => wipeVars({ inMs: motion.headStartMs + step * motion.headStepMs, outMs: playersOutMs + step * 40, dur: motion.wipeMs, outDur: motion.headOutMs });
+  const head = step => wipeVars({ inMs: motion.headStartMs + step * motion.headStepMs, outMs: playersOutMs + step * motion.headOutStepMs, dur: motion.wipeMs, outDur: motion.headOutMs });
   const panel = wipeVars({ inMs: 0, outMs: motion.panelOutDelayMs, dur: motion.panelMs, outDur: motion.panelOutMs });
-  const field = wipeVars({ inMs: motion.fieldMs, outMs: playersOutMs, dur: motion.panelMs, outDur: motion.headOutMs });
   return (
     <section className={`scl-xi scl-wipe ${isLeaving ? 'is-leaving' : ''}`} data-wipe-in={motion.inDirection} data-wipe-out={motion.outDirection}
       style={panel} aria-label={`Once inicial de ${team.name}`}>
@@ -79,7 +81,7 @@ function XiCard({ team, logo, isLeaving, motion }) {
         <div className="scl-xi-seal scl-wipe" data-wipe-in="up" data-wipe-out="up" style={head(3)}><BroadcastBadge /></div>
       </header>
       <div className="scl-xi-pitch">
-        <div className="scl-xi-field scl-wipe" data-wipe-in={motion.inDirection} data-wipe-out={motion.outDirection} style={field} aria-hidden="true">
+        <div className="scl-xi-field" aria-hidden="true">
           <span className="scl-xi-box" /><span className="scl-xi-half" />
         </div>
         {/* Cada uno en su lugar del juego (utils/lineupIntro.js pitchLayout); el orden y el ritmo, wipeSchedule. */}
