@@ -62,7 +62,8 @@ accept only the values the data uses (`min`/`max`). With that export every `binL
 playing style included (one player has style 22, past the 0–21 list). The generator writes those checks to
 `PLAYER_FIELD_CHECKS` and `pes/formats/pes2021/playerEvidence.js` raises the «structural» fields to verified; form,
 injury resistance and reputation become verified because the EDIT (4ccEditor names) agrees on 17/17 players. The 5
-goalkeeper attributes stay read-only (label conflict between EJOGC and Rebuilt). Matching the export is not an
+goalkeeper attributes keep EJOGC's names (owner's decision over Rebuilt's); gkReach is the only one that correlates
+with height (r = 0.37, 3 051 goalkeepers). Matching the export is not an
 in-game test.
 
 **Player.bin ↔ EDIT** (`pes/formats/pes2021/playerFieldSync.js`): a Player.bin edit of a player who is also in the
