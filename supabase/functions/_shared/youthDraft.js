@@ -4,13 +4,14 @@
 export const YOUTH_DRAFT_MIN_AGE = 17;
 export const YOUTH_DRAFT_MAX_AGE = 21;
 export const YOUTH_DRAFT_MIN_OVR = 50;
-export const YOUTH_DRAFT_MAX_OVR = 60;
-// The administration takes each prospect to 84–86 in the PES editor before the draft.
+// No real upper bound: 99 is the game's highest rating.
+export const YOUTH_DRAFT_MAX_OVR = 99;
+// The administration takes each prospect to at least 84 in the PES editor before the draft.
 export const YOUTH_DRAFT_EDITED_MIN_OVR = 84;
-export const YOUTH_DRAFT_EDITED_MAX_OVR = 86;
+export const YOUTH_DRAFT_EDITED_MAX_OVR = 99;
 export const YOUTH_DRAFT_MAX_POOL = 40;
 
-export const YOUTH_DRAFT_RULE_TEXT = `Edad ${YOUTH_DRAFT_MIN_AGE}-${YOUTH_DRAFT_MAX_AGE} y media original ${YOUTH_DRAFT_MIN_OVR}-${YOUTH_DRAFT_MAX_OVR}`;
+export const YOUTH_DRAFT_RULE_TEXT = `Edad ${YOUTH_DRAFT_MIN_AGE}-${YOUTH_DRAFT_MAX_AGE} y media original de ${YOUTH_DRAFT_MIN_OVR} o más`;
 
 export const youthDraftPath = appId => `artifacts/${appId}/public/data/config/youthDraft`;
 

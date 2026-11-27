@@ -4,16 +4,17 @@ import { describe, it, expect } from 'vitest';
 import { isYouthDraftEligible, isYouthDraftLock, youthDraftPoolIds, youthDraftPath } from '../supabase/functions/_shared/youthDraft.js';
 
 describe('isYouthDraftEligible', () => {
-  it('takes 17 to 21 year olds rated 50 to 60, both ends included', () => {
+  it('takes 17 to 21 year olds rated 50 or more, up to 99', () => {
     expect(isYouthDraftEligible({ Age: 17, OVR_CALCULADO: 50 })).toBe(true);
     expect(isYouthDraftEligible({ Age: 21, OVR_CALCULADO: 60 })).toBe(true);
+    expect(isYouthDraftEligible({ Age: 20, OVR_CALCULADO: 99 })).toBe(true);
   });
 
   it('refuses anyone outside the age or rating range, and missing players', () => {
     expect(isYouthDraftEligible({ Age: 16, OVR_CALCULADO: 55 })).toBe(false);
     expect(isYouthDraftEligible({ Age: 22, OVR_CALCULADO: 55 })).toBe(false);
     expect(isYouthDraftEligible({ Age: 19, OVR_CALCULADO: 49 })).toBe(false);
-    expect(isYouthDraftEligible({ Age: 19, OVR_CALCULADO: 61 })).toBe(false);
+    expect(isYouthDraftEligible({ Age: 19, OVR_CALCULADO: 61 })).toBe(true);
     expect(isYouthDraftEligible(null)).toBe(false);
   });
 });
