@@ -267760,5 +267760,11 @@
     "seen": 1795726373.0169468,
     "ast_hash": "076f439740b753f5c016b54b859c119d",
     "semantic_hash": ""
+  },
+  "components/league/HistoryChapters.jsx": {
+    "mtime": 1795738318.4920185,
+    "seen": 1795739076.1630344,
+    "ast_hash": "15fad61780e7cbf160292f49a73ff9a2",
+    "semantic_hash": ""
   }
 }

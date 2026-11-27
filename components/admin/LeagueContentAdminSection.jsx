@@ -209,7 +209,7 @@ export const LeagueContentAdminSection = memo(function LeagueContentAdminSection
         <StoryEditor
           docId={LEAGUE_HISTORY_DOC}
           label="Historia de la liga"
-          help={`Cómo surgió la idea, quiénes la armaron y cómo fue creciendo. ${PARAGRAPH_HELP}`}
+          help={`Cómo surgió la idea, quiénes la armaron y cómo fue creciendo. ${PARAGRAPH_HELP} Capítulos: una línea «## 2024 | Los orígenes» (año | título) abre cada uno; «##! 2027 | Lo que viene» marca el cierre, resaltado.`}
           publicHref="/historia"
           onSave={body => saveLeagueHistory(body, auth?.currentUser?.uid)}
           showStatusMessage={showStatusMessage}
