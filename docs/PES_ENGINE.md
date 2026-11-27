@@ -66,8 +66,9 @@ EDIT writes the EDIT field too (`playerEditOps`), because the game reads the EDI
 on the 17 players of the owner's EDIT: stats, body, positions 0–8, COM styles and the 28 skills those players have
 agree; EDIT keeps weak foot, attitude and motions as value − 1; the EDIT skill bits follow the Player.bin order, so
 the 13 skills none of them has are linked by position. Playing style uses another numbering in the EDIT (game menu
-order); 7 of 22 values are confirmed on those players. Not linked: celebration (other numbering) and positions
-pos9–pos12 (order of CB/LB/RB/GK unknown).
+order); 7 of 22 values are confirmed on those players. Not linked: positions pos9–pos12 (order of CB/LB/RB/GK
+unknown). Celebrations: the game takes them from the EDIT only (owner), so the player editor hides the Player.bin
+one and edits EDIT `gc1`/`gc2` (0–255, mod celebrations included).
 
 ## 4. Architecture
 
