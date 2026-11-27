@@ -3,7 +3,7 @@
 // byte of the decrypted data section, plus the description/logo/serial sections,
 // is preserved exactly.
 import { decryptEdit, encryptEdit } from './editCrypto.js';
-import { EDIT_LAYOUT, EDIT_PLAYER_FIELDS, EDIT_TEAM_FIELDS, EDIT_COACH, EDIT_COACH_FIELDS, EDIT_LOCKED_FIELDS, EDIT_TACTICS, EDIT_STRATEGY, EDIT_ADVANCED_CODES, editFlagsFor } from './editLayout.js';
+import { EDIT_LAYOUT, EDIT_PLAYER_FIELDS, EDIT_TEAM_FIELDS, EDIT_COACH, EDIT_COACH_FIELDS, EDIT_LOCKED_FIELDS, isModCelebration, EDIT_TACTICS, EDIT_STRATEGY, EDIT_ADVANCED_CODES, editFlagsFor } from './editLayout.js';
 import { readField, writeField } from '../../core/fields.js';
 import { PesFormatError, PesValidationError } from '../../core/errors.js';
 
@@ -144,6 +144,9 @@ export class EditDatabase {
     if (!f) throw new PesValidationError('UNKNOWN_FIELD', `EDIT: el campo "${field}" no existe para ${entity}.`, { field });
     if (EDIT_LOCKED_FIELDS.has(field)) throw new PesValidationError('FIELD_READ_ONLY', `EDIT: "${field}" es un identificador o marca interna.`, { field });
     const before = readField(this.data, base, f);
+    if (entity === 'player' && isModCelebration(field, before) && value !== before) {
+      throw new PesValidationError('MOD_CELEBRATION', `EDIT: el festejo ${before} lo maneja el mod de festejos y no se cambia.`, { field });
+    }
     writeField(this.data, base, f, value);
     const flags = editFlagsFor(entity, field, value);
     for (const flag of flags) writeField(this.data, base, fields.get(flag), 1);
