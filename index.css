@@ -232,6 +232,37 @@
 }
 
 @layer components {
+  /* Slider: pista de 6 px dentro de un área táctil de 44 px; el aro de foco global lo cubre. */
+  .range {
+    @apply w-full h-11 bg-transparent appearance-none cursor-pointer;
+  }
+  .range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: rgb(var(--c-overlay));
+  }
+  .range::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: rgb(var(--c-overlay));
+  }
+  .range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -7px;
+    border-radius: 9999px;
+    border: 0;
+    background: rgb(var(--c-accent));
+  }
+  .range::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    border: 0;
+    background: rgb(var(--c-accent));
+  }
   /* ── Tipografía ─────────────────────────────────────────────── */
   .font-display { font-family: 'Barlow Condensed', 'Barlow', ui-sans-serif, system-ui, sans-serif; }
   .eyebrow {

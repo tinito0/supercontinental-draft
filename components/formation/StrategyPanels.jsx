@@ -1,54 +1,54 @@
 import React, { memo } from 'react';
-import { Crown, Target, Zap, Shield, Users, Activity } from 'lucide-react';
+import { Crown, Target, Zap, Rocket, Shield, Users, Activity } from 'lucide-react';
 import { DEFAULT_TACTICS } from '../../utils/constants.js';
 
 // Team strategy (Preset S1) and set-piece takers of the tactics board (components/FormationModal.jsx). Both are
 // exported to PES in Formation.csv.
 
 const ATTACK_FIELDS = [
-  { key: 'attackingStyles', label: 'Estilo de Ataque', type: 'select', options: [
-    { value: 1, label: 'Posesión (Possession Game)' },
-    { value: 0, label: 'Contraataque (Counter Attack)' },
+  { key: 'attackingStyles', label: 'Estilo de ataque', type: 'select', options: [
+    { value: 1, label: 'Posesión' },
+    { value: 0, label: 'Contraataque' },
   ] },
   { key: 'buildUp', label: 'Construcción', type: 'select', options: [
-    { value: 1, label: 'Pase Corto (Short-pass)' },
-    { value: 0, label: 'Pase Largo (Long-pass)' },
+    { value: 1, label: 'Pase corto' },
+    { value: 0, label: 'Pase largo' },
   ] },
-  { key: 'attackingArea', label: 'Área de Ataque', type: 'select', options: [
-    { value: 1, label: 'Centro (Centre)' },
-    { value: 0, label: 'Bandas (Wide)' },
+  { key: 'attackingArea', label: 'Área de ataque', type: 'select', options: [
+    { value: 1, label: 'Centro' },
+    { value: 0, label: 'Bandas' },
   ] },
   { key: 'positioning', label: 'Posicionamiento', type: 'select', options: [
     { value: 1, label: 'Flexible' },
-    { value: 0, label: 'Mantener Formación' },
+    { value: 0, label: 'Mantener formación' },
   ] },
-  { key: 'supportRange', label: 'Rango de Apoyo', type: 'slider', min: 1, max: 10, minLabel: 'Corto (1)', maxLabel: 'Largo (10)' },
-  { key: 'numbersInAttack', label: 'Efectivos en Ataque', type: 'select', options: [
-    { value: 2, label: 'Muchos (Many)' },
-    { value: 1, label: 'Medio (Medium)' },
-    { value: 0, label: 'Pocos (Few)' },
+  { key: 'supportRange', label: 'Rango de apoyo', type: 'slider', min: 1, max: 10, minLabel: 'Corto (1)', maxLabel: 'Largo (10)' },
+  { key: 'numbersInAttack', label: 'Efectivos en ataque', type: 'select', options: [
+    { value: 0, label: 'Pocos' },
+    { value: 1, label: 'Medio' },
+    { value: 2, label: 'Muchos' },
   ] },
 ];
 
 const DEFENSE_FIELDS = [
-  { key: 'defensiveStyles', label: 'Estilo Defensivo', type: 'select', options: [
-    { value: 0, label: 'Presión en la Frontal (Frontline Pressure)' },
-    { value: 1, label: 'Defensa Total (All-out Defence)' },
+  { key: 'defensiveStyles', label: 'Estilo defensivo', type: 'select', options: [
+    { value: 0, label: 'Presión en la frontal' },
+    { value: 1, label: 'Defensa total' },
   ] },
-  { key: 'containmentArea', label: 'Área de Contención', type: 'select', options: [
-    { value: 0, label: 'Centro (Middle)' },
-    { value: 1, label: 'Bandas (Wide)' },
+  { key: 'containmentArea', label: 'Área de contención', type: 'select', options: [
+    { value: 0, label: 'Centro' },
+    { value: 1, label: 'Bandas' },
   ] },
   { key: 'pressuring', label: 'Presión', type: 'select', options: [
-    { value: 0, label: 'Conservador (Conservative)' },
-    { value: 1, label: 'Agresivo (Aggressive)' },
+    { value: 0, label: 'Conservador' },
+    { value: 1, label: 'Agresivo' },
   ] },
-  { key: 'defensiveLine', label: 'Línea Defensiva', type: 'slider', min: 1, max: 10, minLabel: 'Retrasada (1)', maxLabel: 'Adelantada (10)' },
-  { key: 'compactness', label: 'Compactibilidad / Densidad', type: 'slider', min: 1, max: 10, minLabel: 'Abierta (1)', maxLabel: 'Compacta (10)' },
-  { key: 'numbersInDefense', label: 'Efectivos en Defensa', type: 'select', options: [
-    { value: 0, label: 'Pocos (Few)' },
-    { value: 1, label: 'Medio (Medium)' },
-    { value: 2, label: 'Muchos (Many)' },
+  { key: 'defensiveLine', label: 'Línea defensiva', type: 'slider', min: 1, max: 10, minLabel: 'Retrasada (1)', maxLabel: 'Adelantada (10)' },
+  { key: 'compactness', label: 'Compactación', type: 'slider', min: 1, max: 10, minLabel: 'Abierta (1)', maxLabel: 'Compacta (10)' },
+  { key: 'numbersInDefense', label: 'Efectivos en defensa', type: 'select', options: [
+    { value: 0, label: 'Pocos' },
+    { value: 1, label: 'Medio' },
+    { value: 2, label: 'Muchos' },
   ] },
 ];
 
@@ -77,7 +77,7 @@ function StrategyField({ field, value, onChange }) {
             max={field.max}
             value={value ?? field.min}
             onChange={(e) => onChange(field.key, Number(e.target.value))}
-            className="w-full h-1.5 bg-overlay rounded-lg appearance-none cursor-pointer accent-[rgb(var(--c-accent))]"
+            className="range"
           />
           <div className="flex justify-between text-2xs text-ink-3 px-0.5">
             <span>{field.minLabel}</span>
@@ -93,7 +93,7 @@ function StrategyGroup({ title, icon: Icon, fields, tactics, onChange, className
   return (
     <div className={`space-y-2 ${className}`}>
       <h3 className="eyebrow flex items-center gap-1.5"><Icon className="w-3.5 h-3.5" aria-hidden="true" />{title}</h3>
-      <div className="space-y-2">
+      <div>
         {fields.map(field => <StrategyField key={field.key} field={field} value={tactics[field.key]} onChange={onChange} />)}
       </div>
     </div>
@@ -105,7 +105,7 @@ export const TacticsPanel = memo(function TacticsPanel({ tactics, onTacticsChang
   return (
     <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar space-y-4 pb-20 lg:pb-4">
       <p className="text-xs text-ink-3 leading-relaxed mb-1">
-        Configurá la estrategia táctica (Preset S1) de tu equipo. Se exporta directamente a PES en <span className="text-ink-2 font-mono">Formation.csv</span>.
+        Así juega tu equipo en PES. Se guarda en <span className="text-ink-2 font-mono">Formation.csv</span>.
       </p>
       <StrategyGroup title="Ataque" icon={Zap} fields={ATTACK_FIELDS} tactics={currentTactics} onChange={onTacticsChange} />
       <StrategyGroup title="Defensa" icon={Shield} fields={DEFENSE_FIELDS} tactics={currentTactics} onChange={onTacticsChange}
@@ -155,16 +155,16 @@ function formatRolePlayerOption(player, roleKey, dorsals = {}) {
 }
 
 const ROLE_CONFIGS = [
-  { key: 'captain', label: 'Capitán', icon: Crown, statLabel: 'Habilidad Capitanía · Media' },
-  { key: 'shortFK', label: 'Tiro Libre Corto', icon: Target, statLabel: 'Balón Parado · Efecto' },
-  { key: 'longFK', label: 'Tiro Libre Largo', icon: Zap, statLabel: 'Balón Parado · Potencia' },
-  { key: 'leftCorner', label: 'Córner Izquierdo', icon: Target, statLabel: 'Balón Parado · Efecto · Pie' },
-  { key: 'rightCorner', label: 'Córner Derecho', icon: Target, statLabel: 'Balón Parado · Efecto · Pie' },
-  { key: 'penalty', label: 'Penales', icon: Shield, statLabel: 'Balón Parado' },
-  { key: 'secondKicker', label: 'Segundo Tirador', icon: Users, statLabel: 'Balón Parado · Efecto · Pie' },
-  { key: 'header1', label: 'Rematador al Cabeceo 1', icon: Activity, statLabel: 'Cabeceo · Salto · Altura' },
-  { key: 'header2', label: 'Rematador al Cabeceo 2', icon: Activity, statLabel: 'Cabeceo · Salto · Altura' },
-  { key: 'header3', label: 'Rematador al Cabeceo 3', icon: Activity, statLabel: 'Cabeceo · Salto · Altura' },
+  { key: 'captain', label: 'Capitán', icon: Crown, statLabel: 'Habilidad de capitanía · Media' },
+  { key: 'shortFK', label: 'Tiro libre corto', icon: Target, statLabel: 'Balón parado · Efecto' },
+  { key: 'longFK', label: 'Tiro libre largo', icon: Rocket, statLabel: 'Balón parado · Potencia' },
+  { key: 'leftCorner', label: 'Córner izquierdo', icon: Target, statLabel: 'Balón parado · Efecto · Pie' },
+  { key: 'rightCorner', label: 'Córner derecho', icon: Target, statLabel: 'Balón parado · Efecto · Pie' },
+  { key: 'penalty', label: 'Penales', icon: Shield, statLabel: 'Balón parado' },
+  { key: 'secondKicker', label: 'Segundo tirador', icon: Users, statLabel: 'Balón parado · Efecto · Pie' },
+  { key: 'header1', label: 'Rematador al cabeceo 1', icon: Activity, statLabel: 'Cabeceo · Salto · Altura' },
+  { key: 'header2', label: 'Rematador al cabeceo 2', icon: Activity, statLabel: 'Cabeceo · Salto · Altura' },
+  { key: 'header3', label: 'Rematador al cabeceo 3', icon: Activity, statLabel: 'Cabeceo · Salto · Altura' },
 ];
 
 export const RolesPanel = memo(function RolesPanel({ starterPlayers, setPieces, onSetPieceChange, dorsals }) {
@@ -179,7 +179,7 @@ export const RolesPanel = memo(function RolesPanel({ starterPlayers, setPieces, 
   return (
     <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar pb-20 lg:pb-4">
       <p className="text-xs text-ink-3 leading-relaxed mb-1">
-        Configurá los lanzadores de faltas y capitán. Se exportan directamente a PES en <span className="text-ink-2 font-mono">Formation.csv</span>.
+        Quién patea las pelotas paradas y quién es el capitán. Se guarda en <span className="text-ink-2 font-mono">Formation.csv</span>.
       </p>
       {ROLE_CONFIGS.map(({ key, label, icon: Icon, statLabel }) => (
         <div key={key} className="py-3 space-y-2 border-b border-line/[0.07] last:border-0">
@@ -196,7 +196,7 @@ export const RolesPanel = memo(function RolesPanel({ starterPlayers, setPieces, 
             onChange={(e) => onSetPieceChange(key, e.target.value)}
             className="select min-h-9 text-sm"
           >
-            <option value="">(Por defecto / Automático)</option>
+            <option value="">Automático</option>
             {starterPlayers.map((player) => (
               <option key={player.Id} value={player.Id}>{formatRolePlayerOption(player, key, dorsals)}</option>
             ))}
