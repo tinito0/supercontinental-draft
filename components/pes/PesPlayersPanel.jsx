@@ -160,7 +160,7 @@ function PlayerEditor({ pes, table, playerId, fieldOf, canEdit, modified, onAppl
   // The game takes celebrations from the EDIT only (owner, 2026-11-27): the Player.bin one is not shown.
   const motions = fieldsInGroup(table.fields, 'motion').filter(f => f.name !== 'celebration');
   const used = new Set(['id', ...IDENTITY_FIELDS, ...POSITION_FIELDS.map(p => p.field), ...statGroups(table.fields, goalkeeper).flatMap(([, l]) => l.map(f => f.name))]);
-  // Goalkeeper attributes are read-only and say nothing about a field player: they only show on a goalkeeper's sheet.
+  // Goalkeeper attributes say nothing about a field player: they only show on a goalkeeper's sheet.
   const others = table.fields.filter(f => !used.has(f.name) && !TRAIT_GROUPS.includes(f.group) && !/^gk[A-Z]/.test(f.name));
   const owned = skills.filter(f => get(f.name)).length;
   const differences = inEdit ? editDifferences(table, pes.ws.edit, playerId) : [];
@@ -212,7 +212,7 @@ function PlayerEditor({ pes, table, playerId, fieldOf, canEdit, modified, onAppl
         )}
 
         {tab === 'atributos' && (
-          <Card description={goalkeeper ? 'Ficha de arquero. Los atributos de arquero se muestran pero no se editan: no está claro cuál es cuál en el archivo.' : 'Valores 40–99 como en el juego. Enter o salir del campo para aplicar.'}>
+          <Card description={goalkeeper ? 'Ficha de arquero. Valores 40–99 como en el juego. Enter o salir del campo para aplicar.' : 'Valores 40–99 como en el juego. Enter o salir del campo para aplicar.'}>
             <StatGroups {...shared} fields={table.fields} goalkeeper={goalkeeper} />
           </Card>
         )}

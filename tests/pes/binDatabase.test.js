@@ -88,7 +88,6 @@ describe.skipIf(!hasPesdb)('pesdb on the real UML database', () => {
   it('refuses id changes and unverified fields', () => {
     const db = loadBinDatabase(files);
     expect(() => db.tables.player.set(45685, 'id', 1)).toThrow(expect.objectContaining({ code: 'ID_IMMUTABLE' }));
-    expect(() => db.tables.player.set(45685, 'gkReach', 70)).toThrow(expect.objectContaining({ code: 'FIELD_READ_ONLY' }));
     expect(() => db.tables.team.set(1, 'nonPlayableLeague', 0)).toThrow(expect.objectContaining({ code: 'FIELD_READ_ONLY' }));
     expect(() => db.tables.player.set(45685, 'speed', 200)).toThrow(expect.objectContaining({ code: 'OUT_OF_RANGE' }));
     expect(() => db.tables.player.set(999999999, 'speed', 70)).toThrow(expect.objectContaining({ code: 'NOT_FOUND' }));
