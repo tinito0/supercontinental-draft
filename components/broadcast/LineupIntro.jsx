@@ -28,7 +28,7 @@ function Silhouette() {
 }
 
 const LONG_WORD = 11;
-const hasLongWord = name => String(name || '').split(/s+/).some(word => word.length > LONG_WORD);
+const hasLongWord = name => String(name || '').split(/\s+/).some(word => word.length > LONG_WORD);
 
 function XiPlayer({ player, timing, motion }) {
   // Se recuerda qué foto falló: con otro jugador en el mismo lugar se vuelve a intentar.

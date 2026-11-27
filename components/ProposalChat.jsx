@@ -110,7 +110,7 @@ export const ProposalChat = memo(function ProposalChat({
             Chat de negociación
           </span>
           {messages.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-md text-[11px] font-bold bg-accent/10 text-accent-soft border border-accent/20">
+            <span className="px-1.5 py-0.2 rounded-md text-2xs font-bold bg-accent/10 text-accent-soft border border-accent/20">
               {messages.length}
             </span>
           )}
@@ -154,7 +154,7 @@ export const ProposalChat = memo(function ProposalChat({
                           className="w-3.5 h-3.5 rounded object-contain bg-raised"
                           onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                         />
-                        <span className="text-[11px] font-semibold text-ink-3 truncate max-w-[150px]">
+                        <span className="text-2xs font-semibold text-ink-3 truncate max-w-[150px]">
                           {msg.senderTeamName || 'Rival'}
                         </span>
                       </div>
@@ -168,7 +168,7 @@ export const ProposalChat = memo(function ProposalChat({
                     >
                       <p className="leading-snug">{msg.text}</p>
                       {timeStr && (
-                        <span className={`block text-[11px] mt-0.5 text-right font-medium ${
+                        <span className={`block text-2xs mt-0.5 text-right font-medium ${
                           isMine ? 'text-accent-soft' : 'text-ink-3'
                         }`}>
                           {timeStr}
@@ -184,7 +184,7 @@ export const ProposalChat = memo(function ProposalChat({
 
           {/* Composer / Closed Banner */}
           {isClosed ? (
-            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-raised/50 text-ink-3 text-[11px] font-medium">
+            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-raised/50 text-ink-3 text-2xs font-medium">
               <Lock className="w-3.5 h-3.5" />
               <span>Esta negociación fue cerrada. Chat en modo solo lectura.</span>
             </div>
@@ -212,7 +212,7 @@ export const ProposalChat = memo(function ProposalChat({
             </form>
           )}
           {sendError && !isClosed && (
-            <p role="alert" className="pt-1 text-[11px] font-medium text-danger-soft">{sendError}</p>
+            <p role="alert" className="pt-1 text-2xs font-medium text-danger-soft">{sendError}</p>
           )}
         </div>
       )}

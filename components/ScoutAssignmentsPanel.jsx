@@ -6,6 +6,7 @@ import { formatPriceShort, getFlagUrl, getRegionById, getPosColorClass, getStatA
 import { Page } from './ui/Page.jsx';
 import { PageHeader, SectionHeader } from './ui/PageHeader.jsx';
 import { Alert } from './ui/Alert.jsx';
+import { Button } from './ui/Button.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
 import { buildResultsAsync, positionGroups, RESULT_COUNT_MIN, RESULT_COUNT_MAX } from '../utils/scoutEngine.js';
 import { PLAYING_STYLE_GROUPS, PLAYING_STYLE_POSITIONS } from '../utils/playerGlossary.js';
@@ -294,6 +295,10 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
   const [selectedScoutId, setSelectedScoutId] = useState('fefe-farfan');
   const [criteria, setCriteria] = useState(initialCriteria);
   const [monthlyUsage, setMonthlyUsage] = useState(0);
+  const [usageLoaded, setUsageLoaded] = useState(false);
+  const [searchesError, setSearchesError] = useState(false);
+  const [usageError, setUsageError] = useState(false);
+  const [readAttempt, setReadAttempt] = useState(0);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [clockTick, setClockTick] = useState(() => Date.now());
   const resolvingRef = useRef(new Set());
@@ -327,6 +332,8 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
 
   useEffect(() => {
     if (!scoutSearchesRef) return undefined;
+    setIsLoading(true);
+    setSearchesError(false);
     const unsubscribe = onSnapshot(scoutSearchesRef, (snap) => {
       const nextSearches = [];
       snap.docs.forEach(docSnap => {
@@ -338,20 +345,25 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       setIsLoading(false);
     }, (error) => {
       console.error('Error cargando busquedas scout:', error);
+      setSearchesError(true);
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [db, scoutSearchesRef, userId]);
+  }, [db, scoutSearchesRef, userId, readAttempt]);
 
   useEffect(() => {
     if (!scoutUsageRef) return undefined;
+    setUsageLoaded(false);
+    setUsageError(false);
     const unsubscribe = onSnapshot(scoutUsageRef, (snap) => {
       setMonthlyUsage(Number(snap.data()?.count || 0));
+      setUsageLoaded(true);
     }, (error) => {
       console.error('Error cargando cupo scout:', error);
+      setUsageError(true);
     });
     return () => unsubscribe();
-  }, [scoutUsageRef]);
+  }, [scoutUsageRef, readAttempt]);
 
   // El snapshot no se actualiza por el simple paso del tiempo. Programamos el
   // próximo vencimiento para que una búsqueda se complete aun sin otros cambios.
@@ -375,8 +387,8 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
       .forEach(async (search) => {
         resolvingRef.current.add(search.id);
         const scout = DEFAULT_SCOUTS.find(item => item.id === search.scoutId) || scouts[0] || DEFAULT_SCOUTS[0];
-        const results = await buildResultsAsync({ allPlayers, criteria: search.criteria || {}, scout, playerLocks });
         try {
+          const results = await buildResultsAsync({ allPlayers, criteria: search.criteria || {}, scout, playerLocks });
           const searchRef = doc(db, `artifacts/${APP_ID}/users/${userId}/scout_searches`, search.id);
           const didResolve = await runTransaction(db, async (transaction) => {
             const latest = await transaction.get(searchRef);
@@ -396,11 +408,13 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
             id: `scout-${search.id}`,
             category: 'scout',
             type: 'info',
-            text: `Scout listo: ${scout.name} trajo ${results.length} candidatos para revisar.`,
-            time: 'Scout',
+            text: `Ojeador listo: ${scout.name} trajo ${results.length} candidatos para revisar.`,
+            time: 'Scouting',
           });
         } catch (error) {
           console.error('Error resolviendo busqueda scout:', error);
+          // Not in the effect deps on purpose: a new callback identity must not re-trigger retries.
+          showStatusMessage?.('error', 'No se pudo completar la búsqueda del ojeador. Se reintenta al reabrir la pestaña.');
         } finally {
           resolvingRef.current.delete(search.id);
         }
@@ -411,7 +425,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
     event.preventDefault();
     if (!scoutSearchesRef || isCreatingRef.current) return;
     if (monthlyUsage >= MONTHLY_SEARCH_LIMIT) {
-      showStatusMessage?.('error', 'Ya usaste los 5 scouts disponibles de este mes.');
+      showStatusMessage?.('error', `Ya usaste los ${MONTHLY_SEARCH_LIMIT} scouts disponibles de este mes.`);
       return;
     }
 
@@ -492,15 +506,15 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         }
       });
       setCriteria(initialCriteria);
-      showStatusMessage?.('success', scout.testDurationSeconds ? 'Busqueda scout de prueba creada. Volvé en 1 segundo.' : `Busqueda scout creada. Volvé en ${scoutDurationLabel(scout)}.`);
+      showStatusMessage?.('success', scout.testDurationSeconds ? 'Búsqueda scout de prueba creada. Volvé en 1 segundo.' : `Búsqueda scout creada. Volvé en ${scoutDurationLabel(scout)}.`);
     } catch (error) {
       console.error('Error creando busqueda scout:', error);
       if (error.message === 'scout-limit-reached') {
-        showStatusMessage?.('error', 'Ya usaste los 5 scouts disponibles de este mes.');
+        showStatusMessage?.('error', `Ya usaste los ${MONTHLY_SEARCH_LIMIT} scouts disponibles de este mes.`);
       } else if (error.message === 'scout-search-duplicate') {
         showStatusMessage?.('error', 'Ya tenés una búsqueda idéntica en curso.');
       } else {
-        showStatusMessage?.('error', 'No se pudo crear la busqueda scout.');
+        showStatusMessage?.('error', 'No se pudo crear la búsqueda scout.');
       }
     } finally {
       isCreatingRef.current = false;
@@ -516,7 +530,9 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
     }
   };
 
-  const quotaFull = monthlyUsage >= MONTHLY_SEARCH_LIMIT;
+  const readFailed = searchesError || usageError;
+  const quotaKnown = usageLoaded && !usageError;
+  const quotaFull = quotaKnown && monthlyUsage >= MONTHLY_SEARCH_LIMIT;
   const fieldLabel = 'field-label';
 
   return (
@@ -527,15 +543,27 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         description="Mandá ojeadores a buscar jugadores con los criterios que elijas. Cada búsqueda usa una de tus asignaciones del mes."
         actions={(
           <>
-            <span className={`text-sm ${quotaFull ? 'text-danger-soft' : 'text-ink-3'}`}>
-              Cupo del mes: <span className="num font-semibold text-ink">{monthlyUsage}/{MONTHLY_SEARCH_LIMIT}</span>
-            </span>
+            {quotaKnown && (
+              <span className={`text-sm ${quotaFull ? 'text-danger-soft' : 'text-ink-3'}`}>
+                Cupo del mes: <span className="num font-semibold text-ink">{monthlyUsage}/{MONTHLY_SEARCH_LIMIT}</span>
+              </span>
+            )}
             <button type="button" onClick={() => setIsGuideOpen(true)} className="btn btn-secondary">
               <HelpCircle className="w-4 h-4" aria-hidden="true" />Cómo funciona
             </button>
           </>
         )}
       />
+
+      {readFailed && (
+        <Alert
+          tone="danger"
+          title="No pudimos cargar tus búsquedas"
+          action={<Button className="min-h-11" onClick={() => setReadAttempt(n => n + 1)}>Reintentar</Button>}
+        >
+          No sabemos cuántas asignaciones te quedan este mes. Reintentá en unos segundos.
+        </Alert>
+      )}
 
       {quotaFull && (
         <Alert tone="danger" title="Cupo mensual agotado">
@@ -636,7 +664,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         </fieldset>
 
         <div data-scout-target="area" className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-line/[0.08] pt-5">
-          <label data-scout-target="budget">
+          <label>
             <span className={fieldLabel}>País</span>
             <select value={criteria.countryId} onChange={e => setCriteria(prev => ({ ...prev, countryId: e.target.value }))} className="select">
               <option value="">Cualquiera</option>
@@ -650,7 +678,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
               {REGIONES.map(region => <option key={region} value={region}>{region}</option>)}
             </select>
           </label>
-          <label>
+          <label data-scout-target="budget">
             <span className={fieldLabel}>Presupuesto</span>
             <select value={criteria.considerBudget} onChange={e => setCriteria(prev => ({ ...prev, considerBudget: e.target.value }))} className="select">
               <option value="considerar">Solo los que puedo pagar</option>
@@ -724,15 +752,15 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                 </optgroup>
               ))}
             </select>
-            <span className="block mt-1 text-[11px] text-ink-3">Prioriza ese estilo; si hay pocos, completa con otros.</span>
+            <span className="block mt-1 text-2xs text-ink-3">Prioriza ese estilo; si hay pocos, completa con otros.</span>
           </label>
         </div>
 
         <div data-scout-target="submit" className="border-t border-line/[0.08] pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-xs text-ink-3">
-            {quotaFull ? `Ya usaste las ${MONTHLY_SEARCH_LIMIT} búsquedas de este mes.` : `Usa 1 de tus ${MONTHLY_SEARCH_LIMIT} asignaciones del mes (${monthlyUsage} usadas).`}
+            {!quotaKnown ? 'Usa 1 de tus asignaciones del mes.' : quotaFull ? `Ya usaste las ${MONTHLY_SEARCH_LIMIT} búsquedas de este mes.` : `Usa 1 de tus ${MONTHLY_SEARCH_LIMIT} asignaciones del mes (${monthlyUsage} usadas).`}
           </p>
-          <button type="submit" disabled={isCreating || quotaFull}
+          <button type="submit" disabled={isCreating || quotaFull || readFailed}
             title={isCreating ? 'Hay una operación en curso' : quotaFull ? 'Ya usaste las asignaciones de este mes' : undefined}
             className="btn btn-primary btn-lg w-full sm:w-auto">
             {isCreating ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Search className="w-4 h-4" aria-hidden="true" />}
@@ -745,7 +773,7 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
         <SectionHeader title={<span id="scout-searches-title">Búsquedas</span>} />
         {isLoading ? (
           <div className="space-y-3" aria-hidden="true">{[0, 1].map(i => <div key={i} className="skeleton h-28 rounded-2xl" />)}</div>
-        ) : searches.length === 0 ? (
+        ) : searchesError ? null : searches.length === 0 ? (
           <EmptyState icon={Search} title="Todavía no mandaste ningún ojeador" description="Elegí los criterios arriba y enviá a un ojeador a buscar." />
         ) : searches.map(search => (
           <article key={search.id} className="panel-flat overflow-hidden" aria-label={`Búsqueda de ${search.scoutName || 'ojeador'}`}>
@@ -778,12 +806,12 @@ export const ScoutAssignmentsPanel = memo(function ScoutAssignmentsPanel({
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-ink truncate">{player.Name}</p>
                           <p className="flex items-center gap-2 mt-1 text-xs text-ink-3">
-                            <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                            <span className={`px-1.5 rounded text-2xs font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                             <img src={getFlagUrl(player.Country1)} alt="" className="w-4 h-3 rounded-[2px]" onError={e => { e.currentTarget.style.display = 'none'; }} />
                             {player.Age} años
                           </p>
                           {player.PlayingStyle && player.PlayingStyle !== 'Ninguno' && (
-                            <p className="mt-0.5 text-[11px] text-ink-3 truncate">{player.PlayingStyle}</p>
+                            <p className="mt-0.5 text-2xs text-ink-3 truncate">{player.PlayingStyle}</p>
                           )}
                         </div>
                         <span className={`w-9 h-9 rounded-lg flex items-center justify-center font-display num text-base font-bold shrink-0 ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>

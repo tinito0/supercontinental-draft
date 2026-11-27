@@ -31,7 +31,7 @@ function BudgetMeter({ remaining, initial }) {
   }, [remaining]);
   return (
     <div data-app-tour="budget" className="flex flex-col items-end justify-center min-w-0 px-1 sm:px-2" title={pct != null ? `${pct.toFixed(0)}% del presupuesto inicial` : undefined}>
-      <span className="sr-only sm:not-sr-only sm:block text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3 leading-none">Presupuesto<span className="sr-only">: </span></span>
+      <span className="sr-only sm:not-sr-only sm:block text-2xs font-semibold uppercase tracking-[0.08em] text-ink-3 leading-none">Presupuesto<span className="sr-only">: </span></span>
       <span key={changeCount} className={`font-display num text-lg sm:text-xl font-bold leading-none sm:mt-1 ${text} ${changeCount > 0 ? 'value-flash' : ''}`}>{formatPriceShort(remaining / 1000000)}</span>
       {pct != null && (
         <span className="mt-1 h-[3px] w-14 sm:w-20 rounded-full bg-white/10 overflow-hidden" aria-hidden="true">
@@ -49,6 +49,7 @@ export const TopHeader = memo(function TopHeader({
   unreadChatCount,
   remainingBudget,
   initialBudget,
+  budgetStatus = 'ready',
   onlineCount: propOnlineCount,
   onNotificationClick,
   onChatClick,
@@ -93,7 +94,7 @@ export const TopHeader = memo(function TopHeader({
           onError={(e) => { e.target.src = DEFAULT_LOGO; }}
         />
         <div className="min-w-0 leading-none">
-          <p className="hidden sm:block text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Mi club</p>
+          <p className="hidden sm:block text-2xs font-semibold uppercase tracking-[0.08em] text-ink-3">Mi club</p>
           <p className="font-display text-base sm:text-lg font-bold text-ink truncate sm:mt-1">
             {userProfile?.teamName || 'Club sin nombre'}
           </p>
@@ -102,7 +103,12 @@ export const TopHeader = memo(function TopHeader({
 
       <div className="hidden md:block"><OnlineIndicator count={onlineCount} /></div>
 
-      {typeof remainingBudget === 'number' && <BudgetMeter remaining={remainingBudget} initial={initialBudget} />}
+      {budgetStatus !== 'ready' ? (
+        <div data-app-tour="budget" className="flex flex-col items-end justify-center min-w-0 px-1 sm:px-2" title={budgetStatus === 'error' ? 'No pudimos cargar tus contratos' : 'Cargando el presupuesto'}>
+          <span className="sr-only sm:not-sr-only sm:block text-2xs font-semibold uppercase tracking-[0.08em] text-ink-3 leading-none">Presupuesto<span className="sr-only">: </span></span>
+          <span className="font-display num text-lg sm:text-xl font-bold leading-none sm:mt-1 text-ink-3">—</span>
+        </div>
+      ) : typeof remainingBudget === 'number' && <BudgetMeter remaining={remainingBudget} initial={initialBudget} />}
 
       <span className="hidden sm:block w-px h-8 bg-line/15 mx-1" aria-hidden="true" />
 
@@ -118,7 +124,7 @@ export const TopHeader = memo(function TopHeader({
         >
           <MessageSquareText className="w-5 h-5" aria-hidden="true" />
           {unreadChatCount > 0 && (
-            <span className="absolute top-1.5 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-on-accent text-[11px] font-bold num flex items-center justify-center" aria-hidden="true">
+            <span className="absolute top-1.5 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-on-accent text-2xs font-bold num flex items-center justify-center" aria-hidden="true">
               {unreadChatCount > 9 ? '9+' : unreadChatCount}
             </span>
           )}

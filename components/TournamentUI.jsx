@@ -49,7 +49,7 @@ export const TournamentTabButton = memo(function TournamentTabButton({ id, tabId
       <span>{label}</span>
       {EndIcon && <EndIcon className={`w-3.5 h-3.5 ml-1.5 shrink-0 ${isActive ? 'text-slate-950' : 'text-warning-soft'}`} />}
       {typeof badge === 'number' && badge > 0 && (
-        <span className={`ml-2 px-1.5 py-0.2 rounded-md text-[11px] font-bold tabular-nums shrink-0 ${
+        <span className={`ml-2 px-1.5 py-0.2 rounded-md text-2xs font-bold tabular-nums shrink-0 ${
           isActive ? 'bg-slate-950 text-accent-soft' : 'bg-accent text-on-accent'
         }`}>
           {badge}

@@ -74,7 +74,7 @@ export function YouthDraftPanel({ draft, playerById, userId, allTeams, onSelectP
     <section aria-labelledby="youth-draft-title" className="mb-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 id="youth-draft-title" className="section-title">Draft de promesas</h2>
-        <p className="text-xs text-ink-3"><span className="num">{Object.keys(picks).length}</span> de <span className="num">{order.length || '—'}</span> clubes eligieron</p>
+        <p className="text-xs text-ink-3"><span className="num">{Object.keys(picks).length}</span> de <span className="num">{order.length}</span> clubes eligieron</p>
       </div>
       <p className="mt-1 text-sm text-ink-2" role="status">{turnLine({ draft, userId, myPick, teamName })}</p>
 
@@ -88,7 +88,7 @@ export function YouthDraftPanel({ draft, playerById, userId, allTeams, onSelectP
               <button type="button" onClick={() => onSelectPlayer?.(player || entry.id)}
                 className="min-w-0 flex-1 text-left min-h-11 rounded-md focus-visible:ring-2 focus-visible:ring-accent-soft">
                 <span className="flex items-center gap-2 min-w-0">
-                  <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold shrink-0 ${getPosColorClass(entry.position)}`}>{entry.position}</span>
+                  <span className={`px-1.5 py-0.5 rounded-md text-2xs font-bold shrink-0 ${getPosColorClass(entry.position)}`}>{entry.position}</span>
                   <span className="font-semibold text-ink truncate">{entry.name}</span>
                 </span>
                 <span className="block mt-0.5 text-xs text-ink-3">

@@ -96,7 +96,7 @@ export const BroadcastBracket = memo(function BroadcastBracket({ cupId, bracket,
   const champion = finalWinner ? (finalWinner === 'A' ? finalEntry.match.teamA : finalEntry.match.teamB) : '';
 
   return (
-    <div className="bb-root" data-tone={cup.tone} data-layout={layout} aria-label={`${cup.name} — bracket`}>
+    <div className="bb-root" data-tone={cup.tone} data-layout={layout} aria-label={`${cup.name} (cuadro)`}>
       <div className="bb-frame scl-frame">
         <div className="scl-frame-stripe" aria-hidden="true" />
         <div className="scl-frame-ball" aria-hidden="true" />

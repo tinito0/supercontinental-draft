@@ -152,7 +152,7 @@ export const MatchCenter = memo(function MatchCenter({
                   <div className="w-2 h-2 rounded-full bg-accent" />
                   <span className="uppercase tracking-wider font-bold">{roundName}</span>
                 </div>
-                <span className="text-[11px] font-semibold text-ink-3">
+                <span className="text-2xs font-semibold text-ink-3">
                   {matchesInRound.length} {matchesInRound.length === 1 ? 'partido' : 'partidos'}
                 </span>
               </div>
@@ -181,7 +181,7 @@ export const MatchCenter = memo(function MatchCenter({
                     >
                       {/* Top status */}
                       <div className="mb-2.5 flex items-center justify-between gap-2 text-xs border-b border-line/[0.08] pb-2">
-                        <span className="flex items-center gap-2 min-w-0 text-ink-3 font-medium text-[11px]">
+                        <span className="flex items-center gap-2 min-w-0 text-ink-3 font-medium text-2xs">
                           <span className="truncate" title={etaById?.has(`league-${match.id}`) ? `Programado: ${formatFixtureDate(match) || 'sin hora'}` : undefined}>
                             {etaById?.has(`league-${match.id}`) && match.status !== 'completed'
                               ? [formatFixtureDate({ date: match.date }), formatEta(etaById.get(`league-${match.id}`))].filter(Boolean).join(' · ')
@@ -191,7 +191,7 @@ export const MatchCenter = memo(function MatchCenter({
                         </span>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                            className={`text-2xs font-bold px-2 py-0.5 rounded-md ${
                               isCompleted
                                 ? 'bg-success/15 text-success-soft border border-success/30'
                                 : match.status === 'postponed'
@@ -318,7 +318,7 @@ export const MatchCenter = memo(function MatchCenter({
                       </div>
 
                       {!canEditResult && isCompleted && outcome.ok && outcome.decidedBy === 'shootout' && (
-                        <p className="text-right text-[11px] font-semibold text-ink-3 tabular-nums">
+                        <p className="text-right text-2xs font-semibold text-ink-3 tabular-nums">
                           Penales {match.homePenalties}-{match.awayPenalties}
                         </p>
                       )}
@@ -343,7 +343,7 @@ export const MatchCenter = memo(function MatchCenter({
                       )}
 
                       {/* Goalscorers & Meta */}
-                      <div className="mt-2.5 pt-2 border-t border-line/[0.08] text-[11px] text-ink-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="mt-2.5 pt-2 border-t border-line/[0.08] text-2xs text-ink-3 flex flex-wrap items-center justify-between gap-2">
                         {match.homeGoals || match.awayGoals ? (
                           <div className="flex items-center gap-1.5 min-w-0 text-ink-2">
                             <Goal className="w-3.5 h-3.5 shrink-0" aria-label="Goles" />
@@ -352,16 +352,16 @@ export const MatchCenter = memo(function MatchCenter({
                             </span>
                           </div>
                         ) : (
-                          <span className="italic text-[11px] text-ink-3">Sin goles registrados</span>
+                          <span className="italic text-2xs text-ink-3">Sin goles registrados</span>
                         )}
                         <div className="flex items-center gap-2 shrink-0">
                           {match.mvp && (
-                            <span className="text-warning-soft font-semibold text-[11px] flex items-center gap-1">
+                            <span className="text-warning-soft font-semibold text-2xs flex items-center gap-1">
                               <Star className="w-3 h-3 fill-current" aria-hidden="true" />MVP: {match.mvp}
                             </span>
                           )}
                           {match.homeConfirmed && match.awayConfirmed && (
-                            <span className="text-success-soft font-semibold text-[11px] flex items-center gap-1">
+                            <span className="text-success-soft font-semibold text-2xs flex items-center gap-1">
                               <Check className="w-3 h-3" aria-hidden="true" />Confirmado
                             </span>
                           )}
@@ -372,19 +372,19 @@ export const MatchCenter = memo(function MatchCenter({
 
                       {/* Formulario de edición: agenda siempre; goleadores y MVP a mano, plegados (los trae el colector). */}
                       {canEditResult && isMissingShootout && (
-                        <p role="alert" className="mt-2 text-[11px] text-warning-soft">
+                        <p role="alert" className="mt-2 text-2xs text-warning-soft">
                           Empate sin la tanda: suma el partido y los goles, pero no los puntos, hasta cargar los penales.
                         </p>
                       )}
                       {canEditResult && isMissingScore && (
-                        <p role="alert" className="mt-2 text-[11px] text-warning-soft">
+                        <p role="alert" className="mt-2 text-2xs text-warning-soft">
                           Marcado como finalizado sin marcador completo: no suma a la tabla hasta cargar los dos resultados.
                         </p>
                       )}
                       {isEditing && (
                         <div className="mt-3 pt-3 border-t border-line/[0.12] grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Día del partido</label>
+                            <label className="text-2xs text-ink-3 font-bold block mb-1">Día del partido</label>
                             <input
                               type="date"
                               value={match.date || ''}
@@ -393,7 +393,7 @@ export const MatchCenter = memo(function MatchCenter({
                             />
                           </div>
                           <div>
-                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Hora</label>
+                            <label className="text-2xs text-ink-3 font-bold block mb-1">Hora</label>
                             <input
                               type="time"
                               value={match.time || ''}
@@ -402,7 +402,7 @@ export const MatchCenter = memo(function MatchCenter({
                             />
                           </div>
                           <div>
-                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Fecha</label>
+                            <label className="text-2xs text-ink-3 font-bold block mb-1">Fecha</label>
                             <input
                               type="text"
                               value={match.round || ''}
@@ -412,7 +412,7 @@ export const MatchCenter = memo(function MatchCenter({
                             />
                           </div>
                           <div>
-                            <label className="text-[11px] text-ink-3 font-bold block mb-1">Estado</label>
+                            <label className="text-2xs text-ink-3 font-bold block mb-1">Estado</label>
                             <select
                               value={match.status || 'scheduled'}
                               disabled={isLocked}
@@ -427,13 +427,13 @@ export const MatchCenter = memo(function MatchCenter({
                           {canEditResult && (
                             <Disclosure
                               className="col-span-2"
-                              summaryClassName="text-[11px] font-bold text-ink-3"
+                              summaryClassName="text-2xs font-bold text-ink-3"
                               summary="Goleadores, asistencias y MVP a mano"
                               defaultOpen={hasManualStats && !fromGame}
                             >
                               <div className="grid grid-cols-2 gap-2 pb-1">
                                 <div>
-                                  <label className="text-[11px] text-ink-3 font-bold block mb-1">MVP</label>
+                                  <label className="text-2xs text-ink-3 font-bold block mb-1">MVP</label>
                                   <input
                                     value={match.mvp || ''}
                                     onChange={event => onUpdate(match.id, 'mvp', event.target.value)}
@@ -443,7 +443,7 @@ export const MatchCenter = memo(function MatchCenter({
                                 </div>
                                 {EDIT_FIELDS.map(({ field, label, placeholder }) => (
                                   <label key={field} className="block">
-                                    <span className="text-[11px] text-ink-3 font-bold block mb-1">{label}</span>
+                                    <span className="text-2xs text-ink-3 font-bold block mb-1">{label}</span>
                                     <input
                                       value={match[field] || ''}
                                       onChange={event => onUpdate(match.id, field, event.target.value)}
@@ -452,7 +452,7 @@ export const MatchCenter = memo(function MatchCenter({
                                     />
                                   </label>
                                 ))}
-                                <p className="col-span-2 text-[11px] text-ink-3">{SCORERS_HINT}</p>
+                                <p className="col-span-2 text-2xs text-ink-3">{SCORERS_HINT}</p>
                               </div>
                             </Disclosure>
                           )}

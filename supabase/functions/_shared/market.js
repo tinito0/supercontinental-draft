@@ -409,6 +409,44 @@ function draftPicks(draft) {
   return draft?.picks && typeof draft.picks === 'object' ? draft.picks : {};
 }
 
+const FRANCHISE_RESET_FIELDS = ['franchisePlayerUsed', 'franchisePlayerId'];
+
+/**
+ * Admin only (Administración → Equipos → Resetear franquicia): the club may pick a franchise player again.
+ * Clears the profile's franchise fields and frees the stored player's lock, its cart copy and its place in the
+ * public roster. The stored id can be stale: a lock held by another club is kept and reported as `otherClub`.
+ * Result `lock`: 'released' | 'otherClub' | 'missing' (no lock) | 'none' (no franchise player stored).
+ */
+export async function resetFranchise({ tx, appId, user, teamId, now = new Date() }) {
+  if (!user?.isAdmin) throw new MarketError('Solo el administrador puede resetear la franquicia de un club.', 403);
+  const paths = marketPaths(appId);
+  const [profile, team] = await Promise.all([tx.get(paths.profile(teamId)), tx.get(paths.team(teamId))]);
+  if (!profile && !team) throw new MarketError('Ese club no existe.', 404);
+
+  const storedId = profile?.data.franchisePlayerId;
+  const lockId = storedId === undefined || storedId === null || storedId === '' ? null : String(storedId);
+  let lockState = 'none';
+  if (lockId) {
+    const lock = await tx.get(paths.lock(lockId));
+    if (!lock) lockState = 'missing';
+    else if (lock.data.lockedBy === teamId) lockState = 'released';
+    else lockState = 'otherClub';
+    if (lockState === 'released') {
+      tx.delete(paths.lock(lockId));
+      if (team) {
+        const roster = (Array.isArray(team.data.roster) ? team.data.roster : []).filter(p => String(p?.Id) !== lockId);
+        tx.update(paths.team(teamId), { roster, rosterUpdatedAt: now.toISOString() });
+      }
+    }
+    // The cart is this club's private copy: a stale entry goes even when another club owns the lock.
+    tx.delete(paths.cart(teamId, lockId));
+  }
+  // Same as the old browser write `{ merge: true }`: only these two fields, the profile is created if missing.
+  tx.set(paths.profile(teamId), { franchisePlayerUsed: false, franchisePlayerId: null }, { mask: FRANCHISE_RESET_FIELDS });
+
+  return { teamId, playerId: lockId === null ? null : Number(lockId), lock: lockState };
+}
+
 /**
  * Moves an old email/password account's club to the Google account of the same manager, in one transaction:
  * profile, public team, player locks, cart, offers and transfers. The caller is the old account (its token
@@ -613,6 +651,12 @@ export async function handleMarketAction({ firestore, appId, catalog, user, body
     if (!user?.isAdmin) throw new MarketError('Solo el administrador puede deshacer un pick del draft.', 403);
     if (!UID_PATTERN.test(String(body.teamId || ''))) throw new MarketError('Club inválido.');
     return firestore.runTransaction(tx => undoYouthDraftPick({ tx, appId, user, teamId: body.teamId, now }));
+  }
+  if (action === 'resetFranchise') {
+    // Checked before opening a transaction, and again inside resetFranchise.
+    if (!user?.isAdmin) throw new MarketError('Solo el administrador puede resetear la franquicia de un club.', 403);
+    if (!UID_PATTERN.test(String(body.teamId || ''))) throw new MarketError('Club inválido.');
+    return firestore.runTransaction(tx => resetFranchise({ tx, appId, user, teamId: body.teamId, now }));
   }
   if (action === 'acceptOffer') {
     const offerId = body.offerId;

@@ -8,6 +8,7 @@ import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 import { Stat } from './ui/Stat.jsx';
+import { Alert } from './ui/Alert.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
 import { evaluateSquadRules } from '../utils/squadRules.js';
 
@@ -58,6 +59,8 @@ export const TeamsModal = memo(function TeamsModal({
   allTeams,
   currentUserId,
   isLoading = false,
+  loadError = false,
+  onRetry,
   playerLocks,
   allPlayers,
   countryMap,
@@ -159,7 +162,8 @@ export const TeamsModal = memo(function TeamsModal({
     });
   };
 
-  const isAllExpanded = filteredAndSortedTeams.length > 0 && expandedTeamIds.size >= filteredAndSortedTeams.length;
+  const isAllExpanded = filteredAndSortedTeams.length > 0
+    && filteredAndSortedTeams.every(t => expandedTeamIds.has(t.userId));
 
   const toggleAllCollapse = () => {
     if (isAllExpanded) {
@@ -218,7 +222,12 @@ export const TeamsModal = memo(function TeamsModal({
     </div>
   );
 
-  const list = isLoading ? (
+  const list = loadError ? (
+    <Alert tone="danger" title="No pudimos cargar los clubes"
+      action={onRetry && <button type="button" onClick={onRetry} className="btn btn-secondary min-h-11">Reintentar</button>}>
+      Revisá tu conexión y probá de nuevo.
+    </Alert>
+  ) : isLoading ? (
     <ul className="space-y-3" role="status" aria-label="Cargando los clubes">
       {Array.from({ length: 5 }, (_, i) => <li key={i} className="skeleton h-[72px] rounded-2xl" />)}
     </ul>
@@ -242,7 +251,6 @@ export const TeamsModal = memo(function TeamsModal({
           <li key={team.userId} className="panel-flat overflow-hidden">
             <div className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3">
               <button type="button" aria-expanded={!isCollapsed} aria-controls={panelId}
-                aria-label={`${isCollapsed ? 'Desplegar' : 'Plegar'} el plantel de ${team.teamName}`}
                 onClick={() => toggleTeamCollapse(team.userId)}
                 className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 text-left min-h-12 rounded-lg">
                 <img src={team.logoUrl || DEFAULT_LOGO} alt="" width={40} height={40} className="w-10 h-10 object-contain shrink-0"
@@ -312,7 +320,7 @@ export const TeamsModal = memo(function TeamsModal({
                                       {isTopStar && <Star className="w-3.5 h-3.5 shrink-0 fill-current text-warning-soft" aria-label="Figura del plantel" />}
                                     </span>
                                     <span className="flex items-center gap-2 mt-0.5 text-xs text-ink-3">
-                                      <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                                      <span className={`px-1.5 rounded text-2xs font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                                       <img src={getFlagUrl(player.Country1)} className="w-4 h-3 rounded-[2px] shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} alt="" />
                                       {player.Age ? <span>{player.Age} años</span> : null}
                                       <span className="num">{formatPriceShort(player.Precio)}</span>

@@ -1,4 +1,5 @@
-// Real scl_probe recordings from E:\eFootball PES 2021\scl_probe (2026-10-21). Skipped when they are missing.
+// Real scl_probe recordings from E:\eFootball PES 2021\scl_probe (2026-10-21). Run only under npm run test:real
+// (PES_REAL=1) and skipped when they are missing.
 // Expected values come from the user's notes and the in-game result screens of each match.
 import { existsSync, readFileSync } from 'node:fs';
 import { parseEventLines, splitMatches, summarizeMatch } from '../../pes-collector/collector/matchSummary.js';
@@ -7,7 +8,7 @@ const ROOT = process.env.SCL_PROBE_DIR || 'E:/eFootball PES 2021/scl_probe';
 
 function load(session) {
   const file = `${ROOT}/${session}/events.ndjson`;
-  return existsSync(file) ? splitMatches(parseEventLines(readFileSync(file, 'utf8'))).map(summarizeMatch) : null;
+  return process.env.PES_REAL === '1' && existsSync(file) ? splitMatches(parseEventLines(readFileSync(file, 'utf8'))).map(summarizeMatch) : null;
 }
 
 const arsenalLiverpool = load('20261021_180553');

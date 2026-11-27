@@ -26,11 +26,11 @@ export function PesPlayerList({ total, results, query, onQuery, selectedId, onSe
                 <PlayerPhoto id={p.id} className="w-9 h-9 rounded-lg shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{p.name || `Jugador ${p.id}`}</span>
-                  <span className="block text-[11px] text-ink-3">
+                  <span className="block text-2xs text-ink-3">
                     <span className="num">{p.id}</span>{p.src === 'edit' && ' · editado en el EDIT'}
                   </span>
                 </span>
-                {p.pos && <span className={`shrink-0 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${getPosColorClass(p.pos)}`}>{p.pos}</span>}
+                {p.pos && <span className={`shrink-0 px-1.5 py-0.5 rounded-md text-2xs font-bold ${getPosColorClass(p.pos)}`}>{p.pos}</span>}
                 {p.ovr > 0 && <span className={`shrink-0 w-8 text-center rounded-md font-display num text-sm font-bold ${getStatAndOvrColorClass(p.ovr)}`}>{p.ovr}</span>}
               </button>
             </li>

@@ -28,7 +28,7 @@ export const TacticalStateBar = memo(function TacticalStateBar({ active, fluid, 
           Formación fluida
         </label>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-3">
         <p className="hidden sm:block">
           {fluid
             ? roleMode

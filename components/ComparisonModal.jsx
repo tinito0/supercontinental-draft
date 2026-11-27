@@ -106,7 +106,7 @@ function ProfileRow({ label, valA, valB, unit, min, max, names }) {
   const numB = toNumber(valB);
   const percent = value => clampPercent(((value - min) / (max - min)) * 100, 15);
   const value = num => (
-    <span className="font-display num text-sm font-bold text-ink">{num}<span className="ml-0.5 font-sans text-[11px] font-medium text-ink-3">{unit}</span></span>
+    <span className="font-display num text-sm font-bold text-ink">{num}<span className="ml-0.5 font-sans text-2xs font-medium text-ink-3">{unit}</span></span>
   );
   return (
     <div className="py-2 border-b border-line/[0.08] last:border-0">
@@ -143,7 +143,7 @@ function PlayerHeader({ player, side, align }) {
       <div className="min-w-0">
         <h3 className="text-sm sm:text-base font-semibold text-ink leading-tight truncate">{player.Name}</h3>
         <div className={`flex items-center gap-x-2 gap-y-1 mt-1 flex-wrap ${isRight ? 'justify-end' : ''}`}>
-          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+          <span className={`text-2xs font-bold px-1.5 py-0.5 rounded ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
           <span className="font-display num text-sm font-semibold text-ink">{formatPriceShort(player.Precio)}</span>
           {player.PlayingStyle && player.PlayingStyle !== 'Ninguno' && (
             <span className="hidden sm:inline text-xs text-ink-3">{player.PlayingStyle}</span>
@@ -183,7 +183,7 @@ function RadarSummary({ keys, playerA, playerB, names }) {
         return (
           <li key={key} className="flex flex-col items-center">
             <span className="sr-only">{`${full}: ${names.A} ${valA}, ${names.B} ${valB}`}</span>
-            <span className="text-[11px] font-semibold text-ink-3" aria-hidden="true">{short}</span>
+            <span className="text-2xs font-semibold text-ink-3" aria-hidden="true">{short}</span>
             <span className="font-display num text-sm font-bold" aria-hidden="true">
               <span className={SIDE.A.text}>{valA}</span>
               <span className="text-ink-3 font-medium mx-1">·</span>
@@ -270,12 +270,12 @@ function ComparisonContent({ onClose, playerA, playerB }) {
               {leader ? (
                 <>
                   <p className={`text-xs font-semibold truncate ${SIDE[leader].text}`}>{names[leader]}</p>
-                  <p className="text-[11px] text-ink-3 whitespace-nowrap">
+                  <p className="text-2xs text-ink-3 whitespace-nowrap">
                     <span className="font-display num text-base font-bold text-ink">+{Math.abs(ovrDiff)}</span> de media
                   </p>
                 </>
               ) : (
-                <p className="text-[11px] text-ink-3">Misma media</p>
+                <p className="text-2xs text-ink-3">Misma media</p>
               )}
             </div>
             <PlayerHeader player={playerB} side="B" align="right" />

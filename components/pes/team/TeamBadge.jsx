@@ -16,7 +16,7 @@ function inkOn(colours) {
 }
 
 const SIZES = {
-  sm: 'w-8 h-8 text-[11px]',
+  sm: 'w-8 h-8 text-2xs',
   lg: 'w-14 h-14 text-base',
 };
 

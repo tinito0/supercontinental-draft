@@ -10,7 +10,7 @@ export const isFromGame = match => Boolean(match?.importedFrom);
 /** Plain source note next to the match date. */
 export function FromGameNote({ className = '' }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-medium normal-case tracking-normal text-ink-3 ${className}`}>
+    <span className={`inline-flex items-center gap-1 text-2xs font-medium normal-case tracking-normal text-ink-3 ${className}`}>
       <Gamepad2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />Del juego
     </span>
   );
@@ -28,7 +28,7 @@ export function FromGameLock({ onUnlock, compact = false }) {
     if (isConfirmed) onUnlock();
   };
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-ink-3 ${compact ? 'border-t border-line/[0.08] bg-raised px-3 py-1' : 'mt-2'}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-2xs text-ink-3 ${compact ? 'border-t border-line/[0.08] bg-raised px-3 py-1' : 'mt-2'}`}>
       <span>Resultado del juego, bloqueado.</span>
       <button type="button" onClick={unlock} className="min-h-11 font-semibold text-accent-soft hover:text-ink transition-colors cursor-pointer">
         Corregir a mano

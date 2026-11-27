@@ -299,8 +299,9 @@ export const GeneralAdminSection = memo(function GeneralAdminSection({
             <ul className="list-disc list-inside space-y-1 text-ink-2 pl-1">
               <li>Planteles: carritos y plantilla pública de cada club</li>
               <li>Alineaciones, tácticas, dorsales y suplentes</li>
-              <li>Historial y créditos mensuales del Scout</li>
+              <li>Historial y créditos mensuales de Scouting</li>
               <li>Bloqueos de mercado, ofertas (con su chat), noticias, formaciones compartidas y transferencias</li>
+              <li>Draft de promesas: grupo, orden y turnos</li>
             </ul>
             <p className="pt-1">Se conservan los presupuestos, el acceso anticipado, el torneo, el chat de mánagers y las sugerencias.</p>
             <p className="text-warning-soft font-semibold pt-1">Si necesitás los planteles de esta temporada en el PES (Draft → PES o CSV), exportalos antes: después del reseteo ya no existen.</p>

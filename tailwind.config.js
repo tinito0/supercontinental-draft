@@ -69,6 +69,12 @@ export default {
       maxWidth: {
         page: '1440px',
       },
+      // Type scale additions (docs/DESIGN_SYSTEM.md): size only, the line height stays with the leading-* classes.
+      // 2xs = the smallest text allowed (labels, badges); display = the Stat / page figure size.
+      fontSize: {
+        '2xs': '11px',
+        display: '28px',
+      },
       // Motion tokens (index.css --dur-*, --ease-*). ease-in/out/in-out are redefined so every class uses the app's curves.
       // DEFAULT: a bare `transition` / `transition-colors` without a duration class lands on the scale (was Tailwind's 150ms).
       transitionDuration: {

@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { hasKitServer } from './fixtures.js';
 import { parseKitConfig, setKitValue } from '../../pes/kits/kitConfig.js';
 import { resolveKitRender, printedNumber, availableCollars } from '../../pes/kits/kitRenderConfig.js';
 import { parseKitPack, selectKitParts, collarModel } from '../../pes/kits/kitModels.js';
@@ -117,7 +118,7 @@ describe('collar variants are real models', () => {
   });
 });
 
-describe.skipIf(!fs.existsSync(KIT_SERVER))('font sheets of the real kit-server', () => {
+describe.skipIf(!hasKitServer || !fs.existsSync(KIT_SERVER))('font sheets of the real kit-server', () => {
   const sheets = [
     ['2. Bundesliga/1860 München/g1/u4138g1_name.ftex', 'name', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ.'],
     ['2. Bundesliga/1860 München/g1/u4138g1_num.ftex', 'back', '0123456789'],

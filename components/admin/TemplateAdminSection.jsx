@@ -319,9 +319,9 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h3 className="font-bold text-ink text-base">{team.name}</h3>
-                    <p className="text-[11px] text-ink-3 font-mono">ID: {team.id.substring(0, 8)}</p>
+                    <p className="text-2xs text-ink-3 font-mono">ID: {team.id.substring(0, 8)}</p>
                   </div>
-                  <span className="bg-accent/10 text-accent-soft text-[11px] font-bold px-2 py-0.5 rounded-lg border border-accent/20">
+                  <span className="bg-accent/10 text-accent-soft text-2xs font-bold px-2 py-0.5 rounded-lg border border-accent/20">
                     {team.players.length} Jugadores
                   </span>
                 </div>
@@ -392,7 +392,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
                     className="input w-full"
                     placeholder="Ej: Liverpool FC, Boca Juniors, etc."
                   />
-                  <span className="text-[11px] text-ink-3">Nombre en PES (máx. 32 car.).</span>
+                  <span className="text-2xs text-ink-3">Nombre en PES (máx. 32 car.).</span>
                 </div>
 
                 <div>
@@ -411,7 +411,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
                       <option value={204}>Inglaterra (ID: 204)</option>
                     )}
                   </select>
-                  <span className="text-[11px] text-ink-3">País asignado al equipo en Team.csv.</span>
+                  <span className="text-2xs text-ink-3">País asignado al equipo en Team.csv.</span>
                 </div>
               </div>
 
@@ -425,7 +425,7 @@ export const TemplateAdminSection = memo(function TemplateAdminSection({
                   className="input w-full font-mono"
                   placeholder="Ej: 103 (Liverpool), etc."
                 />
-                <span className="text-[11px] text-ink-3">Ejemplo: 103 para reemplazar Liverpool FC o el ID del club deseado.</span>
+                <span className="text-2xs text-ink-3">Ejemplo: 103 para reemplazar Liverpool FC o el ID del club deseado.</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

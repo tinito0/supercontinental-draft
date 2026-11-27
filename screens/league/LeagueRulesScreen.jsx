@@ -72,7 +72,7 @@ export default function LeagueRulesScreen() {
         <div className={`space-y-12 ${chapters.length > 1 ? '' : 'lg:col-span-2'}`}>
           {chapters.map((chapter, index) => (
             <article key={chapter.id} id={chapterAnchor(index)} className="scroll-mt-24">
-              <h2 className="flex items-baseline gap-3 border-b border-line/[0.14] pb-3 font-display text-2xl font-bold uppercase leading-tight tracking-wide text-ink sm:text-[28px]">
+              <h2 className="flex items-baseline gap-3 border-b border-line/[0.14] pb-3 font-display text-2xl font-bold uppercase leading-tight tracking-wide text-ink sm:text-display">
                 <span className="num text-accent-soft">{index + 1}.</span> {chapter.title}
               </h2>
               <div className="mt-5">

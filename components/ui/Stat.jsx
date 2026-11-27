@@ -10,7 +10,7 @@ export function Stat({ label, value, hint, tone = 'default', size = 'md', classN
   return (
     <div className={`min-w-0 ${className}`}>
       <p className="eyebrow">{label}</p>
-      <p className={`font-display num font-bold leading-none mt-1.5 ${size === 'lg' ? 'text-4xl' : size === 'sm' ? 'text-xl' : 'text-[28px]'} ${TONES[tone] || TONES.default}`}>{value}</p>
+      <p className={`font-display num font-bold leading-none mt-1.5 ${size === 'lg' ? 'text-4xl' : size === 'sm' ? 'text-xl' : 'text-display'} ${TONES[tone] || TONES.default}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-ink-3 truncate">{hint}</p>}
     </div>
   );

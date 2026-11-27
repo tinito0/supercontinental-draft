@@ -41,7 +41,7 @@ export const MatchCard = memo(function MatchCard({
   if (!match) {
     return (
       <div className="w-full max-w-[260px] h-24 bg-surface/80 border border-dashed border-line/[0.12] flex flex-col items-center justify-center text-ink-3 font-medium text-xs rounded-xl p-3 shadow-sm">
-        <span className="text-[11px] font-semibold text-ink-3">Por definir</span>
+        <span className="text-2xs font-semibold text-ink-3">Por definir</span>
         <span className="text-xs text-ink-3 mt-0.5">Cruce pendiente</span>
       </div>
     );
@@ -189,7 +189,7 @@ export const MatchCard = memo(function MatchCard({
       {/* Empate: la tanda decide quién pasa (competitionRules.knockoutWinner). */}
       {isEditing && fromGame && !isUnlocked && <FromGameLock compact onUnlock={() => setIsUnlocked(true)} />}
       {canEdit && isTied && (
-        <div className="flex items-center justify-between gap-2 border-t border-line/[0.08] bg-raised px-3 py-1.5 text-[11px] text-ink-3">
+        <div className="flex items-center justify-between gap-2 border-t border-line/[0.08] bg-raised px-3 py-1.5 text-2xs text-ink-3">
           <span>Penales</span>
           <span className="flex items-center gap-1">
             {['penaltiesA', 'penaltiesB'].map((field, i) => (

@@ -27,7 +27,7 @@ export function CommitText({ value, onCommit, maxBytes, maxLength, disabled, mod
         }}
         className={`input w-full ${maxBytes ? 'pr-16' : ''} ${modified ? 'border-accent/50' : ''} ${className}`} />
       {maxBytes > 0 && (
-        <span className={`num absolute right-3 top-1/2 -translate-y-1/2 text-[11px] pointer-events-none ${bytes > maxBytes ? 'text-warning-soft' : 'text-ink-3'}`} aria-hidden="true">
+        <span className={`num absolute right-3 top-1/2 -translate-y-1/2 text-2xs pointer-events-none ${bytes > maxBytes ? 'text-warning-soft' : 'text-ink-3'}`} aria-hidden="true">
           {bytes}/{maxBytes}
         </span>
       )}

@@ -188,7 +188,7 @@ export function KitsSection({ pes, teamId, access, onApply }) {
                 <Shirt className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span className="flex flex-col leading-tight">
                   <span className="text-sm font-semibold">{kitLabel(k.kit, k.category)}{k.modified && <span className="sr-only"> (modificado)</span>}</span>
-                  <span className="num text-[11px] text-ink-3">{k.kit}</span>
+                  <span className="num text-2xs text-ink-3">{k.kit}</span>
                 </span>
                 {!k.inOrder ? <Pill tone="amber">no está en order.ini</Pill> : k.modified && <Pill tone="accent">modificado</Pill>}
               </button>

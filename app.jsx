@@ -42,6 +42,7 @@ import { calculateSmartRecommendations } from './utils/recommendations.js';
 import { handleListenerError } from './utils/listenerErrorHandler.js';
 import { KeyboardShortcutsHelp } from './components/ui/KeyboardShortcutsHelp.jsx';
 import { Alert } from './components/ui/Alert.jsx';
+import { SectionErrorBoundary } from './components/ui/SectionErrorBoundary.jsx';
 import { TournamentPublicState } from './components/tournament/TournamentPublicState.jsx';
 import { ConfirmHost, confirmAction } from './components/ui/ConfirmDialog.jsx';
 import { MarketplaceView } from './components/marketplace/MarketplaceView.jsx';
@@ -254,8 +255,8 @@ const MiniPlayerCard = memo(function MiniPlayerCard({ player, countryMap, onRemo
         </span>
       </button>
       {onRemove && (
-        <button onClick={onRemove} className="text-danger-soft hover:text-red-500 transition p-1 rounded-full hover:bg-red-900/30 flex-shrink-0">
-          <Trash2 className="w-5 h-5" />
+        <button type="button" onClick={onRemove} aria-label={`Quitar a ${player.Name}`} className="text-danger-soft transition-colors min-w-11 min-h-11 grid place-items-center rounded-full hover:bg-danger/10 flex-shrink-0">
+          <Trash2 className="w-5 h-5" aria-hidden="true" />
         </button>
       )}
     </div>
@@ -708,7 +709,7 @@ function App() {
   }, []);
 
 
-  const { cart, isCartSynced, playerLocks, isLocksLoaded, isLocksSynced, allTeams, isTeamsLoaded, userProfile } = useFirebaseData(
+  const { cart, isCartSynced, playerLocks, isLocksLoaded, isLocksSynced, allTeams, isTeamsLoaded, userProfile, teamsStatus, locksStatus, retryFirebaseData } = useFirebaseData(
     userId, isAuthReady, getPrivateCartCollectionRef, getPublicLocksCollectionRef, getPublicTeamsCollectionRef, getPrivateProfileRef, setAppError, setIsLoading, showStatusMessage);
 
   const playerById = useMemo(() => {
@@ -1098,6 +1099,7 @@ function App() {
   // Hook desacoplado de Finanzas y Presupuesto (Fase 2)
   const {
     budgetBase,
+    budgetStatus,
     totalCartCost,
     committedInOffers,
     remainingBudget,
@@ -1112,6 +1114,7 @@ function App() {
     sentOffers,
     priceOf: priceOfPlayer,
     pricesKnown: !squadNeedsCatalog,
+    locksStatus,
   });
 
   const wishlistSet = useMemo(() => {
@@ -1147,8 +1150,6 @@ function App() {
         const player = playerById.get(String(playerId));
         if (player) {
           const toastId = `toast-${playerId}-${lockData.lockedBy || Date.now()}`;
-          const posColors = { DC: '#ef4444', SD: '#ef4444', EI: '#ef4444', ED: '#ef4444', MC: '#10b981', MCD: '#10b981', MO: '#10b981', MI: '#10b981', MD: '#10b981', DFC: '#3b82f6', LI: '#3b82f6', LD: '#3b82f6', PT: '#eab308' };
-          const posColorHex = posColors[player.POS_NOMBRE] || '#6b7280';
 
           newEvents.push({
             id: toastId,
@@ -1171,7 +1172,6 @@ function App() {
                 teamName: lockData.teamName || 'Equipo',
                 ovr: player.OVR_CALCULADO,
                 pos: player.POS_NOMBRE,
-                posColor: posColorHex,
               },
               ...prevToasts.filter(t => t.toastId !== toastId)
             ].slice(0, 2));
@@ -1369,7 +1369,7 @@ function App() {
     const systemNotifs = [];
 
     // Alerta 1: Presupuesto Bajo (Menos de 10M) - solo si no fue descartada
-    if (remainingBudget < 10000000 && remainingBudget > 0 && !dismissedNotifIdsRef.current.has('system-low-budget')) {
+    if (budgetStatus === 'ready' && remainingBudget < 10000000 && remainingBudget > 0 && !dismissedNotifIdsRef.current.has('system-low-budget')) {
       systemNotifs.push({
         id: 'system-low-budget',
         category: 'system',
@@ -1399,7 +1399,7 @@ function App() {
       const nonSystem = prev.filter(notif => notif.category !== 'system');
       return [...updatedSystem, ...nonSystem].slice(0, 40);
     });
-  }, [remainingBudget, marketStatus.status, userProfile]);
+  }, [remainingBudget, budgetStatus, marketStatus.status, userProfile]);
 
   useEffect(() => {
     if (!isAuthReady || !userId) {
@@ -1549,22 +1549,43 @@ function App() {
     return true;
   }, [userId, userProfile, remainingBudget, playerLocks, marketStatus, isMarketOpen, showStatusMessage, draftBlockedIds]);
 
+  // Players being released right now: a second click on the same row neither reopens the dialog nor
+  // sends a request the server would reject.
+  const [releasingIds, setReleasingIds] = useState(() => new Set());
+  const releasingIdsRef = useRef(new Set());
+  const setReleasing = useCallback((playerId, isReleasing) => {
+    const next = new Set(releasingIdsRef.current);
+    if (isReleasing) next.add(playerId); else next.delete(playerId);
+    releasingIdsRef.current = next;
+    setReleasingIds(next);
+  }, []);
+
   const handleRemoveFromCart = useCallback(async (player, { confirmed: alreadyConfirmed = false } = {}) => {
     if (!userId || !player) return;
     if (!isMarketOpen) {
       showStatusMessage('error', 'El mercado está cerrado: los jugadores se liberan cuando abra.');
       return;
     }
-
-    const confirmed = alreadyConfirmed || await confirmAction({
-      title: '¿Liberar al jugador?',
-      player,
-      message: 'Sale de tu plantel y vuelve al mercado: cualquier mánager lo puede fichar.',
-      confirmLabel: 'Liberar',
-    });
-    if (!confirmed) return;
+    const playerId = String(player.Id);
+    if (releasingIdsRef.current.has(playerId)) return;
+    setReleasing(playerId, true);
 
     try {
+      // The server frees the player's catalog price (supabase/functions/_shared/budget.js), so that is the refund.
+      const refund = Math.round((Number(priceOfPlayer(playerId)) || 0) * 1000000);
+      const money = (units) => (units < 0 ? `-${formatPriceShort(-units / 1000000)}` : formatPriceShort(units / 1000000));
+      const confirmed = alreadyConfirmed || await confirmAction({
+        title: '¿Liberar al jugador?',
+        player,
+        amount: refund > 0 ? `+${money(refund)}` : undefined,
+        message: 'Sale de tu plantel y vuelve al mercado: cualquier mánager lo puede fichar.',
+        details: refund > 0
+          ? [`Recuperás ${money(refund)}`, `Disponible: ${money(remainingBudget)} → ${money(remainingBudget + refund)}`]
+          : undefined,
+        confirmLabel: 'Liberar',
+      });
+      if (!confirmed) return;
+
       showStatusMessage('loading', `Liberando a ${player.Name}...`);
       // El servidor borra lock, carrito, el fichaje del feed y la plantilla pública, y cierra las ofertas
       // abiertas por el jugador (antes quedaban reteniendo el dinero de los compradores).
@@ -1573,8 +1594,10 @@ function App() {
     } catch (e) {
       console.error('Error al liberar al jugador: ', e);
       showStatusMessage('error', e?.message || 'No se pudo liberar al jugador.');
+    } finally {
+      setReleasing(playerId, false);
     }
-  }, [userId, isMarketOpen, showStatusMessage]);
+  }, [userId, isMarketOpen, showStatusMessage, priceOfPlayer, remainingBudget, setReleasing]);
 
   const handleOpenPlayerFromCart = (player) => {
     handleOpenPlayerModal(player.Id);
@@ -1655,6 +1678,7 @@ function App() {
 
     return (
       <div className="min-h-screen bg-canvas text-ink-2">
+        <SectionErrorBoundary resetKey={location.pathname}>
         <Suspense fallback={<LoadingScreen message="Cargando torneo..." />}>
           <TournamentModal
             isVisible={true}
@@ -1676,6 +1700,7 @@ function App() {
             userTeamName={userProfile?.teamName}
           />
         </Suspense>
+        </SectionErrorBoundary>
       </div>
     );
   }
@@ -1685,11 +1710,11 @@ function App() {
   }
 
   if (location.pathname.startsWith('/team/')) {
-    return <Suspense fallback={<LoadingScreen message="Cargando vista..." />}><TeamScreen /></Suspense>;
+    return <SectionErrorBoundary resetKey={location.pathname}><Suspense fallback={<LoadingScreen message="Cargando vista..." />}><TeamScreen /></Suspense></SectionErrorBoundary>;
   }
 
   if (location.pathname.startsWith('/tactics/view/')) {
-    return <Suspense fallback={<LoadingScreen message="Cargando vista..." />}><FormationViewScreen /></Suspense>;
+    return <SectionErrorBoundary resetKey={location.pathname}><Suspense fallback={<LoadingScreen message="Cargando vista..." />}><FormationViewScreen /></Suspense></SectionErrorBoundary>;
   }
 
   const isPublicAuthRoute = location.pathname === '/' || location.pathname === '/login';
@@ -1698,7 +1723,8 @@ function App() {
   if (isPublicAuthRoute && (isAuthReady || !readSessionHint())) {
     if (user) return <LoadingScreen message="Entrando..." />;
     return (
-      <Suspense fallback={<LoadingScreen message={location.pathname === '/' ? "Cargando inicio..." : "Cargando login..."} />}>
+      <SectionErrorBoundary resetKey={location.pathname}>
+      <Suspense fallback={<LoadingScreen message={location.pathname === '/' ? "Cargando inicio...": "Cargando login..."} />}>
         {location.pathname === '/' ? (
           <LandingPage onEnter={() => navigate('/login')} />
         ) : (
@@ -1710,6 +1736,7 @@ function App() {
           />
         )}
       </Suspense>
+      </SectionErrorBoundary>
     );
   }
 
@@ -1785,8 +1812,6 @@ function App() {
           onShortcutsClick={() => setIsShortcutsHelpOpen(true)}
           onSuggestionsClick={() => openModalRoute('suggestions')}
           onLogout={handleLogout}
-          remainingBudget={remainingBudget}
-          initialBudget={userProfile?.budget}
         />
 
         <div className="flex-1 flex flex-col overflow-hidden relative bg-canvas transition-colors">
@@ -1798,6 +1823,7 @@ function App() {
             unreadChatCount={unreadChatCount}
             remainingBudget={remainingBudget}
             initialBudget={userProfile?.budget}
+            budgetStatus={budgetStatus}
             onNotificationClick={() => {
               setAreNotificationsWarmed(true);
               setIsNotificationPanelOpen(!isNotificationPanelOpen);
@@ -1865,7 +1891,7 @@ function App() {
                 onRetryCatalog={retryPlayerCatalog}
                 budgetPercent={budgetPercent}
                 recommendations={smartRecommendations}
-                showBudgetExhausted={remainingBudget > 0 && remainingBudget < 1000000 && allPlayers.length > 0 && smartRecommendations.length === 0}
+                showBudgetExhausted={budgetStatus === 'ready' && remainingBudget > 0 && remainingBudget < 1000000 && allPlayers.length > 0 && smartRecommendations.length === 0}
                 isFranchiseMarket={marketStatus.status === 'FranchiseMarket'}
                 hasUsedFranchise={Boolean(userProfile?.franchisePlayerUsed)}
                 franchisePlayerName={userProfile?.franchisePlayerId ? playerById.get(String(userProfile.franchisePlayerId))?.Name : null}
@@ -1881,6 +1907,7 @@ function App() {
 
 
               {/* VISTAS MODULARES EN LUGAR DE PLACEHOLDERS */}
+              <SectionErrorBoundary resetKey={activeTab}>
               <Suspense fallback={null}>
                 {activeTab === 'My Team' && (
                   <div className="animate-in fade-in h-full w-full">
@@ -1890,10 +1917,14 @@ function App() {
                       cart={ownedCart}
                       initialTab={clubTab}
                       onRemoveFromCart={handleRemoveFromCart}
+                      releasingIds={releasingIds}
+                      onGoToMarket={() => navigate('/marketplace')}
                       isMarketOpen={isMarketOpen}
                       userProfile={userProfile}
                       userId={userId}
                       isSquadLoading={!isCartSynced && ownedCart.length === 0}
+                      budgetStatus={budgetStatus}
+                      onRetryBudget={retryFirebaseData}
                       budgetBase={budgetBase}
                       budgetPercent={budgetPercent}
                       totalCartCost={totalCartCost}
@@ -1957,6 +1988,8 @@ function App() {
                       allTeams={allTeams}
                       currentUserId={userId}
                       isLoading={!isTeamsLoaded || !isLocksLoaded || !hasLoadedPlayerDatabase}
+                      loadError={teamsStatus === 'error' || locksStatus === 'error'}
+                      onRetry={retryFirebaseData}
                       playerLocks={playerLocks}
                       allPlayers={allPlayers}
                       countryMap={countryMap}
@@ -2022,6 +2055,7 @@ function App() {
                   </div>
                 )}
               </Suspense>
+              </SectionErrorBoundary>
             </main> {/* End scrollable center pane */}
 
             {/* RIGHT SIDEBAR - ACTIVITY PANEL */}
@@ -2071,20 +2105,25 @@ function App() {
       )}
 
       <Suspense fallback={null}>
+      <SectionErrorBoundary onClose={() => closeModalRoute(setIsComparisonModalVisible)}>
       <ComparisonModal
         isVisible={Boolean((isComparisonModalVisible || modalRoute === 'compare') && compareList[0] && compareList[1])}
         onClose={() => closeModalRoute(setIsComparisonModalVisible)}
         playerA={compareList[0]}
         playerB={compareList[1]}
       />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary onClose={() => closeModalRoute(setIsTutorialVisible)}>
       <TutorialModal
         isVisible={isTutorialVisible || modalRoute === 'tutorial'}
         onClose={() => closeModalRoute(setIsTutorialVisible)}
         onShowSection={showTutorialSection}
         budget={userProfile?.budget || DEFAULT_BUDGET}
       />
+      </SectionErrorBoundary>
       <ConfirmHost />
 
+      <SectionErrorBoundary onClose={() => closeModalRoute(setIsFiltrosModalVisible)}>
       <FiltrosModal
         isVisible={isFiltrosModalVisible || modalRoute === 'filters'}
         onClose={() => closeModalRoute(setIsFiltrosModalVisible)}
@@ -2101,7 +2140,9 @@ function App() {
         showStatusMessage={showStatusMessage}
         resultCount={filteredPlayers.length}
       />
+      </SectionErrorBoundary>
 
+      <SectionErrorBoundary onClose={handleClosePlayerModal}>
       <PlayerModal
         player={selectedPlayer}
         countryMap={countryMap}
@@ -2134,7 +2175,9 @@ function App() {
         marketStatus={marketStatus}
         isMarketOpen={isMarketOpen}
       />
+      </SectionErrorBoundary>
       {(isCartVisible || modalRoute === 'cart') && (
+        <SectionErrorBoundary onClose={() => closeModalRoute(setIsCartVisible)}>
         <CartModal
           isVisible={true}
           isPage={false}
@@ -2145,10 +2188,18 @@ function App() {
           }}
           cart={ownedCart}
           onRemoveFromCart={handleRemoveFromCart}
+          releasingIds={releasingIds}
+          onGoToMarket={() => {
+            setIsCartVisible(false);
+            setCartInitialTab('players');
+            navigate('/marketplace', { replace: true });
+          }}
           isMarketOpen={isMarketOpen}
           userProfile={userProfile}
           userId={userId}
           isSquadLoading={!isCartSynced && ownedCart.length === 0}
+          budgetStatus={budgetStatus}
+          onRetryBudget={retryFirebaseData}
           budgetBase={budgetBase}
           budgetPercent={budgetPercent}
           totalCartCost={totalCartCost}
@@ -2163,13 +2214,17 @@ function App() {
           allTeams={allTeams}
           showStatusMessage={showStatusMessage}
         />
+        </SectionErrorBoundary>
       )}
+      <SectionErrorBoundary onClose={() => closeModalRoute(setIsTeamsModalVisible)}>
       <TeamsModal
         isVisible={isTeamsModalVisible || modalRoute === 'teams'}
         onClose={() => closeModalRoute(setIsTeamsModalVisible)}
         allTeams={allTeams}
         currentUserId={userId}
         isLoading={!isTeamsLoaded || !isLocksLoaded || !hasLoadedPlayerDatabase}
+        loadError={teamsStatus === 'error' || locksStatus === 'error'}
+        onRetry={retryFirebaseData}
         playerLocks={playerLocks}
         allPlayers={allPlayers}
         countryMap={countryMap}
@@ -2178,7 +2233,9 @@ function App() {
           closeModalRoute(setIsTeamsModalVisible);
         }}
       />
+      </SectionErrorBoundary>
       {(isAdminModalVisible || modalRoute === 'admin') && isAdmin && (
+        <SectionErrorBoundary onClose={() => closeModalRoute(setIsAdminModalVisible)}>
         <AdminModal
           isVisible={true}
           isPage={false}
@@ -2208,8 +2265,10 @@ function App() {
             setIsTournamentModalVisible(true);
           }}
         />
+        </SectionErrorBoundary>
       )}
       {(isTournamentModalVisible || modalRoute === 'tournament') && isAdmin && (
+        <SectionErrorBoundary onClose={() => closeModalRoute(setIsTournamentModalVisible)}>
         <TournamentModal
           isVisible={true}
           onClose={() => closeModalRoute(setIsTournamentModalVisible)}
@@ -2220,8 +2279,10 @@ function App() {
           allPlayers={allPlayers}
           userTeamName={userProfile?.teamName}
         />
+        </SectionErrorBoundary>
       )}
 
+      <SectionErrorBoundary onClose={() => closeModalRoute(setIsSuggestionsModalVisible)}>
       <SuggestionsModal
         isVisible={isSuggestionsModalVisible || modalRoute === 'suggestions'}
         onClose={() => closeModalRoute(setIsSuggestionsModalVisible)}
@@ -2230,8 +2291,10 @@ function App() {
         getSuggestionsCollectionRef={getSuggestionsCollectionRef}
         showStatusMessage={showStatusMessage}
       />
+      </SectionErrorBoundary>
 
       {(isFormationModalVisible || modalRoute === 'formation') && (
+        <SectionErrorBoundary onClose={() => closeModalRoute(setIsFormationModalVisible)}>
         <FormationModal
           isVisible={true}
           onClose={() => closeModalRoute(setIsFormationModalVisible)}
@@ -2243,8 +2306,10 @@ function App() {
           showStatusMessage={showStatusMessage}
           db={db}
         />
+        </SectionErrorBoundary>
       )}
 
+      <SectionErrorBoundary onClose={() => closeModalRoute(setIsTransferFeedVisible)}>
       <TransferFeed
         db={db}
         isVisible={isTransferFeedVisible || modalRoute === 'transfers'}
@@ -2253,7 +2318,9 @@ function App() {
         playerLocks={playerLocks}
         allTeams={allTeams}
       />
+      </SectionErrorBoundary>
 
+      <SectionErrorBoundary onClose={() => closeModalRoute(setIsManagerChatVisible)}>
       <ManagerChat
         isVisible={isManagerChatVisible || modalRoute === 'chat'}
         onClose={() => closeModalRoute(setIsManagerChatVisible)}
@@ -2263,6 +2330,7 @@ function App() {
         userProfile={userProfile}
         onSendMessage={handleSendChatMessage}
       />
+      </SectionErrorBoundary>
 
       <CommandPalette
         isOpen={isCommandPaletteOpen}
@@ -2273,10 +2341,12 @@ function App() {
         openModalRoute={openModalRoute}
       />
 
+      <SectionErrorBoundary onClose={() => setIsShortcutsHelpOpen(false)}>
       <KeyboardShortcutsHelp
         isOpen={isShortcutsHelpOpen}
         onClose={() => setIsShortcutsHelpOpen(false)}
       />
+      </SectionErrorBoundary>
       </Suspense>
 
       <InstallPopup
@@ -2309,7 +2379,7 @@ function App() {
 
       {/* Budget alert: a BaseModal, so focus moves in and Escape closes it. */}
       <BaseModal
-        isOpen={showBudgetAlert}
+        isOpen={showBudgetAlert && budgetStatus === 'ready'}
         onClose={() => setShowBudgetAlert(false)}
         size="sm"
         title="Presupuesto casi agotado"

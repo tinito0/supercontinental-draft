@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component {
             <AlertTriangle className="w-8 h-8" />
           </div>
 
-          <span className="text-[11px] font-bold text-danger-soft bg-danger/10 px-2.5 py-1 rounded-md border border-danger/20 mb-3">
+          <span className="text-2xs font-bold text-danger-soft bg-danger/10 px-2.5 py-1 rounded-md border border-danger/20 mb-3">
             Ocurrió un error inesperado
           </span>
 
@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component {
                 Ver detalles técnicos del error
               </summary>
               <p className="mt-2 text-danger-soft font-semibold">{this.state.error.toString()}</p>
-              <pre className="mt-2 text-[11px] text-ink-3 overflow-x-auto">
+              <pre className="mt-2 text-2xs text-ink-3 overflow-x-auto">
                 {this.state.errorInfo?.componentStack || this.state.error.stack}
               </pre>
             </details>

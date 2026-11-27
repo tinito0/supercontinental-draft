@@ -78,7 +78,7 @@ export function KeyboardShortcutsHelp({ isOpen = false, onClose }) {
       className="bg-raised border border-line/[0.12] rounded-2xl max-w-md mx-auto"
       footer={
         <div className="flex items-center justify-between w-full">
-          <span className="text-[11px] text-ink-3">
+          <span className="text-2xs text-ink-3">
             Presioná <kbd className="kbd">Esc</kbd> o hacé clic afuera
           </span>
           <Button variant="primary" size="sm" onClick={onClose} className="min-h-11">

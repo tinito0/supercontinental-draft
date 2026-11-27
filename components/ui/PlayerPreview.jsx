@@ -40,7 +40,7 @@ function PreviewCard({ player, isVisible, position }) {
           <p className="text-sm font-semibold text-ink truncate">{player.Name}</p>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-ink-3">
             <span className={`min-w-7 px-1 rounded font-display num text-sm font-bold text-center ${getStatAndOvrColorClass(player.OVR_CALCULADO)}`}>{player.OVR_CALCULADO}</span>
-            <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+            <span className={`px-1.5 rounded text-2xs font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
             <span><span className="num">{player.Age}</span> años</span>
             {flagUrl && <img src={flagUrl} alt="" width={16} height={12} className="w-4 h-3 rounded-[2px] object-cover" />}
           </div>

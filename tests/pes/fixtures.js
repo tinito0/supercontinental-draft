@@ -1,6 +1,7 @@
 // Test fixtures for the PES engine.
 // REAL fixtures: files from the user's PES 2021 install / patch (not committed). Tests that
-// need them are skipped when absent. SYNTHETIC fixtures: built here from the verified
+// need them run only under `npm run test:real` (PES_REAL=1) and skip when absent, so `npm test`
+// gives the same result on every machine. SYNTHETIC fixtures: built here from the verified
 // specification only; they prove encoder/decoder symmetry, never game compatibility.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,9 +12,10 @@ export const PESDB_DIR = path.join(ROOT, 'vendor/UML_Database/common/etc/pesdb')
 export const EDIT_FILE = path.join(ROOT, 'vendor/EDIT00000000');
 export const KIT_SERVER_DIR = process.env.PES_KIT_SERVER || 'E:/eFootball PES 2021/content/kit-server';
 
-export const hasPesdb = fs.existsSync(path.join(PESDB_DIR, 'Team.bin'));
-export const hasEdit = fs.existsSync(EDIT_FILE);
-export const hasKitServer = fs.existsSync(path.join(KIT_SERVER_DIR, 'map.txt'));
+const REAL = process.env.PES_REAL === '1';
+export const hasPesdb = REAL && fs.existsSync(path.join(PESDB_DIR, 'Team.bin'));
+export const hasEdit = REAL && fs.existsSync(EDIT_FILE);
+export const hasKitServer = REAL && fs.existsSync(path.join(KIT_SERVER_DIR, 'map.txt'));
 
 export function readPesdb(names) {
   const list = names || fs.readdirSync(PESDB_DIR);

@@ -19,7 +19,7 @@ App ──(token de Firebase + "fichar 7511")──▶ Supabase Edge Function `m
 | Precios (generado) | `supabase/functions/_shared/catalog.json` ← `node scripts/build-market-catalog.mjs` |
 | Llamada desde la app | `services/marketService.js` |
 | Reglas que lo exigen | `firestore.rules` (sección MERCADO) |
-| Tests | `tests/marketFunction.test.js`, `tests/rules/marketFunction.test.js`, `tests/rules/marketRules.test.js` |
+| Tests | `tests/marketFunction.test.js`, `tests/marketServiceResetFranchise.test.js`, `tests/rules/marketFunction.test.js`, `tests/rules/marketRules.test.js` |
 
 Qué hace el servidor y qué sigue en el navegador:
 
@@ -38,6 +38,15 @@ Qué hace el servidor y qué sigue en el navegador:
     club entero a un equipo pendiente y vacío, también su página de la web, el overlay, las formaciones
     compartidas, el scouting y la asignación de Draft → PES; bloquea la cuenta anterior (`clubTransferredTo`). Se
     niega con cuentas de administrador. Flujo para el admin: `docs/GUIA_ADMIN_LIGA.md` §3.
+  - resetear la franquicia de un club (`resetFranchise`, **solo admin**; Administración → Equipos → Resetear
+    franquicia). Pedido `{ action: 'resetFranchise', teamId }`. En una transacción lee `franchisePlayerId` del
+    perfil y el lock de ese jugador: borra el lock y lo saca de la plantilla pública solo si `lockedBy` es ese
+    club; borra la copia del carrito; deja `franchisePlayerUsed: false` y `franchisePlayerId: null` (solo esos
+    dos campos). Responde `{ teamId, playerId, lock }`, con `lock` = `released` (liberado), `otherClub` (el id
+    guardado estaba viejo y el jugador es de otro club: el lock queda), `missing` (no había lock) o `none` (no
+    había franquicia guardada). 403 si no es admin, 404 si el club no existe. Si la función publicada es
+    anterior responde "Acción desconocida." y la app muestra que hay que volver a publicarla: no hay plan B
+    desde el navegador.
   - draft de promesas (`_shared/youthDraft.js`, documento `config/youthDraft`):
     - `pickYouthDraft`: el club con el turno abierto (`turnTeamId`) elige una promesa del grupo publicado
       (`pool`). Crea el lock con `isDraftee: true`, anota `picks[uid]`, cierra el turno y escribe el feed con

@@ -235,12 +235,12 @@
   /* ── Tipografía ─────────────────────────────────────────────── */
   .font-display { font-family: 'Barlow Condensed', 'Barlow', ui-sans-serif, system-ui, sans-serif; }
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3;
+    @apply text-2xs font-semibold uppercase tracking-[0.08em] text-ink-3;
   }
   /* Group titles inside long reading lists (the Filtros glossary): ink-3 at 11px got lost between 16px entries. */
   .eyebrow-strong { @apply text-ink-2; }
   .page-title {
-    @apply font-display text-[28px] sm:text-[32px] font-bold leading-none text-ink tracking-tight;
+    @apply font-display text-display sm:text-[32px] font-bold leading-none text-ink tracking-tight;
   }
   .section-title {
     @apply font-display text-lg font-bold leading-tight text-ink tracking-wide uppercase;
@@ -336,13 +336,13 @@
     @apply bg-overlay text-ink shadow-[0_1px_0_rgb(255_255_255/0.05)_inset];
   }
   .kbd {
-    @apply inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded border border-line/25 bg-raised text-[11px] font-semibold text-ink-2 font-mono;
+    @apply inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded border border-line/25 bg-raised text-2xs font-semibold text-ink-2 font-mono;
   }
 
   /* ── Datos ─────────────────────────────────────────────────── */
   .data-table { @apply w-full text-sm text-ink-2; }
   .data-table thead th {
-    @apply sticky top-0 bg-surface text-left text-[11px] font-semibold uppercase tracking-wider text-ink-3 px-3 py-2 border-b border-line/[0.12];
+    @apply sticky top-0 bg-surface text-left text-2xs font-semibold uppercase tracking-wider text-ink-3 px-3 py-2 border-b border-line/[0.12];
   }
   .data-table tbody td { @apply px-3 py-2 border-b border-line/[0.07]; }
   .data-table tbody tr { @apply transition-colors hover:bg-white/[0.025]; }

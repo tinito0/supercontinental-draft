@@ -84,7 +84,7 @@ function Spotlight({ players, field, title, unit, catalog }) {
           )}
         </>
       ) : (
-        <p className="mt-3 text-sm text-ink-3">Todavía no hay.</p>
+        <p className="mt-3 text-sm text-ink-3">Todavía no hay datos. Aparecen apenas se juegue un partido oficial.</p>
       )}
     </section>
   );
@@ -101,7 +101,7 @@ export function LeaderTable({ players, field, title, note, catalog, limit = TABL
           {rows.map((player, index) => <SeasonLeaderRow key={player.id} player={player} rank={index + 1} field={field} catalog={catalog} hideClub={hideClub} />)}
         </ol>
       ) : (
-        <p className="py-2 text-sm text-ink-3">Todavía no hay.</p>
+        <p className="py-2 text-sm text-ink-3">Todavía no hay datos. Aparecen apenas se juegue un partido oficial.</p>
       )}
     </section>
   );

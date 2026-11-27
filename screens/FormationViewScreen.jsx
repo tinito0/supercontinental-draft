@@ -44,7 +44,7 @@ export default function FormationViewScreen() {
     })
       .then(({ data }) => {
         if (cancelled) return;
-        if (data.isPublic === false) setError('Esta formación ya no se comparte.');
+        if (data.isPublic === false) setError('Esta formación ya no se comparte. Pedile a su dueño que la vuelva a compartir.');
         else setFormationData(data);
       })
       .catch(err => {
@@ -161,7 +161,7 @@ export default function FormationViewScreen() {
                   <img src={`/fotos_jugadores/${player.playerId}.webp`} alt="" className="h-8 w-8 rounded-full object-cover bg-raised border border-line/20" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-bold text-ink">{player.name}</p>
-                    <p className="text-[11px] text-ink-3">{player.pos}{player.dorsal ? ` · #${player.dorsal}` : ''}</p>
+                    <p className="text-2xs text-ink-3">{player.pos}{player.dorsal ? ` · #${player.dorsal}` : ''}</p>
                   </div>
                   <span className="text-xs font-bold text-accent-soft tabular-nums">{player.ovr}</span>
                 </div>
@@ -172,7 +172,7 @@ export default function FormationViewScreen() {
 
         {/* Info footer */}
         <div className="mt-4 text-center">
-          <p className="text-[11px] text-ink-3">
+          <p className="text-2xs text-ink-3">
             SuperContinental League
             {createdAt && ` · ${new Date(createdAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}`}
           </p>

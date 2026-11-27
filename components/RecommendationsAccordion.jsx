@@ -107,7 +107,7 @@ export const RecommendationsAccordion = memo(function RecommendationsAccordion({
                     onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = playerPlaceholder(player.Name?.substring(0, 2) || '?'); }}
                   />
                   <span className={`absolute left-1.5 top-1.5 min-w-8 h-8 px-1 rounded-md flex items-center justify-center font-display num text-lg font-bold leading-none ${getStatAndOvrColorClass(ovr)}`}>{ovr}</span>
-                  <span className={`absolute left-1.5 bottom-1.5 px-1.5 py-0.5 rounded text-[11px] font-bold leading-tight ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                  <span className={`absolute left-1.5 bottom-1.5 px-1.5 py-0.5 rounded text-2xs font-bold leading-tight ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                 </div>
                 <div className="flex-1 flex flex-col gap-1.5 p-2.5 min-w-0">
                   <span className="text-sm font-semibold text-ink truncate">{player.Name}</span>

@@ -43,7 +43,7 @@ export const PositionPicker = memo(function PositionPicker({ slot, player, state
           );
         })}
       </div>
-      <p className="mt-2 text-[11px] text-ink-3">
+      <p className="mt-2 text-2xs text-ink-3">
         En esta zona el juego permite {allowed.join(' o ')}. Para otra posición, mové al jugador a su zona.
       </p>
       {notice && <Alert tone="warning" className="mt-2">{notice}</Alert>}

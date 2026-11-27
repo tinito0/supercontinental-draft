@@ -68,7 +68,7 @@ function SlotRow({ slot, state, editable, cfg, onImport }) {
           </>
         )}
       </div>
-      {result && <p className="animate-in fade-in text-xs text-success-soft mt-1" role="status">Importada y verificada: {result}</p>}
+      {result && <p className="animate-in fade-in text-xs text-success-soft mt-1" role="status">Importada y verificada estructuralmente: {result}</p>}
       <ErrorText error={error} />
     </li>
   );
@@ -93,7 +93,7 @@ function FontLibrary({ kits, version, cfg, editable, onAssign }) {
           </label>
         );
       })}
-      <p className="sm:col-span-2 text-[11px] text-ink-3">
+      <p className="sm:col-span-2 text-2xs text-ink-3">
         Solo se cambia el nombre en el config.txt. El kit-server busca la textura en la carpeta de este kit y luego en los CPK; si la fuente vive en la carpeta de otro equipo, importá el archivo acá.
       </p>
     </div>
@@ -198,7 +198,7 @@ function FontGenerator({ editable, onImport }) {
         </div>
       )}
       <Button variant="primary" disabled={!family || !editable || busy} onClick={generate}><Wand2 className="w-4 h-4" aria-hidden="true" />{busy ? 'Generando…' : 'Generar y aplicar a este kit'}</Button>
-      {done && <p className="animate-in fade-in text-xs text-success-soft" role="status">Generada y verificada: {done}. Se exporta junto al config.txt.</p>}
+      {done && <p className="animate-in fade-in text-xs text-success-soft" role="status">Generada y verificada estructuralmente: {done}. Se exporta junto al config.txt.</p>}
       <ErrorText error={error} />
     </div>
   );
@@ -222,7 +222,7 @@ export function PesKitTextures({ pes, teamId, kit, cfg, editable, onApply }) {
             <SlotRow key={slot.slot} slot={slot} state={slotStatus(kits, teamId, kit, cfg, slot)} editable={editable} cfg={cfg} onImport={importTexture} />
           ))}
         </ul>
-        <p className="mt-2 text-[11px] text-ink-3">
+        <p className="mt-2 text-2xs text-ink-3">
           .ftex y .dds se guardan tal cual (se verifica su estructura). PNG/JPG/WebP se convierten a FTEX DXT5 en potencia de 2; las hojas de fuente deben tener proporción 4:1 (letras) u 8:1 (números). Las texturas no se prueban dentro del juego.
         </p>
       </Card>

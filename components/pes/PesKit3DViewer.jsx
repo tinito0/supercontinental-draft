@@ -355,10 +355,10 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
           {error && <p className="absolute inset-x-3 top-3 text-xs text-danger-soft bg-canvas/90 border border-danger/30 rounded-lg p-2" role="alert">{error.message}</p>}
           <div className="absolute bottom-3 inset-x-3 flex flex-wrap justify-end gap-1.5">
             <button type="button" aria-pressed={camera.autoTurn} onClick={() => camera.setAutoTurn(!camera.autoTurn)} title="Girar solo"
-              className={`flex items-center gap-1.5 min-h-10 px-3 rounded-lg text-xs font-semibold backdrop-blur-sm transition-colors ${camera.autoTurn ? 'bg-accent-deep text-ink' : 'bg-canvas/85 text-ink-2 hover:text-ink hover:bg-overlay'}`}>
+              className={`flex items-center gap-1.5 min-h-10 px-3 rounded-lg text-xs font-semibold transition-colors ${camera.autoTurn ? 'bg-accent-deep text-ink' : 'bg-canvas/85 text-ink-2 hover:text-ink hover:bg-overlay'}`}>
               <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" /><span className="max-[400px]:sr-only">Girar solo</span>
             </button>
-            <div className="flex rounded-lg bg-canvas/85 p-0.5 backdrop-blur-sm" role="group" aria-label="Vistas">
+            <div className="flex rounded-lg bg-canvas/85 p-0.5" role="group" aria-label="Vistas">
               {VIEWS.map(v => (
                 <button key={v.id} type="button" aria-pressed={camera.active === v.id} onClick={() => camera.glideTo(typeof v.to === 'function' ? v.to() : v.to, v.id)}
                   className={`min-h-10 px-2.5 sm:px-3 rounded-md text-xs font-semibold transition-colors ${camera.active === v.id ? 'bg-accent-deep text-ink' : 'text-ink-2 hover:text-ink hover:bg-overlay'}`}>
@@ -374,7 +374,7 @@ export function PesKit3DViewer({ kits, teamId, kit, cfg, version, players = [], 
             onResize={dir => selected && resize(selected, dir)} onDiscard={() => { setDraft({}); setSelected(null); setLetterSave(null); }}
             onSave={onSetValues ? saveLettering : undefined} saving={letterSave} />
         )}
-        <p className={`text-[11px] ${pickMode ? 'text-accent-soft' : 'text-ink-3'}`} aria-live="polite">
+        <p className={`text-2xs ${pickMode ? 'text-accent-soft' : 'text-ink-3'}`} aria-live="polite">
           {pickMode
             ? `Hacé clic en la camiseta para tomar el color de ${pickColor.label}. Esc para cancelar.`
             : letterMode
@@ -458,7 +458,7 @@ function LetteringBar({ group, steps, canEdit, dirty, onResize, onDiscard, onSav
         {saving?.done && !dirty && <span className="text-xs text-success-soft">{saving.done}</span>}
         {dirty && <Button onClick={onDiscard}>Descartar</Button>}
         {dirty && onSave && <Button variant="primary" onClick={onSave} disabled={saving?.busy}>{saving?.busy ? 'Guardando…' : 'Guardar posición'}</Button>}
-        {dirty && !onSave && <span className="text-[11px] text-ink-3">Solo vista previa: no tenés permiso para editar este kit.</span>}
+        {dirty && !onSave && <span className="text-2xs text-ink-3">Solo vista previa: no tenés permiso para editar este kit.</span>}
       </span>
     </div>
   );
@@ -471,7 +471,7 @@ function KitStatusLine({ kitAsset, loading, warnCount, onShowDiagnostics }) {
     ? `Textura ${kitAsset.file} · ${kitAsset.sourceLabel}`
     : kitAsset.status === 'empty' ? 'El kit no tiene KitFile: colores del config.txt' : `Sin ${kitAsset.file}: colores del config.txt`;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+    <div className="flex flex-wrap items-center justify-between gap-2 text-2xs">
       <span className={kitAsset.status === 'found' ? 'text-ink-3' : 'text-warning-soft'}>{text}</span>
       {warnCount > 0 && (
         <button type="button" onClick={onShowDiagnostics} className="flex items-center gap-1 min-h-10 rounded-md text-warning-soft hover:underline underline-offset-2">

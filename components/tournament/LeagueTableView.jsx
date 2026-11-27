@@ -149,7 +149,7 @@ export const LeagueTableView = memo(function LeagueTableView({
                             <span
                               key={rIdx}
                               title={r.title}
-                              className={`w-4 h-4 rounded-full flex items-center justify-center text-[11px] font-bold ${r.bg} shadow-sm`}
+                              className={`w-4 h-4 rounded-full flex items-center justify-center text-2xs font-bold ${r.bg} shadow-sm`}
                             >
                               {r.char}
                             </span>
@@ -176,7 +176,7 @@ export const LeagueTableView = memo(function LeagueTableView({
                 <span className="font-semibold text-ink-2">Puestos 9-12: Copa de Plata</span>
               </div>
             </div>
-            <div className="text-[11px] text-ink-3">
+            <div className="text-2xs text-ink-3">
               <p>PJ partidos jugados · G ganados · GP ganados por penales · P perdidos · GF goles a favor · GC goles en contra · DG diferencia de gol · PTS puntos</p>
               <p className="font-mono">G = 2 pts • GP = 1 pt • P = 0 pts</p>
             </div>

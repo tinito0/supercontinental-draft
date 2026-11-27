@@ -119,7 +119,7 @@ export function PesYouthDraftPanel({ pes, appPlayers = [], allTeams }) {
         <ul className="divide-y divide-line/[0.08] border-t border-line/[0.08]">
           {rows.map(row => (
             <li key={row.id} className="flex items-center gap-3 py-2.5">
-              {row.position && <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold shrink-0 ${getPosColorClass(row.position)}`}>{row.position}</span>}
+              {row.position && <span className={`px-1.5 py-0.5 rounded-md text-2xs font-bold shrink-0 ${getPosColorClass(row.position)}`}>{row.position}</span>}
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-ink truncate">{row.name}</span>
                 <span className={`block text-xs ${row.problem ? 'text-danger-soft' : 'text-ink-3'}`}>

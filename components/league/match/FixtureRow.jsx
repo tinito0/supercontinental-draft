@@ -15,7 +15,7 @@ export function makeClubLookup(teams) {
 
 /** Escudo del club o, si no tiene, sus iniciales. `club`: el equipo del draft (logoUrl) o null. */
 export function LeagueCrest({ name, club, size = 'md' }) {
-  const box = size === 'lg' ? 'h-14 w-14 text-lg' : size === 'sm' ? 'h-6 w-6 text-[11px]' : 'h-8 w-8 text-xs';
+  const box = size === 'lg' ? 'h-14 w-14 text-lg' : size === 'sm' ? 'h-6 w-6 text-2xs' : 'h-8 w-8 text-xs';
   const px = size === 'lg' ? 56 : size === 'sm' ? 24 : 32;
   const [failedUrl, setFailedUrl] = useState('');
   if (club?.logoUrl && failedUrl !== club.logoUrl) {

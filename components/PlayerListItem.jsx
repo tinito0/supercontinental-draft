@@ -50,7 +50,7 @@ export const PlayerListItem = memo(function PlayerListItem({
       <div className="flex-1 min-w-0 pl-1 pointer-events-none">
         <p className="text-sm sm:text-base font-semibold text-ink truncate">{player.Name}</p>
         <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-3 min-w-0">
-          <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold leading-tight shrink-0 ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+          <span className={`px-1.5 py-0.5 rounded text-2xs font-bold leading-tight shrink-0 ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
           {/* On phones the price lives here, so the name keeps the row's width. */}
           <span className="sm:hidden font-display num text-sm font-semibold text-ink whitespace-nowrap">{formatPriceCompact(player.Precio)}</span>
           {isInMyCart ? (
@@ -75,7 +75,7 @@ export const PlayerListItem = memo(function PlayerListItem({
       <dl className="hidden md:flex items-center gap-3 px-2 pointer-events-none" aria-label="Atributos principales">
         {(isGK ? GK_STATS : FIELD_STATS).map(([label, key]) => (
           <div key={key} className="flex flex-col items-center gap-0.5 w-10">
-            <dt className="text-[11px] font-semibold text-ink-3">{label}</dt>
+            <dt className="text-2xs font-semibold text-ink-3">{label}</dt>
             <dd className={`min-w-8 px-1 rounded font-display num text-sm font-bold text-center ${getStatAndOvrColorClass(player[key])}`}>{player[key] ?? '–'}</dd>
           </div>
         ))}

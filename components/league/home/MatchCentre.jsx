@@ -26,12 +26,14 @@ function actionFor(fixture, prediction) {
   return null;
 }
 
-function List({ fixtures, clubOf, prediction }) {
+function List({ fixtures, clubOf, prediction, quietLive = false }) {
+  // One pulsing live dot per screen (DS): only the first live row of the list pulses, unless something above already does.
+  const firstLive = quietLive ? -1 : fixtures.slice(0, PREVIEW_ROWS).findIndex(fixture => fixture.status === 'live');
   return (
     // Two columns on wide screens: a single column left two thirds of the row empty.
     <ul className="divide-y divide-line/10 lg:grid lg:grid-cols-2 lg:divide-y-0 lg:[&>li:nth-child(odd)]:border-r lg:[&>li:nth-child(n+3)]:border-t lg:[&>li]:border-line/10">
-      {fixtures.slice(0, PREVIEW_ROWS).map(fixture => (
-        <FixtureRow key={fixture.id} fixture={fixture} clubOf={clubOf} action={actionFor(fixture, prediction)} />
+      {fixtures.slice(0, PREVIEW_ROWS).map((fixture, index) => (
+        <FixtureRow key={fixture.id} fixture={fixture} clubOf={clubOf} action={actionFor(fixture, prediction)} quietLive={index !== firstLive} />
       ))}
     </ul>
   );
@@ -105,11 +107,11 @@ export function MatchCentre({ groups, round, clubOf, loading, error, liveError, 
     const rest = tab === 'live' && round ? round.fixtures.filter(f => !list.some(item => item.id === f.id)) : [];
     body = list.length ? (
       <>
-        <List fixtures={list} clubOf={clubOf} prediction={prediction} />
+        <List fixtures={list} clubOf={clubOf} prediction={prediction} quietLive={featuredIsLive} />
         {rest.length > 0 && (
           <>
             <p className="eyebrow border-t border-line/10 px-4 pb-1 pt-4">Resto de la {round.title}</p>
-            <List fixtures={rest} clubOf={clubOf} prediction={prediction} />
+            <List fixtures={rest} clubOf={clubOf} prediction={prediction} quietLive />
           </>
         )}
       </>

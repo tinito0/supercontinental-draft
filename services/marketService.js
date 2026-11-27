@@ -44,6 +44,23 @@ export const releasePlayer = ({ playerId }) => callMarket('release', { playerId 
 export const migrateAccount = ({ newIdToken }) => callMarket('migrateAccount', { newIdToken });
 /** Admin only: moves the club of `fromUid` to the pending, empty team of `toUid` (market.js transferClub). */
 export const transferClub = ({ fromUid, toUid, managerName }) => callMarket('transferClub', { fromUid, toUid, managerName });
+// The function answers this to actions it does not know: here, a deployed `market` older than this app.
+const UNKNOWN_ACTION = 'Acción desconocida.';
+const FUNCTION_OUTDATED = 'El servidor del mercado todavía no tiene esta acción: hay que volver a publicar la función market.';
+
+/**
+ * Admin only: clears a club's franchise fields and frees its franchise player's lock if the club still owns it
+ * (market.js resetFranchise). Resolves `{ teamId, playerId, lock: 'released' | 'otherClub' | 'missing' | 'none' }`.
+ * No browser fallback: the lock write must stay on the server.
+ */
+export async function resetFranchise({ teamId }) {
+  try {
+    return await callMarket('resetFranchise', { teamId });
+  } catch (error) {
+    if (error?.message === UNKNOWN_ACTION) throw new Error(FUNCTION_OUTDATED);
+    throw error;
+  }
+}
 /** Youth draft: the club whose turn is open takes one prospect of the published pool (market.js pickYouthDraft). */
 export const pickYouthDraft = ({ playerId }) => callMarket('pickYouthDraft', { playerId });
 /** Admin only: undoes a club's youth-draft pick and gives that club the turn again. */

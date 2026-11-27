@@ -5,6 +5,7 @@ import { Pitch } from './Pitch.jsx';
 import { BaseModal } from './ui/BaseModal.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 import { Alert } from './ui/Alert.jsx';
+import { confirmAction } from './ui/ConfirmDialog.jsx';
 import { FORMATIONS, APP_ID, DEFAULT_LOGO, DEFAULT_TACTICS } from '../utils/constants.js';
 import { formationReducer, initialFormationState } from '../utils/lineupReducer.js';
 import { useStatusSwap } from '../hooks/useStatusSwap.js';
@@ -265,6 +266,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     setAdvanced(prev => replaceInstruction(prev, side, index, code));
   }, []);
 
+  const lastBlockMessageRef = useRef(null);
   const handleSaveLineup = useCallback(async (overrideLineup, overrideFormation, overrideSetPieces, overrideTactics) => {
     // Determinar si overrideLineup es un objeto lineup real o un SyntheticEvent de React
     const isLineupObject = Boolean(
@@ -293,9 +295,15 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     if (benchCheck.applies && !benchCheck.ok) {
       if (saveIndicatorTimerRef.current) clearTimeout(saveIndicatorTimerRef.current);
       setSaveIndicator('blocked');
-      if (!isLineupObject) showStatusMessage?.('error', benchBlockMessage(benchCheck));
+      // Autosave retries on every change: say it when the block starts or its message changes, not on each tick.
+      const blockMessage = benchBlockMessage(benchCheck);
+      if (!isLineupObject || lastBlockMessageRef.current !== blockMessage) {
+        showStatusMessage?.('error', `Este once no se va a guardar. ${blockMessage}`);
+      }
+      lastBlockMessageRef.current = blockMessage;
       return;
     }
+    lastBlockMessageRef.current = null;
 
     setIsSaving(true);
     setSaveIndicator('saving');
@@ -478,6 +486,21 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
     autoSaveTimerRef.current = null;
     handleSaveLineup();
   }, [handleSaveLineup]);
+
+  // Closing flushes the autosave; if the bench rule blocks it, the current XI would be lost, so ask first.
+  const requestClose = useCallback(async () => {
+    const benchCheck = checkBench(cart || [], sanitizeLineup(lineup));
+    if (benchCheck.applies && !benchCheck.ok) {
+      const confirmed = await confirmAction({
+        title: '¿Cerrar sin guardar el once?',
+        message: `Tu banco promedia ${formatAverage(benchCheck.average)} y el mínimo es ${BENCH_MIN_AVG_OVR}, así que este once no se guarda. Si cerrás, queda la última alineación válida.`,
+        confirmLabel: 'Cerrar sin guardar',
+        tone: 'danger',
+      });
+      if (!confirmed) return;
+    }
+    onClose?.();
+  }, [cart, sanitizeLineup, lineup, onClose]);
 
   // Another device (or tab) saved the board: take its version while this one has nothing pending (no autosave
   // waiting, no save in flight, no player in hand). Before, the board loaded once, and the next autosave here
@@ -668,12 +691,12 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
         <label htmlFor="formation-select" className="field-label">Formación de «{shownStateLabel}»</label>
       )}
       {renderFormationSelect('formation-select')}
-      <button onClick={handleManualSave} disabled={isSaving} title={busyTitle}
+      <button type="button" onClick={handleManualSave} disabled={isSaving} title={busyTitle}
         type="button" className="btn btn-primary w-full">
         {saveIcon}{isSaving ? 'Guardando…' : 'Guardar alineación'}
       </button>
       <div className="relative" data-share-area>
-        <button onClick={handleShareURL} disabled={isSharing} title={isSharing ? 'Hay una operación en curso' : undefined}
+        <button type="button" onClick={handleShareURL} disabled={isSharing} title={isSharing ? 'Hay una operación en curso' : undefined}
           type="button" className="btn btn-secondary w-full">
           {isSharing ? (
             <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Generando…</>
@@ -818,7 +841,11 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
           />
         ))}
       </SquadSection>
-      {availablePlayers.length === 0 && <p className="text-ink-3 text-sm text-center py-4">Todos tus jugadores están en la cancha.</p>}
+      {availablePlayers.length === 0 && (
+        <p className="text-ink-3 text-sm text-center py-4">
+          {cart.length === 0 ? 'Todavía no tenés jugadores. Fichá desde el Mercado.' : 'Todos tus jugadores están en la cancha.'}
+        </p>
+      )}
     </div>
   );
 
@@ -900,11 +927,11 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
             </span>
           </div>
           {isPage ? (
-            <button type="button" onClick={onClose} className="btn btn-secondary">
+            <button type="button" onClick={requestClose} className="btn btn-secondary">
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />Plantel y finanzas
             </button>
           ) : (
-            <button type="button" onClick={onClose} className="btn btn-ghost btn-icon" aria-label="Cerrar táctica"><X className="w-5 h-5" aria-hidden="true" /></button>
+            <button type="button" onClick={requestClose} className="btn btn-ghost btn-icon" aria-label="Cerrar táctica"><X className="w-5 h-5" aria-hidden="true" /></button>
           )}
         </div>
 
@@ -1001,7 +1028,7 @@ export const FormationModal = memo(function FormationModal({ isVisible, isPage, 
   return (
     <BaseModal
       isOpen={true}
-      onClose={onClose}
+      onClose={requestClose}
       ariaLabel="Táctica"
       size="2xl"
       showClose={false}

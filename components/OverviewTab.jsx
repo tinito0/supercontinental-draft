@@ -35,7 +35,7 @@ function MatchFocus({ match, teamName, getLogo }) {
       <div className="flex flex-col items-center text-center gap-2 min-w-0">
         <Crest src={getLogo(name)} name={name} className={`w-14 h-14 sm:w-16 sm:h-16 ${mine ? '' : 'opacity-90'}`} />
         <span className={`text-sm font-semibold truncate max-w-full ${mine ? 'text-accent-soft' : 'text-ink'}`}>{name || fallback}</span>
-        {mine && <span className="text-[11px] text-ink-3 -mt-1.5">Tu club</span>}
+        {mine && <span className="text-2xs text-ink-3 -mt-1.5">Tu club</span>}
       </div>
     );
   };
@@ -176,7 +176,7 @@ export const OverviewTab = memo(function OverviewTab({
                   className={`w-7 h-7 rounded-md flex items-center justify-center font-display text-sm font-bold ${RESULT[r].className}`}>{r}</li>
               ))}
             </ol>
-          ) : <p className="font-display text-[28px] font-bold leading-none mt-1.5 text-ink-3">—</p>}
+          ) : <p className="font-display text-display font-bold leading-none mt-1.5 text-ink-3">—</p>}
           <p className="mt-1 text-xs text-ink-3">Últimos 5 partidos</p>
         </div>
       </div>
@@ -261,7 +261,7 @@ export const OverviewTab = memo(function OverviewTab({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink group-hover:text-accent-soft transition-colors">{player.Name}</span>
                       <span className="flex items-center gap-2 text-xs text-ink-3 mt-0.5">
-                        <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+                        <span className={`px-1.5 rounded text-2xs font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
                         {player.Age > 0 && <span>{player.Age} años</span>}
                         <span className="num">{formatPriceShort(player.Precio)}</span>
                       </span>

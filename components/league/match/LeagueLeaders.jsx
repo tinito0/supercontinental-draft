@@ -30,7 +30,7 @@ function LeaderList({ title, rows, field }) {
           ))}
         </ol>
       ) : (
-        <p className="py-2 text-sm text-ink-3">Todavía no hay.</p>
+        <p className="py-2 text-sm text-ink-3">Todavía no hay datos: aparecen con los partidos que registra el juego.</p>
       )}
     </section>
   );

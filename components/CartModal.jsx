@@ -17,6 +17,7 @@ import { Page } from './ui/Page.jsx';
 import { PageHeader } from './ui/PageHeader.jsx';
 import { Tabs } from './ui/Tabs.jsx';
 import { Stat } from './ui/Stat.jsx';
+import { Alert } from './ui/Alert.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
 import { SquadRulesStats } from './SquadRulesStats.jsx';
 import { evaluateSquadRules } from '../utils/squadRules.js';
@@ -31,7 +32,7 @@ import {
 
 // ─── CartMiniPlayerCard ─────────────────────────────────────────────────────
 // Row of the squad: photo, position and OVR in the market's colour scale, current price.
-const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap, allPlayers, onRemove, onCardClick }) {
+const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap, allPlayers, onRemove, onCardClick, isMarketOpen = true, isReleasing = false }) {
   const livePlayer = playerMap ? playerMap.get(String(player.Id)) : allPlayers?.find(p => p.Id === player.Id);
   const precio = livePlayer ? livePlayer.Precio : player.Precio;
   const ovr = player.OVR_CALCULADO || 0;
@@ -45,7 +46,7 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
       <div className="flex-1 min-w-0 pointer-events-none">
         <p className="text-sm font-semibold text-ink truncate group-hover:text-accent-soft transition-colors">{player.Name}</p>
         <p className="mt-1 flex items-center gap-2 text-xs">
-          <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
+          <span className={`px-1.5 rounded text-2xs font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>
           {/* The franchise player costs nothing from the budget (hooks/useBudget.js), so no price for him. */}
           {player.isFranchise
             ? <span className="font-semibold text-accent-soft">Franquicia</span>
@@ -64,8 +65,10 @@ const CartMiniPlayerCard = memo(function CartMiniPlayerCard({ player, playerMap,
         </span>
       ) : (
         <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="relative btn btn-ghost btn-icon btn-sm text-ink-3 hover:text-danger-soft"
-          title="Quitar del plantel" aria-label={`Quitar a ${player.Name} del plantel`}>
+          disabled={!isMarketOpen || isReleasing}
+          className="relative btn btn-ghost btn-icon btn-sm text-ink-3 hover:text-danger-soft disabled:opacity-40 disabled:hover:text-ink-3"
+          title={!isMarketOpen ? 'El mercado está cerrado: los jugadores se liberan cuando abra' : isReleasing ? 'Liberando…' : 'Quitar del plantel'}
+          aria-label={isReleasing ? `Liberando a ${player.Name}` : `Quitar a ${player.Name} del plantel`}>
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
@@ -254,7 +257,7 @@ const NegotiationCard = memo(function NegotiationCard({
   );
 });
 
-export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, isSquadLoading = false, onRemoveFromCart, userProfile, userId, budgetBase, budgetPercent, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage, isMarketOpen = true }) {
+export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, cart, isSquadLoading = false, onRemoveFromCart, releasingIds, onGoToMarket, userProfile, userId, budgetBase, budgetPercent, totalCartCost, remainingBudget, committedInOffers, incomingOffers = [], sentOffers = [], offerHistory = [], countryMap, onPlayerClick, allPlayers, allTeams, initialTab = 'players', onOpenTactics, showStatusMessage, isMarketOpen = true, budgetStatus = 'ready', onRetryBudget }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingOfferRef = useRef(null);
@@ -430,7 +433,12 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     });
 
     const positionChartData = {
-      labels: ['Porteros', 'Defensas', 'Medios', 'Delanteros'],
+      labels: [
+        `Porteros (${posCounts.Arqueros})`,
+        `Defensas (${posCounts.Defensores})`,
+        `Medios (${posCounts.Medios})`,
+        `Delanteros (${posCounts.Delanteros})`,
+      ],
       datasets: [{
         data: [posCounts.Arqueros, posCounts.Defensores, posCounts.Medios, posCounts.Delanteros],
         backgroundColor: ['#eab308', '#3b82f6', '#22c55e', '#ef4444'],
@@ -452,8 +460,9 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
       .slice(0, 5);
 
     const countryChartData = {
-      labels: sortedCountries.map(([code]) => {
-        return countryMap && countryMap[code] ? countryMap[code].substring(0, 10) : code;
+      labels: sortedCountries.map(([code, count]) => {
+        const name = countryMap && countryMap[code] ? countryMap[code].substring(0, 10) : code;
+        return `${name} (${count})`;
       }),
       datasets: [{
         label: 'Jugadores',
@@ -499,7 +508,8 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     : (sentOffers || []).filter(o => o.senderId === userId && o.status === 'pending').reduce((sum, o) => sum + (Number(o.offerAmount) || 0), 0);
   // One tone for the "Disponible" figure and its meter: accent, warning from 20% down (the budget alert's
   // threshold, hooks/useBudget.js), danger once nothing is left.
-  const availableTone = remainingBudget <= 0 ? 'danger' : budgetPct <= 20 ? 'warning' : 'accent';
+  const budgetReady = budgetStatus === 'ready';
+  const availableTone = !budgetReady ? 'default' : remainingBudget <= 0 ? 'danger' : budgetPct <= 20 ? 'warning' : 'accent';
   const meterTone = { danger: 'bg-danger', warning: 'bg-warning', accent: 'bg-accent' }[availableTone];
   // Same format as every other price in the app ($12.50M). Keeps the sign: an overdrawn budget reads -$3.20M.
   const fmtM = (val) => {
@@ -521,16 +531,25 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   };
 
   const finances = (
-    <section aria-label="Balance financiero" className="border-y border-line/[0.08] py-5">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
+    <section aria-label="Balance financiero" className="border-b border-line/[0.08] pb-5">
+      {/* «Disponible» is the figure a manager acts on, so it leads; the other three explain it. */}
+      {budgetStatus === 'error' && (
+        <Alert tone="danger" title="No pudimos cargar tus contratos" className="mb-4"
+          action={onRetryBudget && <button type="button" onClick={onRetryBudget} className="btn btn-secondary min-h-11">Reintentar</button>}>
+          Sin ellos no podemos calcular tu presupuesto.
+        </Alert>
+      )}
+      <Stat label="Disponible" value={budgetReady ? fmtM(remainingBudget) : '—'} size="lg" tone={availableTone} hint={budgetReady ? `${budgetPct.toFixed(0)}% del presupuesto` : undefined} />
+      {budgetReady && (
+        <div className="mt-3 h-2 rounded-full bg-white/[0.06] overflow-hidden" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(budgetPct)} aria-label="Presupuesto disponible">
+          <div className={`h-full rounded-full transition-[width] duration-move ${meterTone}`} style={{ width: `${budgetPct}%` }} />
+        </div>
+      )}
+      <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
         {/* Short labels: each fits one line at 360px; the detail goes in the hint. */}
-        <Stat label="Presupuesto" value={fmtM(initialBudget)} size="sm" hint="Cambia con los traspasos" />
-        <Stat label="Gastado" value={fmtM(totalCartCost)} size="sm" hint="En el plantel" />
-        <Stat label="En ofertas" value={fmtM(activeCommitted)} size="sm" tone={activeCommitted > 0 ? 'warning' : 'default'} hint="Enviadas, pendientes" />
-        <Stat label="Disponible" value={fmtM(remainingBudget)} size="sm" tone={availableTone} hint={`${budgetPct.toFixed(0)}% del presupuesto`} />
-      </div>
-      <div className="mt-4 h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(budgetPct)} aria-label="Presupuesto disponible">
-        <div className={`h-full rounded-full transition-[width] duration-move ${meterTone}`} style={{ width: `${budgetPct}%` }} />
+        <Stat label="Presupuesto" value={budgetReady ? fmtM(initialBudget) : '—'} size="sm" hint="Cambia con los traspasos" />
+        <Stat label="Gastado" value={budgetReady ? fmtM(totalCartCost) : '—'} size="sm" hint="En el plantel" />
+        <Stat label="En ofertas" value={budgetReady ? fmtM(activeCommitted) : '—'} size="sm" tone={budgetReady && activeCommitted > 0 ? 'warning' : 'default'} hint="Enviadas, pendientes" />
       </div>
     </section>
   );
@@ -538,18 +557,28 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
   const content = (
     <>
       {activeTab === 'players' && (
+        <SquadRulesStats result={squadRules} className="border-b border-line/[0.08] pb-5 mb-5" />
+      )}
+      {activeTab === 'players' && (
         isSquadLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5" role="status" aria-label="Cargando el plantel">
             {Array.from({ length: 8 }, (_, i) => <div key={i} className="skeleton h-[70px] rounded-xl" />)}
           </div>
         ) : cart.length === 0 ? (
-          <EmptyState icon={ShoppingCart} title="Tu plantel está vacío" description="Explorá el mercado para fichar jugadores." />
+          <EmptyState icon={ShoppingCart} title="Tu plantel está vacío" description="Fichá jugadores en el mercado para armar tu equipo."
+            actionLabel={onGoToMarket ? 'Ir al mercado' : undefined} onAction={onGoToMarket} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-            {sortedCart.map(player => (
-              <CartMiniPlayerCard key={player.Id} player={player} playerMap={playerMap} allPlayers={allPlayers}
-                onRemove={() => onRemoveFromCart(player)} onCardClick={() => onPlayerClick(player)} />
-            ))}
+          <div className="space-y-3">
+            {!isMarketOpen && (
+              <p className="text-sm text-ink-3">El mercado está cerrado: vas a poder liberar jugadores cuando abra.</p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+              {sortedCart.map(player => (
+                <CartMiniPlayerCard key={player.Id} player={player} playerMap={playerMap} allPlayers={allPlayers}
+                  isMarketOpen={isMarketOpen} isReleasing={releasingIds?.has(String(player.Id)) ?? false}
+                  onRemove={() => onRemoveFromCart(player)} onCardClick={() => onPlayerClick(player)} />
+              ))}
+            </div>
           </div>
         )
       )}
@@ -588,6 +617,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
 
       {activeTab === 'stats' && (
         <div className="space-y-6">
+          {finances}
           <section className="panel-flat p-5" aria-labelledby="cart-ledger">
             <h3 id="cart-ledger" className="eyebrow mb-4">Movimientos de la temporada</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -614,7 +644,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
             )}
             <p className="mt-3 text-xs text-ink-3">Los fichajes cuentan a precio de catálogo; las ventas, después de la comisión de la liga. El presupuesto disponible es el de arriba.</p>
           </section>
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
             <Stat label="Media del plantel" value={statsData.avgOvr} tone="accent" size="sm" />
             <Stat label="Edad promedio" value={statsData.avgAge} hint="años" size="sm" />
             <Stat label="Jugadores" value={statsData.totalPlayers} size="sm" />
@@ -653,8 +683,6 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
             </button>
           )}
         />
-        {finances}
-        <SquadRulesStats result={squadRules} className="border-b border-line/[0.08] pb-5" />
         {tabList}
         <div>{content}</div>
       </Page>
@@ -673,8 +701,6 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
         </button>
       </div>
       <div className="flex-grow min-h-0 overflow-y-auto px-4 sm:px-6 py-4 space-y-5 custom-scrollbar">
-        {finances}
-        <SquadRulesStats result={squadRules} className="border-b border-line/[0.08] pb-5" />
         {tabList}
         <div>{content}</div>
       </div>
@@ -687,7 +713,7 @@ export const CartModal = memo(function CartModal({ isPage, isVisible, onClose, c
     <BaseModal
       isOpen={isVisible}
       onClose={onClose}
-      ariaLabel="Finanzas y plantilla"
+      ariaLabel="Plantel y finanzas"
       showClose={false}
       size="2xl"
       className="h-[100dvh] sm:h-[88vh] max-w-6xl rounded-none border-0 sm:rounded-2xl sm:border"

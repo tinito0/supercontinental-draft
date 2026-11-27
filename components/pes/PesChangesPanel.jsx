@@ -95,7 +95,8 @@ export function PesChangesPanel({ pes }) {
 
       <Card title="Exportar ZIP" description="Trae solo los archivos generados (BIN modificados, EDIT, config.txt y texturas) más manifest.json. No se prueba dentro del juego."
         actions={caps.has('export') && (
-          <Button variant="primary" disabled={!validation?.passed || drafts.length > 0 || busy} onClick={doExport}><Download className="w-4 h-4" aria-hidden="true" />Exportar</Button>
+          <Button variant="primary" disabled={!validation?.passed || drafts.length > 0 || failures.length > 0 || busy} onClick={doExport}
+            title={failures.length > 0 ? 'Corregí los errores antes de exportar' : undefined}><Download className="w-4 h-4" aria-hidden="true" />Exportar</Button>
         )}>
         {!caps.has('export') ? <p className="text-sm text-ink-3">Solo el Super Admin exporta.</p> : (
           <ul className="space-y-1.5 text-sm">
@@ -105,7 +106,7 @@ export function PesChangesPanel({ pes }) {
         )}
         {lastExport && (
           <div className="animate-in fade-in mt-4 text-sm">
-            <Pill tone="green">Exportado y verificado: {lastExport.files.length} {plural(lastExport.files.length, 'archivo', 'archivos')}</Pill>
+            <Pill tone="green">Exportado y verificado estructuralmente:{lastExport.files.length} {plural(lastExport.files.length, 'archivo', 'archivos')}</Pill>
             <ul className="mt-2 space-y-1 text-xs text-ink-3">{lastExport.verification.map(v => <li key={v.path}><code className="text-ink-2">{v.path}</code>: {v.check}</li>)}</ul>
           </div>
         )}

@@ -16,7 +16,7 @@ function Row({ label, hint, children }) {
     <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <div className="min-w-0">
         <span className="text-xs text-ink-2">{label}</span>
-        {hint && <p className="text-[11px] text-ink-3">{hint}</p>}
+        {hint && <p className="text-2xs text-ink-3">{hint}</p>}
       </div>
       {children}
     </div>
@@ -79,7 +79,7 @@ export function ViewPanel({ opts, set, render, goalkeeper }) {
         </Row>
         <Toggle checked={opts.captain} onChange={v => set({ captain: v })}>Cinta de capitán</Toggle>
       </Section>
-      <p className="text-[11px] text-ink-3">Arrastrá para girar, rueda o +/− para acercar, flechas para mover, doble clic o 0 para volver al frente.</p>
+      <p className="text-2xs text-ink-3">Arrastrá para girar, rueda o +/− para acercar, flechas para mover, doble clic o 0 para volver al frente.</p>
     </div>
   );
 }
@@ -109,7 +109,7 @@ export function ShirtPanel({ render, collarPreview, children }) {
               </React.Fragment>
             ))}
           </dl>
-          <p className="text-[11px] text-ink-3">
+          <p className="text-2xs text-ink-3">
             El parche es el escudo de la competición (badge-server de Sider), no parte del kit: esta vista lee solo el kit-server,
             así que muestra la posición configurada pero no dibuja el parche.
           </p>
@@ -145,11 +145,11 @@ export function LetteringPanel({ opts, set, sample, setSample, players, nameOff,
               onChange={e => setSample(s => ({ ...s, number: e.target.value.replace(/\D/g, '') }))} />
           </label>
         </div>
-        {nameOff && <p className="text-[11px] text-ink-3">Este kit tiene el nombre apagado (Name=1).</p>}
+        {nameOff && <p className="text-2xs text-ink-3">Este kit tiene el nombre apagado (Name=1).</p>}
       </Section>
       <Section title="Fuentes del kit">
         <ul className="space-y-1.5">{fonts.map(a => <AssetRow key={a.slot} asset={a} compact />)}</ul>
-        <p className="text-[11px] text-ink-3">Las letras y números salen de las hojas del kit (NameFontFile, BackNumbersFile, LegNumbersFile, ChestNumbersFile). La posición es una aproximación de la del juego.</p>
+        <p className="text-2xs text-ink-3">Las letras y números salen de las hojas del kit (NameFontFile, BackNumbersFile, LegNumbersFile, ChestNumbersFile). La posición es una aproximación de la del juego.</p>
       </Section>
     </div>
   );
@@ -215,17 +215,17 @@ export function FabricPanel({ fabric, setFabric, srmOpts, setSrmOpts, source, se
           title={generated ? undefined : 'Elegí «De la tela» o «Del _srm» para descargar un relieve nuevo'}>
           <Download className="w-3.5 h-3.5" aria-hidden="true" />{downloading?.busy ? `Armando el normal map a ${downloading.size} px…` : 'Descargar _nrm.ftex'}
         </Button>
-        {downloading?.done && <p className="text-[11px] text-success-soft">{downloading.done}</p>}
-        {downloading?.error && <p className="text-[11px] text-danger-soft" role="alert">No se pudo descargar el normal map: {downloading.error.message}</p>}
-        {saving?.done && <p className="text-[11px] text-success-soft">{saving.done}</p>}
-        {saving?.error && <p className="text-[11px] text-danger-soft" role="alert">No se pudo guardar el relieve: {saving.error.message}</p>}
+        {downloading?.done && <p className="text-2xs text-success-soft">{downloading.done}</p>}
+        {downloading?.error && <p className="text-2xs text-danger-soft" role="alert">No se pudo descargar el normal map: {downloading.error.message}</p>}
+        {saving?.done && <p className="text-2xs text-success-soft">{saving.done}</p>}
+        {saving?.error && <p className="text-2xs text-danger-soft" role="alert">No se pudo guardar el relieve: {saving.error.message}</p>}
       </Section>
       <Section title="En pantalla">
         <Slider label="Relieve en pantalla" value={opts.bump} min={0} max={2.5} step={0.05} format={percent} onChange={v => set({ bump: v })} />
         <Slider label="Brillo de la tela" value={opts.spec} min={0} max={2.5} step={0.05} format={percent} onChange={v => set({ spec: v })} />
         <Toggle checked={opts.useNrm} onChange={v => set({ useNrm: v })}>Usar normal map</Toggle>
       </Section>
-      <p className="text-[11px] text-ink-3">El kit-server no carga un _nrm por kit: kserv.lua solo cambia la textura y el _srm. Lo de «En pantalla» solo cambia esta vista.</p>
+      <p className="text-2xs text-ink-3">El kit-server no carga un _nrm por kit: kserv.lua solo cambia la textura y el _srm. Lo de «En pantalla» solo cambia esta vista.</p>
     </div>
   );
 }
@@ -235,7 +235,7 @@ function SrmReliefSection({ o, set }) {
   const R = NRM_FROM_SRM_RANGES;
   return (
     <Section title="Relieve desde el _srm">
-      <p className="text-[11px] text-ink-3">Lo que cambia en el _srm (escudo, sponsor, rayas, costuras) sale en relieve. Lo liso y brillante queda alto.</p>
+      <p className="text-2xs text-ink-3">Lo que cambia en el _srm (escudo, sponsor, rayas, costuras) sale en relieve. Lo liso y brillante queda alto.</p>
       <Slider label="Intensidad" value={o.strength} min={R.strength[0]} max={R.strength[1]} step={R.strength[2]} format={v => v.toFixed(2)} onChange={v => set({ strength: v })} />
       <Slider label="Suavizado" value={o.blur} min={R.blur[0]} max={R.blur[1]} step={R.blur[2]} format={v => `${v.toFixed(1)} px`} onChange={v => set({ blur: v })} />
       <Slider label="Quitar inclinación" value={o.flatten} min={R.flatten[0]} max={R.flatten[1]} step={R.flatten[2]} format={v => `${v} px`} onChange={v => set({ flatten: v })} />
@@ -260,7 +260,7 @@ export function KitImageBar({ image, onTransparent, onDownload, disabled }) {
           <Download className="w-3.5 h-3.5" aria-hidden="true" />{image.busy ? 'Generando…' : 'Descargar PNG'}
         </Button>
       </div>
-      {image.error && <p className="text-[11px] text-danger-soft text-right" role="alert">No se pudo descargar la imagen: {image.error.message}</p>}
+      {image.error && <p className="text-2xs text-danger-soft text-right" role="alert">No se pudo descargar la imagen: {image.error.message}</p>}
     </div>
   );
 }
@@ -282,7 +282,7 @@ export function AssetRow({ asset, localAvailable, compact }) {
       <div className="min-w-0">
         <span className="text-ink-2">{asset.label}</span>
         {!compact && asset.width && <span className="num text-ink-3"> · {asset.width}×{asset.height} {asset.format}</span>}
-        <p className={`text-[11px] break-words ${d.level === 'ok' ? 'text-ink-3' : L.className}`} title={asset.path || undefined}>{d.text}</p>
+        <p className={`text-2xs break-words ${d.level === 'ok' ? 'text-ink-3' : L.className}`} title={asset.path || undefined}>{d.text}</p>
       </div>
     </li>
   );
@@ -295,7 +295,7 @@ function NoteList({ notes }) {
         const L = LEVEL[n.level === 'warn' ? 'warn' : 'info'];
         const Icon = L.icon;
         return (
-          <li key={`${n.key}-${n.text}`} className={`flex items-start gap-2 text-[11px] ${L.className}`}>
+          <li key={`${n.key}-${n.text}`} className={`flex items-start gap-2 text-2xs ${L.className}`}>
             <Icon className="w-3.5 h-3.5 mt-px shrink-0" aria-label={L.label} /><span className="min-w-0">{n.text}</span>
           </li>
         );
@@ -313,13 +313,13 @@ export function DiagnosticsPanel({ assets, notes, local, cloud, share, canShare,
   return (
     <div className="space-y-4">
       <Section title="Texturas del kit">
-        {error && <p className="text-[11px] text-danger-soft" role="alert">{error.message}</p>}
+        {error && <p className="text-2xs text-danger-soft" role="alert">{error.message}</p>}
         <ul className="space-y-2">{assets.map(a => <AssetRow key={a.slot} asset={a} localAvailable={localAvailable} />)}</ul>
-        <p className="text-[11px] text-ink-3">
+        <p className="text-2xs text-ink-3">
           Orden de búsqueda: texturas importadas en el espacio → compartidas en la nube{sharedCount ? ` (${sharedCount} de este equipo)` : ''} → la carpeta del kit en esta PC.
           Solo se lee el kit-server, como hace kserv.lua con la carpeta de cada kit; las texturas de los livecpk no se buscan.
         </p>
-        {cloud.error && <p className="text-[11px] text-warning-soft">No se pudo leer la lista de texturas compartidas: {cloud.error.message}</p>}
+        {cloud.error && <p className="text-2xs text-warning-soft">No se pudo leer la lista de texturas compartidas: {cloud.error.message}</p>}
       </Section>
 
       <Section title="Carpeta en esta PC">
@@ -329,16 +329,16 @@ export function DiagnosticsPanel({ assets, notes, local, cloud, share, canShare,
             <Button variant="primary" disabled={share?.busy} onClick={onShare}>
               <CloudUpload className="w-3.5 h-3.5" />{share?.busy ? 'Subiendo…' : `Compartir ${pendingShare.length} textura(s) de este kit`}
             </Button>
-            <p className="text-[11px] text-ink-3">Sube a la nube del espacio los .ftex encontrados en tu carpeta para que el resto los vea sin abrir la suya. No se suben solas.</p>
+            <p className="text-2xs text-ink-3">Sube a la nube del espacio los .ftex encontrados en tu carpeta para que el resto los vea sin abrir la suya. No se suben solas.</p>
           </div>
         )}
-        {share?.done && <p className="text-[11px] text-success-soft">{share.done}</p>}
-        {share?.error && <p className="text-[11px] text-danger-soft" role="alert">{share.error.message}</p>}
+        {share?.done && <p className="text-2xs text-success-soft">{share.done}</p>}
+        {share?.error && <p className="text-2xs text-danger-soft" role="alert">{share.error.message}</p>}
       </Section>
 
       {notes.length > 0 && (
         <Section title="config.txt en la vista">
-          {warnings.length > 0 ? <NoteList notes={warnings} /> : <p className="text-[11px] text-ink-3">Sin advertencias.</p>}
+          {warnings.length > 0 ? <NoteList notes={warnings} /> : <p className="text-2xs text-ink-3">Sin advertencias.</p>}
           {infos.length > 0 && (
             <Disclosure className="text-xs text-ink-3" summary={`Detalles (${infos.length})`}>
               <div className="pt-1"><NoteList notes={infos} /></div>
@@ -355,17 +355,17 @@ function FolderControls({ local }) {
   return (
     <div className="space-y-1.5">
       {folder?.read && folder.kind !== 'unknown' && (
-        <p className="text-[11px] text-ink-3">Leyendo <b className="text-ink-2">{folder.name}</b> ({folder.kind === 'game' ? 'carpeta del juego' : 'carpeta kit-server'}). Solo lectura: nada se sube sin tu permiso.</p>
+        <p className="text-2xs text-ink-3">Leyendo <b className="text-ink-2">{folder.name}</b> ({folder.kind === 'game' ? 'carpeta del juego' : 'carpeta kit-server'}). Solo lectura: nada se sube sin tu permiso.</p>
       )}
       {folder?.pending && <Button onClick={local.allow}><FolderOpen className="w-3.5 h-3.5" />Permitir leer «{folder.name}»</Button>}
       {local.canPick ? (
         <Button onClick={local.pick}><FolderOpen className="w-3.5 h-3.5" />{folder?.read ? 'Cambiar carpeta' : 'Abrir carpeta del juego o del kit-server'}</Button>
       ) : (
-        <label className="block text-[11px] text-ink-3">Elegí la carpeta del kit-server (content/kit-server):
-          <input type="file" webkitdirectory="" multiple className="mt-1 block w-full text-[11px]" onChange={e => e.target.files?.length && local.fromFiles(e.target.files)} />
+        <label className="block text-2xs text-ink-3">Elegí la carpeta del kit-server (content/kit-server):
+          <input type="file" webkitdirectory="" multiple className="mt-1 block w-full text-2xs" onChange={e => e.target.files?.length && local.fromFiles(e.target.files)} />
         </label>
       )}
-      {error && <p className="text-[11px] text-danger-soft" role="alert">{error.message}</p>}
+      {error && <p className="text-2xs text-danger-soft" role="alert">{error.message}</p>}
     </div>
   );
 }

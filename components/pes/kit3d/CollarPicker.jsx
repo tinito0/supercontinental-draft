@@ -92,7 +92,7 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
     try { await onUse(current, winter); onPreview(null); } catch (e) { setError(e); } finally { setBusy(false); }
   };
 
-  if (!collars.length) return <p className="text-[11px] text-ink-3">Los modelos 3D no tienen cuellos para este kit.</p>;
+  if (!collars.length) return <p className="text-2xs text-ink-3">Los modelos 3D no tienen cuellos para este kit.</p>;
   return (
     <div className="space-y-2">
       <div role="group" aria-label="Cuellos disponibles" className="grid grid-cols-3 gap-1.5 max-h-72 overflow-y-auto pr-1">
@@ -101,7 +101,7 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
             onClick={() => onPreview(n === saved ? null : n)}
             className={`relative rounded-lg border p-0.5 transition-[border-color,background-color,scale] duration-fast active:scale-[0.97] ${n === current ? 'border-accent bg-accent-deep' : 'border-line/[0.12] hover:border-line/30'}`}>
             <canvas ref={el => { if (el) thumbs.current.set(n, el); else thumbs.current.delete(n); }} width={THUMB * RENDER_SCALE} height={THUMB * RENDER_SCALE} className="w-full aspect-square rounded-md bg-canvas" />
-            <span className="absolute bottom-1 left-1 num text-[11px] font-semibold text-ink bg-canvas/85 rounded px-1">{n}</span>
+            <span className="absolute bottom-1 left-1 num text-2xs font-semibold text-ink bg-canvas/85 rounded px-1">{n}</span>
             {n === saved && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-success-soft" aria-label="guardado" />}
           </button>
         ))}
@@ -116,11 +116,11 @@ export function CollarPicker({ pack, collars, baseParts, texture, scene, saved, 
             </>
           )}
           <Button onClick={() => onPreview(null)}><Undo2 className="w-4 h-4" aria-hidden="true" />Volver al guardado{saved ? ` (${saved})` : ''}</Button>
-          {!onUse && <p className="text-[11px] text-ink-3">Solo lectura: podés ver los cuellos pero no cambiar el config.txt.</p>}
+          {!onUse && <p className="text-2xs text-ink-3">Solo lectura: podés ver los cuellos pero no cambiar el config.txt.</p>}
         </div>
       )}
-      {thumbError && <p className="text-[11px] text-warning-soft">{thumbError}</p>}
-      {error && <p className="text-[11px] text-danger-soft" role="alert">{error.message}</p>}
+      {thumbError && <p className="text-2xs text-warning-soft">{thumbError}</p>}
+      {error && <p className="text-2xs text-danger-soft" role="alert">{error.message}</p>}
     </div>
   );
 }

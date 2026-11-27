@@ -38,7 +38,7 @@ export const AdvancedInstructionsPanel = memo(function AdvancedInstructionsPanel
           <section key={side} className="space-y-2" aria-labelledby={`adv-${side}`}>
             <div className="flex items-center justify-between gap-2">
               <h3 id={`adv-${side}`} className="eyebrow flex items-center gap-1.5"><Icon className="w-3.5 h-3.5" aria-hidden="true" />{title}</h3>
-              <span className="text-[11px] text-ink-3 num" aria-live="polite">{chosen.length} de {MAX_PER_SIDE}</span>
+              <span className="text-2xs text-ink-3 num" aria-live="polite">{chosen.length} de {MAX_PER_SIDE}</span>
             </div>
 
             <ol className="grid grid-cols-2 gap-1.5">
@@ -47,19 +47,19 @@ export const AdvancedInstructionsPanel = memo(function AdvancedInstructionsPanel
                 const isReplacing = replacing?.side === side && replacing.index === i;
                 return (
                   <li key={i} className={`min-h-14 rounded-lg border px-2 py-1.5 text-xs ${isReplacing ? 'border-warning/60 bg-warning/10' : ins ? 'border-accent/40 bg-accent/10' : 'border-dashed border-line/20 text-ink-3'}`}>
-                    <span className="block text-[11px] uppercase tracking-wide text-ink-3">{slot} {i + 1}</span>
+                    <span className="block text-2xs uppercase tracking-wide text-ink-3">{slot} {i + 1}</span>
                     {ins ? (
                       <div className="flex items-start justify-between gap-1">
                         <span className="font-semibold text-ink leading-tight">{ins.name}</span>
                         <span className="flex shrink-0">
                           <button type="button" onClick={() => setReplacing(isReplacing ? null : { side, index: i })} aria-pressed={isReplacing}
-                            className="p-1 rounded hover:bg-white/10" aria-label={`Cambiar ${ins.name}`} title="Cambiar por otra"><ArrowLeftRight className="w-3.5 h-3.5" /></button>
+                            className="inline-flex items-center justify-center min-h-11 min-w-11 rounded hover:bg-white/10" aria-label={`Cambiar ${ins.name}`} title="Cambiar por otra"><ArrowLeftRight className="w-3.5 h-3.5" /></button>
                           <button type="button" onClick={() => { onToggle(side, ins.code); setReplacing(null); }}
-                            className="p-1 rounded hover:bg-white/10" aria-label={`Quitar ${ins.name}`} title="Quitar"><X className="w-3.5 h-3.5" /></button>
+                            className="inline-flex items-center justify-center min-h-11 min-w-11 rounded hover:bg-white/10" aria-label={`Quitar ${ins.name}`} title="Quitar"><X className="w-3.5 h-3.5" /></button>
                         </span>
                       </div>
                     ) : <span>Sin elegir</span>}
-                    {isReplacing && <span className="block mt-0.5 text-[11px] text-warning-soft">Elegí la instrucción que la reemplaza.</span>}
+                    {isReplacing && <span className="block mt-0.5 text-2xs text-warning-soft">Elegí la instrucción que la reemplaza.</span>}
                   </li>
                 );
               })}
@@ -74,18 +74,18 @@ export const AdvancedInstructionsPanel = memo(function AdvancedInstructionsPanel
                     className={`text-left rounded-lg border px-2.5 py-2 transition-colors ${selected ? 'border-accent/60 bg-accent/15' : blocked ? 'border-line/[0.08] opacity-50' : 'border-line/[0.12] hover:border-line/30'}`}>
                     <span className="flex items-center justify-between gap-2 text-sm font-medium text-ink">
                       {ins.name}
-                      {!ins.verified && <span className="chip text-[11px]" title="PES Editor Rebuilt lo marca como probable">probable</span>}
+                      {!ins.verified && <span className="chip text-2xs" title="PES Editor Rebuilt lo marca como probable">probable</span>}
                     </span>
-                    <span className="block text-[11px] text-ink-3 leading-snug mt-0.5">{ins.description}</span>
+                    <span className="block text-2xs text-ink-3 leading-snug mt-0.5">{ins.description}</span>
                   </button>
                 );
               })}
             </div>
-            {notice?.side === side && <p role="status" className="text-[11px] text-warning-soft">{notice.text}</p>}
+            {notice?.side === side && <p role="status" className="text-2xs text-warning-soft">{notice.text}</p>}
           </section>
         );
       })}
-      <p className="text-[11px] text-ink-3 leading-relaxed">
+      <p className="text-2xs text-ink-3 leading-relaxed">
         Se guardan con tu equipo y se escriben en el EDIT al pasar el draft al juego (dos de ataque y dos de defensa, como en PES 2021).
         «Delantero liberado» necesita que elijas el delantero dentro del juego; sin eso el juego la muestra como «No».
       </p>

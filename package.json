@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:real": "vitest run --config vitest.real.config.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-scl \"vitest run --config vitest.rules.config.js\"",
     "pes:claims": "node scripts/sync-pes-claims.mjs"
   },

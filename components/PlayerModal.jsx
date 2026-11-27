@@ -560,14 +560,14 @@ export const PlayerModal = memo(function PlayerModal({
         return (
           <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
             <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-raised text-ink-3 border border-line/[0.12] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro mánager">
-              <div className="flex items-center text-[11px] text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
+              <div className="flex items-center text-2xs text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
                 <Lock className="w-3 h-3 mr-1" />
                 <span>Fichado por</span>
               </div>
               <span className="text-ink text-sm font-bold">{lockedTeamName || 'Otro equipo'}</span>
             </div>
             <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-accent/[0.08] text-accent-soft border border-accent/30 w-full sm:w-auto cursor-not-allowed" aria-disabled="true" title="Jugador Franquicia">
-              <div className="flex items-center text-[11px] text-accent-soft uppercase tracking-wider mb-0.5 font-semibold">
+              <div className="flex items-center text-2xs text-accent-soft uppercase tracking-wider mb-0.5 font-semibold">
                 <Crown className="w-3 h-3 mr-1" />
                 <span>Jugador Franquicia</span>
               </div>
@@ -579,7 +579,7 @@ export const PlayerModal = memo(function PlayerModal({
       return (
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
           <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl bg-raised text-ink-3 border border-line/[0.12] cursor-not-allowed w-full sm:w-auto" aria-disabled="true" title="Este jugador ya fue fichado por otro mánager">
-            <div className="flex items-center text-[11px] text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
+            <div className="flex items-center text-2xs text-danger-soft uppercase tracking-wider mb-0.5 font-semibold">
               <Lock className="w-3 h-3 mr-1" />
               <span>Fichado por</span>
             </div>
@@ -920,7 +920,7 @@ export const PlayerModal = memo(function PlayerModal({
                             className="w-10 h-10 rounded-lg object-cover bg-canvas border border-line/20 transition-colors"
                             onError={(e) => { e.target.onerror = null; e.target.src = playerPlaceholder(simPlayer.Name.substring(0, 1)); }}
                           />
-                          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold tabular-nums !text-black ${getStatAndOvrColorClass(simPlayer.OVR_CALCULADO)}`}>
+                          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded flex items-center justify-center text-2xs font-bold tabular-nums !text-black ${getStatAndOvrColorClass(simPlayer.OVR_CALCULADO)}`}>
                             {simPlayer.OVR_CALCULADO}
                           </div>
                         </div>
@@ -930,7 +930,7 @@ export const PlayerModal = memo(function PlayerModal({
                             {simPlayer.Name}
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold !text-black ${getPosColorClass(simPlayer.POS_NOMBRE)}`}>
+                            <span className={`px-1.5 py-0.5 rounded text-2xs font-bold !text-black ${getPosColorClass(simPlayer.POS_NOMBRE)}`}>
                               {simPlayer.POS_NOMBRE}
                             </span>
                             <span className="text-xs text-ink-3">
@@ -944,12 +944,12 @@ export const PlayerModal = memo(function PlayerModal({
                         <div className="min-w-0">
                           <div className="font-display num text-sm font-semibold text-ink">{formatPriceShort(simPlayer.Precio)}</div>
                           {Math.abs(priceDiff) >= 0.05 && (
-                            <div className="num text-[11px] text-ink-3">
+                            <div className="num text-2xs text-ink-3">
                               {formatPriceShort(Math.abs(priceDiff))} {priceDiff < 0 ? 'menos' : 'más'}
                             </div>
                           )}
                         </div>
-                        <span className={`num text-[11px] font-medium ${ovrDiff > 0 ? 'text-success-soft' : 'text-ink-3'}`}>
+                        <span className={`num text-2xs font-medium ${ovrDiff > 0 ? 'text-success-soft' : 'text-ink-3'}`}>
                           {ovrDiff === 0 ? 'Misma media' : `${ovrDiff > 0 ? '+' : '−'}${Math.abs(ovrDiff)} de media`}
                         </span>
                       </div>

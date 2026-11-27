@@ -34,7 +34,7 @@ const MACRO_DECK_COMMANDS = [
 
 // Tarjetas de la comunidad (components/broadcast/CommunityCard.jsx); sin votos no aparecen.
 const COMMUNITY_CARDS = [
-  { kind: 'manager', label: 'Manager de la fecha', hint: 'Quién va ganando la votación de la última fecha' },
+  { kind: 'manager', label: 'Mánager de la fecha', hint: 'Quién va ganando la votación de la última fecha' },
   { kind: 'prediction', label: 'Predicción', hint: 'Local, empate o visitante' },
   { kind: 'cup', label: 'Copa', hint: '¿Quién gana la copa?' },
 ];

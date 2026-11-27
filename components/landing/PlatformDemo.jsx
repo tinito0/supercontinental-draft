@@ -149,8 +149,8 @@ function MarketPanel() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">{p.card}</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <span className={`${getPosColorClass(p.pos)} rounded px-1.5 py-0.5 text-[11px] font-bold`}>{p.pos}</span>
-                  <span className={`${getStatAndOvrColorClass(p.ovr)} num rounded px-1.5 py-0.5 text-[11px] font-bold`}>{p.ovr}</span>
+                  <span className={`${getPosColorClass(p.pos)} rounded px-1.5 py-0.5 text-2xs font-bold`}>{p.pos}</span>
+                  <span className={`${getStatAndOvrColorClass(p.ovr)} num rounded px-1.5 py-0.5 text-2xs font-bold`}>{p.ovr}</span>
                 </div>
                 {!isSigned && !canAfford && <p className="mt-1 text-xs text-warning-soft">No te alcanza el presupuesto. Liberá a alguien para fichar.</p>}
               </div>

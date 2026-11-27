@@ -64,6 +64,9 @@ graphics and sets its own frame in `components/broadcast/broadcast.css`.
 | `accent-hover` / `accent-soft` / `accent-deep` | #4d7ad6 / #93b0f2 / #16244a | hover / blue text & icons on dark / tinted fills |
 | `success` `warning` `danger` (+`-soft` text) | | meaning only |
 
+Public sites exception: the league site and the draft landing lift `ink-2`/`ink-3` to #cfd8e8 / #a9b5cc (`landing.css`,
+`.landing-root`), because their text is mostly small metadata; the draft app keeps the values above.
+
 Contrast (measured with `.claude/skills/antislop-human/contrast-check.py`): `ink-3` on surface 5.93:1, on raised 5.49:1,
 on overlay 4.87:1; white on `accent` 5.42:1; `accent-soft` on surface 8.59:1, on raised 7.95:1. Plain `accent` on
 surface is **3.42:1**: it fails for text, so **blue text is always `text-accent-soft`**; `accent` is for fills,
@@ -98,7 +101,8 @@ or near-opaque token fill. No glow (`box-shadow` with blur in an accent color); 
 
 Type: **Barlow** text, **Barlow Condensed** (`font-display`) for page/section titles, numbers, scoreboards.
 Page title 28–32px bold · section title 18px bold uppercase (`.section-title`) · body 14–16px · labels 11–12px.
-**Nothing is smaller than 11px** (`text-[9px]`/`text-[10px]` are gone). One exception: the dorsal and OVR chips on the
+Size tokens added to Tailwind's scale: `text-2xs` (11px, labels and badges) and `text-display` (28px, `Stat` and
+page figures); don't write `text-[11px]`/`text-[28px]`. **Nothing is smaller than 11px** (`text-[9px]`/`text-[10px]` are gone). One exception: the dorsal and OVR chips on the
 pitch markers (`Pitch.jsx`, 9–10px) sit on a 360px pitch; the same numbers are in the lists next to it.
 Weights: 400/500/600/700 only (no `font-black`, no 900); the OBS overlay may use Barlow Condensed 800, which is loaded.
 Uppercase only for eyebrows, section titles and table heads, never for field labels, buttons, badges or names.
@@ -133,7 +137,7 @@ Motion explains a change; it never decorates or delays. Audit and roadmap: `docs
   anything that travels). No `duration-150/200/300/500`. The one literal is the live vote bar at 300ms (below).
   Easing keywords `ease`/`ease-in-out` are not used; transitions name their properties and use `var(--ease-out)`.
 - **Looping**: `animate-pulse` only on the live dot (`bg-danger`, marks a real live match), one per screen. Loading placeholders use
-  `.skeleton`, not `animate-pulse`. Nothing else loops.
+  `.skeleton`, not `animate-pulse`. Nothing else loops. The draft landing's player marquee runs one lap and rests, with a pause button.
 - **Guided tour** (`.guide-*`, used by `TutorialModal` and `ScoutAssignmentsPanel`): its ring animates
   `left/top/width/height` on purpose, because it is one small fixed element that follows another and `transform`
   cannot resize a border without distorting it. It is the only exception besides pitch markers and meters.

@@ -4,7 +4,7 @@ import { EmptyState } from '../ui/EmptyState.jsx';
 import { Alert } from '../ui/Alert.jsx';
 import { ruleTarget } from '../SquadRulesStats.jsx';
 import { DEFAULT_LOGO } from '../../utils/constants.js';
-import { buildTeamRuleRows, BENCH_MIN_AVG_OVR } from '../../utils/squadRules.js';
+import { buildTeamRuleRows, BENCH_MIN_AVG_OVR, SQUAD_MIN_PLAYERS } from '../../utils/squadRules.js';
 
 const COLUMNS = [
   { id: 'squad', label: 'Plantel' },
@@ -78,15 +78,18 @@ export function SquadRulesAdminSection({ allTeams, playerLocks, allPlayers, onRe
   }
 
   const offenders = rows.filter(row => failingRules(row).length > 0).length;
+  const unmeasuredClubs = rows.filter(row => row.result.rules.some(rule => !rule.applies)).length;
   return (
     <section aria-labelledby="squad-rules-title" className="space-y-4">
       <div>
         <h2 id="squad-rules-title" className="section-title">Reglas del plantel</h2>
         <p className="mt-1 text-sm text-ink-2">
-          {offenders === 0
-            ? <>Los <span className="num">{rows.length}</span> clubes están en regla.</>
-            : <><span className="num font-semibold text-danger-soft">{offenders}</span> de <span className="num">{rows.length}</span> clubes incumplen alguna regla.</>}
-          {' '}La táctica no deja guardar un once con el banco por debajo de {BENCH_MIN_AVG_OVR}; el plantel y los locales se corrigen en el mercado.
+          {offenders > 0
+            ? <><span className="num font-semibold text-danger-soft">{offenders}</span> de <span className="num">{rows.length}</span> clubes incumplen alguna regla.</>
+            : unmeasuredClubs > 0
+              ? <><span className="num">{rows.length - unmeasuredClubs}</span> en regla · <span className="num">{unmeasuredClubs}</span> sin medir.</>
+              : <>Los <span className="num">{rows.length}</span> clubes están en regla.</>}
+          {' '}Con {SQUAD_MIN_PLAYERS} jugadores o más y el once completo, la táctica no guarda un banco por debajo de {BENCH_MIN_AVG_OVR}. El plantel y los locales se corrigen en el mercado.
         </p>
       </div>
 
@@ -94,13 +97,16 @@ export function SquadRulesAdminSection({ allTeams, playerLocks, allPlayers, onRe
       <ul className="sm:hidden divide-y divide-line/[0.08] border-y border-line/[0.08]">
         {rows.map(row => {
           const broken = failingRules(row);
+          const unmeasured = row.result.rules.filter(rule => !rule.applies);
           return (
             <li key={row.userId} className="py-3">
               <ClubName row={row} />
               <p className={`mt-1.5 pl-11 text-xs ${broken.length ? 'text-danger-soft' : 'text-ink-3'}`}>
                 {broken.length
                   ? broken.map(rule => `${rule.label} ${rule.value} ${ruleTarget(rule)}`).join(' · ')
-                  : `En regla · ${row.result.rules.map(rule => `${COLUMNS.find(column => column.id === rule.id).label} ${rule.value}`).join(' · ')}`}
+                  : unmeasured.length
+                    ? `Sin medir · ${unmeasured.map(rule => COLUMNS.find(column => column.id === rule.id).label).join(' · ')}`
+                    : `En regla · ${row.result.rules.map(rule => `${COLUMNS.find(column => column.id === rule.id).label} ${rule.value}`).join(' · ')}`}
               </p>
             </li>
           );

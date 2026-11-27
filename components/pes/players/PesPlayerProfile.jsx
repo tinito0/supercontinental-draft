@@ -134,14 +134,14 @@ export function PositionMap({ fieldOf, get, canEdit, isModified, commit }) {
             <button key={name} type="button" disabled={locked} title={label} aria-label={locked ? label : `${label}. Cambiar`}
               onClick={() => commit(name, (apt + 1) % 3)}
               style={{ gridColumn: col, gridRow: row, backgroundColor: bgColor, color: textColor }}
-              className={`relative min-h-11 rounded-lg text-[11px] font-bold transition-[background-color,color,scale] duration-fast enabled:active:scale-[0.97] enabled:hover:brightness-110 disabled:cursor-default
+              className={`relative min-h-11 rounded-lg text-2xs font-bold transition-[background-color,color,scale] duration-fast enabled:active:scale-[0.97] enabled:hover:brightness-110 disabled:cursor-default
                 ${pos === registered ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas' : ''} ${isModified(name) ? 'outline outline-2 outline-accent-soft' : ''}`}>
               {pos}<span className="ml-1 opacity-70">{APTITUDE_LABEL[apt]}</span>
             </button>
           );
         })}
       </div>
-      <p className="mt-3 text-center text-[11px] text-ink-3">A verde · B lima · C gris. Tocá una posición para cambiarla.</p>
+      <p className="mt-3 text-center text-2xs text-ink-3">A verde · B lima · C gris. Tocá una posición para cambiarla.</p>
     </div>
   );
 }

@@ -339,7 +339,7 @@ function ManagerPanel({ tournament, matches, teams }) {
   return (
     <section className="panel p-5 space-y-4" aria-labelledby="manager-title">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <h2 id="manager-title" ref={titleRef} tabIndex={-1} className="section-title flex items-center gap-2 rounded-sm focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-soft"><UserRoundCheck className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Manager de la fecha</h2>
+        <h2 id="manager-title" ref={titleRef} tabIndex={-1} className="section-title flex items-center gap-2 rounded-sm focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-soft"><UserRoundCheck className="h-5 w-5 text-accent-soft" aria-hidden="true" /> Mánager de la fecha</h2>
         {round && (
           <span className="text-sm text-ink-2">
             {round.title} · {round.open ? (left != null ? `cierra en ${left} h` : 'votación abierta') : 'votación cerrada'}

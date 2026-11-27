@@ -53,7 +53,7 @@ export function PesAddKit({ kits, teamId, version, onApply, onCreated }) {
         </label>
         <span className="pb-2.5">Carpeta nueva: <span className="num font-semibold text-ink">{name}</span></span>
       </div>
-      <p className="text-[11px] text-ink-3">
+      <p className="text-2xs text-ink-3">
         Se copian los valores del config.txt (incluidos los nombres de textura). Después importá la textura propia del kit nuevo con otro nombre en «Texturas del kit»;
         si no, comparte las del kit copiado.
       </p>
@@ -61,7 +61,7 @@ export function PesAddKit({ kits, teamId, version, onApply, onCreated }) {
         <Button variant="primary" disabled={busy || !source} onClick={add}><Plus className="w-4 h-4" aria-hidden="true" />{busy ? 'Agregando…' : `Crear ${name}`}</Button>
         <Button variant="quiet" onClick={() => setOpen(false)}>Cancelar</Button>
       </div>
-      {!templates.length && <p className="text-[11px] text-warning-soft">El equipo no tiene kits de este tipo para copiar.</p>}
+      {!templates.length && <p className="text-2xs text-warning-soft">El equipo no tiene kits de este tipo para copiar.</p>}
       <ErrorText error={error} />
     </div>
   );

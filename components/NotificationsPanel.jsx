@@ -42,9 +42,9 @@ const NotificationItem = memo(function NotificationItem({ notif, onClick, onDism
       <div className="min-w-0 flex-1 pl-1">
         <p className={`text-xs leading-snug ${isUnread ? 'font-bold text-ink' : 'font-medium text-ink-2'}`}>{notif.text}</p>
         <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-line/[0.08]">
-          <span className="text-[11px] text-ink-3 font-medium">{notif.time}</span>
+          <span className="text-2xs text-ink-3 font-medium">{notif.time}</span>
           {isClickable && (
-            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-accent-soft group-hover:translate-x-0.5 transition-transform">
+            <span className="inline-flex items-center gap-0.5 text-2xs font-bold text-accent-soft group-hover:translate-x-0.5 transition-transform">
               Ver <ChevronRight className="w-3 h-3" />
             </span>
           )}
@@ -101,7 +101,7 @@ export const NotificationsPanel = memo(function NotificationsPanel({
         <div className="flex items-center gap-2">
           <h4 className="font-bold text-ink text-sm">Notificaciones</h4>
           {unreadCount > 0 && (
-            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-ink text-[11px] font-bold flex items-center justify-center tabular-nums">
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-ink text-2xs font-bold flex items-center justify-center tabular-nums">
               {unreadCount}
             </span>
           )}

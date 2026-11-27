@@ -74,7 +74,7 @@ function Marker({ player, side, team, vertical, rating, isBest }) {
         {player.goals > 0 && (
           <span className="absolute -right-2.5 -bottom-1 flex items-center gap-0.5 rounded-full bg-canvas/85 py-0.5 pl-0.5 pr-1" aria-hidden="true">
             <BallIcon className="h-4 w-4" />
-            {player.goals > 1 && <span className="num text-[11px] font-bold leading-none text-ink">{player.goals}</span>}
+            {player.goals > 1 && <span className="num text-2xs font-bold leading-none text-ink">{player.goals}</span>}
           </span>
         )}
         {player.cards?.length > 0 && (
@@ -89,7 +89,7 @@ function Marker({ player, side, team, vertical, rating, isBest }) {
         )}
       </span>
       <span className="mt-1 flex max-w-full items-baseline gap-1 rounded-md bg-canvas/80 px-1.5 py-0.5 text-xs font-semibold leading-tight text-ink sm:text-[13px]">
-        {team && <span className="num shrink-0 text-[11px] font-bold text-ink-2" aria-hidden="true">{teamCode(team)}</span>}
+        {team && <span className="num shrink-0 text-2xs font-bold text-ink-2" aria-hidden="true">{teamCode(team)}</span>}
         {player.number != null && <span className="num text-accent-soft">{player.number}</span>}
         <span className="truncate">{lastName(player.name)}</span>
       </span>

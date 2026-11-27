@@ -215,7 +215,7 @@ export function FieldInput({ field, value, readOnly, onCommit, label, modified }
     <label className={`flex flex-col gap-1 text-xs ${modified ? 'text-accent-soft' : 'text-ink-2'}`}>
       <span className="flex items-center justify-between gap-2">
         {title}
-        {range && <span className="num text-[11px] text-ink-3 shrink-0">{range.min}–{range.max}</span>}
+        {range && <span className="num text-2xs text-ink-3 shrink-0">{range.min}–{range.max}</span>}
       </span>
       <input
         type={field.kind === 'string' ? 'text' : 'number'}

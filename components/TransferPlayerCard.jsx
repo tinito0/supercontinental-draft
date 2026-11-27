@@ -61,7 +61,7 @@ export const TransferPlayerCard = memo(function TransferPlayerCard({
       <div className="flex items-center justify-between px-3.5 py-2 bg-surface/80 border-b border-line/15">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-success-soft">
+          <span className="text-2xs font-bold uppercase tracking-wider text-success-soft">
             Traspaso Oficial
           </span>
         </div>
@@ -86,10 +86,10 @@ export const TransferPlayerCard = memo(function TransferPlayerCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
-              <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold border tabular-nums ${ovrBadgeStyle}`}>
+              <span className={`px-1.5 py-0.5 rounded text-2xs font-bold border tabular-nums ${ovrBadgeStyle}`}>
                 {ovr || '--'}
               </span>
-              <span className="text-[11px] font-semibold text-ink-3 uppercase">
+              <span className="text-2xs font-semibold text-ink-3 uppercase">
                 {position}
               </span>
               {country && (

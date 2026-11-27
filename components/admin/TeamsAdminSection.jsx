@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { RefreshCw, Search, X, Users, Edit2, Crown, Trash2, Upload, Save, KeyRound, UserCheck, UserCog } from 'lucide-react';
-import { getDocs, query, collection, getDoc, writeBatch, doc, setDoc, where, runTransaction } from 'firebase/firestore';
+import { getDocs, query, collection, getDoc, doc, setDoc, where, runTransaction } from 'firebase/firestore';
 import { DEFAULT_LOGO, APP_ID } from '../../utils/constants.js';
 import { formatPriceShort } from '../../utils/helpers.js';
 import { filterAdminTeams, mergeAdminTeamProfile, parseBudgetInput, sortByTeamName, validateLogoFile } from '../../utils/adminTeams.js';
@@ -9,8 +9,10 @@ import { commitBatchOperations } from './commitBatchOperations.js';
 import { resizeImageFile } from '../../utils/resizeImage.js';
 import { renameTeamInTournament } from '../../utils/tournamentRename.js';
 import { confirmAction } from '../ui/ConfirmDialog.jsx';
+import { Alert } from '../ui/Alert.jsx';
 import { ClubTransferDialog } from './ClubTransferDialog.jsx';
 import { uploadClubCrest } from '../../services/leagueMediaService.js';
+import { resetFranchise } from '../../services/marketService.js';
 
 const ACCESS_FILTERS = [
   { id: 'all', label: 'Todos' },
@@ -32,6 +34,7 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
   const [teams, setTeams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [accessFilter, setAccessFilter] = useState('all');
   const [togglingUid, setTogglingUid] = useState('');
@@ -59,6 +62,7 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
 
   const fetchTeams = useCallback(async () => {
     setIsLoading(true);
+    setLoadError('');
     try {
       const [teamsSnap, locksSnap] = await Promise.all([
         getDocs(query(getPublicTeamsCollectionRef())),
@@ -80,7 +84,8 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
       setHasLoaded(true);
     } catch (e) {
       console.error(e);
-      showStatusMessage('error', 'No se pudieron cargar los equipos. Probá con «Actualizar».');
+      setLoadError('No se pudieron cargar los equipos.');
+      showStatusMessage('error', 'No se pudieron cargar los equipos.');
     }
     setIsLoading(false);
   }, [getPublicTeamsCollectionRef, getPrivateProfileRef, db, showStatusMessage]);
@@ -282,37 +287,40 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
 
   const handleResetFranchise = async (team) => {
     const isConfirmed = await confirmAction({
-      title: `¿Resetear el franquicia de ${team.teamName}?`,
-      message: 'El jugador sale de su plantel y el club puede elegir otro franquicia.',
+      title: `¿Resetear la franquicia de ${team.teamName}?`,
+      message: 'El jugador sale de su plantel y el club puede elegir otra franquicia.',
       confirmLabel: 'Resetear franquicia',
       irreversible: true,
     });
     if (!isConfirmed) return;
     try {
-      const batch = writeBatch(db);
-      const profileSnap = await getDoc(getPrivateProfileRef(team.uid));
-      const franchisePlayerId = profileSnap.exists() ? profileSnap.data().franchisePlayerId : null;
-
-      batch.set(getPrivateProfileRef(team.uid), {
-        franchisePlayerUsed: false,
-        franchisePlayerId: null,
-      }, { merge: true });
-
-      if (franchisePlayerId) {
-        const lockRef = doc(db, `artifacts/${APP_ID}/public/data/player_locks`, String(franchisePlayerId));
-        batch.delete(lockRef);
-        const cartRef = doc(db, `artifacts/${APP_ID}/users/${team.uid}/cart`, String(franchisePlayerId));
-        batch.delete(cartRef);
-      }
-
-      await batch.commit();
-      showStatusMessage('success', `Franquicia de "${team.teamName}" reseteada.`);
+      // On the server (market.js resetFranchise): it frees the lock only if this club still owns it.
+      const result = await resetFranchise({ teamId: team.uid });
+      showStatusMessage(
+        'success',
+        result?.lock === 'otherClub'
+          ? `Franquicia de "${team.teamName}" reseteada. El jugador ya pertenece a otro club, no se lo liberó.`
+          : `Franquicia de "${team.teamName}" reseteada.`,
+      );
       await fetchTeams();
     } catch (err) {
       console.error(err);
-      showStatusMessage('error', `No se pudo resetear el franquicia: ${err?.message || 'reintentá en unos instantes.'}`);
+      showStatusMessage('error', `No se pudo resetear la franquicia: ${err?.message || 'reintentá en unos instantes.'}`);
     }
   };
+
+  // A failed first load must not look like an empty league; a failed refresh keeps the last list and only toasts.
+  if (loadError && !isLoading && teams.length === 0) {
+    return (
+      <Alert
+        tone="danger"
+        title={loadError}
+        action={<button type="button" onClick={fetchTeams} className="btn btn-secondary min-h-11">Reintentar</button>}
+      >
+        Revisá la conexión y volvé a intentar.
+      </Alert>
+    );
+  }
 
   if (isLoading && !hasLoaded) {
     return (
@@ -467,9 +475,9 @@ export const TeamsAdminSection = memo(function TeamsAdminSection({
                 />
                 <div className="flex-1">
                   <p className="field-label">Escudo</p>
-                  <label className="btn btn-secondary btn-sm cursor-pointer">
+                  <label className="btn btn-secondary btn-sm cursor-pointer focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-surface">
                     <Upload size={14} aria-hidden="true" /> {isUploading ? 'Subiendo…' : 'Subir imagen'}
-                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={isUploading} />
+                    <input type="file" accept="image/*" className="sr-only" onChange={handleLogoUpload} disabled={isUploading} />
                   </label>
                 </div>
               </div>

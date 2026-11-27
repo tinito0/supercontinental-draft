@@ -56,7 +56,7 @@ function PlayerLine({ player, amount }) {
         {(player.POS_NOMBRE || player.OVR_CALCULADO) && (
           <div className="flex items-center gap-1.5 mt-1">
             {player.OVR_CALCULADO && <span className={`min-w-7 px-1 rounded font-display num text-sm font-bold text-center ${getStatAndOvrColorClass(player.OVR_CALCULADO)}`}>{player.OVR_CALCULADO}</span>}
-            {player.POS_NOMBRE && <span className={`px-1.5 rounded text-[11px] font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>}
+            {player.POS_NOMBRE && <span className={`px-1.5 rounded text-2xs font-bold ${getPosColorClass(player.POS_NOMBRE)}`}>{player.POS_NOMBRE}</span>}
           </div>
         )}
       </div>

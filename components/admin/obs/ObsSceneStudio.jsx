@@ -52,7 +52,7 @@ function SceneList({ selected, liveScene, onSelect }) {
                       <span className="block truncate text-xs text-ink-3">{scene.hint}</span>
                     </span>
                     {isLive && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded bg-danger/15 px-1.5 py-0.5 text-[11px] font-bold text-danger-soft">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded bg-danger/15 px-1.5 py-0.5 text-2xs font-bold text-danger-soft">
                         <span className="h-1.5 w-1.5 rounded-full bg-danger" aria-hidden="true" />Al aire
                       </span>
                     )}
@@ -227,7 +227,7 @@ export const ObsSceneStudio = memo(function ObsSceneStudio({ allTeams, tournamen
             {FULLSCREEN_SCENES.has(selected) && <TournamentDataNote onOpenTournamentModal={onOpenTournamentModal} />}
             {showsTexts && <TextSettings draft={draft} onChange={onChange} onResetTexts={resetTexts} />}
             {/* Phones: the same actions at the end of the panel, stuck to the bottom edge while the panel scrolls by. */}
-            <div className="sm:hidden sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-wrap justify-end gap-2 rounded-b-2xl border-t border-line/10 bg-surface/95 p-3 backdrop-blur-sm">{sceneActions}</div>
+            <div className="sm:hidden sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-wrap justify-end gap-2 rounded-b-2xl border-t border-line/10 bg-surface p-3">{sceneActions}</div>
           </div>
         </div>
       </section>

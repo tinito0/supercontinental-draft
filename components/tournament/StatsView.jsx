@@ -69,8 +69,8 @@ export const StatsView = memo(function StatsView({
                         </>
                       ) : (
                         <>
-                          <span className="text-xs sm:text-sm font-semibold text-ink truncate">{player.name || '—'}</span>
-                          <span className="text-[11px] text-ink-3 truncate">{player.team || 'Sin equipo'}</span>
+                          <span className="text-xs sm:text-sm font-semibold text-ink truncate">{player.name || '–'}</span>
+                          <span className="text-2xs text-ink-3 truncate">{player.team || 'Sin equipo'}</span>
                         </>
                       )}
                     </div>
@@ -140,8 +140,8 @@ export const StatsView = memo(function StatsView({
                         </>
                       ) : (
                         <>
-                          <span className="text-xs sm:text-sm font-semibold text-ink truncate">{player.name || '—'}</span>
-                          <span className="text-[11px] text-ink-3 truncate">{player.team || 'Sin equipo'}</span>
+                          <span className="text-xs sm:text-sm font-semibold text-ink truncate">{player.name || '–'}</span>
+                          <span className="text-2xs text-ink-3 truncate">{player.team || 'Sin equipo'}</span>
                         </>
                       )}
                     </div>

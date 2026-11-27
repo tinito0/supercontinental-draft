@@ -309,6 +309,7 @@ export function usePesWorkspace({ userId, isAdmin }) {
   }, [engineState.ws, activeId, userId]);
 
   const exportZip = useCallback(async () => {
+    if (engineState.failures?.length > 0) throw new Error('Corregí los errores antes de exportar.');
     setBusy('Generando y verificando la exportación…');
     try {
       const active = savedOps.filter(o => o.state !== 'discarded');
@@ -319,7 +320,7 @@ export function usePesWorkspace({ userId, isAdmin }) {
       setExportsList(await listExports(activeId));
       return { zip, manifest };
     } finally { setBusy(null); }
-  }, [engineState.ws, savedOps, drafts, activeId, wsDoc, actor, userId]);
+  }, [engineState.ws, engineState.failures, savedOps, drafts, activeId, wsDoc, actor, userId]);
 
   return {
     role, actor, caps, workspaces, activeId, wsDoc, savedOps, drafts, validation, exportsList, busy,

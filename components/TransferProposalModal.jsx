@@ -149,10 +149,10 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                   className="w-11 h-11 rounded-lg object-contain bg-raised border border-line/20 p-1"
                   onError={(e) => { e.target.src = DEFAULT_LOGO; }}
                 />
-                <span className="text-[11px] text-ink-3 font-semibold max-w-16 truncate">{senderTeamName || 'Tu equipo'}</span>
+                <span className="text-2xs text-ink-3 font-semibold max-w-16 truncate">{senderTeamName || 'Tu equipo'}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-ink-3 uppercase font-semibold tracking-wider">Pide traspaso por</p>
+                <p className="text-2xs text-ink-3 uppercase font-semibold tracking-wider">Pide traspaso por</p>
                 <div className="flex items-center gap-2.5 mt-1.5">
                   <img
                     src={`/fotos_jugadores/${player.Id}.webp`}
@@ -191,7 +191,7 @@ export const TransferProposalModal = ({ isVisible, onClose, player, targetTeamNa
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-3 font-bold text-xs">M</span>
               </div>
-              <div className="flex items-center justify-between mt-1.5 text-[11px] text-ink-3">
+              <div className="flex items-center justify-between mt-1.5 text-2xs text-ink-3">
                 <span>Máximo: {formatPriceShort(Math.round(Number(player.Precio) * MAX_TRANSFER_MULTIPLIER * 100) / 100)}</span>
                 {remainingBudget !== undefined && (
                   <span className="font-semibold text-accent-soft">

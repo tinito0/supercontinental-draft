@@ -98,7 +98,7 @@ export const SearchBar = memo(function SearchBar({
           <button type="button" data-app-tour="filters" onClick={() => setIsFiltrosModalVisible(true)} className="btn btn-secondary min-h-12">
             <SlidersHorizontal className="w-4 h-4 shrink-0" aria-hidden="true" />Filtros
             {activeFilterCount > 0 && (
-              <span className="num min-w-5 h-5 px-1.5 rounded-full bg-accent text-on-accent text-[11px] font-bold flex items-center justify-center">
+              <span className="num min-w-5 h-5 px-1.5 rounded-full bg-accent text-on-accent text-2xs font-bold flex items-center justify-center">
                 {activeFilterCount}<span className="sr-only"> activos</span>
               </span>
             )}

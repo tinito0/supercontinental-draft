@@ -79,7 +79,7 @@ function StrategyField({ field, value, onChange }) {
             onChange={(e) => onChange(field.key, Number(e.target.value))}
             className="w-full h-1.5 bg-overlay rounded-lg appearance-none cursor-pointer accent-[rgb(var(--c-accent))]"
           />
-          <div className="flex justify-between text-[11px] text-ink-3 px-0.5">
+          <div className="flex justify-between text-2xs text-ink-3 px-0.5">
             <span>{field.minLabel}</span>
             <span>{field.maxLabel}</span>
           </div>
@@ -171,7 +171,7 @@ export const RolesPanel = memo(function RolesPanel({ starterPlayers, setPieces, 
   if (!starterPlayers || starterPlayers.length === 0) {
     return (
       <div className="p-6 text-center text-ink-3 text-sm">
-        Coloca jugadores titulares en la cancha para poder asignar los roles de balón parado y capitanía.
+        Poné jugadores titulares en la cancha para poder asignar los roles de balón parado y capitanía.
       </div>
     );
   }
@@ -179,7 +179,7 @@ export const RolesPanel = memo(function RolesPanel({ starterPlayers, setPieces, 
   return (
     <div className="flex-grow overflow-y-auto p-3 lg:p-4 custom-scrollbar pb-20 lg:pb-4">
       <p className="text-xs text-ink-3 leading-relaxed mb-1">
-        Configura los lanzadores de faltas y capitán. Se exportan directamente a PES en <span className="text-ink-2 font-mono">Formation.csv</span>.
+        Configurá los lanzadores de faltas y capitán. Se exportan directamente a PES en <span className="text-ink-2 font-mono">Formation.csv</span>.
       </p>
       {ROLE_CONFIGS.map(({ key, label, icon: Icon, statLabel }) => (
         <div key={key} className="py-3 space-y-2 border-b border-line/[0.07] last:border-0">
@@ -188,7 +188,7 @@ export const RolesPanel = memo(function RolesPanel({ starterPlayers, setPieces, 
               <Icon className="w-3.5 h-3.5 text-ink-3" aria-hidden="true" />
               {label}
             </span>
-            <span className="text-[11px] text-ink-3">{statLabel}</span>
+            <span className="text-2xs text-ink-3">{statLabel}</span>
           </div>
           <select
             aria-label={label}

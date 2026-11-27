@@ -21,7 +21,7 @@ function SourceSummary({ s, missing }) {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 text-sm text-ink-2">
       <span className="font-semibold text-ink">{KIND_LABEL[s.kind]}</span>
       <span className="text-ink-3">{detail}</span>
-      <code className="num text-[11px] text-ink-3" title={s.sha256}>{s.sha256.slice(0, 12)}…</code>
+      <code className="num text-2xs text-ink-3" title={s.sha256}>{s.sha256.slice(0, 12)}…</code>
       {missing ? <Pill tone="amber">no está en este navegador</Pill> : !s.stored && <Pill tone="amber">sin compartir</Pill>}
     </div>
   );

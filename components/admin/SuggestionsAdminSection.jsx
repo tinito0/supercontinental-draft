@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { getDocs, query } from 'firebase/firestore';
 import { MessageSquarePlus, RefreshCw } from 'lucide-react';
+import { Alert } from '../ui/Alert.jsx';
 import { EmptyState } from '../ui/EmptyState.jsx';
 
 export const SuggestionsAdminSection = memo(function SuggestionsAdminSection({ getSuggestionsCollectionRef, showStatusMessage }) {
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   // Se lee bajo demanda (no hay listener): "Actualizar" trae las sugerencias nuevas sin recargar la página.
   const fetchSuggestions = useCallback(async () => {
     setIsLoading(true);
+    setLoadError('');
     try {
       const snapshot = await getDocs(query(getSuggestionsCollectionRef()));
       const suggestionList = snapshot.docs.map(doc => ({
@@ -20,12 +23,26 @@ export const SuggestionsAdminSection = memo(function SuggestionsAdminSection({ g
       setHasLoaded(true);
     } catch (error) {
       console.error(error);
+      setLoadError('No se pudieron cargar las sugerencias.');
       showStatusMessage('error', 'Error al cargar sugerencias.');
     }
     setIsLoading(false);
   }, [getSuggestionsCollectionRef, showStatusMessage]);
 
   useEffect(() => { fetchSuggestions(); }, [fetchSuggestions]);
+
+  // A failed read must not look like an empty mailbox.
+  if (loadError && !isLoading && suggestions.length === 0) {
+    return (
+      <Alert
+        tone="danger"
+        title={loadError}
+        action={<button type="button" onClick={fetchSuggestions} className="btn btn-secondary min-h-11">Reintentar</button>}
+      >
+        Revisá la conexión y volvé a intentar.
+      </Alert>
+    );
+  }
 
   if (isLoading && !hasLoaded) {
     return (

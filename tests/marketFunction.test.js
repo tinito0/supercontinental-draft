@@ -8,7 +8,7 @@ import * as shared from '../supabase/functions/_shared/marketConstants.js';
 import * as constants from '../utils/constants.js';
 import { encodeFields, decodeFields } from '../supabase/functions/_shared/firestoreValues.js';
 import { verifyFirebaseIdToken } from '../supabase/functions/_shared/googleAuth.js';
-import { isMarketOpen, isMarketAdmin, getCatalogPlayer } from '../supabase/functions/_shared/market.js';
+import { isMarketOpen, isMarketAdmin, getCatalogPlayer, handleMarketAction, resetFranchise, MarketError } from '../supabase/functions/_shared/market.js';
 import { buildMarketCatalog } from '../scripts/build-market-catalog.mjs';
 
 const ROOT = path.resolve(__dirname, '..');
@@ -96,5 +96,95 @@ describe('Firebase ID token verification', () => {
     await expect(verifyFirebaseIdToken(await token({}, { issuer: 'https://evil' }), { projectId, jwtVerify, keySet })).rejects.toThrow();
     await expect(verifyFirebaseIdToken(await token({}, { exp: '-1m' }), { projectId, jwtVerify, keySet })).rejects.toThrow();
     await expect(verifyFirebaseIdToken(await other.token(), { projectId, jwtVerify, keySet })).rejects.toThrow();
+  });
+});
+
+// resetFranchise (Administración → Equipos → Resetear franquicia) against an in-memory Firestore that follows the
+// transaction API of firestoreRest.js (set with `mask` merges only those fields). Synthetic: it proves the logic,
+// not Firestore itself.
+describe('resetFranchise (admin only)', () => {
+  const APP = 'scl-test';
+  const base = `artifacts/${APP}`;
+  const profile = uid => `${base}/users/${uid}/profile/data`;
+  const team = uid => `${base}/public/data/teams/${uid}`;
+  const lock = id => `${base}/public/data/player_locks/${id}`;
+  const cart = (uid, id) => `${base}/users/${uid}/cart/${id}`;
+  const admin = { uid: 'admin', isAdmin: true };
+
+  function memoryFirestore(initial) {
+    const docs = new Map(Object.entries(initial).map(([p, d]) => [p, structuredClone(d)]));
+    return {
+      docs,
+      async runTransaction(fn) {
+        const writes = [];
+        const snap = p => (docs.has(p) ? { id: p.split('/').pop(), path: p, data: structuredClone(docs.get(p)) } : null);
+        const tx = {
+          async get(p) { return snap(p); },
+          async query() { return []; },
+          set(p, data, { mask } = {}) { writes.push(['set', p, data, mask]); },
+          update(p, data) { writes.push(['update', p, data]); },
+          delete(p) { writes.push(['delete', p]); },
+        };
+        const result = await fn(tx);
+        for (const [op, p] of writes) if (op === 'update' && !docs.has(p)) throw new Error(`missing: ${p}`);
+        for (const [op, p, data, mask] of writes) {
+          if (op === 'delete') docs.delete(p);
+          else if (op === 'update' || mask) docs.set(p, { ...(docs.get(p) || {}), ...structuredClone(data) });
+          else docs.set(p, structuredClone(data));
+        }
+        return result;
+      },
+    };
+  }
+
+  const seed = owner => memoryFirestore({
+    [profile('club')]: { teamName: 'Club', formation: '4-4-2', franchisePlayerUsed: true, franchisePlayerId: 7511 },
+    [team('club')]: { teamName: 'Club', roster: [{ Id: '7511' }, { Id: '8000' }] },
+    [lock(7511)]: { lockedBy: owner, teamName: owner, isFranchise: owner === 'club' },
+    [cart('club', 7511)]: { Id: 7511 },
+  });
+  const reset = (db, user = admin, teamId = 'club') => handleMarketAction({
+    firestore: db, appId: APP, catalog: {}, user, body: { action: 'resetFranchise', teamId },
+  });
+
+  it('frees the lock, cart and roster entry when the club still owns the player', async () => {
+    const db = seed('club');
+    await expect(reset(db)).resolves.toEqual({ teamId: 'club', playerId: 7511, lock: 'released' });
+    expect(db.docs.has(lock(7511))).toBe(false);
+    expect(db.docs.has(cart('club', 7511))).toBe(false);
+    expect(db.docs.get(team('club')).roster).toEqual([{ Id: '8000' }]);
+    expect(db.docs.get(profile('club'))).toEqual({ teamName: 'Club', formation: '4-4-2', franchisePlayerUsed: false, franchisePlayerId: null });
+  });
+
+  it('keeps a lock owned by another club and reports otherClub', async () => {
+    const db = seed('rival');
+    await expect(reset(db)).resolves.toEqual({ teamId: 'club', playerId: 7511, lock: 'otherClub' });
+    expect(db.docs.get(lock(7511))).toMatchObject({ lockedBy: 'rival' });
+    expect(db.docs.get(team('club')).roster).toHaveLength(2);
+    expect(db.docs.get(profile('club'))).toMatchObject({ franchisePlayerUsed: false, franchisePlayerId: null });
+  });
+
+  it('only clears the fields when no franchise player is stored, or its lock is gone', async () => {
+    const none = memoryFirestore({ [profile('club')]: { franchisePlayerUsed: true } });
+    await expect(reset(none)).resolves.toEqual({ teamId: 'club', playerId: null, lock: 'none' });
+    expect(none.docs.get(profile('club'))).toEqual({ franchisePlayerUsed: false, franchisePlayerId: null });
+    const gone = seed('club');
+    gone.docs.delete(lock(7511));
+    await expect(reset(gone)).resolves.toMatchObject({ lock: 'missing' });
+  });
+
+  it('rejects non-admins, bad ids and unknown clubs without writing', async () => {
+    const db = seed('club');
+    const before = structuredClone([...db.docs]);
+    await expect(reset(db, { uid: 'club', isAdmin: false })).rejects.toMatchObject({ status: 403 });
+    await expect(reset(db, admin, '../x')).rejects.toThrow('Club inválido.');
+    await expect(reset(db, admin, 'ghost')).rejects.toMatchObject({ status: 404 });
+    expect([...db.docs]).toEqual(before);
+  });
+
+  it('refuses inside the transaction too, if called without the dispatcher check', async () => {
+    const db = seed('club');
+    await expect(db.runTransaction(tx => resetFranchise({ tx, appId: APP, user: { uid: 'x' }, teamId: 'club' })))
+      .rejects.toBeInstanceOf(MarketError);
   });
 });

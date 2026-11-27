@@ -4,6 +4,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { hasKitServer } from './fixtures.js';
 import {
   kitAssetRefs, assetCandidates, kitDirOf, resolveAsset, resolveKitAssets, AssetCache,
   describeAsset, manifestKey, manifestEntry, shareableAssets,
@@ -155,7 +156,7 @@ describe('cloud manifest keys', () => {
 // Real files: PSG (team 114) in the UML patch. Its p1 folder holds the name/back/leg sheets but not u0114p1.ftex,
 // which the patch keeps in livecpk/UML_Kits (outside the kit-server); p1x1 holds the kit texture too.
 const PSG = 'E:/eFootball PES 2021/content/kit-server/Ligue 1/PSG';
-describe.skipIf(!fs.existsSync(PSG))('PSG kit-server folder (real files)', () => {
+describe.skipIf(!hasKitServer || !fs.existsSync(PSG))('PSG kit-server folder (real files)', () => {
   const diskProvider = { id: 'local:disk', label: 'disco', lookup: async rel => { const f = path.join('E:/eFootball PES 2021/content/kit-server', rel); return fs.existsSync(f) ? new Uint8Array(fs.readFileSync(f)) : null; } };
   const resolveKit = async kit => {
     const cfg = parseKitConfig(fs.readFileSync(path.join(PSG, kit, 'config.txt'), 'utf8'));

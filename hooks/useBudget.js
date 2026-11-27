@@ -27,11 +27,18 @@ export function nextOfferExpiry(sentOffers, userId, nowMs) {
   return upcoming.length ? Math.min(...upcoming) : null;
 }
 
+/** 'ready' only once the profile and the locks are loaded; a locks error wins over loading. */
+export function budgetStatusFrom({ userProfile, locksStatus }) {
+  if (locksStatus === 'error') return 'error';
+  return !userProfile || locksStatus !== 'ready' ? 'loading' : 'ready';
+}
+
 /**
+ * @param {'loading'|'ready'|'error'} [locksStatus] budgetStatus is not 'ready' until locks and profile are loaded.
  * @param {boolean} [pricesKnown] false while some owned player has no price yet (bought, catalog loading):
  *   the alert waits, so a transient high balance followed by the real one does not trigger it.
  */
-export function useBudget({ userProfile, baseBudget, playerLocks, userId, sentOffers = [], priceOf, pricesKnown = true }) {
+export function useBudget({ userProfile, baseBudget, playerLocks, userId, sentOffers = [], priceOf, pricesKnown = true, locksStatus = 'ready' }) {
   const franchisePlayerId = userProfile?.franchisePlayerId;
   // An offer that expires gives its money back at that moment: re-render then (offerExpiry.js).
   const [expiryTick, setExpiryTick] = useState(0);
@@ -46,6 +53,8 @@ export function useBudget({ userProfile, baseBudget, playerLocks, userId, sentOf
     [baseBudget, userProfile?.budget, playerLocks, userId, sentOffers, priceOf, franchisePlayerId, expiryTick],
   );
   const remainingBudget = userProfile ? remaining : 0;
+  // Without the profile or the locks the figures are not real: callers render a neutral state, not 0 in red.
+  const budgetStatus = budgetStatusFrom({ userProfile, locksStatus });
 
   const [showBudgetAlert, setShowBudgetAlert] = useState(false);
 
@@ -54,7 +63,8 @@ export function useBudget({ userProfile, baseBudget, playerLocks, userId, sentOf
   // Mostrar alerta modal automáticamente cuando un fichaje hace caer el saldo por debajo del 20%
   const prevBudgetPercentRef = useRef(null);
   useEffect(() => {
-    if (!pricesKnown) return;
+    // Figures before the profile and locks load are not real: no baseline, no alert.
+    if (!pricesKnown || budgetStatus !== 'ready') return;
     if (prevBudgetPercentRef.current === null) {
       prevBudgetPercentRef.current = budgetPercent;
       return;
@@ -65,10 +75,11 @@ export function useBudget({ userProfile, baseBudget, playerLocks, userId, sentOf
       try { sessionStorage.setItem('budget_alert_shown', 'true'); } catch {}
     }
     prevBudgetPercentRef.current = budgetPercent;
-  }, [budgetPercent, pricesKnown]);
+  }, [budgetPercent, pricesKnown, budgetStatus]);
 
   return {
     budgetBase: base,
+    budgetStatus,
     totalCartCost,
     committedInOffers,
     remainingBudget,

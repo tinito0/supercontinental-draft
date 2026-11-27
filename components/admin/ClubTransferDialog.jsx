@@ -99,7 +99,7 @@ export function ClubTransferDialog({ target, teams, onClose, onDone, showStatusM
             <li>Sus permisos de administrador o del editor PES, si tenía.</li>
           </ul>
           <p className="mt-3 text-sm text-ink-2">
-            La cuenta anterior queda bloqueada: si vuelve a entrar ve «Tu club pasó a otro manager» y no se le crea
+            La cuenta anterior queda bloqueada: si vuelve a entrar ve «Tu club pasó a otro mánager» y no se le crea
             un club nuevo.
           </p>
         </div>

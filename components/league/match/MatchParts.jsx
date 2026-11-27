@@ -4,7 +4,7 @@ import React from 'react';
 
 /** Escudo del club de la liga si el equipo del juego está asignado (Draft → PES); si no, sus iniciales. */
 export function TeamMark({ team, teamsById, size = 'md' }) {
-  const box = size === 'lg' ? 'h-16 w-16 text-xl' : size === 'sm' ? 'h-6 w-6 text-[11px]' : 'h-9 w-9 text-xs';
+  const box = size === 'lg' ? 'h-16 w-16 text-xl' : size === 'sm' ? 'h-6 w-6 text-2xs' : 'h-9 w-9 text-xs';
   const logo = team?.draftTeamId ? teamsById?.[team.draftTeamId]?.logoUrl : null;
   if (logo) return <img src={logo} alt="" width={size === 'lg' ? 64 : size === 'sm' ? 24 : 36} height={size === 'lg' ? 64 : size === 'sm' ? 24 : 36} className={`${box} shrink-0 object-contain`} loading="lazy" />;
   const initials = String(team?.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();

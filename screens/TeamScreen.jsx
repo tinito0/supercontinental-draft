@@ -72,6 +72,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
   // A failed optional read hides only its own section (record or market); the page still loads.
   const [recordFailed, setRecordFailed] = useState(false);
   const [transfersFailed, setTransfersFailed] = useState(false);
+  const [locksFailed, setLocksFailed] = useState(false);
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
   const fetchTeam = useCallback(() => {
@@ -86,6 +87,7 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
       setError(null);
       setRecordFailed(false);
       setTransfersFailed(false);
+      setLocksFailed(false);
       try {
         if (!userId) {
           if (isMounted) {
@@ -183,6 +185,8 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
           if (isMounted) setFranchiseIds(franchiseIdsOf(teamLocks));
         } catch (locksErr) {
           console.warn("No se pudieron cargar los bloqueos públicos para el equipo:", locksErr);
+          // The squad below falls back to lineup/roster, which may be stale: flag it instead of showing it as verified.
+          if (isMounted) setLocksFailed(true);
         }
 
         const lineupIds = data?.lineup && typeof data.lineup === 'object'
@@ -403,6 +407,17 @@ export default function TeamScreen({ isLeagueSite = false, afterHeader = null, h
           </div>
           )}
         </section>
+        )}
+
+        {locksFailed && (
+          <Alert
+            tone="danger"
+            title="No pudimos verificar el plantel"
+            className="mb-4"
+            action={<Button size="md" className="min-h-11" onClick={fetchTeam}>Reintentar</Button>}
+          >
+            Mostramos la última alineación guardada, que puede no coincidir con los jugadores que el club tiene fichados.
+          </Alert>
         )}
 
         {/* Game plan, as PES lays it out: the squad list with the team strength beside the pitch. */}

@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useMemo, useRef } from 'react';
 import { X } from 'lucide-react';
 import { StatusAlert } from './StatusAlert.jsx';
+import { getPosColorClass } from '../utils/helpers.js';
 import { useExitAnimation, usePresenceList } from '../hooks/usePresence.js';
 
 // One corner for every transient message: the status alert and the rivals' signings used to be two separate fixed
@@ -38,7 +39,6 @@ function SigningToast({ toast, onOpen, onDismiss }) {
         }
       }}
       className="cursor-pointer panel hover:border-line/30 transition-colors rounded-xl p-3 flex items-center gap-3 group"
-      style={{ borderLeft: `4px solid ${toast.posColor}` }}
     >
       <img
         src={`/fotos_jugadores/${toast.playerId}.webp`}
@@ -54,7 +54,8 @@ function SigningToast({ toast, onOpen, onDismiss }) {
           <span className="font-semibold text-ink">{toast.playerName}</span>
         </p>
         <p className="text-xs text-ink-3 mt-0.5">
-          Media <span className="num">{toast.ovr}</span> · {toast.pos}
+          Media <span className="num">{toast.ovr}</span>{' '}
+          {toast.pos && <span className={`ml-1 inline-block rounded px-1.5 py-px font-bold !text-black ${getPosColorClass(toast.pos)}`}>{toast.pos}</span>}
         </p>
       </div>
       <span className="text-xs font-semibold text-accent-soft shrink-0">Ver</span>
@@ -64,7 +65,7 @@ function SigningToast({ toast, onOpen, onDismiss }) {
           onDismiss(toast.toastId);
         }}
         type="button"
-        className="w-8 h-8 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-white/10 shrink-0"
+        className="w-11 h-11 -my-2 -mr-1.5 flex items-center justify-center rounded-md text-ink-3 hover:text-ink hover:bg-overlay shrink-0"
         title="Cerrar aviso"
         aria-label="Cerrar aviso"
       >

@@ -48,7 +48,7 @@ const TeamVisual = memo(function TeamVisual({ teamId, teamName, allTeams }) {
     );
   }
   return (
-    <span className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center text-[11px] font-bold text-accent-soft flex-shrink-0 border border-accent/20">
+    <span className="w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center text-2xs font-bold text-accent-soft flex-shrink-0 border border-accent/20">
       {getInitials(teamName)}
     </span>
   );
@@ -74,7 +74,7 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
   if (transfer.type === 'match_result') {
     return (
       <article className="relative overflow-hidden rounded-xl border border-success/20 bg-emerald-950/20 p-3.5">
-        <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-success-soft">
+        <div className="mb-2 flex items-center justify-between text-2xs font-bold uppercase tracking-wider text-success-soft">
           <span>Resultado Final</span>
           <span>{transfer.round || 'Torneo'}</span>
         </div>
@@ -86,9 +86,9 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
           <span className="truncate text-xs font-bold text-ink-2">{transfer.awayTeam}</span>
         </div>
         {transfer.homePenalties != null && transfer.awayPenalties != null && (
-          <p className="mt-1 text-center text-[11px] text-ink-3 tabular-nums">Penales {transfer.homePenalties}-{transfer.awayPenalties}</p>
+          <p className="mt-1 text-center text-2xs text-ink-3 tabular-nums">Penales {transfer.homePenalties}-{transfer.awayPenalties}</p>
         )}
-        {transfer.mvp && <p className="mt-2 text-center text-[11px] font-medium text-warning-soft">MVP: {transfer.mvp}</p>}
+        {transfer.mvp && <p className="mt-2 text-center text-2xs font-medium text-warning-soft">MVP: {transfer.mvp}</p>}
       </article>
     );
   }
@@ -134,12 +134,12 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
               {transfer.playerName}
             </h4>
             <div className="mt-1 flex items-center gap-2">
-              <span className={`text-[11px] font-bold uppercase tracking-wider ${
+              <span className={`text-2xs font-bold uppercase tracking-wider ${
                 isTransfer ? ' text-accent-soft' : isFranchise ? ' text-warning-soft' : ' text-accent-soft'
               }`}>
                 {isTransfer ? 'Traspaso' : isFranchise ? 'Franquicia' : isDraftee ? 'Draft de promesas' : 'Fichaje'}
               </span>
-              <span className="inline-flex items-center gap-1 text-[11px] text-ink-3 font-medium">
+              <span className="inline-flex items-center gap-1 text-2xs text-ink-3 font-medium">
                 <Clock className="w-3 h-3" /> {time}
               </span>
             </div>
@@ -147,11 +147,11 @@ const TransferCard = memo(function TransferCard({ transfer, isReleased, allTeams
         </div>
 
         {isReleased ? (
-          <span className="shrink-0 rounded px-2 py-0.5 text-[11px] font-bold bg-danger/10 text-danger-soft border border-danger/20">
+          <span className="shrink-0 rounded px-2 py-0.5 text-2xs font-bold bg-danger/10 text-danger-soft border border-danger/20">
             Liberado
           </span>
         ) : isFranchise || isDraftee ? (
-          <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-bold bg-warning/10 text-warning-soft border border-warning/20">
+          <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-2xs font-bold bg-warning/10 text-warning-soft border border-warning/20">
             <Star className="w-3 h-3" fill="currentColor" /> Gratis
           </span>
         ) : (
@@ -272,7 +272,7 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 id="transfer-feed-title" className="text-base font-bold text-ink tracking-tight">Centro de traspasos</h2>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-danger/10 text-danger-soft border border-danger/20">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-bold bg-danger/10 text-danger-soft border border-danger/20">
                   En vivo
                 </span>
               </div>
@@ -325,7 +325,7 @@ export const TransferFeed = memo(function TransferFeed({ db, isVisible, shouldPr
 
         {/* Footer */}
         <div className="shrink-0 px-4 py-3 bg-surface/40 border-t border-line/20 text-center pb-[max(12px,env(safe-area-inset-bottom))]">
-          <p className="text-[11px] text-ink-3 font-medium">
+          <p className="text-2xs text-ink-3 font-medium">
             SuperContinental League • Mercado Oficial
           </p>
         </div>

@@ -12,7 +12,7 @@ const OUTCOME_STYLE = { goal: 'bg-accent text-on-accent', on_target: 'bg-raised 
 
 function OutcomeMark({ shot }) {
   return (
-    <span className={`inline-flex min-w-[2.75rem] items-center justify-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${OUTCOME_STYLE[shot.outcome]}`}>
+    <span className={`inline-flex min-w-[2.75rem] items-center justify-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold ${OUTCOME_STYLE[shot.outcome]}`}>
       {shot.outcome === 'goal' && <BallIcon className="h-3.5 w-3.5" />}
       {shot.outcome === 'goal' ? 'Gol' : shot.outcome === 'on_target' ? 'Al arco' : 'Afuera'}
     </span>
